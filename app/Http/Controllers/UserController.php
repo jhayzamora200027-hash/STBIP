@@ -1,0 +1,501 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+
+class UserController extends Controller
+{
+    
+    public function addUser(Request $request)
+    {
+        // Generate user_id from the email prefix (before '@')
+        $emailForUserId = $request->email;
+        $generatedUserId = null;
+        if ($emailForUserId && strpos($emailForUserId, '@') !== false) {
+            $generatedUserId = strstr($emailForUserId, '@', true);
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'firstname' => 'required|string|max:255',
+                'middlename' => 'nullable|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'email' => [
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    // Only block emails that belong to non-rejected users
+                    Rule::unique('users', 'email')->where(function ($query) {
+                        $query->where(function ($q) {
+                            $q->whereNull('approvalstatus')
+                              ->orWhere('approvalstatus', '')
+                              ->orWhere('approvalstatus', '!=', 'R');
+                        });
+                    }),
+                    'regex:/^[A-Za-z0-9._%+-]+@dswd\.gov\.ph$/i',
+                ],
+                'usergroup' => 'required|in:admin,user,sysadmin',
+                'password' => 'required|string|min:8|confirmed',
+            ],
+            [
+                'email.regex' => 'The email address must be a DSWD email (example: user@dswd.gov.ph).',
+            ]
+        );
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($validator, 'adduser')
+                ->withInput();
+        }
+
+        try {
+            $fields = $validator->validated();
+
+            // Check if this email belongs to a previously rejected user
+            $existingRejectedUser = User::where('email', $fields['email'])
+                ->where('approvalstatus', 'R')
+                ->first();
+
+            // Ensure generated user_id is unique (ignoring the rejected record if we are reusing it)
+            if ($generatedUserId) {
+                $userIdQuery = User::where('user_id', $generatedUserId);
+                if ($existingRejectedUser) {
+                    $userIdQuery->where('id', '!=', $existingRejectedUser->id);
+                }
+                if ($userIdQuery->exists()) {
+                    $error = ['user_id' => ['The generated User ID already exists. Please use a different email address.']];
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'message' => 'Validation failed.',
+                            'errors' => $error,
+                        ], 422);
+                    }
+                    return redirect()->back()
+                        ->withErrors($error, 'adduser')
+                        ->withInput();
+                }
+            }
+
+            $fields['password'] = bcrypt($fields['password']);
+            $fields['user_id'] = $generatedUserId ?? ($existingRejectedUser->user_id ?? '');
+            $fields['active'] = 1;
+            $fields['approvalstatus'] = 'A';
+            // Add 'name' field for compatibility
+            $fields['name'] = trim($fields['firstname'] . ' ' . ($fields['middlename'] ?? '') . ' ' . $fields['lastname']);
+            $fields['name'] = preg_replace('/\s+/', ' ', $fields['name']);
+
+            if ($existingRejectedUser) {
+                $existingRejectedUser->fill($fields);
+                $existingRejectedUser->approvalstatus = 'A';
+                $existingRejectedUser->approvalcomment = null;
+                $existingRejectedUser->approvedby = Auth::user() ? Auth::user()->name : null;
+                $existingRejectedUser->save();
+                $user = $existingRejectedUser;
+            } else {
+                $user = User::create($fields);
+            }
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Failed to add user: ' . $e->getMessage(),
+                ], 500);
+            }
+            return redirect()->back()
+                ->with('error', 'Failed to add user: ' . $e->getMessage())
+                ->withInput();
+        }
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Additional user added and approved successfully.',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => trim(($user->firstname ?? '') . ' ' . ($user->middlename ?? '') . ' ' . ($user->lastname ?? '')),
+                    'email' => $user->email,
+                    'usergroup' => $user->usergroup,
+                    'active' => $user->active,
+                    'created_at' => $user->created_at ? $user->created_at->format('M d, Y') : null,
+                ],
+            ]);
+        }
+        return redirect()->back()->with('success', 'Additional user added and approved successfully.');
+    }
+    public function register(Request $request)
+    {
+        // Generate user_id from the email prefix (before '@')
+        $emailForUserId = $request->email;
+        $generatedUserId = null;
+        if ($emailForUserId && strpos($emailForUserId, '@') !== false) {
+            $generatedUserId = strstr($emailForUserId, '@', true);
+        }
+
+        // Check if email or user_id exists with approved status
+        $approvedEmailExists = User::where('email', $request->email)
+            ->where('approvalstatus', 'A')
+            ->exists();
+        
+        $approvedUserIdExists = $generatedUserId
+            ? User::where('user_id', $generatedUserId)
+                ->where('approvalstatus', 'A')
+                ->exists()
+            : false;
+        
+        if ($approvedEmailExists) {
+            $error = ['email' => ['This email is already registered and approved.']];
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $error,
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($error, 'register')
+                ->withInput();
+        }
+        
+        if ($approvedUserIdExists) {
+            $error = ['user_id' => ['This User ID is already registered and approved.']];
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $error,
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($error, 'register')
+                ->withInput();
+        }
+        
+        // Check if there's a pending registration with same email or user_id (do not block rejected)
+        $pendingEmail = User::where('email', $request->email)
+            ->where(function($query) {
+                $query->whereNull('approvalstatus')
+                      ->orWhere('approvalstatus', '');
+            })
+            ->exists();
+
+        $pendingUserId = $generatedUserId
+            ? User::where('user_id', $generatedUserId)
+                ->where(function($query) {
+                    $query->whereNull('approvalstatus')
+                          ->orWhere('approvalstatus', '');
+                })
+                ->exists()
+            : false;
+
+        if ($pendingEmail) {
+            $error = ['email' => ['This email already has a pending registration. Please wait for admin review or contact support.']];
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $error,
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($error, 'register')
+                ->withInput();
+        }
+
+        if ($pendingUserId) {
+            $error = ['user_id' => ['This User ID already has a pending registration. Please wait for admin review or contact support.']];
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $error,
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($error, 'register')
+                ->withInput();
+        }
+        
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'firstname' => 'required|string|max:255',
+                'middlename' => 'nullable|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'email' => [
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    'regex:/^[A-Za-z0-9._%+-]+@dswd\.gov\.ph$/i',
+                ],
+                'password' => 'required|string|min:8|confirmed',
+            ],
+            [
+                'email.regex' => 'The email address must be a DSWD email (example: user@dswd.gov.ph).',
+            ]
+        );
+        
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($validator, 'register')
+                ->withInput();
+        }
+        
+        try {
+            $IncomingFields = $validator->validated();
+            $IncomingFields['password'] = bcrypt($IncomingFields['password']);
+            $IncomingFields['active'] = 1; // Set account as active by default
+            // Add 'name' field for compatibility with users table
+            $IncomingFields['name'] = trim($IncomingFields['firstname'] . ' ' . ($IncomingFields['middlename'] ?? '') . ' ' . $IncomingFields['lastname']);
+            $IncomingFields['name'] = preg_replace('/\s+/', ' ', $IncomingFields['name']); // Clean up extra spaces
+            // Set generated user_id from email prefix
+            if (!$generatedUserId && isset($IncomingFields['email']) && strpos($IncomingFields['email'], '@') !== false) {
+                $generatedUserId = strstr($IncomingFields['email'], '@', true);
+            }
+            $IncomingFields['user_id'] = $generatedUserId ?? '';
+            // Don't set approvalstatus - leave it null/blank for pending approval
+
+            // Check for existing rejected user by email or user_id
+            $existingRejectedUser = User::where(function($query) use ($request, $generatedUserId) {
+                $query->where('email', $request->email)
+                      ->orWhere('user_id', $generatedUserId);
+            })->where('approvalstatus', 'R')->first();
+
+            if ($existingRejectedUser) {
+                // Update the rejected user record with new registration data
+                $existingRejectedUser->fill($IncomingFields);
+                $existingRejectedUser->approvalstatus = null; // Set back to pending
+                $existingRejectedUser->approvalcomment = null;
+                $existingRejectedUser->approvedby = null;
+                $existingRejectedUser->save();
+            } else {
+                User::create($IncomingFields);
+            }
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Registration failed: ' . $e->getMessage(),
+                ], 500);
+            }
+            return redirect()->back()
+                ->with('error', 'Registration failed: ' . $e->getMessage())
+                ->withInput();
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Registration successful. Please wait for admin approval.',
+            ]);
+        }
+        return redirect()->route('main')->with('success', 'Registration successful. Please wait for admin approval.');
+
+
+    }
+    public function login(Request $request){
+        try {
+            $IncomingFields = $request->validate([
+                'email' => 'required|string|email',
+                'password' => 'required|string',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            throw $e;
+        }
+
+        // Check if user exists
+        $user = User::where('email', $IncomingFields['email'])->first();
+
+        // Helper for AJAX error response
+        $ajaxError = function($field, $msg) use ($request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $msg,
+                    'errors' => [ $field => [$msg] ]
+                ], 422);
+            }
+            return back()->withErrors([
+                $field => $msg,
+            ], 'login')->onlyInput('email');
+        };
+
+        if (!$user) {
+            // Email doesn't exist
+            return $ajaxError('email', 'No account found with this email address.');
+        }
+
+        // Check if user account is active
+        if ($user->active == 0) {
+            return $ajaxError('email', 'Your account is not active. Please contact support.');
+        }
+
+        // Check if user registration is pending approval
+        if (empty($user->approvalstatus) || is_null($user->approvalstatus)) {
+            return $ajaxError('email', 'Your registration is pending admin approval. Please wait for approval.');
+        }
+
+        // Check if user registration was rejected
+        if ($user->approvalstatus === 'R') {
+            return $ajaxError('email', 'Your registration has been rejected. Please contact support.');
+        }
+
+        // Check if user is approved
+        if ($user->approvalstatus !== 'A') {
+            return $ajaxError('email', 'Your account access is restricted. Please contact support.');
+        }
+
+        // User exists, now check password
+        if (Auth::attempt($IncomingFields)) {
+            $request->session()->regenerate();
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'redirect' => url('main')]);
+            }
+            return redirect()->intended('main');
+        } else {
+            // Email is correct but password is wrong
+            return $ajaxError('password', 'The password is incorrect.');
+        }
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->route('main');
+    }
+
+    public function profile(){
+        $user = Auth::user();
+        return view('login.accounts.profile', compact('user'));
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = User::find(Auth::id());
+        
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'usergroup' => 'required|in:admin,user,sysadmin',
+            'current_password' => 'required',
+            'new_password' => 'nullable|min:8|confirmed',
+            'phonenumber' => 'nullable|string|max:20',
+            'gender' => 'nullable|string|in:Male,Female',
+            'address' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        // Verify current password
+        if (!password_verify($request->current_password, $user->password)) {
+            return redirect()->back()
+                ->with('error', 'Current password is incorrect.')
+                ->withInput();
+        }
+
+        try {
+            // Prepare update data
+            $updateData = [
+                'email' => $request->email,
+                'usergroup' => $request->usergroup,
+                'phonenumber' => $request->phonenumber,
+                'gender' => $request->gender,
+                'address' => $request->address,
+            ];
+
+            // Add password to update data if provided
+            if ($request->filled('new_password')) {
+                $updateData['password'] = bcrypt($request->new_password);
+            }
+
+            $user->update($updateData);
+
+
+            return redirect()->route('profile')
+                ->with('success', 'Profile updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Failed to update profile: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+
+    public function index()
+    {
+        $users = User::where('approvalstatus', 'A')->orderBy('created_at', 'asc')->get();
+        return view('admin.users', compact('users'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'firstname' => 'required|string|max:255',
+            'middlename' => 'nullable|string|max:255',
+            'lastname' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'usergroup' => 'required|in:admin,user,sysadmin',
+            'active' => 'required|boolean',
+            'password' => 'nullable|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            // Prepare update data
+            $updateData = [
+                'firstname' => $request->firstname,
+                'middlename' => $request->middlename,
+                'lastname' => $request->lastname,
+                'email' => $request->email,
+                'usergroup' => $request->usergroup,
+                'active' => $request->active,
+            ];
+
+            // Add password to update data if provided
+            if ($request->filled('password')) {
+                $updateData['password'] = bcrypt($request->password);
+            }
+
+            $user->update($updateData);
+
+            return redirect()->route('users.index')
+                ->with('success', 'User updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Failed to update user. Please try again.')
+                ->withInput();
+        }
+    }
+}

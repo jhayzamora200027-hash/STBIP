@@ -1,0 +1,191 @@
+@extends('layouts.app')
+
+@section('content')
+	<div class="container mt-4 d-flex justify-content-start">
+		<div class="card shadow w-100" style="max-width: 900px; margin-bottom: 2.5rem; background: #fff; border-radius: 18px;">
+			<div class="card-body">
+				<h1 class="mb-4">STs MOA Attachment Listing</h1>
+
+				@if(session('success'))
+					<div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3 p-3 rounded-3" role="alert" style="background:linear-gradient(90deg,#22c55e,#16a34a); color:#ecfdf5; box-shadow:0 4px 10px rgba(16,185,129,0.35);">
+						<div class="me-3" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:999px; background:rgba(255,255,255,0.18);">
+							<i class="bi bi-check2" style="font-size:1.2rem;"></i>
+						</div>
+						<div class="flex-grow-1" style="font-size:0.9rem;">
+							<strong>Success.</strong> {{ session('success') }}
+						</div>
+						<button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="alert" aria-label="Close" style="filter:brightness(0) invert(1);"></button>
+					</div>
+				@endif
+
+				@if($errors->any())
+					<div class="alert alert-danger alert-dismissible fade show d-flex align-items-start mb-3 p-3 rounded-3" role="alert" style="background:linear-gradient(90deg,#ef4444,#b91c1c); color:#fef2f2; box-shadow:0 4px 10px rgba(239,68,68,0.35);">
+						<div class="me-3" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:999px; background:rgba(0,0,0,0.12);">
+							<i class="bi bi-exclamation-triangle" style="font-size:1.1rem;"></i>
+						</div>
+						<div class="flex-grow-1" style="font-size:0.9rem;">
+							<strong>There were some issues with your upload:</strong>
+							<ul class="mb-0 mt-1" style="padding-left:1.2rem;">
+								@foreach($errors->all() as $error)
+									<li>{{ $error }}</li>
+								@endforeach
+							</ul>
+						</div>
+						<button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="alert" aria-label="Close" style="filter:brightness(0) invert(1);"></button>
+					</div>
+				@endif
+
+				{{-- Region filter (single selection) --}}
+				<form id="sts-filter-form" method="GET" action="{{ route('uploadmoasts') }}" class="row g-3 mb-3">
+					<div class="col-md-4">
+						<label for="region" class="form-label">Region</label>
+						<select name="region" id="region" class="form-select">
+							<option value="">All Regions</option>
+							@foreach($regions as $region)
+								<option value="{{ $region }}" {{ $selectedRegion === $region ? 'selected' : '' }}>{{ $region }}</option>
+							@endforeach
+						</select>
+					</div>
+					<div class="col-md-4 position-relative">
+						<label for="title" class="form-label">ST Title</label>
+						<input
+							type="text"
+							name="title"
+							id="title"
+							class="form-control"
+							placeholder="Type part of the ST title"
+							value="{{ $searchTitle ?? '' }}"
+						>
+						@php
+							$initialTitles = $titles ?? [];
+							if (!empty($selectedRegion) && !empty($regionTitleMap[$selectedRegion] ?? [])) {
+								$initialTitles = $regionTitleMap[$selectedRegion];
+							}
+						@endphp
+						<div id="title-suggestions" class="list-group shadow-sm" style="position:absolute; top: 100%; left:0; right:0; z-index: 20; max-height: 220px; overflow-y:auto; font-size:0.8rem; display:none;">
+							{{-- suggestions injected via JS --}}
+						</div>
+					</div>
+					<div class="col-md-4 d-flex align-items-end">
+						<button type="submit" class="btn btn-primary me-2">Filter</button>
+						@if($selectedRegion || ($searchTitle ?? '') !== '')
+							<a href="{{ route('uploadmoasts') }}" class="btn btn-outline-secondary">Clear</a>
+						@endif
+					</div>
+				</form>
+
+				{{-- STs table with pagination (10 rows per page), AJAX-loaded --}}
+				<div id="sts-list-container">
+					@include('dashboard.maincomponents.partials.uploadingstattachment_list', ['sts' => $sts])
+				</div>
+
+				<script>
+					const regionTitleMap = @json($regionTitleMap ?? []);
+					const allTitles = @json($titles ?? []);
+
+					function loadUploadStsPage(url) {
+						if (!url) return;
+						var container = document.getElementById('sts-list-container');
+						if (!container) {
+							window.location = url;
+							return;
+						}
+
+						fetch(url, {
+							headers: {
+								'X-Requested-With': 'XMLHttpRequest',
+								'Accept': 'application/json'
+							}
+						})
+							.then(function(response) { return response.json(); })
+							.then(function(data) {
+								if (data && data.html) {
+									container.innerHTML = data.html;
+								} else if (data && data.redirect) {
+									window.location = data.redirect;
+								}
+							})
+							.catch(function() {
+								window.location = url;
+							});
+					}
+
+					document.addEventListener('DOMContentLoaded', function () {
+						var form = document.getElementById('sts-filter-form');
+						var regionSelect = document.getElementById('region');
+						var titleInput = document.getElementById('title');
+						var suggestions = document.getElementById('title-suggestions');
+
+						function hideSuggestions() {
+							if (suggestions) {
+								suggestions.style.display = 'none';
+							}
+						}
+
+						function refreshTitleOptions() {
+							if (!suggestions || !titleInput) return;
+							var selectedRegion = regionSelect ? regionSelect.value : '';
+							var query = titleInput.value.trim().toLowerCase();
+
+							var titlesList = allTitles;
+							if (selectedRegion && regionTitleMap[selectedRegion]) {
+								titlesList = regionTitleMap[selectedRegion];
+							}
+
+							// When user has typed something, filter; otherwise show first few for quick pick
+							if (query.length > 0) {
+								titlesList = titlesList.filter(function (title) {
+									return title.toLowerCase().indexOf(query) !== -1;
+								});
+							}
+							titlesList = titlesList.slice(0, 15);
+
+							suggestions.innerHTML = '';
+							if (titlesList.length === 0) {
+								hideSuggestions();
+								return;
+							}
+
+							titlesList.forEach(function (title) {
+								var item = document.createElement('button');
+								item.type = 'button';
+								item.className = 'list-group-item list-group-item-action';
+								item.textContent = title;
+								item.addEventListener('click', function () {
+									titleInput.value = title;
+									hideSuggestions();
+								});
+								suggestions.appendChild(item);
+							});
+
+							suggestions.style.display = 'block';
+						}
+
+						if (regionSelect) {
+							regionSelect.addEventListener('change', function () {
+								hideSuggestions();
+								refreshTitleOptions();
+							});
+						}
+
+						if (titleInput) {
+							titleInput.addEventListener('input', function () {
+								refreshTitleOptions();
+							});
+							titleInput.addEventListener('focus', function () {
+								refreshTitleOptions();
+							});
+						}
+
+						document.addEventListener('click', function (e) {
+							if (!suggestions || !titleInput) return;
+							if (!suggestions.contains(e.target) && e.target !== titleInput) {
+								hideSuggestions();
+							}
+						});
+					});
+				</script>
+			</div>
+		</div>
+	</div>
+@endsection

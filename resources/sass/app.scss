@@ -1,0 +1,386 @@
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+/* Custom Dark Theme Login Styles */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.login-page {
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+    background: linear-gradient(to right, #b92b27, #1565c0);
+    min-height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+.card{
+    margin-bottom:20px;
+    border:none;
+    background: transparent;
+}
+
+.box {
+    width: 500px;
+    padding: 40px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #191919;
+    text-align: center;
+    transition: 0.25s;
+    border-radius: 10px;
+}
+
+.box input[type="text"],
+.box input[type="email"],
+.box input[type="password"] {
+    border: 0;
+    background: none;
+    display: block;
+    margin: 20px auto;
+    text-align: center;
+    border: 2px solid #3498db;
+    padding: 10px 10px;
+    width: 250px;
+    outline: none;
+    color: white;
+    border-radius: 24px;
+    transition: 0.25s
+}
+
+.box h1 {
+    color: white;
+    text-transform: uppercase;
+    font-weight: 500
+}
+
+.box input[type="text"]:focus,
+.box input[type="email"]:focus,
+.box input[type="password"]:focus {
+    width: 300px;
+    border-color: #2ecc71
+}
+
+.box input[type="submit"] {
+    border: 0;
+    background: none;
+    display: block;
+    margin: 20px auto;
+    text-align: center;
+    border: 2px solid #2ecc71;
+    padding: 14px 40px;
+    outline: none;
+    color: white;
+    border-radius: 24px;
+    transition: 0.25s;
+    cursor: pointer
+}
+
+.box input[type="submit"]:hover {
+    background: #2ecc71
+}
+
+.forgot {
+    text-decoration: underline
+}
+
+ul.social-network {
+    list-style: none;
+    display: inline;
+    margin-left: 0 !important;
+    padding: 0
+}
+
+ul.social-network li {
+    display: inline;
+    margin: 0 5px
+}
+
+.social-network a.icoFacebook:hover {
+    background-color: #3B5998
+}
+
+.social-network a.icoTwitter:hover {
+    background-color: #33ccff
+}
+
+.social-network a.icoGoogle:hover {
+    background-color: #BD3518
+}
+
+.social-network a.icoFacebook:hover i,
+.social-network a.icoTwitter:hover i,
+.social-network a.icoGoogle:hover i {
+    color: #fff
+}
+
+a.socialIcon:hover,
+.socialHoverClass {
+    color: #44BCDD
+}
+
+.social-circle li a {
+    display: inline-block;
+    position: relative;
+    margin: 0 auto 0 auto;
+    border-radius: 50%;
+    text-align: center;
+    width: 50px;
+    height: 50px;
+    font-size: 20px
+}
+
+.social-circle li i {
+    margin: 0;
+    line-height: 50px;
+    text-align: center
+}
+
+.social-circle li a:hover i,
+.triggeredHover {
+    transform: rotate(360deg);
+    transition: all 0.2s
+}
+
+.social-circle i {
+    color: #fff;
+    transition: all 0.8s;
+    transition: all 0.8s
+}
+
+.box label {
+    color: white;
+    display: none;
+}
+
+.box a {
+    color: #3498db;
+}
+
+.box a:hover {
+    color: #2ecc71;
+}
+
+.box p {
+    color: white;
+}
+
+.text-muted {
+    color: #999 !important;
+}
+
+/* Profile and Navigation Styles */
+.profile-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid #dee2e6;
+    transition: border-color 0.3s;
+}
+
+.profile-img:hover {
+    border-color: #0d6efd;
+}
+
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    border: 2px solid #dee2e6;
+    transition: all 0.3s;
+}
+
+.profile-icon:hover {
+    background: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Login Modal Styles */
+.modal-login-bg {
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+}
+.modal-login-content {
+    background: rgba(255,255,255,0.15);
+    box-shadow: 0 8px 32px 0 rgba(31,38,135,0.37);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 40px 30px 30px 30px;
+    color: #fff;
+    text-align: center;
+}
+.modal-login-content h2 {
+    margin-bottom: 30px;
+    font-size: 2rem;
+    font-weight: bold;
+}
+.modal-login-content input[type="email"],
+.modal-login-content input[type="password"] {
+    width: 100%;
+    padding: 12px 10px;
+    margin: 10px 0 20px 0;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 1rem;
+}
+.modal-login-content input[type="checkbox"] {
+    margin-right: 8px;
+}
+.modal-login-content label {
+    font-size: 0.95rem;
+}
+.modal-login-content .actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+.modal-login-content .forgot {
+    color: #fff;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+.modal-login-content button[type="submit"] {
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    border-radius: 25px;
+    background: #fff;
+    color: #7b2ff2;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: background 0.2s;
+}
+.modal-login-content button[type="submit"]:hover {
+    background: #e0e0e0;
+}
+.modal-login-content .register {
+    color: #fff;
+    font-size: 0.95rem;
+}
+.modal-login-content .register a {
+    color: #fff;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+/* Nested Dropdown Styles */
+.dropdown-menu .dropend .dropdown-menu {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-top: 0;
+    margin-left: 0.125rem;
+}
+
+.dropdown-menu .dropend:hover > .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu .dropdown-item.dropdown-toggle::after {
+    margin-left: .255em;
+    border: none;
+    content: "\25BC";
+    font-size: .7em;
+    font-weight: normal;
+    vertical-align: middle;
+}
+
+.stb-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 220px;
+  background: linear-gradient(135deg, #f8fafc 60%, #e3eafc 100%);
+  box-shadow: 2px 0 12px rgba(44,62,80,0.07);
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.2rem 1rem 1rem 1rem;
+  transition: box-shadow 0.2s, background 0.2s;
+}
+.stb-sidebar .sidebar-logo {
+  max-width: 120px;
+  margin-bottom: 1.5rem;
+}
+.stb-sidebar .sidebar-title {
+  font-weight: 800;
+  color: #2563eb;
+  font-size: 1.1rem;
+  margin-bottom: 2.2rem;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+.stb-sidebar .nav-link {
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 1.04rem;
+  margin-bottom: 1.1rem;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+.stb-sidebar .nav-link.active, .stb-sidebar .nav-link:hover {
+  background: #2563eb;
+  color: #fff;
+}
+.stb-sidebar .nav-link i {
+  font-size: 1.2em;
+}
+.stb-sidebar .nav {
+  width: 100%;
+}
+.stb-sidebar .sidebar-title {
+  margin-bottom: 1.5rem;
+}
+.stb-sidebar .sidebar-logo {
+  margin-bottom: 1.2rem;
+}
+.stb-sidebar .nav-link {
+  margin-bottom: 0.7rem;
+}
+@media (max-width: 900px) {
+  .stb-sidebar { display: none; }
+  .stb-main-content { margin-left: 0 !important; }
+}
+
+.stb-content-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+
