@@ -80,8 +80,6 @@ php artisan migrate
 php artisan storage:link
 
 # 5) Seed initial user (creates admin user)
-php artisan db:seed --class=UserSeeder
-# or run all seeders
 php artisan db:seed
 
 

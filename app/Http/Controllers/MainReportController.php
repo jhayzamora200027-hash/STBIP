@@ -257,6 +257,8 @@ class MainReportController extends Controller
 
     public function index(Request $request)
     {
+        // determine if the view is being embedded (e.g. via iframe)
+        $embed = $request->query('embed');
         $path = $this->findLatestExcelPath();
         if (!$path) {
             $galleryCards = GalleryCard::with([
@@ -278,6 +280,7 @@ class MainReportController extends Controller
                 'data' => [],
                 'regionFilteredData' => [],
                 'galleryCards' => $galleryCards,
+                'embed' => $embed,
             ]);
         }
 
@@ -296,6 +299,8 @@ class MainReportController extends Controller
 
         // First, filter by region/province/municipality only (for bar chart)
         $regionFilteredData = $data;
+        // propagate embed flag to view data
+        $viewData['embed'] = $embed;
         $selectedRegions = $request->input('region', []);
         $selectedProvinces = $request->input('province', []);
         $selectedMunicipalities = $request->input('municipality', []);
@@ -360,6 +365,7 @@ class MainReportController extends Controller
             'data' => $filteredData, // fully filtered for all other charts/totals (with attachment info)
             'regionFilteredData' => $regionFilteredData, // only region/province/municipality filtered for bar chart
             'galleryCards' => $galleryCards,
+            'embed' => $embed,
         ]);
     }
 

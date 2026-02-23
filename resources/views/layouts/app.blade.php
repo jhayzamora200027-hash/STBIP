@@ -24,6 +24,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>STB Inventory Portal</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Swiper CSS (required by STsReport slider) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     {{-- Bootstrap JS loaded before Vite to ensure global availability --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
@@ -42,6 +44,26 @@
         footer {
             flex-shrink: 0;
         }
+
+        /* when the view is embedded (via ?embed=1 or $embed passed), hide chrome */
+        @if(request()->query('embed') || (isset($embed) && $embed))
+        nav.navbar,
+        .stb-sidebar,
+        footer {
+            display: none !important;
+        }
+        /* remove space reserved by navbar/sidebar so embedded content sits flush and prevent scrolling */
+        body, html {
+            margin: 0 !important;
+            overflow: hidden !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .stb-main-content {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        @endif
         /* Global loading overlay + animated blocks loader
            (used by resources/views/components/loader.blade.php) */
         .loading-overlay {
@@ -365,12 +387,14 @@
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: #06306e; position: fixed; top: 0; left: 0; width: 100%; z-index: 1030;">
         <div class="container-fluid px-3 d-flex align-items-center justify-content-between">
             <!-- On desktop, title is next to sidebar; on mobile, title is on the right -->
-            <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}">STB Inventory Portal</a>
+            <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}" style="@guest margin-left:0 !important; @endguest">STB Inventory Portal</a>
             <div class="d-flex align-items-center ms-auto" style="gap: 0.5rem; position: relative; z-index: 1;">
                 <!-- Hamburger for mobile sidebar toggle -->
+                @auth
                 <button class="navbar-toggler d-block d-lg-none order-2" type="button" aria-label="Toggle sidebar" style="z-index:1060;" onclick="document.body.classList.toggle('sidebar-open')">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+                @endauth
                 <!-- User dropdown or login/register always on right -->
                 @auth
                 <div class="order-1">
@@ -530,6 +554,7 @@
             }
         });
     </script>
+@auth
     <div class="stb-sidebar" id="stbSidebar" style="z-index: 1040;">
         <img src="{{ asset('images/dattachments/social technology bureau innovating solution logo.png') }}" alt="STB Innovating Solution Logo" class="sidebar-logo">
         <nav class="nav flex-column w-100">
@@ -602,7 +627,8 @@
             }
         </style>
     </div>
-    <div class="container py-5 stb-main-content" style="margin-top: 70px;">
+@endauth
+    <div class="container py-5 stb-main-content" style="margin-top: 70px; @guest margin-left:auto !important; margin-right:auto !important; @endguest">
         @yield('content')
     </div>
     <footer style="width:100%; background:linear-gradient(90deg,#e0e7ff 60%,#f8fafc 100%); color:#2c3e50; text-align:center; padding: 0.5rem 0 0.4rem 0; font-size:0.92rem; margin-top:1.2rem; box-shadow:0 -2px 12px rgba(44,62,80,0.05);">
@@ -613,6 +639,8 @@
             <div>© {{ date('Y') }} DSWD STB Inventory Portal. All rights reserved.</div>
         </div>
     </footer>
+    <!-- Swiper JS (make sure slider initialization in partial works) -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 </body>
 
 
