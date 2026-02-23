@@ -190,7 +190,7 @@
 	/* mini gallery scrolling animation */
 	@keyframes gallery-mini-anim {
 		0% { transform: translateX(0); }
-		100% { transform: translateX(-50%); }
+		100% { transform: translateX(-100%); }
 	}
 
 	/* mini-icon-slider styling */
@@ -216,8 +216,8 @@
 	/* mini-card-gallery styling */
 	.mini-streport-card { display: block; cursor:pointer; }
 	.mini-streport-card .mini-card-gallery {
-		width: 100%;
-		height: 120px;
+		width: 120px; /* viewport shows one card */
+		height: 140px; /* slightly taller so ribbon is fully visible */
 		overflow: hidden;
 		perspective: 800px;
 	}
@@ -228,16 +228,15 @@
 	}
 	.mini-streport-card .mini-card-gallery .card {
 		flex: 0 0 100px;
-		height: 100px;
+		height: 120px;
 		background: #e2e8f0;
 		border-radius: 8px;
 		box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 		position: relative;
-		margin-left: -40px; /* overlap cards for stack effect */
+		margin-left: 0;
 	}
+	/* single-card preview: no rotation or overlap */
 	.mini-streport-card .mini-card-gallery .card:first-child { margin-left: 0; }
-	.mini-streport-card .mini-card-gallery .card:nth-child(odd) { transform: rotateY(-4deg); }
-	.mini-streport-card .mini-card-gallery .card:nth-child(even) { transform: rotateY(4deg); }
 	.mini-streport-card .mini-card-gallery .card .imgContainer {
 		position: absolute;
 		top: 10px;
@@ -628,8 +627,10 @@
 		</div>
 
             @php
-                // Use actual gallery cards fetched by controller; fallback to empty collection
+                // Use actual gallery cards fetched by controller; fallback
                 $galleryCards = $galleryCards ?? collect();
+                // same slider images used in STsReport
+                $sliderImages = ['1.png','2.png','3.png','4_a.png','4_b.png','5.png','6.png','7.png','8.png','9.png','10.png','11.png','12.png','13.png','barmm.png','car.png','ncr.png','nir.png'];
             @endphp
 
             <!-- mini STsReport preview card -->
@@ -641,22 +642,14 @@
                             <!-- icon slider similar to STsReport top slider -->
                             <div class="mini-icon-slider" style="margin-bottom:12px; overflow:hidden; height:40px;">
                                 <div class="icons" style="display:flex; width:200%; animation:icons-anim 8s linear infinite; background:#f1f5f9; padding:4px 0;">
-                                    @foreach($galleryCards as $card)
+                                    @foreach($sliderImages as $img)
                                         <div class="icon" style="flex:0 0 40px; height:40px; margin-right:8px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
-                                            @if($card->image)
-                                                <img src="{{ asset('storage/'.$card->image) }}" style="max-width:32px; max-height:32px; object-fit:contain;" />
-                                            @elseif($card->icon_class)
-                                                <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
-                                            @endif
+                                            <img src="{{ asset('images/ST Regional Nav Slide/'.$img) }}" style="max-width:32px; max-height:32px; object-fit:contain;" />
                                         </div>
                                     @endforeach
-                                    @foreach($galleryCards as $card)
+                                    @foreach($sliderImages as $img)
                                         <div class="icon" style="flex:0 0 40px; height:40px; margin-right:8px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
-                                            @if($card->image)
-                                                <img src="{{ asset('storage/'.$card->image) }}" style="max-width:32px; max-height:32px; object-fit:contain;" />
-                                            @elseif($card->icon_class)
-                                                <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
-                                            @endif
+                                            <img src="{{ asset('images/ST Regional Nav Slide/'.$img) }}" style="max-width:32px; max-height:32px; object-fit:contain;" />
                                         </div>
                                     @endforeach
                                 </div>
@@ -665,17 +658,6 @@
                             <!-- card gallery mimic from STsReport, scaled down -->
                             <div class="mini-card-gallery" style="overflow:hidden; height:120px;">
                                 <div class="container-cards" style="display:flex; gap:10px; animation:gallery-mini-anim 12s linear infinite;">
-                                    @foreach($galleryCards as $card)
-                                        <a class="card card-link" href="{{ $card->url ?? '#' }}" style="flex:0 0 100px; height:100px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; margin-left:-40px; background:{{ $card->image ? "url('".asset('storage/'.$card->image)."') center/cover no-repeat" : '#e2e8f0' }};">
-                                            <div class="imgContainer" style="position:absolute; top:8px; left:50%; transform:translate(-50%,0); width:60px; height:60px; z-index:3; box-shadow:0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
-                                                @if($card->image)
-                                                    <img src="{{ asset('storage/'.$card->image) }}" style="width:72%;height:72%;object-fit:contain;" />
-                                                @elseif($card->icon_class)
-                                                    <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
-                                                @endif
-                                            </div>
-                                        </a>
-                                    @endforeach
                                     @foreach($galleryCards as $card)
                                         <a class="card card-link" href="{{ $card->url ?? '#' }}" style="flex:0 0 100px; height:100px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; margin-left:-40px; background:{{ $card->image ? "url('".asset('storage/'.$card->image)."') center/cover no-repeat" : '#e2e8f0' }};">
                                             <div class="imgContainer" style="position:absolute; top:8px; left:50%; transform:translate(-50%,0); width:60px; height:60px; z-index:3; box-shadow:0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
