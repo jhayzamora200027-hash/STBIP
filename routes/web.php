@@ -164,8 +164,8 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // AJAX routes
-Route::get('/demo1/ajax-region-titles', [STsReportController::class, 'ajaxRegionTitles'])->name('demo1.ajaxRegionTitles');
+Route::get('/sts-report/ajax-region-titles', [STsReportController::class, 'ajaxRegionTitles'])->name('stsreport.ajaxRegionTitles');
 // Hierarchical JSON for modal dropdowns: provinces -> cities -> ST rows
-Route::get('/demo1/ajax-region-hierarchy', [STsReportController::class, 'ajaxRegionHierarchy'])->name('demo1.ajaxRegionHierarchy');
+Route::get('/sts-report/ajax-region-hierarchy', [STsReportController::class, 'ajaxRegionHierarchy'])->name('stsreport.ajaxRegionHierarchy');
 
 

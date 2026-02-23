@@ -6,7 +6,7 @@
 /* Beautify Select2 dropdowns */
 .select2-container--default .select2-selection--multiple {
 	background: #f8fafc;
-	border: 2px solid #4da1f7;
+	border: 2px solid #06306e;
 	border-radius: 10px;
 	min-height: 44px;
 	padding: 6px 8px;
@@ -15,10 +15,10 @@
 	transition: border 0.2s;
 }
 .select2-container--default .select2-selection--multiple:focus {
-	border: 2px solid #4da1f7;
+	border: 2px solid #06306e;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-	background: linear-gradient(90deg, #4da1f7 60%, #4da1f7 100%);
+	background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
 	color: #fff;
 	border: none;
 	border-radius: 8px;
@@ -35,7 +35,7 @@
 .select2-dropdown {
 	border-radius: 10px;
 	box-shadow: 0 4px 16px rgba(16, 174, 181, 0.13);
-	border: 2px solid #4da1f7;
+	border: 2px solid #06306e;
 	padding: 4px 0;
 }
 .select2-results__option {
@@ -47,15 +47,30 @@
 }
 .select2-results__option--highlighted {
 	background: #e0f7fa;
-	color: #4da1f7;
+	color: #06306e;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__rendered {
 	padding: 0 4px 0 0;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
-	color: #4da1f7;
+	color: #06306e;
 	opacity: 0.85;
 	font-weight: 500;
+}
+
+/* fixed height for each result and scrollable dropdown */
+.select2-results__option,
+.select2-dropdown .select2-results__option {
+    height: 40px !important;
+    line-height: 40px !important;
+    padding: 0 14px !important; /* keep horizontal padding but remove vertical */
+    box-sizing: border-box !important;
+}
+/* constrain the results container to eight rows */
+.select2-results__options,
+.select2-dropdown .select2-results__options {
+    max-height: calc(40px * 8) !important;
+    overflow-y: auto !important;
 }
 </style>
 <style>
@@ -73,7 +88,7 @@
 		background: #fff;
 		border-radius: 24px;
 		box-shadow: 0 8px 32px rgba(16, 174, 181, 0.13), 0 1.5px 8px rgba(0,0,0,0.04);
-		border: 3px solid #4da1f7;
+		border: 3px solid #06306e;
 		padding: 56px 48px 48px 48px;
 		max-width: 1200px;
 		width: 100%;
@@ -81,7 +96,7 @@
 		position: relative;
 	}
 	.st-dashboard-header {
-		background: linear-gradient(90deg, #4da1f7 60%, #4da1f7 100%);
+		background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
 		color: #fff;
 		padding: 28px 0 18px 0;
 		border-radius: 18px 18px 0 0;
@@ -111,7 +126,7 @@
 		box-shadow: 0 8px 24px rgba(16, 174, 181, 0.18);
 	}
 	.st-dashboard-card .card-header {
-		background: linear-gradient(90deg, #4da1f7 60%, #4da1f7 100%);
+		background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
 		color: #fff;
 		font-weight: 600;
 		font-size: 1.15rem;
@@ -132,13 +147,13 @@
 		font-size: 2.7rem;
 		font-weight: bold;
 		margin: 0;
-		color: #4da1f7;
+		color: #06306e;
 		text-shadow: 0 1px 0 #fff, 0 2px 8px #e2edf8;
 	}
 	.st-dashboard-select-card {
-		background: linear-gradient(135deg, #4da1f7 60%, #4da1f7 100%);
+		background: linear-gradient(135deg, #06306e 60%, #06306e 100%);
 		border-radius: 14px;
-		border: 2.5px solid #4da1f7;
+		border: 2.5px solid #06306e;
 		padding: 32px 18px 18px 18px;
 		margin-bottom: 24px;
 		min-height: 180px;
@@ -152,18 +167,88 @@
 		margin-bottom: 14px;
 		width: 220px;
 		border-radius: 6px;
-		border: 1.5px solid #4da1f7;
+		border: 1.5px solid #06306e;
 		padding: 8px 10px;
 		font-size: 1.05rem;
 		background: #fff;
 		color: #222;
-		box-shadow: 0 1px 4px #4da1f7;
+		box-shadow: 0 1px 4px #06306e;
 		transition: border 0.2s;
 	}
 	.st-dashboard-select-card select:focus {
-		border: 2px solid #4da1f7;
+		border: 2px solid #06306e;
 		outline: none;
 	}
+
+
+	/* mini-icon slider animation */
+	@keyframes icons-anim {
+		0% { transform: translateX(0); }
+		100% { transform: translateX(-50%); }
+	}
+
+	/* mini gallery scrolling animation */
+	@keyframes gallery-mini-anim {
+		0% { transform: translateX(0); }
+		100% { transform: translateX(-50%); }
+	}
+
+	/* mini-icon-slider styling */
+	.mini-streport-card .mini-icon-slider {
+		width: 100%;
+		height: 40px;
+		overflow: hidden;
+	}
+	.mini-streport-card .mini-icon-slider .icons {
+		display: flex;
+		width: 200%;
+		animation: icons-anim 8s linear infinite;
+	}
+	.mini-streport-card .mini-icon-slider .icon {
+		flex: 0 0 40px;
+		height: 40px;
+		margin-right: 8px;
+		background-color: transparent;
+		border-radius: 50%;
+		box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+	}
+
+	/* mini-card-gallery styling */
+	.mini-streport-card { display: block; cursor:pointer; }
+	.mini-streport-card .mini-card-gallery {
+		width: 100%;
+		height: 120px;
+		overflow: hidden;
+		perspective: 800px;
+	}
+	.mini-streport-card .mini-card-gallery .container-cards {
+		display: flex;
+		gap: 10px;
+		animation: gallery-mini-anim 12s linear infinite;
+	}
+	.mini-streport-card .mini-card-gallery .card {
+		flex: 0 0 100px;
+		height: 100px;
+		background: #e2e8f0;
+		border-radius: 8px;
+		box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+		position: relative;
+		margin-left: -40px; /* overlap cards for stack effect */
+	}
+	.mini-streport-card .mini-card-gallery .card:first-child { margin-left: 0; }
+	.mini-streport-card .mini-card-gallery .card:nth-child(odd) { transform: rotateY(-4deg); }
+	.mini-streport-card .mini-card-gallery .card:nth-child(even) { transform: rotateY(4deg); }
+	.mini-streport-card .mini-card-gallery .card .imgContainer {
+		position: absolute;
+		top: 10px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 60px;
+		height: 60px;
+		background: #fff;
+		border-radius: 6px;
+	}
+
 	@media (max-width: 991px) {
 		.st-dashboard-container {
 			padding: 18px 4vw 18px 4vw;
@@ -459,11 +544,11 @@
 
 <div class="st-center-outer">
    <div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden;">
-	   <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
+	   {{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
 		   <button type="button" class="btn btn-sm btn-primary" onclick="window.print()" style="background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%); border: none; border-radius: 999px; padding: 6px 18px; font-weight: 600; box-shadow: 0 2px 6px rgba(16,174,181,0.35);">
 			   Print / Save as PDF
 		   </button>
-	   </div>
+	   </div> --}}
 	   	<div class="st-dashboard-header st-dashboard-header-fullwidth">
 	   		<div style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; min-height:100px; padding:10px 10px 10px 10px;">
 	   			<div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap;">
@@ -541,6 +626,74 @@
 
 			
 		</div>
+
+            @php
+                // Use actual gallery cards fetched by controller; fallback to empty collection
+                $galleryCards = $galleryCards ?? collect();
+            @endphp
+
+            <!-- mini STsReport preview card -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <a href="{{ route('streport') }}" class="card st-dashboard-card mini-streport-card" style="text-decoration:none;color:inherit;">
+                        <div class="card-header">STsReport Preview</div>
+                        <div class="card-body" style="padding:12px;">
+                            <!-- icon slider similar to STsReport top slider -->
+                            <div class="mini-icon-slider" style="margin-bottom:12px; overflow:hidden; height:40px;">
+                                <div class="icons" style="display:flex; width:200%; animation:icons-anim 8s linear infinite; background:#f1f5f9; padding:4px 0;">
+                                    @foreach($galleryCards as $card)
+                                        <div class="icon" style="flex:0 0 40px; height:40px; margin-right:8px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
+                                            @if($card->image)
+                                                <img src="{{ asset('storage/'.$card->image) }}" style="max-width:32px; max-height:32px; object-fit:contain;" />
+                                            @elseif($card->icon_class)
+                                                <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                    @foreach($galleryCards as $card)
+                                        <div class="icon" style="flex:0 0 40px; height:40px; margin-right:8px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
+                                            @if($card->image)
+                                                <img src="{{ asset('storage/'.$card->image) }}" style="max-width:32px; max-height:32px; object-fit:contain;" />
+                                            @elseif($card->icon_class)
+                                                <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <!-- card gallery mimic from STsReport, scaled down -->
+                            <div class="mini-card-gallery" style="overflow:hidden; height:120px;">
+                                <div class="container-cards" style="display:flex; gap:10px; animation:gallery-mini-anim 12s linear infinite;">
+                                    @foreach($galleryCards as $card)
+                                        <a class="card card-link" href="{{ $card->url ?? '#' }}" style="flex:0 0 100px; height:100px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; margin-left:-40px; background:{{ $card->image ? "url('".asset('storage/'.$card->image)."') center/cover no-repeat" : '#e2e8f0' }};">
+                                            <div class="imgContainer" style="position:absolute; top:8px; left:50%; transform:translate(-50%,0); width:60px; height:60px; z-index:3; box-shadow:0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
+                                                @if($card->image)
+                                                    <img src="{{ asset('storage/'.$card->image) }}" style="width:72%;height:72%;object-fit:contain;" />
+                                                @elseif($card->icon_class)
+                                                    <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                    @foreach($galleryCards as $card)
+                                        <a class="card card-link" href="{{ $card->url ?? '#' }}" style="flex:0 0 100px; height:100px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; margin-left:-40px; background:{{ $card->image ? "url('".asset('storage/'.$card->image)."') center/cover no-repeat" : '#e2e8f0' }};">
+                                            <div class="imgContainer" style="position:absolute; top:8px; left:50%; transform:translate(-50%,0); width:60px; height:60px; z-index:3; box-shadow:0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff;">
+                                                @if($card->image)
+                                                    <img src="{{ asset('storage/'.$card->image) }}" style="width:72%;height:72%;object-fit:contain;" />
+                                                @elseif($card->icon_class)
+                                                    <i class="{{ $card->icon_class }}" style="font-size:24px;color:#4da1f7;"></i>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
 			<!-- Doughnut Chart for ST Titles (inside main dashboard container, after totals/filtering) -->
 			<div class="row mt-4">
 				<div class="col-12 p-0">
@@ -630,7 +783,7 @@
 											@endforeach
 										</select>
 
-										<button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #4da1f7 60%, #4da1f7 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
+										<button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
 									</form>
 								</div>
 							</div>
@@ -862,9 +1015,12 @@
 		<div class="row mt-4 justify-content-center">
 			<div class="col-12">
 				<div class="card st-dashboard-card st-title-listing-card flex-fill">
-					<div class="card-header text-center">TITLE LISTING</div>
+					<div class="card-header text-center">SOCIAL TECHNOLOGIES</div>
 					<div class="card-body" style="padding: 20px 4px;">
-						<div id="title-listing-table-container"></div>
+						<div class="mb-2">
+                                                    <input type="text" id="title-listing-search" class="form-control" placeholder="Search ST title" />
+                                                </div>
+                                                <div id="title-listing-table-container"></div>
 						<script>
 						// Pass all listing data to JS
 						window.fullListingData = @json(collect($data)->filter(function($row){
@@ -930,11 +1086,34 @@
 	(function() {
 		const perPage = 10;
 		let currentPage = 1;
-		const data = window.fullListingData || [];
+		// keep a master copy plus filtered result used for paging
+		const allData = window.fullListingData || [];
+		let data = allData.slice();
 
 		function escapeAttr(str) {
 			return (str || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 		}
+
+		function filterData(term) {
+			term = (term || '').trim().toLowerCase();
+			if (!term) {
+				data = allData.slice();
+			} else {
+				data = allData.filter(r => (r.title||'').toLowerCase().includes(term));
+			}
+			currentPage = 1;
+		}
+
+		// wire up search field if present
+		document.addEventListener('DOMContentLoaded', () => {
+			const inp = document.getElementById('title-listing-search');
+			if (inp) {
+				inp.addEventListener('input', function() {
+					filterData(this.value);
+					renderTable(currentPage);
+				});
+			}
+		});
 
 		function renderTable(page) {
 			const start = (page - 1) * perPage;
@@ -983,10 +1162,10 @@
 			const totalPages = Math.ceil(data.length / perPage);
 			html += `<style>
 				.st-custom-pagination { display: flex; justify-content: center; align-items: center; gap: 14px; background: #f8fafc; border-radius: 12px; box-shadow: 0 2px 8px #b2ebf2; margin-top: 18px; padding: 10px 0 6px 0; }
-				.st-custom-pagination-btn { border: none; background: linear-gradient(90deg, #10aeb5 60%, #4da1f7 100%); color: #fff; font-weight: 700; border-radius: 8px; padding: 7px 26px; font-size: 1.08em; box-shadow: 0 2px 8px #b2ebf2; outline: none; transition: background 0.18s, box-shadow 0.18s, transform 0.12s; cursor: pointer; position: relative; }
+				.st-custom-pagination-btn { border: none; background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; font-weight: 700; border-radius: 8px; padding: 7px 26px; font-size: 1.08em; box-shadow: 0 2px 8px #b2ebf2; outline: none; transition: background 0.18s, box-shadow 0.18s, transform 0.12s; cursor: pointer; position: relative; }
 				.st-custom-pagination-btn:disabled { background: #e0f7fa; color: #b0b0b0; box-shadow: none; cursor: not-allowed; }
-				.st-custom-pagination-btn:not(:disabled):hover { background: linear-gradient(90deg, #4da1f7 60%, #10aeb5 100%); transform: translateY(-2px) scale(1.04); box-shadow: 0 4px 16px #b2ebf2; }
-				.st-custom-pagination-indicator { font-weight: 600; color: #10aeb5; font-size: 1.13em; min-width: 110px; text-align: center; letter-spacing: 0.5px; }
+				.st-custom-pagination-btn:not(:disabled):hover { background: linear-gradient(90deg, #06306e 60%, #06306e 100%); transform: translateY(-2px) scale(1.04); box-shadow: 0 4px 16px #b2ebf2; }
+				.st-custom-pagination-indicator { font-weight: 600; color: #06306e; font-size: 1.13em; min-width: 110px; text-align: center; letter-spacing: 0.5px; }
 			</style>`;
 			html += '<div class="st-custom-pagination">';
 			html += `<button class="st-custom-pagination-btn" ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">&#8592; Prev</button>`;
@@ -1009,7 +1188,21 @@
 	</script>
 	<script>
 	window.regionMap = @json($regionMap);
-	window.allYears = @json($allYears ?? $years);
+// compute master lists of provinces and cities for resetting filters
+window.allProvinces = [];
+window.allCities = [];
+Object.keys(window.regionMap).forEach(function(region) {
+    var reg = window.regionMap[region];
+    if (reg.provinces) {
+        Object.keys(reg.provinces).forEach(function(prov) {
+            window.allProvinces.push(prov);
+            window.allCities = window.allCities.concat(reg.provinces[prov]);
+        });
+    }
+});
+window.allProvinces = Array.from(new Set(window.allProvinces)).sort();
+window.allCities = Array.from(new Set(window.allCities)).sort();
+window.allYears = @json($allYears ?? $years);
 	$(function() {
 		$('.st-select2').select2({
 			width: '100%',
@@ -1033,16 +1226,16 @@
 			}
 		});
 
-		$('#region-select').on('change', function() {
+		$('#region-select-orig').on('change', function() {
 			var selectedRegions = $(this).val() || [];
 			var provinces = [];
 			var cities = [];
 			var years = [];
 
-			// When no region is selected, restore the full list of years
-			// so the Year dropdown is never empty.
+			// When no region is selected, restore the full list of years,
+			// provinces, and cities so everything reverts back.
 			if (selectedRegions.length === 0) {
-				var $yearAll = $('#year-select');
+				var $yearAll = $('#year-select-orig');
 				var selectedYearAll = $yearAll.val() || [];
 				$yearAll.empty();
 				(window.allYears || []).forEach(function(yr) {
@@ -1050,18 +1243,32 @@
 					$yearAll.append('<option value="'+yr+'" '+selected+'>'+yr+'</option>');
 				});
 				$yearAll.trigger('change.select2');
+				// restore provinces and cities as well
+				var $provAll = $('#province-select-orig');
+				var selProv = $provAll.val() || [];
+				$provAll.empty();
+				(window.allProvinces || []).forEach(function(p) {
+					var selected = selProv.includes(p) ? 'selected' : '';
+					$provAll.append('<option value="'+p+'" '+selected+'>'+p+'</option>');
+				});
+				$provAll.trigger('change.select2');
+				var $cityAll = $('#municipality-select-orig');
+				var selCity = $cityAll.val() || [];
+				$cityAll.empty();
+				(window.allCities || []).forEach(function(c) {
+					var selected = selCity.includes(c) ? 'selected' : '';
+					$cityAll.append('<option value="'+c+'" '+selected+'>'+c+'</option>');
+				});
+				$cityAll.trigger('change.select2');
 				return;
 			}
-			selectedRegions.forEach(function(region) {
-				var reg = window.regionMap[region];
-				if (reg) {
-					Object.keys(reg.provinces).forEach(function(prov) {
-						provinces.push(prov);
-						cities = cities.concat(reg.provinces[prov]);
-					});
-					if (Array.isArray(reg.years)) {
-						years = years.concat(reg.years);
-					}
+			// use the full listing data for accurate province/city sets
+			var allRows = window.fullListingData || [];
+			allRows.forEach(function(row) {
+				if (selectedRegions.includes(row.region)) {
+					if (row.province) provinces.push(row.province);
+					if (row.municipality) cities.push(row.municipality);
+					if (row.year_of_moa) years.push(row.year_of_moa);
 				}
 			});
 
@@ -1072,7 +1279,7 @@
 			years.sort();
 
 			// Update province dropdown
-			var $province = $('#province-select');
+			var $province = $('#province-select-orig');
 			var selectedProvince = $province.val() || [];
 			$province.empty();
 			provinces.forEach(function(prov) {
@@ -1082,7 +1289,7 @@
 			$province.trigger('change.select2');
 
 			// Update city dropdown
-			var $city = $('#municipality-select');
+			var $city = $('#municipality-select-orig');
 			var selectedCity = $city.val() || [];
 			$city.empty();
 			cities.forEach(function(city) {
@@ -1092,7 +1299,7 @@
 			$city.trigger('change.select2');
 
 			// Update year dropdown (based on selected regions)
-			var $year = $('#year-select');
+			var $year = $('#year-select-orig');
 			var selectedYear = $year.val() || [];
 			$year.empty();
 			years.forEach(function(yr) {
@@ -1101,6 +1308,48 @@
 			});
 			$year.trigger('change.select2');
 		});
+
+		// province change cascades to cities
+		$('#province-select-orig').on('change', function() {
+			var selectedRegions = $('#region-select-orig').val() || [];
+			var selectedProvinces = $(this).val() || [];
+			var cities = [];
+			// if no filters, restore entire city list
+			if (selectedRegions.length === 0 && selectedProvinces.length === 0) {
+				var $cityAll = $('#municipality-select-orig');
+				var selCity = $cityAll.val() || [];
+				$cityAll.empty();
+				(window.allCities || []).forEach(function(c) {
+					var sel = selCity.includes(c) ? 'selected' : '';
+					$cityAll.append('<option value="'+c+'" '+sel+'>'+c+'</option>');
+				});
+				$cityAll.trigger('change.select2');
+				return;
+			}
+			var allRows = window.fullListingData || [];
+			allRows.forEach(function(row) {
+				if (
+					(selectedRegions.length === 0 || selectedRegions.includes(row.region)) &&
+					(selectedProvinces.length === 0 || selectedProvinces.includes(row.province))
+				) {
+					if (row.municipality) cities.push(row.municipality);
+				}
+			});
+			cities = [...new Set(cities)];
+			var $city = $('#municipality-select-orig');
+			var selectedCity = $city.val() || [];
+			$city.empty();
+			cities.forEach(function(city) {
+				var selected = selectedCity.includes(city) ? 'selected' : '';
+				$city.append('<option value="'+city+'" '+selected+'>'+city+'</option>');
+			});
+			$city.trigger('change.select2');
+		});
+
+		// if the page loaded with preselected filters, fire change events
+		// so dependent dropdowns update immediately
+		$('#region-select-orig').trigger('change');
+		$('#province-select-orig').trigger('change');
 	});
 	// Prepare data for the doughnut chart (ST Titles)
 	// Build a map of title => count first
@@ -2349,6 +2598,100 @@
 		const observer = new MutationObserver(debounce(adjustOverlayTotalsNumbers, 80));
 		document.querySelectorAll('.map-overlay-card h1').forEach(h => observer.observe(h, { childList: true, characterData: true, subtree: true }));
 	});
+
+// make replicate-popover helper available on main dashboard as well
+if (typeof showReplicateConfirmPopover !== 'function') {
+    function showReplicateConfirmPopover(targetEl, stInfo = {}) {
+        try {
+            const existing = document.body.querySelector('.replicate-popover');
+            if (existing) existing.remove();
+            const pop = document.createElement('div');
+            pop.style.position = 'fixed';
+            pop.style.zIndex = '2147483647';
+            pop.style.width = '220px';
+            pop.style.background = 'linear-gradient(180deg,#0b1220, #0f1724)';
+            pop.style.color = '#e6eef1';
+            pop.style.padding = '10px';
+            pop.style.borderRadius = '8px';
+            pop.style.fontSize = '0.92rem';
+            pop.style.boxShadow = '0 12px 40px rgba(2,6,23,0.6)';
+            pop.style.pointerEvents = 'auto';
+            pop.style.opacity = '0';
+            pop.style.transform = 'translateY(-6px) scale(0.98)';
+            pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
+            const title = (stInfo && stInfo.title) ? stInfo.title : '';
+            pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
+            document.body.appendChild(pop);
+            try {
+                const cb = pop.querySelector('.rp-confirm');
+                const xb = pop.querySelector('.rp-cancel');
+                if (cb) {
+                    cb.style.background = '#10b981';
+                    cb.style.color = '#042f2e';
+                    cb.style.border = 'none';
+                    cb.style.padding = '6px 10px';
+                    cb.style.borderRadius = '6px';
+                    cb.style.cursor = 'pointer';
+                    cb.style.fontWeight = '600';
+                }
+                if (xb) {
+                    xb.style.background = 'transparent';
+                    xb.style.color = '#9ca3af';
+                    xb.style.border = '1px solid rgba(255,255,255,0.03)';
+                    xb.style.padding = '6px 10px';
+                    xb.style.borderRadius = '6px';
+                    xb.style.cursor = 'pointer';
+                }
+            } catch(e) {}
+            const r = targetEl.getBoundingClientRect();
+            const measure = () => {
+                const pw = pop.offsetWidth;
+                const ph = pop.offsetHeight;
+                let left = r.left + (r.width/2) - (pw/2);
+                let top = r.top - ph - 8;
+                if (top < 8) top = r.bottom + 8;
+                left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+                pop.style.left = left + 'px';
+                pop.style.top = top + 'px';
+            };
+            requestAnimationFrame(() => { measure();
+                pop.style.opacity = '1';
+                pop.style.transform = 'translateY(0) scale(1)';
+            });
+            const confirmBtn = pop.querySelector('.rp-confirm');
+            const cancelBtn = pop.querySelector('.rp-cancel');
+            const cleanup = () => { try {
+                    pop.style.pointerEvents = 'none';
+                    pop.style.opacity = '0';
+                    pop.style.transform = 'translateY(-6px) scale(0.98)';
+                    setTimeout(()=> pop.remove(), 180);
+                    document.removeEventListener('keydown', onKey);
+                } catch(e){} };
+            const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); cleanup(); } else if (ev.key === 'Enter') { ev.preventDefault(); confirmBtn.click(); } };
+            function doConfirm() {
+                try {
+                    const handler = window.replicateST;
+                    const payload = stInfo.row || stInfo;
+                    if (typeof handler === 'function') {
+                        const result = handler(payload, targetEl);
+                        if (result && typeof result.then === 'function') {
+                            confirmBtn.disabled = true; cancelBtn.disabled = true;
+                            result.then(res => { cleanup(); showTransientPopover(targetEl, 'Replication started'); }).catch(err => { cleanup(); showTransientPopover(targetEl, 'Replication failed'); console.error(err); });
+                            return;
+                        }
+                    }
+                    cleanup();
+                    showTransientPopover(targetEl, 'Replication started');
+                } catch(err) { cleanup(); console.error(err); showTransientPopover(targetEl, 'Replication failed'); }
+            }
+            confirmBtn.addEventListener('click', doConfirm);
+            cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cleanup(); });
+            requestAnimationFrame(()=> confirmBtn.focus());
+            document.addEventListener('keydown', onKey);
+        } catch(e) {}
+    }
+}
+
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));
 
 	</script>

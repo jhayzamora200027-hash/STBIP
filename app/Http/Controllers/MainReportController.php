@@ -178,15 +178,30 @@ class MainReportController extends Controller
                     continue;
                 }
                 foreach (array_slice($rows, 1) as $row) {
-                    $title = trim($row[$titleIdx] ?? '');
-                    $province = trim($row[$provinceIdx] ?? '');
-                    $municipality = trim($row[$municipalityIdx] ?? '');
+                    // remove non-printable/control characters (vertical tab, ETX,
+                    // etc) before we trim.  Excel exports sometimes contain those
+                    // which break our front‑end matching and make cards appear
+                    // empty even though the count badge is correct.
+                    $clean = function($s) {
+                        if (!is_string($s)) return '';
+                        // strip ASCII control characters (0x00-0x1F,0x7F)
+                        return preg_replace('/[\x00-\x1F\x7F]+/u','',$s);
+                    };
+                    $title = trim($clean($row[$titleIdx] ?? ''));
+                    $province = trim($clean($row[$provinceIdx] ?? ''));
+                    $municipality = trim($clean($row[$municipalityIdx] ?? ''));
+                    // skip rows that have no meaningful title after trimming; these
+                    // would otherwise show up as blank/"(no title)" entries in the
+                    // UI and confuse users.  downstream filtering and JS also
+                    // remove blanks, but pre-filtering here avoids keeping them in
+                    // the master dataset at all.
+                    if ($title === '') {
+                        continue;
+                    }
                     $with_expr = ($exprIdx !== false && isset($row[$exprIdx])) ? $row[$exprIdx] : null;
                     $with_moa = ($moaIdx !== false && isset($row[$moaIdx])) ? $row[$moaIdx] : null;
                     $with_res = ($resIdx !== false && isset($row[$resIdx])) ? $row[$resIdx] : null;
-                    if ($title !== '') {
-                        $titles[$title] = true;
-                    }
+                    $titles[$title] = true;
                     if ($province !== '') {
                         $provinces[$province] = true;
                     }

@@ -60,11 +60,32 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 
 ## to execute
+# 1) PHP dependencies
 composer install --no-interaction --prefer-dist --optimize-autoloader
-if (-not (Test-Path .env)) { Copy-Item .env.example .env }; php artisan key:generate --ansi; php artisan config:clear
-php artisan migrate
 
-## to add the env
+# 2) Environment (only once per machine)
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+php artisan key:generate --ansi
+php artisan config:clear
+
+# 3) Front-end (first time or when package.json changes)
+npm install
+# development (live reload)
+npm run dev
+# or production build (creates public/build/manifest.json)
+npm run build
+
+# 4) Database
+php artisan migrate
+php artisan storage:link
+
+# 5) Seed initial user (creates admin user)
+php artisan db:seed --class=UserSeeder
+# or run all seeders
+php artisan db:seed
+
+
+## to add in env
 MAIL_MAILER=smtp
 MAIL_SCHEME=null
 MAIN_HOST=smtp.gmail.com

@@ -7,7 +7,133 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
 <script>
+
+// global replicate popover helper (defined early so it exists even if DOMContentLoaded has passed)
+function showReplicateConfirmPopover(targetEl, stInfo = {}) {
+    try {
+        // remove any existing popover
+        const existing = document.body.querySelector('.replicate-popover');
+        if (existing) existing.remove();
+        const pop = document.createElement('div');
+        // inline styles for independency
+        pop.style.position = 'fixed';
+        pop.style.zIndex = '2147483647';
+        pop.style.width = '220px';
+        pop.style.background = 'linear-gradient(180deg,#0b1220, #0f1724)';
+        pop.style.color = '#e6eef1';
+        pop.style.padding = '10px';
+        pop.style.borderRadius = '8px';
+        pop.style.fontSize = '0.92rem';
+        pop.style.boxShadow = '0 12px 40px rgba(2,6,23,0.6)';
+        pop.style.pointerEvents = 'auto';
+        pop.style.opacity = '0';
+        pop.style.transform = 'translateY(-6px) scale(0.98)';
+        pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
+
+        const title = (stInfo && stInfo.title) ? stInfo.title : '';
+        pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
+        document.body.appendChild(pop);
+
+        // style buttons
+        try {
+            const cb = pop.querySelector('.rp-confirm');
+            const xb = pop.querySelector('.rp-cancel');
+            if (cb) {
+                cb.style.background = '#10b981';
+                cb.style.color = '#042f2e';
+                cb.style.border = 'none';
+                cb.style.padding = '6px 10px';
+                cb.style.borderRadius = '6px';
+                cb.style.cursor = 'pointer';
+                cb.style.fontWeight = '600';
+            }
+            if (xb) {
+                xb.style.background = 'transparent';
+                xb.style.color = '#9ca3af';
+                xb.style.border = '1px solid rgba(255,255,255,0.03)';
+                xb.style.padding = '6px 10px';
+                xb.style.borderRadius = '6px';
+                xb.style.cursor = 'pointer';
+            }
+        } catch(e) {}
+
+        // position relative to target element
+        const r = targetEl.getBoundingClientRect();
+        const measure = () => {
+            const pw = pop.offsetWidth;
+            const ph = pop.offsetHeight;
+            let left = r.left + (r.width/2) - (pw/2);
+            let top = r.top - ph - 8;
+            if (top < 8) top = r.bottom + 8;
+            left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+            pop.style.left = left + 'px';
+            pop.style.top = top + 'px';
+        };
+        requestAnimationFrame(() => { measure();
+            pop.style.opacity = '1';
+            pop.style.transform = 'translateY(0) scale(1)';
+        });
+
+        const confirmBtn = pop.querySelector('.rp-confirm');
+        const cancelBtn = pop.querySelector('.rp-cancel');
+        const cleanup = () => { try {
+                pop.style.pointerEvents = 'none';
+                pop.style.opacity = '0';
+                pop.style.transform = 'translateY(-6px) scale(0.98)';
+                setTimeout(()=> pop.remove(), 180);
+                document.removeEventListener('keydown', onKey);
+            } catch(e){} };
+        const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); cleanup(); } else if (ev.key === 'Enter') { ev.preventDefault(); confirmBtn.click(); } };
+
+        function doConfirm() {
+            try {
+                const handler = window.replicateST;
+                const payload = stInfo.row || stInfo;
+                if (typeof handler === 'function') {
+                    const result = handler(payload, targetEl);
+                    if (result && typeof result.then === 'function') {
+                        confirmBtn.disabled = true; cancelBtn.disabled = true;
+                        result.then(res => { cleanup(); showTransientPopover(targetEl, 'Replication started'); }).catch(err => { cleanup(); showTransientPopover(targetEl, 'Replication failed'); console.error(err); });
+                        return;
+                    }
+                }
+                cleanup();
+                showTransientPopover(targetEl, 'Replication started');
+            } catch(err) { cleanup(); console.error(err); showTransientPopover(targetEl, 'Replication failed'); }
+        }
+
+        confirmBtn.addEventListener('click', doConfirm);
+        cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cleanup(); });
+        requestAnimationFrame(()=> confirmBtn.focus());
+        document.addEventListener('keydown', onKey);
+    } catch(e) {}
+}
+
+// ensure global reference exists immediately
+try { window.showReplicateConfirmPopover = showReplicateConfirmPopover; } catch(e) {}
+
+
 document.addEventListener("DOMContentLoaded", function () {
+
+	// strip ASCII control characters from a string (mirrors PHP cleanup)
+	function clean(s) {
+		return (s||'').toString().replace(/[\x00-\x1F\x7F]/g, '');
+	}
+
+	// helper to trim province/city keys received from server
+	function normalizeGrouping(src) {
+		const out = {};
+		Object.keys(src || {}).forEach(p => {
+			const pp = (p||'').toString().trim();
+			out[pp] = {};
+			const cities = src[p] || {};
+			Object.keys(cities).forEach(c => {
+				const cc = (c||'').toString().trim();
+				out[pp][cc] = cities[c];
+			});
+		});
+		return out;
+	}
 
 	const swiper = new Swiper(".mySwiper", {
 		effect: "coverflow",
@@ -36,7 +162,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			const card = document.getElementById('sliderBottomProvinceListCard');
 			if (!list || !card) return;
 			const provinces = Array.isArray(payload && payload.provinces) ? payload.provinces : [];
-			const grouped = payload && payload.grouped ? payload.grouped : {};
+			const rawGrouped = payload && payload.grouped ? payload.grouped : {};
+		const grouped = normalizeGrouping(rawGrouped);
 			if (!provinces.length) {
 				list.innerHTML = '<div class="province-empty">No provinces found for this region.</div>';
 				card.setAttribute('aria-hidden','true');
@@ -49,9 +176,12 @@ document.addEventListener("DOMContentLoaded", function () {
 				let cityCount = 0;
 				const cities = Object.keys(grouped[prov] || {});
 				for (const c of cities) cityCount += (grouped[prov][c] || []).length;
-				html += `<div class="province-item"><div class="prov-main"><div class="prov-name">${esc(prov)}</div></div><div class="province-badge">${cityCount}</div></div>`;
+				const label = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
+				html += `<div class="province-item"><div class="prov-name">${esc(label)}</div><div class="province-badge">${cityCount}</div></div>`;
 			});
 			list.innerHTML = html;
+			// nothing else needed here
+
 		} catch (e) { console.error('renderBottomProvinceList error', e); }
 	}
 
@@ -84,13 +214,16 @@ document.addEventListener("DOMContentLoaded", function () {
 							'4_a.png': 'Region IV-A','4_b.png': 'Region IV-B','5.png': 'Region V',
 							'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
 							'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
-							'12.png': 'Region XII','13.png': 'Region XIII','barmm.png': 'BARMM',
+							'12.png': 'Region XII',
+					// map image for Region 13 to CARAGA (backend expects this key)
+					'13.png': 'CARAGA',
+					'barmm.png': 'BARMM',
 							'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 						};
 						const mappedRegion = filenameToRegion[fileName] || null;
 						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
 						bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
-						fetch('/demo1/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
+						fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
 							.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
 							.then(payload => renderBottomProvinceList(payload))
 							.catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
@@ -230,7 +363,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const list = document.getElementById('sliderProvinceList');
         if (!card || !list) return;
         const provinces = Array.isArray(payload.provinces) ? payload.provinces : [];
-        const grouped = payload.grouped || {};
+        const rawGrouped = payload.grouped || {};
+        const grouped = normalizeGrouping(rawGrouped);
         if (!provinces.length) {
             list.innerHTML = '<div class="province-empty">No provinces found for this region.</div>';
             card.setAttribute('aria-hidden','false');
@@ -241,10 +375,16 @@ document.addEventListener("DOMContentLoaded", function () {
         provinces.forEach(prov => {
             const cities = Object.keys(grouped[prov] || {});
             const cityCount = cities.length || 0;
+            const displayProv = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
             // render province as a button with caret — supports inline accordion expansion
-            html += `<div class="province-item" role="button" tabindex="0" aria-expanded="false" data-prov="${esc(prov)}"><div class="prov-main"><div class="prov-name">${esc(prov)}</div><div class="province-badge">${cityCount}</div></div><div class="prov-caret" aria-hidden="true">▸</div></div>`;
+            html += `<div class="province-item" role="button" tabindex="0" data-prov="${esc(prov)}"><div class="prov-name">${esc(displayProv)}</div><div class="province-badge">${cityCount}</div></div>`;
         });
+        
         list.innerHTML = html;
+        // keep main province list tall regardless of item count
+        list.style.height = 'calc(40px * 8 + 16px)';
+        // also lock card height in case CSS is overridden
+        if(card) card.style.height = 'calc(40px * 8 + 16px + 40px)';
         card.setAttribute('aria-hidden','false');
         try { positionProvinceTotalCard(); } catch(e) { /* ignore */ }
 
@@ -254,6 +394,10 @@ document.addEventListener("DOMContentLoaded", function () {
             const stCountEl = document.getElementById('sliderProvinceTotalCardCount');
             const exprCard = document.getElementById('sliderProvinceExprCard');
             const exprCountEl = document.getElementById('sliderProvinceExprCardCount');
+            const repCard = document.getElementById('sliderProvinceReplicatedCard');
+            const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount');
+            const adCard = document.getElementById('sliderProvinceAdoptedCard');
+            const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount');
 
             let total = 0;
             if (payload && Array.isArray(payload.allRows)) total = payload.allRows.length;
@@ -277,11 +421,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 }, 0);
             }
 
+            // new totals are dummy, always show zero
+            const replicatedTotal = 0;
+            const adoptedTotal = 0;
+
             if (stCountEl) stCountEl.textContent = String(total || 0);
             if (card) card.setAttribute('aria-hidden', total ? 'false' : 'true');
 
             if (exprCountEl) exprCountEl.textContent = String(exprTotal || 0);
             if (exprCard) exprCard.setAttribute('aria-hidden', exprTotal ? 'false' : 'true');
+
+            if (repCountEl) repCountEl.textContent = String(replicatedTotal);
+            if (repCard) repCard.setAttribute('aria-hidden', 'false');
+
+            if (adCountEl) adCountEl.textContent = String(adoptedTotal);
+            if (adCard) adCard.setAttribute('aria-hidden', 'false');
 
             try { positionProvinceTotalCard(); } catch(e) {}
         } catch(e) { /* ignore */ }
@@ -368,8 +522,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         html += '<div class="city-list">';
         cities.forEach(c => {
-            const rows = (citiesObj[c] || []);
-            html += `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(c)}"><div class="prov-name">${esc(c)}</div><div class="province-badge">${rows.length || 0}</div></div>`;
+            const key = (c||'').toString().trim();
+            const rows = (citiesObj[key] || []);
+            const displayCity = (c === 'UNKNOWN') ? '(no city specified)' : c;
+            html += `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="prov-name">${esc(displayCity)}</div><div class="province-badge">${rows.length || 0}</div></div>`;
         });
         html += '</div>';
         html += '<div class="st-list" style="margin-top:8px;"></div>';
@@ -447,12 +603,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!list || !card) return;
         list.innerHTML = '<div class="province-empty">Loading…</div>';
         card.setAttribute('aria-hidden','false');
-        try { const card = document.getElementById('sliderProvinceTotalCard'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); const exprCard = document.getElementById('sliderProvinceExprCard'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (card) card.setAttribute('aria-hidden','false'); if (stCountEl) stCountEl.textContent = '…'; if (exprCard) exprCard.setAttribute('aria-hidden','false'); if (exprCountEl) exprCountEl.textContent = '…'; positionProvinceTotalCard(); } catch(e) {}
+        try { const card = document.getElementById('sliderProvinceTotalCard'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); const exprCard = document.getElementById('sliderProvinceExprCard'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); const repCard = document.getElementById('sliderProvinceReplicatedCard'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); const adCard = document.getElementById('sliderProvinceAdoptedCard'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (card) card.setAttribute('aria-hidden','false'); if (stCountEl) stCountEl.textContent = '…'; if (exprCard) exprCard.setAttribute('aria-hidden','false'); if (exprCountEl) exprCountEl.textContent = '…'; if (repCard) repCard.setAttribute('aria-hidden','false'); if (repCountEl) repCountEl.textContent = '…'; if (adCard) adCard.setAttribute('aria-hidden','false'); if (adCountEl) adCountEl.textContent = '…'; positionProvinceTotalCard(); } catch(e) {}
         // Use demo1 AJAX endpoint which returns {provinces, grouped, allRows, uploadedCount...}
-        fetch('/demo1/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionKey))
+        fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionKey))
             .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
             .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
-.catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; } catch(e) {} });
+.catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
 
     // expose helper globally so openImageModal (outer scope) can call it
@@ -481,25 +637,79 @@ document.addEventListener("DOMContentLoaded", function () {
     // confirm / cancel popover for replicating an ST
     function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         try {
-            const existing = document.querySelector('.slider-province-card .replicate-popover');
+            // remove any existing popover first
+            const existing = document.body.querySelector('.replicate-popover');
             if (existing) existing.remove();
+
             const pop = document.createElement('div');
-            pop.className = 'replicate-popover';
+            // inline styling so no external CSS dependency
+            pop.style.position = 'fixed';
+            pop.style.zIndex = '2147483647';
+            pop.style.width = '220px';
+            pop.style.background = 'linear-gradient(180deg,#0b1220, #0f1724)';
+            pop.style.color = '#e6eef1';
+            pop.style.padding = '10px';
+            pop.style.borderRadius = '8px';
+            pop.style.fontSize = '0.92rem';
+            pop.style.boxShadow = '0 12px 40px rgba(2,6,23,0.6)';
+            pop.style.pointerEvents = 'auto';
+            pop.style.opacity = '0';
+            pop.style.transform = 'translateY(-6px) scale(0.98)';
+            pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
+
             const title = (stInfo && stInfo.title) ? stInfo.title : '';
             pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
-            const card = document.getElementById('sliderProvinceListCard') || document.body;
-            card.appendChild(pop);
+            document.body.appendChild(pop);
+
+            // style action buttons
+            try {
+                const cb = pop.querySelector('.rp-confirm');
+                const xb = pop.querySelector('.rp-cancel');
+                if (cb) {
+                    cb.style.background = '#10b981';
+                    cb.style.color = '#042f2e';
+                    cb.style.border = 'none';
+                    cb.style.padding = '6px 10px';
+                    cb.style.borderRadius = '6px';
+                    cb.style.cursor = 'pointer';
+                    cb.style.fontWeight = '600';
+                }
+                if (xb) {
+                    xb.style.background = 'transparent';
+                    xb.style.color = '#9ca3af';
+                    xb.style.border = '1px solid rgba(255,255,255,0.03)';
+                    xb.style.padding = '6px 10px';
+                    xb.style.borderRadius = '6px';
+                    xb.style.cursor = 'pointer';
+                }
+            } catch(e) {}
+
+            // positioning
             const r = targetEl.getBoundingClientRect();
-            const cr = card.getBoundingClientRect();
-            pop.style.position = 'absolute';
-            // clamp horizontally inside card
-            pop.style.left = Math.min(Math.max(8, (r.left - cr.left) + (r.width/2) - 100), Math.max(8, cr.width - 240)) + 'px';
-            pop.style.top  = Math.max(8, (r.top - cr.top) - 56) + 'px';
-            requestAnimationFrame(()=> pop.classList.add('show'));
+            const measure = () => {
+                const pw = pop.offsetWidth;
+                const ph = pop.offsetHeight;
+                let left = r.left + (r.width/2) - (pw/2);
+                let top = r.top - ph - 8; // prefer above
+                if (top < 8) top = r.bottom + 8; // fallback below
+                left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+                pop.style.left = left + 'px';
+                pop.style.top = top + 'px';
+            };
+            requestAnimationFrame(() => { measure();
+                pop.style.opacity = '1';
+                pop.style.transform = 'translateY(0) scale(1)';
+            });
 
             const confirmBtn = pop.querySelector('.rp-confirm');
             const cancelBtn = pop.querySelector('.rp-cancel');
-            const cleanup = () => { try { pop.classList.remove('show'); setTimeout(()=> pop.remove(), 180); document.removeEventListener('keydown', onKey); } catch(e){} };
+            const cleanup = () => { try {
+                    pop.style.pointerEvents = 'none';
+                    pop.style.opacity = '0';
+                    pop.style.transform = 'translateY(-6px) scale(0.98)';
+                    setTimeout(()=> pop.remove(), 180);
+                    document.removeEventListener('keydown', onKey);
+                } catch(e){} };
             const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); cleanup(); } else if (ev.key === 'Enter') { ev.preventDefault(); confirmBtn.click(); } };
 
             function doConfirm() {
@@ -553,7 +763,9 @@ document.addEventListener("DOMContentLoaded", function () {
 				'4_a.png': 'Region IV-A','4_b.png': 'Region IV-B','5.png': 'Region V',
 				'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
 				'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
-				'12.png': 'Region XII','13.png': 'Region XIII','barmm.png': 'BARMM',
+				'12.png': 'Region XII',
+						// region XIII stored as CARAGA in dataset
+						'13.png': 'CARAGA','barmm.png': 'BARMM',
 				'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 			};
 			const mappedRegion = filenameToRegion[fileName] || null;
@@ -585,14 +797,15 @@ document.addEventListener("DOMContentLoaded", function () {
 			document.getElementById('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>';
 
 			// fetch aggregated JSON for the region (provinces, grouped, rows, uploads, per-year totals)
-			fetch('/demo1/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
+			fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
 				.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
 				.then(payload => {
 					// populate provinces list
 					const provEl = document.getElementById('rsm-provinces');
 					if (provEl) {
 					const provincesArr = Array.isArray(payload.provinces) ? payload.provinces : [];
-					const grouped = payload.grouped || {};
+					const rawGrouped = payload.grouped || {};
+		const grouped = normalizeGrouping(rawGrouped);
 					const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 					if (!provincesArr.length) {
 						provEl.innerHTML = '<div class="rsm-empty">No provinces</div>';
@@ -600,7 +813,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					} else {
 						provEl.innerHTML = provincesArr.map(p => {
 							const cities = Object.keys(grouped[p] || {});
-							return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-main"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div><div class="prov-caret" aria-hidden="true">▸</div></div>`;
+							return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div>`;
 						}).join('');
 						provEl.setAttribute('aria-hidden','false');
 
@@ -616,8 +829,18 @@ document.addEventListener("DOMContentLoaded", function () {
 									const sub = ci.closest('.province-sublist');
 									if (!sub) return;
 									const provName = ci.getAttribute('data-prov');
-									const city = ci.getAttribute('data-city');
-									const rows = (grouped[provName] && grouped[provName][city]) ? grouped[provName][city] : [];
+									const city = (ci.getAttribute('data-city')||'').trim();
+									let rows = (grouped[provName] && grouped[provName][city]) ? grouped[provName][city] : [];
+									if (!rows.length && window._lastProvincePayload && Array.isArray(window._lastProvincePayload.allRows)) {
+										const provKey = provName.toString().trim().toLowerCase();
+										const cityKey = city.toString().trim().toLowerCase();
+										rows = window._lastProvincePayload.allRows.filter(r => {
+											const rp = (r.province||'').toString().trim().toLowerCase();
+											const rc = (r.city||'').toString().trim().toLowerCase();
+											return rp === provKey && rc === cityKey;
+										});
+									}
+
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
 									// toggle off (restore)
 									if (ci.classList.contains('selected')) {
@@ -652,8 +875,16 @@ document.addEventListener("DOMContentLoaded", function () {
 								const sub = ci.closest('.province-sublist');
 								if (!sub) return;
 								const provName = ci.getAttribute('data-prov');
-								const city = ci.getAttribute('data-city');
-								const rows = (grouped[provName] && grouped[provName][city]) ? grouped[provName][city] : [];
+								const city = (ci.getAttribute('data-city')||'').trim();
+								let rows = (grouped[provName] && grouped[provName][city]) ? grouped[provName][city] : [];
+								if (!rows.length && window._lastProvincePayload && Array.isArray(window._lastProvincePayload.allRows)) {
+									rows = window._lastProvincePayload.allRows.filter(r => {
+										const rp = (r.province||'').toString().trim();
+										const rc = (r.city||'').toString().trim();
+										return rp === provName && rc === city;
+										});
+								}
+
 								const cityItems = Array.from(sub.querySelectorAll('.city-item'));
 								// toggle off (restore)
 								if (ci.classList.contains('selected')) {
@@ -714,7 +945,7 @@ document.addEventListener("DOMContentLoaded", function () {
 								const citiesObj = grouped[prov] || {};
 								const cityNames = Object.keys(citiesObj);
 					// include an inline ST container so city clicks expand in-place (provinces card only)
-					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(cn)}"><div class="city-name">${esc(cn)}</div><div class="province-badge">${(citiesObj[cn]||[]).length}</div></div>`).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
+					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => { const key=(cn||'').toString().trim(); const displayCity = (cn === 'UNKNOWN') ? '(no city specified)' : cn; return `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="city-name">${esc(displayCity)}</div><div class="province-badge">${(citiesObj[key]||[]).length}</div></div>` }).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
 					// insert the sublist so city items are visible when a province is expanded
 					this.insertAdjacentHTML('afterend', subHtml);
 								// attach city handlers (render STs into right-side listing) — hide other cities when one selected
@@ -820,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         html += '<div style="display:flex;flex-direction:column;gap:6px;">';
                         entries.forEach(([title, count]) => {
-                            html += `<div class="rsm-st-summary-row" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;">` +
+                            html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
                                     `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
                                     `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
                                     `</div>`;
@@ -828,6 +1059,20 @@ document.addEventListener("DOMContentLoaded", function () {
                         html += '</div>';
 
                         stListEl.innerHTML = html;
+                        // delegated handler so events persist through re-renders
+                        stListEl.onclick = function(ev) {
+                            const row = ev.target.closest('.rsm-st-summary-row');
+                            if (!row) return;
+                            ev.stopPropagation();
+                            const title = row.getAttribute('data-title') || '';
+                            showReplicateConfirmPopover(row, { title: title, row: { title: title } });
+                        };
+                        stListEl.onkeydown = function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                const row = e.target.closest('.rsm-st-summary-row');
+                                if (row) { e.preventDefault(); row.click(); }
+                            }
+                        };
                     } catch(e) { console.error('renderRegionAggregatedTitles', e); }
                 })();
 						
@@ -863,8 +1108,11 @@ document.addEventListener("DOMContentLoaded", function () {
 	// previously: closeBtn.click, overlay.click, Escape key would close the modal — disabled.
 
 	// Region Stats modal close helpers
-	function closeRegionStatsModal(){ try { const m = document.getElementById('regionStatsModal'); if (!m) return; m.setAttribute('aria-hidden','true'); m.style.display = 'none'; document.body.classList.remove('rsm-open'); try { const ri = document.getElementById('rsm-modal-image'); if (ri) { ri.style.visibility = 'hidden'; ri.src = ''; } } catch(e){} } catch(e){} }
-	try { const rb = document.getElementById('rsm-close'); if (rb) rb.addEventListener('click', closeRegionStatsModal); const bd = document.querySelector('#regionStatsModal .rsm-backdrop'); if (bd) bd.addEventListener('click', closeRegionStatsModal); document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ const rm = document.getElementById('regionStatsModal'); if (rm && rm.getAttribute('aria-hidden') === 'false') closeRegionStatsModal(); } }); } catch(e) {}
+	function closeRegionStatsModal(){ try { const m = document.getElementById('regionStatsModal'); if (!m) return; m.setAttribute('aria-hidden','true'); m.style.display = 'none'; document.body.classList.remove('rsm-open'); try { const ri = document.getElementById('rsm-modal-image'); if (ri) { ri.style.visibility = 'hidden'; ri.src = ''; } } catch(e){} } catch(e){}
+        // also hide any replicate popover when the modal is closed
+        try { if (typeof window.closeReplicatePopover === 'function') window.closeReplicatePopover(); else { const p = document.body.querySelector('.replicate-popover'); if (p) p.remove(); } } catch(e) {}
+}
+	try { const rb = document.getElementById('rsm-close'); if (rb) rb.addEventListener('click', closeRegionStatsModal); const bd = document.querySelector('#regionStatsModal .rsm-backdrop'); if (bd) bd.addEventListener('click', closeRegionStatsModal); const panel = document.querySelector('#regionStatsModal .rsm-panel'); if (panel) panel.addEventListener('click', function(e){ if (e.target === panel || !e.target.closest('#regionStatsModal .rsm-cards')) { closeRegionStatsModal(); } }); document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ const rm = document.getElementById('regionStatsModal'); if (rm && rm.getAttribute('aria-hidden') === 'false') closeRegionStatsModal(); } }); } catch(e) {}
 
 
 // Chart instance for Region Stats modal (lazy-initialized)
@@ -1254,6 +1502,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // open a small popover anchored to the clicked card (preferred over the centered modal)
   function openModalForCard(card){
+    // when popover is opening we want to lock the scrolling/wrapping logic so the track
+    // doesn't jump (especially for cards near the duplicated boundary). resume after close.
+    wrapSuspended = true;
+
     // defensive: ensure any previously-open popover is fully cleaned up before opening a new one
     try { closePopover(); } catch(e){}
 
@@ -1516,6 +1768,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     try { pop._anchor = null; pop._anchorKey = null; } catch(e){}
     try { window.__galleryPopoverActive = false; } catch(e){}
+    // allow wrapping again once the popover fully closes
+    wrapSuspended = false;
     // restore CSS animation / thaw transform-track
     try { const track = document.querySelector('.marquee-track'); if (track) { track.dataset.frozen = '0'; track.style.animationPlayState = ''; } } catch(e){}
     // allow auto-resume (but only if no extension/popover remains open) — schedule rather than immediate
@@ -1848,6 +2102,18 @@ document.addEventListener('DOMContentLoaded', function(){
                     <div id="sliderProvinceExprCardCount" class="region-st-count">0</div>
                 </div>
 
+                <!-- Total Replicated (dummy placeholder) -->
+                <div id="sliderProvinceReplicatedCard" class="slider-province-total-card" aria-hidden="true" role="status" aria-label="Region total Replicated">
+                    <div class="region-st-title">Total Replicated</div>
+                    <div id="sliderProvinceReplicatedCardCount" class="region-st-count">0</div>
+                </div>
+
+                <!-- Total Adopted (dummy placeholder) -->
+                <div id="sliderProvinceAdoptedCard" class="slider-province-total-card" aria-hidden="true" role="status" aria-label="Region total Adopted">
+                    <div class="region-st-title">Total Adopted</div>
+                    <div id="sliderProvinceAdoptedCardCount" class="region-st-count">0</div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -1880,48 +2146,65 @@ document.addEventListener('DOMContentLoaded', function(){
               <div id="rsm-provinces" class="rsm-provinces-list">—</div>
             </div>
           </div>
-          <div class="rsm-right">
-            <div class="rsm-stats-grid">
-              <div class="rsm-stat">
-                <div class="rsm-stat-label">Total STs</div>
-                <div id="rsm-total-sts" class="rsm-stat-value">0</div>
-              </div>
-              <div class="rsm-stat">
-                <div class="rsm-stat-label">Total MOA</div>
-                <div id="rsm-total-moa" class="rsm-stat-value">0</div>
-              </div>
-              <div class="rsm-stat">
-                <div class="rsm-stat-label">Total Expression of Interest</div>
-                <div id="rsm-total-expr" class="rsm-stat-value">0</div>
-              </div>
-              <div class="rsm-stat">
-                <div class="rsm-stat-label">MOA Attachments</div>
-                <div id="rsm-total-moa-attachments" class="rsm-stat-value">0</div>
-              </div>
-              <div class="rsm-stat">
-                <div class="rsm-stat-label">SB Resolutions</div>
-                <div id="rsm-total-res" class="rsm-stat-value">0</div>
-              </div>
-            </div>
 
-            <!-- Region metrics chart (X: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest; Y: Number of STs) -->
-            <div id="modalStatsChartWrap" style="position:relative; display:block; width:100%; height:220px; margin-top:12px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                    <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <div id="modalStatsTotal" style="font-size:0.95rem; font-weight:800; color:#0b2540; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
-                    </div>
+          <!-- Totals card moved inside container so it stays adjacent -->
+          <div class="rsm-right">
+            <div class="rsm-card">
+                <div class="rsm-stats-grid">
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total STs</div>
+                    <div id="rsm-total-sts" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total Expression of Interest</div>
+                    <div id="rsm-total-expr" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">SB Resolutions</div>
+                    <div id="rsm-total-res" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total MOA</div>
+                    <div id="rsm-total-moa" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">MOA Attachments</div>
+                    <div id="rsm-total-moa-attachments" class="rsm-stat-value">0</div>
+                  </div>
+                  
+                  <!-- replicate/adopt placeholders (always 0) -->
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total Replicated</div>
+                    <div id="rsm-total-rep" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total Adopted</div>
+                    <div id="rsm-total-adopt" class="rsm-stat-value">0</div>
+                  </div>
                 </div>
-                <div id="modalStatsChartControls" style="position:absolute; top:8px; right:8px; z-index:30; display:flex; gap:6px;"></div>
-                <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:215px;"></canvas>
-                <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
             </div>
           </div>
-        </div>
 
-        <div class="rsm-listing-wrap">
-          <h4 class="rsm-listing-title">ST Titles — select a city to view</h4>
-          <div id="rsm-st-list" class="rsm-st-list"><div class="rsm-empty">Select a city to view ST titles</div></div>
+          <!-- metrics row under provinces only -->
+          <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:none !important; height:auto; overflow:hidden; box-sizing:border-box;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                      <div id="modalStatsTotal" style="font-size:0.95rem; font-weight:800; color:#0b2540; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
+                  </div>
+              </div>
+              <div id="modalStatsChartControls" style="position:absolute; top:8px; right:8px; z-index:30; display:flex; gap:6px;"></div>
+              <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:255px;"></canvas>
+              <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
+          </div>
+
+          <!-- ST Titles occupies rightmost column spanning both rows -->
+          <div class="rsm-listing-wrap" style="grid-column:4; grid-row:1 / span 2;">
+            <div class="rsm-card">
+              <h4 class="rsm-listing-title">ST Titles — select a city to view</h4>
+              <div id="rsm-st-list" class="rsm-st-list"><div class="rsm-empty">Select a city to view ST titles</div></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1952,11 +2235,11 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards.autoscroll-paused .marquee-track { animation-play-state: paused !important; }
 @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 /* single-row scroller */
-.container-cards { display:flex; gap:18px; flex-wrap:nowrap; justify-content:flex-start; align-items:flex-start; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; padding:8px 6px; }
-.container-cards::-webkit-scrollbar{ height:8px; }
+.container-cards { display:flex; gap:30px; flex-wrap:nowrap; justify-content:flex-start; align-items:flex-start; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; padding:12px 8px; }
+.container-cards::-webkit-scrollbar{ height:10px; }
 .container-cards::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.08); border-radius:6px; }
 /* collapsed card (single-row) — left badge initially centered above */
-.container-cards { display:flex; gap:18px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:8px 6px; }
+.container-cards { display:flex; gap:30px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; }
 .container-cards::-webkit-scrollbar{ display:none; }
 /* allow drag-to-scroll affordance */
 .container-cards { cursor: grab; -webkit-user-select: none; user-select: none; }
@@ -1965,17 +2248,17 @@ document.addEventListener('DOMContentLoaded', function(){
 /* when autoscroll is paused we disable drag affordance */
 .container-cards.autoscroll-paused { cursor: default; }
 .container-cards img { -webkit-user-drag: none; user-drag: none; }
-.container-cards .card { background:var(--card-bg); flex:0 0 240px; height:215px; margin:8px 6px; padding:16px; border-radius:12px; box-shadow: 0 6px 24px rgba(2,6,23,0.08); transition: flex-basis 360ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease; overflow:visible; position:relative; display:flex; align-items:center; gap:18px; text-decoration:none; color:inherit; cursor:pointer; }
+.container-cards .card { background:var(--card-bg); flex:0 0 200px; height:200px; margin:8px 5px; padding:10px; border-radius:12px; box-shadow: 0 6px 24px rgba(2,6,23,0.08); transition: flex-basis 360ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease; overflow:visible; position:relative; display:flex; align-items:center; gap:14px; text-decoration:none; color:inherit; cursor:pointer; }
 /* expand width to the right only */
 /* only allow hover expansion when the scroller is NOT actively scrolling or being drag-scrolled */
-.container-cards:not(.dragging):not(.is-scrolling) .card:hover { flex:0 0 760px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
+.container-cards:not(.dragging):not(.is-scrolling) .card:hover { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
 
 /* Programmatic "lifted" state should visually match :hover so the extension remains visible
    when JS sets/keeps the card lifted (eg. popover is open). */
-.container-cards:not(.dragging):not(.is-scrolling) .card.card-lifted { flex:0 0 760px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
+.container-cards:not(.dragging):not(.is-scrolling) .card.card-lifted { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
 
 /* image starts centered then animates to left on expand */
-.container-cards .card .imgContainer { position:absolute; top:16px; left:50%; transform:translate(-50%, 0); width:120px; height:120px; z-index:3; box-shadow: 0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:visible; background: transparent; display:flex; align-items:center; justify-content:center; transition: left 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1), top 420ms ease; }
+.container-cards .card .imgContainer { position:absolute; top:8px; left:50%; transform:translate(-50%, 0); width:180px; height:180px; z-index:3; box-shadow: 0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:visible; background: transparent; display:flex; align-items:center; justify-content:center; transition: left 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1), top 420ms ease; }
 .container-cards .card .imgContainer img { width:100%; height:100%; object-fit:contain; display:block; }
 .logo-badge { width:96px; height:96px; border-radius:999px; background: transparent; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 28px rgba(2,6,23,0.08); overflow:hidden; }
 .logo-badge img { width:72%; height:72%; object-fit:contain; display:block; }
@@ -1987,29 +2270,32 @@ document.addEventListener('DOMContentLoaded', function(){
     left: 50%;
     bottom: 18px;
     transform: translateX(-50%);
-    font-size: 0.95rem;
+    font-size: 0.70rem;
     color: #374151; /* gray-700 */
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
     pointer-events: none;
     opacity: 1;
-    z-index: 2;
+    z-index: 5; /* ensure title is above the image badge */
     transition: opacity 220ms ease, transform 220ms ease;
 }
 
 /* hide collapsed label while card expands / types / focused (image-hover or keyboard focus)
+   also hide when the card is hovered/ lifted to show the content panel
    NOTE: do NOT hide when the card merely has `.title-typed` (keeps collapsed label visible after typing completes) */
 .container-cards .card.image-hover::after,
 .container-cards .card.typing-active::after,
-.container-cards .card:focus-visible::after {
+.container-cards .card:focus-visible::after,
+.container-cards:not(.dragging):not(.is-scrolling) .card:hover::after,
+.container-cards .card.card-lifted::after {
     opacity: 0;
     transform: translateX(-50%) translateY(-6px);
 } 
 
 /* content panel (hidden when collapsed) — revealed to the right and shifted to avoid overlap */
 .container-cards .card .content { width:0; opacity:0; visibility:hidden; overflow:hidden; transition: width 360ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease, margin-left 360ms cubic-bezier(.2,.9,.2,1); display:flex; flex-direction:column; justify-content:center; padding:0; margin-left:0; z-index:1; }
-.container-cards .card .content h2 { font-size:1.05rem; margin:0 0 6px 0; text-align:left; }
+.container-cards .card .content h2 { font-size:0.95rem; margin:0 0 6px 0; text-align:left; }
 .container-cards .card .content p { color:#505050; font-size:0.92rem; line-height:1.35; margin:0; text-align:left; max-width:520px; opacity:0; transition: opacity 200ms ease; }
 /* paragraph visible only after the title has finished typing (class `title-typed`) */
 .container-cards .card.title-typed .content p { opacity:1; }
@@ -2018,8 +2304,8 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards .card:focus-visible .content,
 .container-cards .card.typing-active .content,
 .container-cards .card.card-lifted .content {
-    margin-left:160px; /* shift past the badge */
-    width: calc(100% - 200px);
+    margin-left:180px; /* shift past the badge */
+    width: calc(100% - 220px);
     opacity:1;
     visibility:visible;
     padding-left:20px;
@@ -2041,22 +2327,22 @@ document.addEventListener('DOMContentLoaded', function(){
 .content p.typing::after, .content h2.typing::after { content: '\007C'; margin-left:6px; display:inline-block; opacity:1; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .card-link:focus-visible { outline: 3px solid rgba(16,174,181,0.25); outline-offset:4px; border-radius:10px; }
-.container-cards .card .content h2 { font-size:1.05rem; margin-bottom:6px; color: #111827; }
+.container-cards .card .content h2 { font-size:0.95rem; margin-bottom:6px; color: #111827; }
 .container-cards .card .content p { color:#505050; font-size:0.86rem; line-height:1.35; }
-@media (max-width: 1200px) { .container-cards { gap:12px; } .logo-badge { width:92px; height:92px; } .container-cards .card { flex:0 0 220px; } }
-@media (max-width: 820px) { .container-cards .card { flex:0 0 200px; } .container-cards .card .imgContainer { width:180px; height:180px; left:12px; } .logo-badge { width:76px; height:76px; } }
+@media (max-width: 1200px) { .container-cards { gap:12px; } .logo-badge { width:92px; height:92px; } .container-cards .card { flex:0 0 240px; } }
+@media (max-width: 820px) { .container-cards .card { flex:0 0 220px; } .container-cards .card .imgContainer { width:180px; height:180px; left:12px; } .logo-badge { width:76px; height:76px; } }
 @media (max-width: 900px) {
   /* Stack cards vertically on narrow screens for better tap targets */
-  .container-cards { flex-direction: column; align-items: center; gap:18px; padding:12px; }
+  .container-cards { flex-direction: column; align-items: center; gap:24px; padding:12px; }
   .container-cards .card { flex: 0 0 92%; max-width:920px; width: 92%; margin:12px 0; height: auto; min-height: auto; padding:18px; }
-  .container-cards .card .imgContainer { position: relative; left: 50%; transform: translateX(-50%); top: 0; width:160px; height:160px; margin-bottom:12px; }
+  .container-cards .card .imgContainer { position: relative; left: 50%; transform: translateX(-50%); top: 0; width:180px; height:180px; margin-bottom:14px; }
   .logo-badge { width:96px; height:96px; }
   .container-cards .card .content { width:100%; margin-left:0; padding-left:0; opacity:1; visibility:visible; }
-  .container-cards .card .content h2 { font-size:1.15rem; }
+  .container-cards .card .content h2 { font-size:1rem; }
   .container-cards .card .content p { font-size:0.95rem; line-height:1.5; }
   .container-cards .card::after { display:none; } /* hide collapsed label on small screens */
 }
-@media (max-width: 420px) { .container-cards { gap:10px; } .container-cards .card { width:94%; max-width:360px; margin:10px 0; padding:14px; } .container-cards .card .imgContainer { width:140px; height:140px; left:calc(50% - 70px); } .logo-badge { width:72px; height:72px; } }
+@media (max-width: 420px) { .container-cards { gap:14px; } .container-cards .card { width:94%; max-width:360px; margin:10px 0; padding:14px; } .container-cards .card .imgContainer { width:140px; height:140px; left:calc(50% - 70px); } .logo-badge { width:72px; height:72px; } }
 
 /* Improved dropdown (right-edge, accessible, animated) */
 .card-dropdown { position:absolute; right:12px; top:50%; transform:translateY(-50%) scale(0.98); background: #fff; border-radius:10px; padding:10px; box-shadow: 0 14px 40px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); width: 300px; max-height:360px; overflow:auto; font-size:0.92rem; color:#111827; opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s cubic-bezier(.2,.9,.2,1); z-index:30; }
@@ -2208,7 +2494,9 @@ n    /* make cards flow horizontally (override absolute positioning used on larg
     }
 
     /* make the chart wrapper flexible so it scales with available width */
-    #modalStatsChartWrap { min-width: 280px; width: min(86vw, 360px); flex: 0 0 auto; }
+    /* fixed 500px width for region metrics chart */
+    /* ensure it never shrinks and always stays at 500px */
+    #modalStatsChartWrap {min-width: 500px !important; width: 500px !important; flex: 0 0 500px !important; }
     #modalStatsChart { width: 100% !important; height: auto !important; }
 
 n    /* smooth transitions for card visibility and layout changes */
@@ -2228,7 +2516,15 @@ n    /* smooth transitions for card visibility and layout changes */
 .slider-modal-title h3 { margin:0; padding:8px 14px; background: linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.32)); color:#fff; border-radius:10px; font-weight:600; font-size:18px; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,0.35); display:inline-flex; flex-direction:column; align-items:center; gap:4px; text-align:center; }
 
 /* Province listing card inside modal (white container + readable text) */
-        .slider-province-card { position: absolute; top:64px; right:18px; z-index:6; width:400px; height:400px; overflow:auto; background: #ffffff; color:#0f1724; border-radius:10px; padding:10px; box-shadow: 0 12px 48px rgba(2,6,23,0.08); backdrop-filter: none; display:none; }
+        .slider-province-card { position: absolute; top:64px; right:18px; z-index:6; width:30px !important; max-width:30px !important; /* user requested fixed narrow width */
+            min-width:30px !important; /* allow height to grow based on content (header + fixed list) */
+            /* remove hard max-height so card doesn't shrink below list height */
+            /* height will be determined by inner .province-list which we fixed to 8 rows */
+            /* but also ensure card itself can't collapse below header+list */
+            height: calc(40px * 8 + 16px + 40px) !important;
+            min-height: calc(40px * 8 + 16px + 40px) !important;
+            max-height: calc(40px * 8 + 16px + 40px) !important;
+            overflow:auto; background: #ffffff; color:#0f1724; border-radius:10px; padding:2px; box-shadow: 0 12px 48px rgba(2,6,23,0.08); backdrop-filter: none; display:none; box-sizing:border-box; }
         .slider-province-card[aria-hidden="false"] { display:block; }
         /* Provinces card header with colored background */
         .slider-province-card .province-card-title {
@@ -2242,11 +2538,57 @@ n    /* smooth transitions for card visibility and layout changes */
             display:flex; align-items:center; justify-content:space-between;
             box-shadow: inset 0 -1px 0 rgba(255,255,255,0.03);
         }
-        .slider-province-card .province-list { font-size:0.92rem; color:#0f1724; }
-#sliderProvinceList, #sliderBottomProvinceList { max-height: 300px; height: 300px; overflow:auto; -webkit-overflow-scrolling: touch; }
-        .slider-province-card .province-list .province-item { padding:8px 6px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:8px; align-items:center; background: transparent; border-bottom: 1px solid rgba(2,6,23,0.04); margin-bottom:8px; }
+        .slider-province-card .province-list { font-size:0.72rem; color:#0f1724; width:100%; box-sizing:border-box; overflow-wrap: break-word; word-break: break-word; }
+#sliderProvinceList, #sliderBottomProvinceList { /* allow the province list to expand vertically before scrolling */
+    max-height: 210px; /* adjust as needed to show more rows */
+    height: auto;
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    padding:0 4px;
+}
+/* make province containers scroll when too many entries and cap visible rows */
+#sliderProvinceList,
+#sliderBottomProvinceList,
+.slider-province-card .province-list,
+.slider-bottom-province-card .province-list {
+    /* fixed 8‑row height (40px each) with a little extra for gaps
+       list will always occupy the same space and scroll when overflow */
+    height: calc(40px * 8 + 16px) !important;
+    min-height: calc(40px * 8 + 16px) !important;
+    max-height: calc(40px * 8 + 16px) !important;
+    overflow-y: auto;
+}
+
+/* play extra defense: target container ids directly too */
+#sliderProvinceList,
+#sliderBottomProvinceList {
+    height: calc(40px * 8 + 16px) !important;
+    min-height: calc(40px * 8 + 16px) !important;
+    max-height: calc(40px * 8 + 16px) !important;
+    overflow-y: auto !important;
+}
+/* enforce a sensible, readable row height rather than 5px */
+.slider-province-card .province-list .province-item,
+.slider-bottom-province-card .province-list .province-item,
+.rsm-provinces-list .province-item,
+.slider-province-card .province-list .city-item {
+    height: 40px !important;
+    line-height: 40px !important;
+    padding: 0 6px !important;
+    margin-bottom: 2px !important;
+}
+
+        .slider-province-card .province-list .province-item { padding:2px 1px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:2px; align-items:center; background: transparent; border-bottom: 1px solid rgba(2,6,23,0.04); margin-bottom:2px; max-width:100%; box-sizing:border-box; font-size:0.75rem; }
         .slider-province-card .province-list .province-item:hover { background: #f8fafc; transform: translateY(-1px); }
         .slider-province-card .province-list .province-empty { color:#6b7280; padding:8px 6px; }
+        /* ensure province names wrap/ellipsize instead of overflowing */
+        .slider-province-card .province-list .province-item .prov-name {
+            white-space: normal;
+            word-break: break-word;
+            flex:1 1 auto;
+            min-width:0;
+            font-size:0.75rem;
+        }
 
 /* Region total STs card (prominent) */
 .slider-province-total-card { position:absolute; top:8px; left:0; z-index:7; width:240px; height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#fff; color:#0f1724; border-radius:14px; padding:12px; box-shadow:0 18px 56px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); transform-origin:center; }
@@ -2269,11 +2611,32 @@ n    /* smooth transitions for card visibility and layout changes */
 
 
 /* inline accordion / dropdown visuals */
-.slider-province-card .province-item { position:relative; display:flex; align-items:center; gap:8px; }
-.slider-province-card .province-item .prov-main { display:flex; align-items:center; gap:8px; flex:1; }
-.slider-province-card .province-item .prov-caret { margin-left:8px; transition: transform 160ms ease, color 120ms; color:#9ca3af; font-weight:700; }
+	/* provinces should be constrained to a fixed 10px width as requested */
+	.slider-province-card .province-item,
+	.province-item {
+	width: 10px;
+    max-width: 10px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+	}
+	.slider-province-card .province-item .prov-name,
+	.province-item .prov-name {
+		flex:1 1 auto;
+		min-width:0;
+	}
+
+	.slider-province-card .province-item .prov-main { min-width:0; }
+	/* caret removed - hide via CSS so markup changes are safe */
+	.slider-province-card .province-item .prov-caret { display:none; }
+/* prov-main no longer needed after markup change, but keep max-width reset in case it appears */
+.slider-province-card .province-item .prov-main { min-width:0;}
+
+/* caret removed - hide via CSS so markup changes are safe */
+.slider-province-card .province-item .prov-caret { display:none; }
 .slider-province-card .province-item.expanded { background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(37,99,235,0.04)); border-radius:8px; }
-.slider-province-card .province-item.expanded .prov-caret { transform: rotate(90deg); color:#60a5fa; }
 .slider-province-card .province-item:focus { outline: 2px solid rgba(96,165,250,0.14); outline-offset: 2px; }
 
 /* Ensure province/city items never overflow their parent when thicker borders are used */
@@ -2300,9 +2663,20 @@ n    /* smooth transitions for card visibility and layout changes */
 
 /* hide non-selected provinces / cities when in single-focus dropdown mode */
 .slider-province-card .province-item.hidden { display:none !important; }
-.slider-province-card .province-sublist { margin-top:6px; padding:6px 6px 8px 8px; border-left: 2px solid rgba(2,6,23,0.04); background: linear-gradient(180deg, rgba(15,23,36,0.02), transparent); border-radius:8px; overflow:hidden; max-height:0; opacity:0; transform: translateY(-6px); transition: max-height 320ms cubic-bezier(.2,.8,.2,1), opacity 220ms ease, transform 200ms ease; }
+.slider-province-card .province-sublist { display: flex;
+    flex-direction: column;
+    gap: 10px; /* also fixed spacing */
+    margin-top: 10px;}
 .slider-province-card .province-sublist.open { opacity:1; transform: translateY(0); max-height:1000px; }
 .slider-province-card .province-sublist .city-item { padding:6px 8px; border-radius:6px; display:flex; justify-content:space-between; gap:8px; align-items:center; cursor:pointer; transform: translateY(-6px); opacity:0; max-height:56px; overflow:hidden; transition: max-height 260ms ease, transform 260ms ease, opacity 260ms ease; }
+/* make city rows same readable height */
+.slider-province-card .province-sublist .city-item,
+.rsm-provinces-list .province-sublist .city-item {
+    height: 40px !important;
+    line-height: 40px !important;
+    padding: 0 6px !important;
+    margin-bottom: 2px !important;
+}
 .slider-province-card .province-sublist.open .city-item { transform: translateY(0); opacity:1; }
 .slider-province-card .province-sublist .city-item.hidden { max-height:0 !important; opacity:0 !important; transform: translateY(-6px) !important; padding:0 !important; margin:0 !important; pointer-events:none !important; }
 .slider-province-card .province-sublist .city-item.selected { background: rgba(96,165,250,0.06); border-radius:6px; }
@@ -2310,12 +2684,12 @@ n    /* smooth transitions for card visibility and layout changes */
 .slider-province-card .province-sublist .st-list { margin-top:8px; }
 .slider-province-card .province-sublist .st-list .st-item { opacity:0; transform: translateY(-6px); transition: opacity 220ms ease, transform 220ms ease; }
 .slider-province-card .province-sublist .st-list .st-item.show { opacity:1; transform: translateY(0); }
-.slider-province-card .province-sublist .st-list-header { text-align:center; font-weight:700; color:#0f1724; margin:8px 0 6px; font-size:0.95rem; }
+.slider-province-card .province-sublist .st-list-header { text-align:center; font-weight:700; color:#0f1724; margin:8px 0 6px; font-size:0.95rem; width:100%; margin-left:auto; margin-right:auto; }
 /* Region Stats modal — inline ST-list styling for Provinces card */
 .rsm-provinces-list .province-sublist .st-list { margin-top:8px; }
 .rsm-provinces-list .province-sublist .st-list .st-item { opacity:0; transform: translateY(-6px); transition: opacity 220ms ease, transform 220ms ease; }
 .rsm-provinces-list .province-sublist .st-list .st-item.show { opacity:1; transform: translateY(0); }
-.rsm-provinces-list .province-sublist .st-list-header { text-align:center; font-weight:700; color:#0f1724; margin:8px 0 6px; font-size:0.95rem; }
+.rsm-provinces-list .province-sublist .st-list-header { text-align:center; font-weight:700; color:#0f1724; margin:8px 0 6px; font-size:0.95rem; width:100%; margin-left:-40px; margin-right:auto; }
 
 /* Make inline ST list inside Provinces card scrollable when there are many STs */
 .rsm-provinces-list .province-sublist .st-list > div {
@@ -2348,7 +2722,7 @@ n    /* smooth transitions for card visibility and layout changes */
 .slider-province-card .replicate-popover .rp-confirm { background:#10b981; color:#042f2e; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; }
 .slider-province-card .replicate-popover .rp-cancel { background:transparent; color:#9ca3af; border:1px solid rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; cursor:pointer; }
 .slider-province-card .replicate-popover button:focus { outline:2px solid rgba(99,102,241,0.14); outline-offset:2px; }
-.slider-province-card .province-badge { background: #f1f5f9; padding:4px 8px; border-radius:999px; font-size:0.8rem; color:#0f1724; border:1px solid rgba(2,6,23,0.04); }
+.slider-province-card .province-badge { background: #f1f5f9; padding:4px 8px; border-radius:999px; font-size:0.8rem; color:#0f1724; border:1px solid rgba(2,6,23,0.04); flex-shrink:0; }
 .slider-province-card .city-list { display:flex; flex-direction:column; gap:6px; }
 .slider-province-card .city-item { padding:8px 6px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:8px; align-items:center; background: transparent; color:#0f1724; border-bottom:1px solid rgba(2,6,23,0.04); }
 .slider-province-card .city-item:hover { background: #f8fafc; }
@@ -2402,9 +2776,10 @@ n    /* smooth transitions for card visibility and layout changes */
     height: calc(100vh - 24px); /* grows downward only, anchored at top */
     transform: translateX(-8px); /* horizontal overlap toward image */
     z-index: 1200;
-    width: 2000px; /* panel width */
-    max-width: 100%;
-    min-width: 10px;
+    /* limit panel width so province list cannot spill out; use a reasonable default */
+    width: auto;
+    max-width: 320px; /* allow shrinking on narrow viewports */
+    min-width: 200px; /* ensure panel stays usable */
     max-height: none;
     padding: 16px 14px;
     gap: 12px;
@@ -2422,6 +2797,8 @@ n    /* smooth transitions for card visibility and layout changes */
 #sliderProvinceWrap #sliderProvinceListCard { order:0; flex:1 1 auto; min-width:0; position:relative !important; display:block !important; margin-right:8px; }
 #sliderProvinceWrap #sliderProvinceTotalCard { order:1; flex:0 0 140px; width:140px; position:relative !important; margin-left:8px; }
 #sliderProvinceWrap #sliderProvinceExprCard { order:2; flex:0 0 140px; width:140px; position:relative !important; margin-left:8px; }
+#sliderProvinceWrap #sliderProvinceReplicatedCard { order:3; flex:0 0 140px; width:140px; position:relative !important; margin-left:8px; }
+#sliderProvinceWrap #sliderProvinceAdoptedCard { order:4; flex:0 0 140px; width:140px; position:relative !important; margin-left:8px; }
 #sliderProvinceWrap .slider-province-card { margin:0; }
 
 /* end modal controls */
@@ -2432,31 +2809,132 @@ n    /* smooth transitions for card visibility and layout changes */
 /* Region Stats Modal (slider center click) */
 .region-stats-modal { position: fixed; inset: 0; display: none; z-index: 999999; align-items: center; justify-content: center; }
 .region-stats-modal .rsm-backdrop { position: absolute; inset: 0; background: rgba(2,6,23,0.55); }
-.region-stats-modal .rsm-panel { position: relative; width: min(1800px, 100vw); max-width: 100vw; height: 100vh; max-height: 100vh; overflow: auto; background: #fff; border-radius: 12px; box-shadow: 0 60px 180px rgba(2,6,23,0.18); padding: 24px; display: flex; flex-direction: column; gap: 18px; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; box-sizing: border-box; transform-origin: center center; }
+.region-stats-modal .rsm-panel { position: relative; width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; overflow: auto; background: transparent !important; border-radius: 12px; box-shadow: 0 60px 180px rgba(2,6,23,0.18); padding: 24px; display: flex; flex-direction: column; gap: 18px; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; box-sizing: border-box; transform-origin: center center; }
 .rsm-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .rsm-header .rsm-modal-image { width: clamp(220px, 34vw, 640px); height: auto; max-height: calc(96vh - 220px); object-fit:contain; flex-shrink:0; }
 .rsm-close { background:transparent;border:none;font-size:20px; cursor:pointer; }
 .rsm-body { display:flex; flex-direction:column; gap:12px; }
-.rsm-cards { display:flex; gap:14px; }
+.rsm-cards {
+    display: grid;
+    /* reorganize columns: provinces, totals, expandable area, ST titles */
+    grid-template-columns: 360px 140px minmax(360px, 2fr) 300px;
+    grid-template-rows: auto auto;
+    gap: 12px 12px; /* horizontal 12px, vertical 12px spacing between rows and columns */
+}
+/* ensure ST titles column doesn't collapse and push into totals */
+/* no extra left margin so this panel sits immediately right of Totals */
+.rsm-listing-wrap[style*="grid-column: 3"] { min-width: 100px; max-width: 100px; width: 100px; margin-left: 40px;}
+#modalStatsChartWrap { margin-top: 20px; }
+#modalStatsChartWrap {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+    /* margin-top handled earlier to create space */
+    padding: 30px; /* add card padding instead of graph padding */
+    /* enforce fixed width so grid tracks don't stretch it */
+    width: 500px !important;
+    min-width: 500px !important;
+    max-width: 500px;
+    flex: 0 0 500px !important;
+    box-sizing: border-box; /* include padding in width */
+}
+/* ensure the internal chart does not exceed the wrapper width */
+#modalStatsChart,
+#modalStatsChartWrap > canvas {
+    width: 100% !important;
+    max-width: 500px !important;
+    min-width: 500px !important;
+    box-sizing: border-box;
+}
+.slider-province-card {
+    padding: 30px; /* provide consistent padding inside provinces card */
+}
+.rsm-metrics { /* keep fallback */
+    flex:1 0 100%;
+}
 .rsm-container { display:flex; gap:28px; align-items:flex-start; width:100%; }
-.rsm-container .rsm-cards { flex: 0 0 clamp(460px, 36vw, 840px); max-width: clamp(360px, 36vw, 840px); }
-.rsm-container .rsm-listing-wrap { flex: 1 1 auto; min-width: clamp(260px, 40vw, 980px); }
+.rsm-right { flex: 0 0 140px; /* expand totals panel width */ }
+/* ensure totals card itself matches column width */
+.rsm-right > .rsm-card { width:300px; max-width:300px; }
+/* totals now lives inside the grid so ordering and negative offsets aren’t needed */
+.rsm-right { order: 1; }
+.rsm-right > .rsm-card { margin-left: 20px; }
+.rsm-listing-wrap { order: 2; }
+/* force ST Titles container/card to a fixed 100px width */
+.rsm-listing-wrap,
+.rsm-listing-wrap .rsm-card {
+    width: 400px !important;
+    min-width: 400px !important;
+    max-width: 400px !important;
+    margin-left: -85px !important;
+    margin-top: 0px !important;
+}
+
+.rsm-container .rsm-cards {
+    flex: 0 0 clamp(460px, 36vw, 840px);
+    max-width: clamp(360px, 36vw, 840px);
+}
+/* when showing the modal with region metrics, allow the cards wrapper to expand/scroll */
+#sliderModalContent .rsm-container .rsm-cards {
+    min-width: 500px !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+}
+/* override the previous min-width clamp for listing-wrap which would otherwise force 260px */
+.rsm-container .rsm-listing-wrap { flex: 1 1 auto; min-width: 100px !important; }
 @media (max-width:900px) { .rsm-container { flex-direction:column; } .rsm-container .rsm-cards, .rsm-container .rsm-listing-wrap { width:100%; max-width:none; } }
 .rsm-left { flex: 0 0 460px; max-width: 460px; }
-.rsm-right { flex:0 0 360px; }
+.rsm-right { flex:0 0 100px; }
 .rsm-card { background:#fff; border-radius:10px; padding:12px; border:1px solid rgba(2,6,23,0.04); box-shadow: 0 8px 20px rgba(2,6,23,0.04); }
-.rsm-prov-card .rsm-provinces-list { max-height: 300px; height: 300px; width: 420px; min-width: 360px; overflow:auto; display:flex; flex-direction:column; gap:6px; padding-top:6px; -webkit-overflow-scrolling: touch; }
+/* make sure provinces panel and the totals card both use only 12px
+   padding (the global rule already covers it, but this reinforces the intent
+   and resets any inner list spacing) */
+.rsm-prov-card,
+.rsm-right > .rsm-card {
+    padding: 12px;
+}
+.rsm-prov-card .rsm-provinces-list { padding-top:12px; }
+
+/* ensure province card in RSM has fixed height */
+.rsm-prov-card { height:405px; }
+.rsm-prov-card .rsm-provinces-list { height:100%; }
+/* allow full height for provinces list, remove restrictive max-height */
+.rsm-prov-card .rsm-provinces-list { max-height: none; height: 100%; width: 420px; min-width: 360px; overflow:auto; display:flex; flex-direction:column; gap:6px; padding-top:6px; -webkit-overflow-scrolling: touch; }
 .rsm-prov-item { padding:8px 10px; border-radius:8px; background:linear-gradient(180deg,#fff,#fafafa); box-shadow: inset 0 -1px 0 rgba(2,6,23,0.02); font-size:0.95rem; }
-.rsm-stats-grid { display:grid; grid-template-columns: 1fr; gap:10px; max-width:360px; }
-.rsm-stat { background:linear-gradient(180deg,#fff,#fbfdff); padding:10px; border-radius:8px; text-align:center; }
+/* ensure province name and badge are side-by-side in RSM card */
+.rsm-prov-item.province-item { display:flex; justify-content:space-between; align-items:center; width:330px !important; max-width:330px !important; overflow:hidden !important; }
+/* blunt override for city and ST entries too */
+.rsm-provinces-list .province-sublist .city-item,
+.slider-province-card .province-sublist .city-item,
+.slider-province-card .city-item,
+.rsm-provinces-list .province-sublist .st-item,
+.slider-province-card .st-item {
+    width: 320px !important;
+    max-width: 320px !important;
+    overflow: hidden !important;
+}
+.rsm-prov-item .province-badge { flex-shrink:0; }
+.rsm-stats-grid {
+    display: grid;
+    /* flow in columns, four rows per column; extras wrap into another column */
+    grid-auto-flow: column;
+    grid-template-rows: repeat(4, auto);
+    column-gap: 10px;
+    row-gap: 10px;
+    max-width: none; /* allow horizontal expansion for additional columns */
+}
+
+.rsm-stat { background:linear-gradient(180deg,#fff,#fbfdff); padding:10px; border-radius:8px; text-align:center; border:1px solid rgba(2,6,23,0.04); }
+/* make sure any other card-like container also has a defined border */
+.rsm-prov-card, .rsm-right > .rsm-card, .rsm-card { border:1px solid rgba(2,6,23,0.04); }
 .rsm-stat-label { font-size:0.82rem; color:#64748b; }
 .rsm-stat-value { font-weight:700; font-size:1.25rem; margin-top:6px; color:#0f1724; }
 .rsm-listing-wrap { margin-top:6px; }
 .rsm-listing-title { margin:0 0 8px 0; font-size:1rem; }
 .rsm-modal-image { width:72px; height:72px; border-radius:12px; object-fit:contain; display:block; transition: none; }
-.rsm-st-list { max-height: calc(200vh - 420px); overflow:auto; border-radius:8px; border:1px solid rgba(2,6,23,0.04); padding:8px; background:#fff; -webkit-overflow-scrolling: touch; }
+.rsm-st-list { max-height: 730px; min-height: 730px; /* limit height to 900px as requested */
+    overflow:auto; border-radius:8px; border:1px solid rgba(2,6,23,0.04); padding:8px; background:#fff; -webkit-overflow-scrolling: touch; }
 .rsm-empty { color:#94a3b8; padding:8px; }
-@media (max-width:900px) { .rsm-header { flex-direction:column; align-items:center; gap:12px; } .rsm-header .rsm-modal-image { width: min(80vw, 360px); height: auto; max-height: 40vh; } .rsm-cards { flex-direction:column; } .rsm-right { width:100%; } .rsm-left { width:100%; } .rsm-panel { width: calc(100% - 24px); } .rsm-prov-card .rsm-provinces-list, .rsm-st-list { max-height: 40vh; } .rsm-container { flex-direction: column; gap: 12px; } }
+@media (max-width:900px) { .rsm-header { flex-direction:column; align-items:center; gap:12px; } .rsm-header .rsm-modal-image { width: min(80vw, 360px); height: auto; max-height: 40vh; } .rsm-cards { display:flex; flex-direction:column; } .rsm-right { width:100%; } .rsm-left { width:100%; } .rsm-panel { width: calc(100% - 24px); } .rsm-prov-card .rsm-provinces-list, .rsm-st-list { max-height: 40vh; } .rsm-container { flex-direction: column; gap: 12px; } }
 
 /* preview must not intercept slider pointer events */
 .slider-bottom-preview img, .slider-bottom-preview .slider-bottom-label { pointer-events: none; }
@@ -2469,8 +2947,15 @@ n    /* smooth transitions for card visibility and layout changes */
 @media (max-width:900px) { .slider-bottom-preview { align-self:center; margin:12px auto 24px; width:160px; } .slider-bottom-preview img { width:160px; height:160px; } }
 
 /* bottom preview province-list specific styles */
-.slider-bottom-province-card { width:100%; margin-top:14px; background:transparent; padding:6px; box-shadow:none; border-radius:8px; }
-.slider-bottom-province-card .province-list { max-height:220px; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:6px 4px; }
+.slider-bottom-province-card { width:100%; margin-top:14px; background:transparent; padding:6px; box-shadow:none; border-radius:8px; height: calc(40px * 8 + 16px + 40px) !important; min-height: calc(40px * 8 + 16px + 40px) !important; max-height: calc(40px * 8 + 16px + 40px) !important; }
+.slider-bottom-province-card .province-list { height: calc(40px * 8 + 16px) !important; min-height: calc(40px * 8 + 16px) !important; max-height: calc(40px * 8 + 16px) !important; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:6px 4px; }
+/* rows inside bottom province card should also be fixed height */
+.slider-bottom-province-card .province-list .province-item {
+    height: 40px !important;
+    line-height: 40px !important;
+    padding: 0 6px !important;
+    margin-bottom: 2px !important;
+}
 .slider-bottom-province-card .province-item { padding:8px 10px; border-radius:8px; background: rgba(247,249,250,0.95); display:flex; justify-content:space-between; gap:8px; align-items:center; border:1px solid rgba(2,6,23,0.04); color:#0f1724; font-weight:600; font-size:0.95rem; }
 .slider-bottom-province-card .province-item .prov-name { font-weight:700; }
 .slider-bottom-province-card .province-empty { color:#6b7280; padding:8px 6px; }
@@ -2644,6 +3129,7 @@ n    /* smooth transitions for card visibility and layout changes */
                 let running = true;
                 let lastTs = null;
                 let useTransformFallback = false; // set to true when we switch to transform-mode (so scrollLeft loop becomes a no-op)
+                let wrapSuspended = false; // when true, we stop wrapping scrollLeft; used while popover open
 
                 // hover-snap state: when user hovers a partially-visible card, speed up until that card is fully visible, then pause
                 let hoverSnap = { active:false, card:null, target:0 };
@@ -3111,15 +3597,8 @@ n    /* smooth transitions for card visibility and layout changes */
                     scroller.classList.add('is-scrolling');
                     clearTimeout(_scrollTimer);
                     _scrollTimer = setTimeout(()=> { scroller.classList.remove('is-scrolling'); }, 180);
-
-                    if (useTransformFallback || _isPointerDragging) return;
-                    try {
-                        if (scroller.scrollLeft >= originalWidth) scroller.scrollLeft -= originalWidth;
-                        else if (scroller.scrollLeft < 0) scroller.scrollLeft += originalWidth;
-                    } catch(e) { /* ignore */ }
                 });
-
-                // convert vertical wheel into horizontal scroll when pointer is over the gallery
+        if (useTransformFallback || _isPointerDragging || wrapSuspended) return;
                 scroller.addEventListener('wheel', (ev) => {
                     // only when the pointer is inside the scroller
                     if (!scroller.contains(ev.target)) return;
