@@ -6,6 +6,28 @@
             .stb-navbar-title {
                 transition: all 0.2s;
             }
+            @media (max-width: 600px) {
+                .stb-navbar-title {
+                    font-size: 1.05rem !important;
+                    padding-right: 0.2rem !important;
+                    max-width: 55%;               /* give some room for the user name */
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .navbar .dropdown-toggle .fw-semibold,
+                .navbar .dropdown-toggle .bi-person-circle {
+                    font-size: 0.95rem !important;
+                }
+                .navbar-toggler {
+                    transform: scale(0.8);
+                    margin-left: 0.2rem;
+                }
+                /* make sure right‑hand container never wraps its contents */
+                .navbar .container-fluid.d-flex {
+                    flex-wrap: nowrap !important;
+                }
+            }
             @media (min-width: 901px) {
                 .stb-navbar-title {
                     margin-left: 300px !important;
@@ -26,6 +48,99 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Swiper CSS (required by STsReport slider) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <!-- Select2 styles for multi-select filters -->
+    <link href="/css/select2.min.css" rel="stylesheet" />
+    <style>
+    /* Beautify Select2 dropdowns (shared across app) */
+    .select2-container--default .select2-selection--multiple {
+        background: #f8fafc;
+        border: 2px solid #06306e;
+        border-radius: 10px;
+        min-height: 44px;
+        padding: 6px 8px;
+        box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);
+        font-size: 1.08rem;
+        transition: border 0.2s;
+    }
+    .select2-container--default .select2-selection--multiple:focus {
+        border: 2px solid #06306e;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        margin: 2px 6px 2px 0;
+        padding: 4px 10px;
+        font-weight: 500;
+        box-shadow: 0 1px 4px #000000;
+    }
+    .select2-container--default .select2-selection--multiple .select2-search__field {
+        background: transparent;
+        color: #222;
+        font-size: 1.05rem;
+    }
+    .select2-dropdown {
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(16, 174, 181, 0.13);
+        border: 2px solid #06306e;
+        padding: 4px 0;
+    }
+    .select2-results__option {
+        padding: 8px 14px;
+        font-size: 1.07rem;
+        border-radius: 6px;
+    }
+    .select2-results__option--highlighted {
+        background: #e0f2f1;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+        color: #8492a6;
+    }
+    /* Dashboard card style used by filter */
+    .st-dashboard-card {
+        background: #f8fafc;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(16, 174, 181, 0.07);
+        margin-bottom: 24px;
+        border: 2.5px solid rgba(16,174,181,0.65);
+        transition: transform 0.15s, box-shadow 0.15s;
+        min-width: 320px;
+        max-width: 340px;
+        min-height: 180px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+    }
+    .st-dashboard-card:hover {
+        transform: translateY(-4px) scale(1.03);
+        box-shadow: 0 8px 24px rgba(16, 174, 181,0.18);
+    }
+    .st-dashboard-card .card-header {
+        background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
+        color: #fff;
+        font-weight:600;
+        font-size:1.15rem;
+        border-radius:14px 14px 0 0;
+        border:none;
+        padding:14px 0;
+        letter-spacing:0.5px;
+        width:100%;
+        margin:0;
+        text-align:center;
+        box-sizing:border-box;
+        display:block;
+    }
+    .st-dashboard-card .card-body {
+        padding: 28px 0 16px 0;
+    }
+    </style>
     {{-- Bootstrap JS loaded before Vite to ensure global availability --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
@@ -255,7 +370,92 @@
             font-weight: normal;
             vertical-align: middle;
         }
+        /* ============================= */
+        /* MODERN DROPDOWN UI UPGRADE  */
+        /* ============================= */
 
+        /* Main dropdown container */
+        .dropdown-menu {
+            border: none;
+            border-radius: 14px;
+            padding: 0.5rem;
+            min-width: 240px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+            animation: fadeSlide 0.18s ease;
+        }
+
+        /* Smooth appearance */
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Dropdown items */
+        .dropdown-item {
+            border-radius: 10px;
+            padding: 0.65rem 0.9rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.15s ease;
+        }
+
+        /* Hover effect */
+        .dropdown-item:hover {
+            background: #eef2ff;
+            color: #2563eb;
+            transform: translateX(3px);
+        }
+
+        /* Active style */
+        .dropdown-item.active {
+            background: #e0e7ff;
+            color: #2563eb;
+        }
+
+        /* Parent toggle styling */
+        .dropdown-item.dropdown-toggle {
+            position: relative;
+        }
+
+        /* Chevron arrow */
+        .dropdown-item.dropdown-toggle::after {
+            float: right;
+            margin-top: 6px;
+            font-size: 0.65rem;
+            opacity: 0.6;
+            transition: transform 0.2s ease;
+        }
+
+        /* Rotate arrow when open */
+        .dropdown-item.dropdown-toggle.show::after {
+            transform: rotate(180deg);
+        }
+
+        /* Nested dropdown styling */
+        .dropdown-menu .dropdown-menu {
+            border-radius: 12px;
+            margin-left: 0.3rem;
+            margin-right: 0.3rem;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.10);
+        }
+
+        /* Divider style improvement */
+        .dropdown-divider {
+            margin: 0.6rem 0;
+            opacity: 0.1;
+        }
+
+        /* Logout styling */
+        .dropdown-item.text-danger:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
         /* Print-only styles: hide chrome (navbar/sidebar/footer) and use a clean page */
         @media print {
             body {
@@ -282,10 +482,95 @@
                 padding-right: 0 !important;
             }
         }
+        @media (max-width: 991px) {
+
+                /* Make nested dropdowns stack downward */
+                .dropdown-menu .dropend .dropdown-menu {
+                    position: relative !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    transform: none !important;
+                    margin-left: 1rem;
+                    width: auto;
+                }
+
+                /* Make dropdown take full width */
+                .dropdown-menu {
+                    width: 100%;
+                }
+
+                /* Better tap spacing */
+                .dropdown-item {
+                    padding: 0.75rem 1rem;
+                }
+
+                /* Rotate arrow properly */
+                .dropdown-item.dropdown-toggle::after {
+                    float: right;
+                    transform: rotate(0deg);
+                    transition: transform 0.2s ease;
+                }
+
+                .dropdown-item.dropdown-toggle.show::after {
+                    transform: rotate(180deg);
+                }
+            }
     </style>
 </head>
 
 <body>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+    const isMobile = window.innerWidth <= 991;
+
+    // Prevent closing parent dropdown on nested click
+    document.querySelectorAll(
+        '#userManagementDropdown, #userUtilitiesDropdown'
+    ).forEach(function (toggle) {
+
+        toggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            let submenu = this.nextElementSibling;
+
+            if (submenu && submenu.classList.contains('dropdown-menu')) {
+
+                // Close siblings
+                let parentMenu = this.closest('.dropdown-menu');
+                parentMenu.querySelectorAll(':scope > .dropend > .dropdown-menu')
+                    .forEach(function (menu) {
+                        if (menu !== submenu) {
+                            menu.classList.remove('show');
+                        }
+                    });
+
+                submenu.classList.toggle('show');
+                this.classList.toggle('show');
+            }
+        });
+
+    });
+
+    // Close all nested menus when main dropdown closes
+    const mainDropdown = document.getElementById('navbarDropdown');
+
+    mainDropdown.addEventListener('hide.bs.dropdown', function () {
+        document.querySelectorAll('.dropdown-menu .dropdown-menu')
+            .forEach(function (submenu) {
+                submenu.classList.remove('show');
+            });
+
+                document.querySelectorAll('.dropdown-item.dropdown-toggle')
+                    .forEach(function (toggle) {
+                        toggle.classList.remove('show');
+                    });
+            });
+
+        });
+        </script>
     {{-- Loader Overlay (used as background + CSS preloader) --}}
     @include('components.loader')
     <script>
@@ -385,86 +670,133 @@
     
     {{-- Navigation Bar --}}
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: #06306e; position: fixed; top: 0; left: 0; width: 100%; z-index: 1030;">
-        <div class="container-fluid px-3 d-flex align-items-center justify-content-between">
+        <div class="container-fluid px-3 d-flex align-items-center justify-content-between flex-nowrap">
             <!-- On desktop, title is next to sidebar; on mobile, title is on the right -->
-            <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}" style="@guest margin-left:0 !important; @endguest">STB Inventory Portal</a>
+            <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}" style="@guest margin-left:0 !important; @endguest; white-space:nowrap;">STB Inventory Portal</a>
             <div class="d-flex align-items-center ms-auto" style="gap: 0.5rem; position: relative; z-index: 1;">
                 <!-- Hamburger for mobile sidebar toggle -->
                 @auth
-                <button class="navbar-toggler d-block d-lg-none order-2" type="button" aria-label="Toggle sidebar" style="z-index:1060;" onclick="document.body.classList.toggle('sidebar-open')">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <button class="navbar-toggler d-block d-lg-none order-2" type="button" aria-label="Toggle sidebar" style="z-index:1060;" onclick="document.body.classList.toggle('sidebar-open')">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
                 @endauth
                 <!-- User dropdown or login/register always on right -->
                 @auth
-                <div class="order-1">
-                    <div class="dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span style="color: #fff; font-weight: 500;">{{ Auth::user()->name }}</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li>
-                                <a class="dropdown-item" href="{{ route('profile') }}">
-                                    <i class="bi bi-person me-2"></i>Profile
-                                </a>
-                            </li>
-                            @if(Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'admin')
-                            <li class="dropend">
-                                <a class="dropdown-item dropdown-toggle" href="#" id="userManagementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-people me-2"></i>Admin Utilities
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="userManagementDropdown">
+                    <div class="order-1">
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center"
+                               href="#"
+                               id="navbarDropdown"
+                               role="button"
+                               data-bs-toggle="dropdown"
+                               data-bs-auto-close="outside"
+                               aria-expanded="false">
+                                <span class="fw-semibold d-flex align-items-center" style="gap:8px; color:#fff;">
+                                    <i class="bi bi-person-circle fs-5"></i>
+                                    {{ Auth::user()->name }}
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('profile') }}">
+                                        <i class="bi bi-person me-2"></i>Profile
+                                    </a>
+                                </li>
+                                @if(Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'admin')
                                     <li class="dropend">
-                                        <a class="dropdown-item dropdown-toggle" href="#" id="userUtilitiesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <i class="bi bi-people-fill me-2"></i>User Utilities
+                                        <a class="dropdown-item dropdown-toggle admin-parent-toggle"
+                                           href="#"
+                                           id="adminUtilitiesDropdown"
+                                           role="button">
+                                            <i class="bi bi-people me-2"></i>Admin Utilities
                                         </a>
-                                        <ul class="dropdown-menu" aria-labelledby="userUtilitiesDropdown">
-                                            <li>
-                                                <a class="dropdown-item" href="{{ route('users.index') }}">
-                                                    <i class="bi bi-people-fill me-2"></i>Users Management
+                                        <ul class="dropdown-menu">
+                                            <li class="dropend">
+                                                <a class="dropdown-item dropdown-toggle nested-toggle"
+                                                   href="#"
+                                                   id="userUtilitiesDropdown"
+                                                   role="button">
+                                                    <i class="bi bi-people-fill me-2"></i>User Utilities
                                                 </a>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ route('users.index') }}">
+                                                            <i class="bi bi-people-fill me-2"></i>
+                                                            Users Management
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ route('approvals.index') }}">
+                                                            <i class="bi bi-person-check-fill me-2"></i>
+                                                            User Approvals
+                                                        </a>
+                                                    </li>
+                                                </ul>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item" href="{{ route('approvals.index') }}">
-                                                    <i class="bi bi-person-check-fill me-2"></i>User Approvals
+                                                <a class="dropdown-item" href="{{ route('admin.stsreportsectors') }}">
+                                                    <i class="bi bi-diagram-3 me-2"></i>
+                                                    STs Report Sector Utilities
                                                 </a>
                                             </li>
                                         </ul>
                                     </li>
-
+                                @endif
+                                @if(Auth::user()->usergroup === 'sysadmin')
                                     <li>
-                                        <a class="dropdown-item" href="{{ route('admin.stsreportsectors') }}">
-                                            <i class="bi bi-diagram-3 me-2"></i>STs Report Sector Utilities
+                                        <a class="dropdown-item" href="{{ route('admin') }}">
+                                            <i class="bi bi-gear me-2"></i>Admin Dashboard
                                         </a>
                                     </li>
-                                </ul>
-                            </li>
-                            @endif
-                            @if(Auth::user()->usergroup === 'sysadmin')
-                            <li>
-                                <a class="dropdown-item" href="{{ route('admin') }}">
-                                    <i class="bi bi-gear me-2"></i>Admin Dashboard
-                                </a>
-                            </li>
-                            @endif
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{{ route('logout') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i>Logout
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
+                                @endif
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{{ route('logout') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
-                @else
-                <div class="order-1 d-flex align-items-center" style="gap:0.5rem;">
-                    <a class="nav-link text-white" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Login</a>
-                    <a class="nav-link text-white" href="#" data-bs-toggle="modal" data-bs-target="#registerModal">Register</a>
-                </div>
                 @endauth
+                @guest
+                    <div class="order-1 d-flex align-items-center guest-auth-btns" style="gap: 1.2rem;">
+                        <a href="#" class="guest-auth-link" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                        <a href="#" class="guest-auth-link" data-bs-toggle="modal" data-bs-target="#registerModal">
+                            <i class="bi bi-person-plus"></i> Register
+                        </a>
+                    </div>
+                    <style>
+                        /* Guest Auth Links Minimalist UI */
+                        .guest-auth-btns .guest-auth-link {
+                            color: #fff !important;
+                            background: none !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                            font-weight: 600;
+                            font-size: 1.08rem;
+                            padding: 0;
+                            border-radius: 0;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.4em;
+                            transition: color 0.18s, text-decoration 0.18s;
+                            text-decoration: none;
+                        }
+                        .guest-auth-btns .guest-auth-link:hover, .guest-auth-btns .guest-auth-link:focus {
+                            color: #e0e7ff !important;
+                            text-decoration: underline;
+                        }
+                        .guest-auth-btns .guest-auth-link i {
+                            font-size: 1.15em;
+                        }
+                        </style>
+                @endguest
             </div>
             <div class="collapse navbar-collapse justify-content-end d-lg-none" id="navbarNav" style="display: none !important;">
                 <!-- This is now hidden to prevent duplicate links/names on mobile -->
@@ -569,7 +901,7 @@
                 <a class="nav-link ms-4" {{ request()->routeIs('streport') ? 'active' : '' }} href="{{ route('streport') }}">ST's Adopted and Replicated Report</a>
                 <a class="nav-link ms-4" {{ request()->routeIs('kreport') ? 'active' : '' }} href="{{ route('kreport') }}">Knowledge Products Report</a>
             </div>
-            @if(Auth::check() && (Auth::user()->usergroup === 'admin' || Auth::user()->usergroup === 'sysadmin'))
+            @if(Auth::check() && (Auth::user()->usergroup === 'admin' || Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'user'))
             <!-- Collapsible Upload Nav -->
             <a class="nav-link d-flex align-items-center justify-content-between {{ request()->routeIs('upload') ? 'active' : '' }}" data-bs-toggle="collapse" href="#sidebarUploadCollapse" role="button" aria-expanded="{{ request()->routeIs('upload') ? 'true' : 'false' }}" aria-controls="sidebarUploadCollapse" id="sidebarUploadToggle" style="transition:background 0.15s, color 0.15s;">
                 <span><i class="bi bi-upload me-2"></i>Upload</span>
@@ -577,7 +909,9 @@
             </a>
             <div class="collapse {{ request()->routeIs('uploadmoasts') ? 'show' : '' }}" id="sidebarUploadCollapse">
                 <a class="nav-link ms-4" {{ request()->routeIs('uploadmoasts') ? 'active' : '' }} href="{{ route('uploadmoasts') }}">STs Manager</a>
+                @if (Auth::check() && (Auth::user()->usergroup !== 'user'))
                 <a class="nav-link ms-4 {{ request()->routeIs('upload') ? 'active' : '' }}" href="{{ route('upload') }}">Uploading Document</a>
+                @endif
             </div>
             @endif
             <a class="nav-link" href="#"><i class="bi bi-gear me-2"></i>Settings</a>

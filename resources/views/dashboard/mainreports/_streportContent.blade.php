@@ -1,5 +1,3 @@
-
-
 <script>
 
 // global replicate popover helper (defined early so it exists even if DOMContentLoaded has passed)
@@ -147,6 +145,141 @@ document.addEventListener("DOMContentLoaded", function () {
 			nextEl: ".swiper-button-next",
 			prevEl: ".swiper-button-prev",
 		},
+	});
+
+	// normalize various region strings to canonical slider labels
+	function normalizeRegionText(r){
+		if (!r) return '';
+		var s = String(r).toLowerCase().trim();
+		if (!s) return '';
+		if (s.includes('national capital') || s.includes(' ncr') || s.startsWith('ncr')) return 'NCR';
+		if (s.includes('ilocos')) return 'Region I';
+		if (s.includes('cagayan valley')) return 'Region II';
+		if (s.includes('central luzon')) return 'Region III';
+		if (s.includes('calabarzon')) return 'Region IV-A';
+		if (s.includes('mimaropa')) return 'Region IV-B';
+		if (s.includes('bicol')) return 'Region V';
+		if (s.includes('western visayas')) return 'Region VI';
+		if (s.includes('central visayas')) return 'Region VII';
+		if (s.includes('eastern visayas')) return 'Region VIII';
+		if (s.includes('zamboanga peninsula') || s.includes('zamboanga pen')) return 'Region IX';
+		if (s.includes('northern mindanao')) return 'Region X';
+		if (s.includes('davao region')) return 'Region XI';
+		if (s.includes('soccsksargen')) return 'Region XII';
+		if (s.includes('caraga')) return 'CARAGA';
+		if (s.includes('bangsamoro') || /\bbarmm\b/.test(s)) return 'BARMM';
+		if (!s.includes('caraga') && (s === 'car' || s.includes('cordillera') || /\bcar\b/.test(s))) {
+			return 'CAR';
+		}
+		// generic roman detection
+		var romanPatterns = [
+			{ code: 'Region XII', re: /\bxii\b/ },
+			{ code: 'Region XI', re: /\bxi\b/ },
+			{ code: 'Region X',  re: /\bx\b/ },
+			{ code: 'Region IX', re: /\bix\b/ },
+			{ code: 'Region VIII', re: /\bviii\b/ },
+			{ code: 'Region VII',  re: /\bvii\b/ },
+			{ code: 'Region VI',   re: /\bvi\b/ },
+			{ code: 'Region V',    re: /\bv\b/ },
+			{ code: 'Region IV-B', re: /\biv[\s-]?b\b/ },
+			{ code: 'Region IV-A', re: /\biv[\s-]?a\b/ },
+			{ code: 'Region III',  re: /\biii\b/ },
+			{ code: 'Region II',   re: /\bii\b/ },
+			{ code: 'Region I',    re: /\bi\b/ }
+		];
+		for (var i=0;i<romanPatterns.length;i++){
+			if (romanPatterns[i].re.test(s)) return romanPatterns[i].code;
+		}
+		return r;
+	}
+
+	// helper to hide/show slides based on a list of region names
+	function filterSliderByRegions(regions){
+		console.log('filterSliderByRegions called with', regions);
+		if (!regions || !regions.length) return;
+		const filenameToRegion = {
+			'1.png': 'Region I','2.png': 'Region II','3.png': 'Region III',
+			'4_a.png': 'Region IV-A','4_b.png': 'Region IV-B','5.png': 'Region V',
+			'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
+			'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
+			'12.png': 'Region XII','13.png': 'CARAGA','barmm.png': 'BARMM',
+			'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
+		};
+		const slides = document.querySelectorAll('.swiper-slide');
+		slides.forEach(slide => {
+			const img = slide.querySelector('img');
+			if (!img) return;
+			const fileName = (img.dataset.img||img.src||'').split('/').pop();
+			const region = filenameToRegion[fileName] || img.getAttribute('data-region-name') || ('Region ' + (img.getAttribute('data-region-number')||''));
+			if (regions.includes(region)) {
+				slide.style.display = '';
+			} else {
+				slide.style.display = 'none';
+			}
+		});
+		if (swiper && typeof swiper.update === 'function') swiper.update();
+	}
+
+	// hide/show gallery cards based on region/year text matching
+	function filterGalleryCards(regions, years) {
+		const cards = document.querySelectorAll('.card-gallery .card');
+		cards.forEach(card => {
+			const txt = ((card.textContent||'') + ' ' + (card.getAttribute('data-title')||'')).toLowerCase();
+			let visible = true;
+			if (regions && regions.length) {
+				visible = regions.some(r=> txt.indexOf(r.toLowerCase()) !== -1);
+			}
+			if (visible && years && years.length) {
+				visible = years.some(y=> txt.indexOf(y.toString()) !== -1);
+			}
+			card.style.display = visible ? '' : 'none';
+		});
+	}
+
+	// when the page loads read any region[] query params and apply
+	document.addEventListener('DOMContentLoaded', function(){
+		const urlParams = new URLSearchParams(window.location.search);
+		let selected = urlParams.getAll('region[]');
+		if (!selected.length) selected = urlParams.getAll('region');
+		let yrs = urlParams.getAll('year_of_moa[]');
+		if (!yrs.length) yrs = urlParams.getAll('year_of_moa');
+		// normalize any region inputs (e.g. "FO I")
+		selected = selected.map(normalizeRegionText);
+		// if only year filters present, derive regions from parent.regionMap if available
+		if (!selected.length && yrs.length) {
+			try {
+				var map = window.parent.regionMap || {};
+				Object.keys(map).forEach(function(r){
+					var ys = map[r].years || [];
+					if (ys.some(y=> yrs.includes(y.toString()))) selected.push(r);
+				});
+			} catch(_){ }
+		}
+		if (selected.length) {
+			filterSliderByRegions(selected);
+			filterGalleryCards(selected, yrs);
+		}
+	});
+
+	// listen for filter updates from parent frame (executed even before DOM ready)
+	window.addEventListener('message', function(e){
+		console.log('iframe message event', e.data);
+		if (e.data && e.data.type === 'streportFilters') {
+			var regs = (e.data.regions || []).map(normalizeRegionText);
+			var yrs = e.data.years || [];
+			// if only year filters provided, try to derive regions from parent.regionMap
+			if (!regs.length && yrs.length) {
+				try {
+					var map = window.parent.regionMap || {};
+					Object.keys(map).forEach(function(r){
+						var ys = map[r].years || [];
+						if (ys.some(y=> yrs.includes(y.toString()))) regs.push(r);
+					});
+				} catch(_){ }
+			}
+			filterSliderByRegions(regs);
+			filterGalleryCards(regs, yrs);
+		}
 	});
 
 	// bottom preview: mirror the currently-centered slide into the bottom preview area
@@ -2074,8 +2207,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
         </div>
 
-        <div class="swiper-button-next"></div>
-        <div class="swiper-button-prev"></div>
     </div>
 
 <!-- slider modal markup has been moved to main layout for global display -->
@@ -2171,7 +2302,6 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
       </div>
 
-      <button id="rsm-close" class="rsm-close" aria-label="Close">✕</button>
     </div>
     <div class="rsm-body">
 	
@@ -2180,6 +2310,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
 <style>
+    .imgContainer {
+        background: transparent !important;
+        /* If there's a background-color, override it */
+        background-color: transparent !important;
+        
+        
+    }
 /* Scoped card styles — do NOT override global page styles */
 .card-gallery { display:flex; justify-content:center; align-items:center; padding:28px 12px; position:relative; z-index:60; pointer-events:auto; width: 120vw; margin-left: 0; overflow-x: auto; -ms-overflow-style: none; /* IE/Edge */ scrollbar-width: none; /* Firefox */ }
 .card-gallery::-webkit-scrollbar { display: none; /* WebKit */ }

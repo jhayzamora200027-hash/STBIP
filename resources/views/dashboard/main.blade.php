@@ -1,6 +1,21 @@
 @extends('layouts.app')
 
 @section('content')
+@guest
+<style>
+    /* guest only: make parent layout full-width and left-aligned */
+    .stb-main-content {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 50px !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+</style>
+@endguest
+<style>
+	/* mobile mini layout adjustments removed for new mobile view */
+</style>
 <link href="/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
 <style>
@@ -82,8 +97,13 @@
 		min-height: 100vh;
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start; /* left align container */
 		background: none;
+		margin-left: 0 !important;
+		margin-right: auto;   /* optional */
+	}
+		.st-center-outer > * {
+		margin-left: 0 !important;
 	}
 	.st-dashboard-container {
 		background: #fff;
@@ -431,7 +451,7 @@
 		/* Map overlay totals (desktop) + responsive adjustments */
 .map-overlay-totals { position: absolute; bottom: 12px; left: -10px; right: auto; transform: none; width: auto; display: grid; grid-template-columns: 1fr; gap: 10px; background: transparent; border-radius: 12px; padding: 8px 12px 8px 26px; box-shadow: none; border: none; z-index: 5; justify-items: center; pointer-events: none; top: 70px; }
 /* decorative vertical bar to the left of the stacked Philippines totals */
-	.map-overlay-totals .st-dashboard-card { margin: 0; box-shadow: none; background: transparent; width: 96px; }
+	.map-overlay-totals .st-dashboard-card { margin: 0; box-shadow: none; background: transparent; width: 300px; }
 	.map-overlay-card { width: 150px; min-width: 150px; background: #ffffff; border: 2px solid #1e90ff; box-shadow: 0 6px 18px rgba(16,174,181,0.06), 0 0 0 6px rgba(30,144,255,0.04); border-radius: 10px; padding: 8px 6px; margin: 0; overflow: hidden; box-sizing: border-box; }
 	/* disable hover lift/scale for totals cards */
 	.map-overlay-card:hover { transform: none !important; box-shadow: none !important; }
@@ -441,8 +461,8 @@
 		width: 96px; /* pill width */
 		max-width: 100%;
 		margin: 0 auto -6px;
-		font-size: 0.62rem;
-		padding: 4px 8px;
+		font-size: 0.7rem;
+		padding: 1px 4px;
 		background: transparent; /* remove header background */
 		background-image: none !important;
 		color: #1e90ff; /* keep blue text */
@@ -475,8 +495,80 @@
 }
 </style>
 
-<div class="st-center-outer">
-   <div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden;">
+<style>
+	/* Mobile dashboard container styles */
+	.mobile-dashboard-container {
+		display: none;
+		background: #fff;
+		border-radius: 18px;
+		box-shadow: 0 4px 16px rgba(16, 174, 181, 0.13);
+		border: 2px solid #06306e;
+		padding: 18px 8px 18px 8px;
+		margin: 16px 0;
+		width: 98vw;
+		max-width: 99vw;
+		position: relative;
+	}
+	@media (max-width: 767px) {
+		.mobile-dashboard-container { display: block; }
+		.st-center-outer, .st-dashboard-container { display: none !important; }
+	}
+</style>
+
+<!-- Desktop/Tablet Dashboard -->
+<div class="st-center-outer" style="justify-content:flex-start;">
+	 <div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:1500px; min-width:300px; max-width:1500px !important; flex-shrink:0; margin:40px 0 40px 0 !important;">
+	<!-- Mobile Dashboard Container (visible only on mobile) -->
+	<div class="mobile-dashboard-container">
+		<div class="st-dashboard-header" style="font-size:1.1rem; padding:12px 0; text-align:center; border-radius:14px 14px 0 0; margin-bottom:12px;">
+			<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:80px; max-width:120px; background:transparent; display:block; margin:0 auto 8px auto;">
+			Adopted & Replicated Social Technologies
+		</div>
+		<div style="padding:0 2vw;">
+			<!-- Example: Show summary cards in a vertical stack for mobile -->
+			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
+				<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
+				<div class="card-body">
+					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
+					})->count() }}</h1>
+				</div>
+			</div>
+			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
+				<div class="card-header">TOTAL EXPRESSION OF INTEREST</div>
+				<div class="card-body">
+					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+						$val = $row['with_expr'] ?? null;
+						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
+						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
+					})->count() }}</h1>
+				</div>
+			</div>
+			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
+				<div class="card-header">TOTAL SB RESOLUTION</div>
+				<div class="card-body">
+					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+						$val = $row['with_res'] ?? null;
+						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
+						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
+					})->count() }}</h1>
+				</div>
+			</div>
+			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
+				<div class="card-header">TOTAL MEMORANDUM OF AGREEMENT</div>
+				<div class="card-body">
+					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+						$val = $row['with_moa'] ?? null;
+						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
+						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
+					})->count() }}</h1>
+				</div>
+			</div>
+			<!-- Add more mobile-friendly dashboard content as needed -->
+		</div>
+	</div>
+    <!-- mobile mini version visible only on narrow screens -->
+	<!-- mobile mini-summary removed for new mobile view -->
 	   {{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
 		   <button type="button" class="btn btn-sm btn-primary" onclick="window.print()" style="background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%); border: none; border-radius: 999px; padding: 6px 18px; font-weight: 600; box-shadow: 0 2px 6px rgba(16,174,181,0.35);">
 			   Print / Save as PDF
@@ -1568,6 +1660,91 @@ window.allYears = @json($allYears ?? $years);
 			}
 		});
 
+		// region text normalization helper (duplicated early for use inside propagateFilters)
+		function inferRegionCodeFromRegionText(regionText) {
+			if (!regionText) return null;
+			const s = String(regionText).toLowerCase().trim();
+			if (!s) return null;
+			// named aliases
+			if (s.includes('national capital') || s.includes(' ncr') || s.startsWith('ncr')) return 'NCR';
+			if (s.includes('ilocos')) return 'Region I';
+			if (s.includes('cagayan valley')) return 'Region II';
+			if (s.includes('central luzon')) return 'Region III';
+			if (s.includes('calabarzon')) return 'Region IV-A';
+			if (s.includes('mimaropa')) return 'Region IV-B';
+			if (s.includes('bicol')) return 'Region V';
+			if (s.includes('western visayas')) return 'Region VI';
+			if (s.includes('central visayas')) return 'Region VII';
+			if (s.includes('eastern visayas')) return 'Region VIII';
+			if (s.includes('zamboanga peninsula') || s.includes('zamboanga pen')) return 'Region IX';
+			if (s.includes('northern mindanao')) return 'Region X';
+			if (s.includes('davao region')) return 'Region XI';
+			if (s.includes('soccsksargen')) return 'Region XII';
+			if (s.includes('caraga')) return 'CARAGA';
+			if (s.includes('bangsamoro') || /\bbarmm\b/.test(s)) return 'BARMM';
+			if (!s.includes('caraga') && (s === 'car' || s.includes('cordillera') || /\bcar\b/.test(s))) {
+				return 'CAR';
+			}
+			const txt = s;
+			const romanPatterns = [
+				{ code: 'Region XII', re: /\bxii\b/ },
+				{ code: 'Region XI', re: /\bxi\b/ },
+				{ code: 'Region X',  re: /\bx\b/ },
+				{ code: 'Region IX', re: /\bix\b/ },
+				{ code: 'Region VIII', re: /\bviii\b/ },
+				{ code: 'Region VII',  re: /\bvii\b/ },
+				{ code: 'Region VI',   re: /\bvi\b/ },
+				{ code: 'Region V',    re: /\bv\b/ },
+				{ code: 'Region IV-B', re: /\biv[\s-]?b\b/ },
+				{ code: 'Region IV-A', re: /\biv[\s-]?a\b/ },
+				{ code: 'Region III',  re: /\biii\b/ },
+				{ code: 'Region II',   re: /\bii\b/ },
+				{ code: 'Region I',    re: /\bi\b/ }
+			];
+			for (let i = 0; i < romanPatterns.length; i++) {
+				if (romanPatterns[i].re.test(txt)) return romanPatterns[i].code;
+			}
+			return null;
+		}
+
+		// helper that applies selections to any gallery/iframe on the page
+		function propagateFilters() {
+			var selRegions = $('#region-select-orig').val() || [];
+			var selYears = $('#year-select-orig').val() || [];
+			// convert any FO-style text to canonical "Region X" codes for the slider
+			selRegions = selRegions.map(function(r){
+				return inferRegionCodeFromRegionText(r) || r;
+			});
+			// update iframe src so embedded STsReport picks up same params
+			var iframe = document.querySelector('iframe');
+			if (iframe) {
+				var base = iframe.dataset.baseSrc || iframe.src.split('?')[0];
+				var params = [];
+				selRegions.forEach(r => params.push('region[]=' + encodeURIComponent(r)));
+				selYears.forEach(y => params.push('year_of_moa[]=' + encodeURIComponent(y)));
+				params.push('embed=1');
+				iframe.dataset.baseSrc = base;
+				iframe.src = base + '?' + params.join('&');
+				// also send a message for live updates
+				try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears }, '*'); } catch(e){}
+			}
+			// local filtering of any card-gallery containers on this page
+			if (selRegions.length || selYears.length) {
+				$('.card-gallery .card').each(function(){
+					var $c = $(this);
+					var txt = ($c.find('h2').text() + ' ' + $c.find('p').text()).toLowerCase();
+					var show = true;
+					if (selRegions.length) {
+						show = selRegions.some(r => txt.indexOf(r.toLowerCase()) !== -1);
+					}
+					if (show && selYears.length) {
+						show = selYears.some(y => txt.indexOf(y.toString()) !== -1);
+					}
+					$c.toggle(show);
+				});
+			}
+		}
+
 		$('#region-select-orig').on('change', function() {
 			var selectedRegions = $(this).val() || [];
 			var provinces = [];
@@ -1602,6 +1779,7 @@ window.allYears = @json($allYears ?? $years);
 					$cityAll.append('<option value="'+c+'" '+selected+'>'+c+'</option>');
 				});
 				$cityAll.trigger('change.select2');
+				propagateFilters();
 				return;
 			}
 			// use the full listing data for accurate province/city sets
@@ -1649,6 +1827,7 @@ window.allYears = @json($allYears ?? $years);
 				$year.append('<option value="'+yr+'" '+selected+'>'+yr+'</option>');
 			});
 			$year.trigger('change.select2');
+			propagateFilters();
 		});
 
 		// province change cascades to cities
@@ -1666,6 +1845,7 @@ window.allYears = @json($allYears ?? $years);
 					$cityAll.append('<option value="'+c+'" '+sel+'>'+c+'</option>');
 				});
 				$cityAll.trigger('change.select2');
+				propagateFilters();
 				return;
 			}
 			var allRows = window.fullListingData || [];
@@ -1688,10 +1868,15 @@ window.allYears = @json($allYears ?? $years);
 			$city.trigger('change.select2');
 		});
 
+		// propagate when year selector is changed as well
+		$('#year-select-orig').on('change', propagateFilters);
+
 		// if the page loaded with preselected filters, fire change events
 		// so dependent dropdowns update immediately
 		$('#region-select-orig').trigger('change');
 		$('#province-select-orig').trigger('change');
+		// update iframe/gallery based on any initial filter values
+		propagateFilters();
 	});
 	// Prepare data for the doughnut chart (ST Titles)
 	// Build a map of title => count first
@@ -1740,7 +1925,7 @@ window.allYears = @json($allYears ?? $years);
 			data: {
 				labels: yearMoaLabels,
 				datasets: [{
-					label: 'MOA Count',
+					label: 'STs Count',
 					data: yearMoaData,
 					backgroundColor: yearMoaColors,
 					borderColor: yearMoaBorderColors,
