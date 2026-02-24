@@ -206,7 +206,22 @@
         }
     });
 </script>
-
+@if(Auth::user() && in_array(Auth::user()->usergroup, ['admin', 'sysadmin']))
+{{-- Logs modal (only shown when admin/sysadmin button is clicked) --}}
+<div class="modal fade" id="stsLogsModal" tabindex="-1" aria-labelledby="stsLogsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="stsLogsModalLabel">STs Manager Logs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height:70vh; overflow-y:auto;" id="sts-logs-container">
+                {{-- AJAX-loaded logs will appear here --}}
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @if($sts instanceof \Illuminate\Pagination\LengthAwarePaginator && $sts->hasPages())
     @php
         $currentPage = $sts->currentPage();

@@ -62,6 +62,11 @@
         <div class="card shadow" style="max-width: 750px; min-width: 650px; margin-bottom: 2.5rem; background: #fff; border-radius: 18px;">
             <div class="card-body">
                 <h1 class="mb-4">Upload Document</h1>
+                @if(Auth::user() && in_array(Auth::user()->usergroup, ['admin','sysadmin']))
+                    <button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="viewSelectLogsBtn" data-bs-toggle="modal" data-bs-target="#selectionHistoryModal">
+                        <i class="bi bi-card-list"></i> View Logs
+                    </button>
+                @endif
                 @if(session('error'))
                     <div class="alert alert-danger">{{ session('error') }}</div>
                 @endif
@@ -213,98 +218,6 @@
                     </div>
                 </div>
                 <div class="container mt-1 d-flex justify-content-start">
-        {{-- <div class="card shadow" style="max-width: 750px; min-width: 650px; margin-bottom: 2.5rem; background: #fff; border-radius: 18px;">
-            <div class="card-body">
-                <h1 class="mb-4">Upload Knowledge Product</h1>
-                <!-- Excel Upload Form -->
-                @if (Auth::user() && in_array(Auth::user()->usergroup, ['admin', 'sysadmin']))
-                <form action="{{ route('excel.upload') }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <h2 style="font-size:1.25rem;">Knowledge Product</h2>
-                        <label for="googleSheetUrl" class="form-label">Google Sheets Link</label>
-                        <input type="url" class="form-control" id="googleSheetUrl" name="googleSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required>
-                        <small class="text-muted">Make sure the sheet is shared as "Anyone with the link" (viewer).</small>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Upload</button>
-                </form>
-                @endif
-                <div class="mt-5">
-                    <h2 class="mb-3">Uploaded Excel Files</h2>
-                    <form id="selectBaseExcelForm" action="{{ route('excel.setBase') }}" method="POST">
-                        @csrf
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                        <th></th>
-                                        <th>Doc No</th>
-                                        <th>Date Uploaded</th>
-                                        <th>Uploaded By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if(isset($logs) && count($logs) > 0)
-                                        @php $shown = 0; @endphp
-                                        @foreach($logs as $i => $log)
-                                            @if($log->stored_filename)
-                                                <tr>
-                                                    <td>
-                                                        <input type="radio" name="base_excel" value="{{ $log->stored_filename }}"
-                                                            @if(session('base_excel') == $log->stored_filename) checked @endif>
-                                                    </td>
-                                                    <td>{{ $log->docno }}</td>
-                                                    <td>{{ $log->created_at }}</td>
-                                                    <td>{{ $log->createdby }}</td>
-                                                </tr>
-                                                @php $shown++; @endphp
-                                            @endif
-                                        @endforeach
-                                        @if($shown == 0)
-                                            <tr>
-                                                <td colspan="4" class="text-center">No Excel files available. Please upload a file first.</td>
-                                            </tr>
-                                        @endif
-                                    @else
-                                        <tr>
-                                            <td colspan="4" class="text-center">No Excel files available. Please upload a file first.</td>
-                                        </tr>
-                                    @endif
-                                </tbody>
-                            </table>
-                            @if(isset($logs) && $logs instanceof \Illuminate\Pagination\LengthAwarePaginator && $logs->hasPages())
-                                @php
-                                    $currentPage = $logs->currentPage();
-                                    $lastPage = $logs->lastPage();
-                                @endphp
-                                <div class="st-custom-pagination">
-                                    <button class="st-custom-pagination-btn" @if($logs->onFirstPage()) disabled @else onclick="window.location='{{ $logs->previousPageUrl() }}'" @endif>&#8592; Prev</button>
-                                    <span class="st-custom-pagination-indicator">Page {{ $currentPage }} of {{ $lastPage }}</span>
-                                    <button class="st-custom-pagination-btn" @if(!$logs->hasMorePages()) disabled @else onclick="window.location='{{ $logs->nextPageUrl() }}'" @endif>Next &#8594;</button>
-                                </div>
-                            @endif
-                        </form>
-                        <script>
-                            function updateBaseExcel() {
-                                var form = document.getElementById('selectBaseExcelForm');
-                                if (!form) {
-                                    alert('Form not found. Please reload the page.');
-                                    return;
-                                }
-                                var radios = form.querySelectorAll('input[type=radio][name=base_excel]');
-                                var selected = false;
-                                radios.forEach(function(radio) {
-                                    if (radio.checked) selected = true;
-                                });
-                                if (!selected) {
-                                    alert('Please select an Excel file to set as base.');
-                                    return;
-                                }
-                                form.submit();
-                            }
-                        </script>
-                    </div>
-                    </div>
-                </div> --}}
     </div>
     </div>
 

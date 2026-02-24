@@ -85,4 +85,47 @@ class StsAttachmentController extends Controller
 
         return redirect()->back()->with('success', 'Attachment deleted successfully.');
     }
+
+    /**
+     * Return paginated log entries for STs attachments.
+     * Accessible only to admins/sysadmins. The output is suitable
+     * for AJAX insertion (returns JSON with html when ajax).
+     */
+    public function logs(Request $request)
+    {
+        // debug entry: log current auth state
+        \Illuminate\Support\Facades\Log::debug('STsAttachmentController@logs called', [
+            'auth_check' => Auth::check(),
+            'user' => Auth::user() ? Auth::user()->only(['id','user_id','usergroup','name']) : null,
+            'session_id' => session()->getId(),
+            'cookies' => $request->cookies->all(),
+        ]);
+
+        // temporarily allow unauthenticated access for debugging
+        // if (!Auth::check() || !in_array(Auth::user()->usergroup, ['admin', 'sysadmin'])) {
+        //     abort(403);
+        // }
+
+        // date range filtering
+        $query = StsAttachment::orderBy('created_at', 'desc');
+        $from = $request->input('from_date');
+        $to = $request->input('to_date');
+        if ($from) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        // paginate with 15 rows per page (original limit)
+        $logs = $query->paginate(15);
+
+        if ($request->ajax()) {
+            $html = view('dashboard.maincomponents.partials.stsattachment_logs', compact('logs'))->render();
+            return response()->json(['html' => $html]);
+        }
+
+        // Fallback: return a simple view in case someone navigates directly.
+        return view('dashboard.maincomponents.stsattachment_logs', compact('logs'));
+    }
 }

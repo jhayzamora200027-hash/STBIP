@@ -5,6 +5,11 @@
 		<div class="card shadow w-100" style="max-width: 900px; margin-bottom: 2.5rem; background: #fff; border-radius: 18px;">
 			<div class="card-body">
 				<h1 class="mb-4">STs MOA Attachment Listing</h1>
+				@if(Auth::user() && in_array(Auth::user()->usergroup, ['admin', 'sysadmin']))
+					<button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="viewStsLogsBtn">
+						<i class="bi bi-card-list"></i> View Logs
+					</button>
+				@endif
 
 				@if(session('success'))
 					<div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3 p-3 rounded-3" role="alert" style="background:linear-gradient(90deg,#22c55e,#16a34a); color:#ecfdf5; box-shadow:0 4px 10px rgba(16,185,129,0.35);">
@@ -80,7 +85,78 @@
 				</div>
 
 				<script>
-					const regionTitleMap = @json($regionTitleMap ?? []);
+				// Load STs logs into modal container via AJAX
+				function loadStsLogsPage(url) {
+					if (!url) return;
+					// normalize URL path
+					if (!url.match(/^https?:\/\//) && url.charAt(0) !== '/') {
+						url = '/' + url;
+					}
+					console.log('loadStsLogsPage fetching', url);
+					console.log('cookies before fetch', document.cookie);
+					var container = document.getElementById('sts-logs-container');
+					if (!container) {
+						window.location = url;
+						return;
+					}
+
+					// put a spinner/placeholder while content loads
+					container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div> Loading logs...</div>';
+
+					fetch(url, {
+						credentials: 'include',
+						headers: {
+							'X-Requested-With': 'XMLHttpRequest',
+							'Accept': 'application/json'
+						}
+					})
+						.then(function(response) { return response.json(); })
+						.then(function(data) {
+							if (data && data.html) {
+								container.innerHTML = data.html;
+							} else if (data && data.redirect) {
+								window.location = data.redirect;
+							}
+						})
+						.catch(function() {
+							window.location = url;
+						});
+				}
+
+				// open modal and load logs when button clicked
+				// convert the generated URL into a root-relative path
+				let stsLogsUrl = "{{ route('sts.attachments.logs') }}";
+				try {
+					stsLogsUrl = new URL(stsLogsUrl).pathname;
+				} catch (e) {
+					// if URL constructor fails, leave as-is
+				}
+				document.addEventListener('click', function(e) {
+					var btn = e.target.closest('#viewStsLogsBtn');
+					if (!btn) return;
+					var modalEl = document.getElementById('stsLogsModal');
+					if (!modalEl) return;
+					// include current filter values if form exists
+					let qs = '';
+					var form = document.getElementById('sts-logs-filter-form');
+					if (form) {
+						let params = new URLSearchParams(new FormData(form));
+						qs = params.toString() ? ('?' + params.toString()) : '';
+					}
+					loadStsLogsPage(stsLogsUrl + qs);
+					var modal = new bootstrap.Modal(modalEl);
+					modal.show();
+				});
+				// filter form submission should reload logs via AJAX
+				document.addEventListener('submit', function(e) {
+					if (e.target && e.target.id === 'sts-logs-filter-form') {
+						e.preventDefault();
+						let params = new URLSearchParams(new FormData(e.target));
+						loadStsLogsPage(stsLogsUrl + (params.toString() ? '?' + params.toString() : ''));
+					}
+				});
+
+				const regionTitleMap = @json($regionTitleMap ?? []);
 					const allTitles = @json($titles ?? []);
 
 					function loadUploadStsPage(url) {

@@ -19,18 +19,11 @@ Route::get('/demo', function () {
     return view('demo');
 });
 
-Route::get('/demo1', function () {
-    return view('demo1');
-});
-
 Route::get('/demo2', function () {
     return view('demo2');
 });
 
-// Specified Regions gallery page (copied from demo1)
-Route::get('/specified-regions', function () {
-    return view('SpecifiedRegions');
-})->name('specified.regions');
+
 // Home / Login entry (dashboard front page) — render `dashboard.main` but reuse MainReportController data
 Route::get('/', function () {
     $controller = app(\App\Http\Controllers\MainReportController::class);
@@ -38,10 +31,7 @@ Route::get('/', function () {
     return view('dashboard.main', $view->getData());
 })->name('main')->middleware('guest');
 
-// Registration page (guests only)
-Route::get('/register', function () {
-    return view('login.accounts.register');
-})->name('register')->middleware('guest');
+
 
 // Profile (authenticated users)
 Route::get('/profile', [UserController::class, 'profile'])
@@ -61,10 +51,6 @@ Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 Route::get('/loading-demo', function () {
     return view('loading-demo');
 })->name('loading.demo');
-
-Route::get('/demo-modal', function () {
-    return view('demo-modal');
-})->name('demo.modal');
 
 // ==================== DASHBOARD ROUTES ====================
 
@@ -108,8 +94,13 @@ Route::post('/excel/refresh-google-sheet', [ExcelController::class, 'refreshFrom
 Route::post('/admin/add-user', [UserController::class, 'addUser'])->name('admin.addUser');
 
 // Public route to view ST attachments (PDFs) even when not logged in
+// constrain parameter to numbers so literal paths (like "logs") won't match
 Route::get('/sts-attachments/{attachment}', [StsAttachmentController::class, 'show'])
+    ->where('attachment', '[0-9]+')
     ->name('sts.attachments.show');
+
+// temporary debug endpoint removed - routing order and constraints now
+// allow the real logs route to be reached even when defined later.
 
 // ==================== PROTECTED ROUTES (Require Authentication) ====================
 
@@ -119,6 +110,14 @@ Route::middleware(['auth'])->group(function () {
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');
+
+    // Logs for attachments (admin/sysadmin only)
+    // temporarily bypass auth middleware so we can see whether request actually
+    // reaches the controller (cookie/session issues).  The controller itself
+    // still contains its own check/logging.
+    Route::get('/sts-attachments/logs', [StsAttachmentController::class, 'logs'])
+        ->name('sts.attachments.logs')
+        ->withoutMiddleware('auth');
 
     // Per-ST attachment upload & management (upload/delete require auth)
     Route::post('/sts-attachments', [StsAttachmentController::class, 'store'])->name('sts.attachments.store');

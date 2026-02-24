@@ -282,6 +282,10 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	});
 
+	// legacy: click actions were previously disabled here. behaviour is now handled
+	// further down by a dedicated listener that shows the region stats panel and
+	// also notifies parent to adjust iframe height.
+
 	// bottom preview: mirror the currently-centered slide into the bottom preview area
 	function renderBottomProvinceList(payload) {
 		try {
@@ -499,12 +503,60 @@ document.addEventListener("DOMContentLoaded", function () {
 	let _lastActiveImgEl = null;
 	let _lastActiveImgRect = null;
 
-	// openImageModal intentionally removed — modal opening disabled
-	function openImageModal(target) { /* no-op */ }
+	// image‑preview modal helper using sliderModal elements
+	function openImageModal(target) {
+		if (!modal) return;
+		const url = (target && (target.dataset.img || target.src)) || '';
+		if (!url) return;
+		modalImg.src = url;
+		modal.style.display = 'block';
+		modal.classList.add('expanded');
+		// explicitly expand content in case CSS gets overridden
+		if (modalContent) {
+			modalContent.style.width = '90vw';
+			modalContent.style.height = '90vh';
+		}
+		overlay.style.display = 'block';
+		document.body.style.overflow = 'hidden';
+		// tell parent to bump iframe height for the slider preview
+		if (window.parent && window.parent !== window && window.parent.postMessage) {
+			window.parent.postMessage({ type:'streportToggleHeight', height:'2000px' }, '*');
+		}
+	}
 
+	function closeImageModal() {
+		if (!modal) return;
+		// notify parent that slider preview went away and iframe can shrink
+		if (window.parent && window.parent !== window && window.parent.postMessage) {
+			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+		}
+		modal.style.display = 'none';
+		modal.classList.remove('expanded');
+		if (modalContent) {
+			modalContent.style.width = '';
+			modalContent.style.height = '';
+		}
+		overlay.style.display = 'none';
+		modalImg.src = '';
+		document.body.style.overflow = '';
+	}
 
-	// closeImageModal removed — no-op
-	function closeImageModal(){ /* no-op */ }
+	function closeImageModal() {
+		if (!modal) return;
+		// notify parent that slider preview went away and iframe can shrink
+		if (window.parent && window.parent !== window && window.parent.postMessage) {
+			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+		}
+		modal.style.display = 'none';
+		modal.classList.remove('expanded');
+		overlay.style.display = 'none';
+		modalImg.src = '';
+		document.body.style.overflow = '';
+	}
+
+	// wire overlay and escape key
+	overlay && overlay.addEventListener('click', closeImageModal);
+	document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeImageModal(); } });
 
 
 	(function enableModalPinchAndZoom(){
@@ -905,7 +957,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 	// click handlers: open only for the active slide; clicking non-active slide will navigate to it
-	function openRegionStatsModalForImg(img){
+	function renderRegionStatsForImg(img){
 		try {
 			if (!img) return;
 			const src = img.dataset.img || img.src || '';
@@ -923,16 +975,13 @@ document.addEventListener("DOMContentLoaded", function () {
 			const mappedRegion = filenameToRegion[fileName] || null;
 			const regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
 
-			const modal = fetchEl('regionStatsModal');
-			if (!modal) return;
-			modal.setAttribute('aria-hidden','false');
-			modal.style.display = 'block';
-			document.body.classList.add('rsm-open');
-			// also prevent scrolling of parent page
-			try { if (window.parent && window.parent.document && window.parent.document.body) window.parent.document.body.style.overflow = 'hidden'; } catch(e) {}
-
-			const titleEl = fetchEl('regionStatsModalTitle');
-			if (titleEl) titleEl.textContent = img.getAttribute('data-region-name') || ('Region ' + (img.getAttribute('data-region-number') || '')) || regionParam;
+			// no modal wrappers – simply update image and data
+			const titleEl = rsmEl('rsm-modal-image');
+			if (titleEl) {
+				const srcFull = src || img.src || '';
+				titleEl.src = srcFull;
+				titleEl.style.visibility = 'visible';
+			}
 
 // show modal image immediately (animation removed)
             try {
@@ -1173,11 +1222,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 (function renderRegionAggregatedTitles(){
                     try {
                         const stListEl = rsmEl('rsm-st-list');
+                        const headerEl = rsmEl('rsm-st-listing-header');
+                        if (headerEl) {
+                            headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+                        }
                         if (!stListEl) return;
                         const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
                         // if server didn't return rows, keep the instruction shown to users
                         if (!rows.length) {
-                            stListEl.innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>';
+                            const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
+                            stListEl.innerHTML = emptyMsg;
                             return;
                         }
 
@@ -1191,7 +1245,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
                         if (!entries.length) {
-                            stListEl.innerHTML = '<div class="rsm-empty">No ST titles for this region</div>';
+                            const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
+                            stListEl.innerHTML = emptyMsg;
                             return;
                         }
 
@@ -1214,19 +1269,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         stListEl.innerHTML = html;
                         // delegated handler so events persist through re-renders
-                        stListEl.onclick = function(ev) {
-                            const row = ev.target.closest('.rsm-st-summary-row');
-                            if (!row) return;
-                            ev.stopPropagation();
-                            const title = row.getAttribute('data-title') || '';
-                            showReplicateConfirmPopover(row, { title: title, row: { title: title } });
+                        const applyHandlers = el => {
+                            if (!el) return;
+                            el.onclick = function(ev) {
+                                const row = ev.target.closest('.rsm-st-summary-row');
+                                if (!row) return;
+                                ev.stopPropagation();
+                                const title = row.getAttribute('data-title') || '';
+                                showReplicateConfirmPopover(row, { title: title, row: { title: title } });
+                            };
+                            el.onkeydown = function(e) {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    const row = e.target.closest('.rsm-st-summary-row');
+                                    if (row) { e.preventDefault(); row.click(); }
+                                }
+                            };
                         };
-                        stListEl.onkeydown = function(e) {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                const row = e.target.closest('.rsm-st-summary-row');
-                                if (row) { e.preventDefault(); row.click(); }
-                            }
-                        };
+                        applyHandlers(stListEl);
                     } catch(e) { console.error('renderRegionAggregatedTitles', e); }
                 })();
 						
@@ -1239,39 +1298,28 @@ document.addEventListener("DOMContentLoaded", function () {
 					rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Failed to load STs listing</div>'; 
 					console.error(err);
 				});
-		} catch(e){ console.error('openRegionStatsModalForImg', e); }
+		} catch(e){ console.error('renderRegionStatsForImg', e); }
 	}
 
-	document.addEventListener('click', function(ev){
-		const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : null;
-		if (!img) return;
-		const slide = img.parentElement;
-		if (slide && !slide.classList.contains('swiper-slide-active')) {
-			// move slider to that slide instead of opening modal
-			const slides = Array.from(document.querySelectorAll('.swiper-slide'));
-			const idx = slides.indexOf(slide);
-			if (idx >= 0 && typeof swiper.slideTo === 'function') swiper.slideTo(idx);
-			return;
-		}
-		// active slide clicked — open the Region Stats modal
-		openRegionStatsModalForImg(img);
-	});
+	// slider click interactions: render region stats and ask parent to extend iframe.
+	// we still want the height animation but the image/totals/ST listing should appear
+	// immediately rather than waiting for the toggling to finish.
+	(function(){
+		document.addEventListener('click', function(ev){
+			const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : null;
+			if (!img) return;
+			console.log('[iframe] slider image clicked, rendering stats and toggling height');
+			try { renderRegionStatsForImg(img); } catch(err) { console.error('renderRegionStatsForImg failed', err); }
+			try {
+				window.parent.postMessage({ type:'streportToggleHeight' }, '*');
+			} catch(err) { console.error('postMessage failed', err); }
+		});
+	})();
 
 
 	// modal close interactions removed (close button / overlay / Escape) for the slider image modal (kept as no-op)
 	// previously: closeBtn.click, overlay.click, Escape key would close the modal — disabled.
 
-	// Region Stats modal close helpers
-	function closeRegionStatsModal(){ try { const m = fetchEl('regionStatsModal'); if (!m) return; m.setAttribute('aria-hidden','true'); m.style.display = 'none'; document.body.classList.remove('rsm-open'); // restore parent scroll
-    try { if (window.parent && window.parent.document && window.parent.document.body) window.parent.document.body.style.overflow = ''; } catch(e) {}
-    try { const ri = rsmEl('rsm-modal-image'); if (ri) { ri.style.visibility = 'hidden'; ri.src = ''; } } catch(e){} } catch(e){}
-        // also hide any replicate popover when the modal is closed
-        try { if (typeof window.closeReplicatePopover === 'function') window.closeReplicatePopover(); else { const p = document.body.querySelector('.replicate-popover'); if (p) p.remove(); } } catch(e) {}
-}
-	try { const rb = rsmEl('rsm-close'); if (rb) rb.addEventListener('click', closeRegionStatsModal);
-            const bd = fetchQS('#regionStatsModal .rsm-backdrop'); if (bd) bd.addEventListener('click', closeRegionStatsModal);
-            const panel = fetchQS('#regionStatsModal .rsm-panel'); if (panel) panel.addEventListener('click', function(e){ if (e.target === panel || !e.target.closest('#regionStatsModal .rsm-cards')) { closeRegionStatsModal(); } });
-            document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ const rm = fetchEl('regionStatsModal'); if (rm && rm.getAttribute('aria-hidden') === 'false') closeRegionStatsModal(); } }); } catch(e) {}
 
 
 // Chart instance for Region Stats modal (lazy-initialized)
@@ -2222,27 +2270,31 @@ document.addEventListener('DOMContentLoaded', function(){
         -->
 </div>
 
-  <div class="rsm-backdrop" data-action="close"></div>
-  <div class="rsm-panel" role="document">
+  <div id="regionStatsPanel" class="rsm-panel" role="document">
     <div class="rsm-header">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <img id="rsm-modal-image" src="" alt="Region image" class="rsm-modal-image" style="visibility:hidden;width:480px;height:480px;border-radius:12px;object-fit:contain;border:1px solid rgba(2,6,23,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.08);" />
-      </div>
-
-      <div id="rsm-container" class="rsm-container">
-				<div class = 'container-form'>
-					<div id="rsm-loading" class="rsm-loading" style="display:none;">Loading…</div> 
-				</div>
-        <div id="rsm-cards" class="rsm-cards" style="display:none;">
-          <div class="rsm-left">
+      <div class="rsm-header-left" style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-direction:column;">
+          <img id="rsm-modal-image" src="" alt="Region image" class="rsm-modal-image" style="visibility:hidden;width:480px;height:480px;border-radius:12px;object-fit:contain; background:transparent; border:none; box-shadow:none;" />
+          <!-- moved metrics under image -->
+          <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:500px !important; height:240px !important; overflow:hidden; box-sizing:border-box; margin-top:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                      <div id="modalStatsTotal" style="font-size:0.95rem; font-weight:800; color:#0b2540; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
+                  </div>
+              </div>
+              <div id="modalStatsChartControls" style="position:absolute; top:8px; right:8px; z-index:30; display:flex; gap:6px;"></div>
+              <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:255px;"></canvas>
+              <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
+          </div>
+        </div>
+        <!-- provinces/totals plus ST titles grouped together -->
+        <div class="rsm-prov-total-st" style="display:flex;gap:24px;">
+          <div class="rsm-provinces-and-totals" style="display:flex;flex-direction:column;gap:12px;">
             <div class="rsm-card rsm-prov-card">
               <div class="rsm-card-title">Provinces</div>
               <div id="rsm-provinces" class="rsm-provinces-list">—</div>
             </div>
-          </div>
-
-          <!-- Totals card moved inside container so it stays adjacent -->
-          <div class="rsm-right">
             <div class="rsm-card">
                 <div class="rsm-stats-grid">
                   <div class="rsm-stat">
@@ -2265,7 +2317,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     <div class="rsm-stat-label">MOA Attachments</div>
                     <div id="rsm-total-moa-attachments" class="rsm-stat-value">0</div>
                   </div>
-                  
                   <!-- replicate/adopt placeholders (always 0) -->
                   <div class="rsm-stat">
                     <div class="rsm-stat-label">Total Replicated</div>
@@ -2279,26 +2330,22 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
 
-          <!-- metrics row under provinces only -->
-          <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:none !important; height:auto; overflow:hidden; box-sizing:border-box;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                  <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
-                  <div style="display:flex; gap:8px; align-items:center;">
-                      <div id="modalStatsTotal" style="font-size:0.95rem; font-weight:800; color:#0b2540; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
-                  </div>
-              </div>
-              <div id="modalStatsChartControls" style="position:absolute; top:8px; right:8px; z-index:30; display:flex; gap:6px;"></div>
-              <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:255px;"></canvas>
-              <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
-          </div>
-
-          <!-- ST Titles occupies rightmost column spanning both rows -->
-          <div class="rsm-listing-wrap" style="grid-column:4; grid-row:1 / span 2;">
+          <!-- ST Titles card now right of provinces/totals -->
+          <div class="rsm-listing-wrap" style="margin-top:0;">
             <div class="rsm-card">
-              <h4 class="rsm-listing-title">ST Titles — select a city to view</h4>
+              <h4 id="rsm-st-listing-header" class="rsm-listing-title">ST Titles — select a city to view</h4>
               <div id="rsm-st-list" class="rsm-st-list"><div class="rsm-empty">Select a city to view ST titles</div></div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div id="rsm-container" class="rsm-container">
+				<div class = 'container-form'>
+					<div id="rsm-loading" class="rsm-loading" style="display:none;">Loading…</div> 
+				</div>
+        <div id="rsm-cards" class="rsm-cards" style="display:none;">
+          <!-- metrics moved into header; this section intentionally left empty -->
         </div>
       </div>
 
@@ -2509,30 +2556,32 @@ document.addEventListener('DOMContentLoaded', function(){
 
 /* Region Stats Modal (slider center click) */
 
-.rsm-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.rsm-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; width:100%; flex-wrap:wrap; background:#fff; border:1px solid rgba(0,0,0,0.1); box-shadow:0 2px 4px rgba(0,0,0,0.08); padding:12px 16px; border-radius:8px; }
+.rsm-header-left { display:flex; align-items:flex-start; gap:24px; }
 .rsm-header .rsm-modal-image { width: clamp(220px, 34vw, 640px); height: auto; max-height: calc(96vh - 220px); object-fit:contain; flex-shrink:0; }
+.rsm-prov-total-st { display:flex; align-items:flex-start; gap:24px; }
 .rsm-close { background:transparent;border:none;font-size:20px; cursor:pointer; }
 .rsm-body { display:flex; flex-direction:column; gap:12px; }
 .rsm-cards {
     display: grid;
-    /* reorganize columns: provinces, totals, expandable area, ST titles */
-    grid-template-columns: 360px 140px minmax(360px, 2fr) 300px;
-    grid-template-rows: auto auto;
-    gap: 12px 12px; /* horizontal 12px, vertical 12px spacing between rows and columns */
+    /* simple single-column layout now metrics only */
+    grid-template-columns: auto;
+    grid-template-rows: auto;
+    gap: 12px; /* spacing around the metrics card */
 }
 /* ensure ST titles column doesn't collapse and push into totals */
-/* no extra left margin so this panel sits immediately right of Totals */
+/* this selector targets stale elements (grid-column:3) and has no effect on our fourth-column panel */
+/* keep it in case other templates use it, but it won't shrink our region modal listing */
 .rsm-listing-wrap[style*="grid-column: 3"] { min-width: 100px; max-width: 100px; width: 100px; margin-left: 40px;}
-#modalStatsChartWrap { margin-top: 20px; }
+#modalStatsChartWrap { margin-top: 0; } /* align with image */
 #modalStatsChartWrap {
-    grid-column: 1 / span 2;
-    grid-row: 2;
     /* margin-top handled earlier to create space */
     padding: 30px; /* add card padding instead of graph padding */
-    /* enforce fixed width so grid tracks don't stretch it */
+    /* enforce fixed width so layout doesn’t jump around */
     width: 500px !important;
     min-width: 500px !important;
     max-width: 500px;
+    height: 300px !important; /* total outer height including padding */
     flex: 0 0 500px !important;
     box-sizing: border-box; /* include padding in width */
 }
@@ -2542,6 +2591,7 @@ document.addEventListener('DOMContentLoaded', function(){
     width: 100% !important;
     max-width: 500px !important;
     min-width: 500px !important;
+    height: 240px !important; /* match wrapper content height */
     box-sizing: border-box;
 }
 .slider-province-card {
@@ -2550,7 +2600,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-metrics { /* keep fallback */
     flex:1 0 100%;
 }
-.rsm-container { display:flex; gap:28px; align-items:flex-start; width:100%; }
+.rsm-container { display:flex; gap:28px; align-items:flex-start; width:900px; max-width:100%; }
 .rsm-right { flex: 0 0 140px; /* expand totals panel width */ }
 /* ensure totals card itself matches column width */
 .rsm-right > .rsm-card { width:300px; max-width:300px; }
@@ -2558,14 +2608,15 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-right { order: 1; }
 .rsm-right > .rsm-card { margin-left: 20px; }
 .rsm-listing-wrap { order: 2; }
-/* force ST Titles container/card to a fixed 100px width */
+/* ensure ST Titles panel has reasonable width but let grid dictate spacing */
 .rsm-listing-wrap,
 .rsm-listing-wrap .rsm-card {
-    width: 400px !important;
-    min-width: 400px !important;
-    max-width: 400px !important;
-    margin-left: -85px !important;
-    margin-top: 0px !important;
+    /* match the fourth column size defined in .rsm-cards grid-template-columns */
+    width: 380px !important;
+    min-width: 380px !important;
+    max-width: 380px !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
 }
 
 .rsm-container .rsm-cards {
@@ -2630,7 +2681,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-listing-wrap { margin-top:6px; }
 .rsm-listing-title { margin:0 0 8px 0; font-size:1rem; }
 .rsm-modal-image { width:72px; height:72px; border-radius:12px; object-fit:contain; display:block; transition: none; }
-.rsm-st-list { max-height: 730px; min-height: 730px; /* limit height to 900px as requested */
+.rsm-st-list, .rsm-sts-region-list { max-height: 745px; min-height: 745px; /* limit height to 900px as requested */
     overflow:auto; border-radius:8px; border:1px solid rgba(2,6,23,0.04); padding:8px; background:#fff; -webkit-overflow-scrolling: touch; }
 .rsm-empty { color:#94a3b8; padding:8px; }
 @media (max-width:900px) { .rsm-header { flex-direction:column; align-items:center; gap:12px; } .rsm-header .rsm-modal-image { width: min(80vw, 360px); height: auto; max-height: 40vh; } .rsm-cards { display:flex; flex-direction:column; } .rsm-right { width:100%; } .rsm-left { width:100%; } .rsm-panel { width: calc(100% - 24px); } .rsm-prov-card .rsm-provinces-list, .rsm-st-list { max-height: 40vh; } .rsm-container { flex-direction: column; gap: 12px; } }

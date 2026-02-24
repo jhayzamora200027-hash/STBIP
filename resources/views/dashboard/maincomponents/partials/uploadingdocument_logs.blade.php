@@ -1,5 +1,7 @@
 <div class="mt-5">
     <h2 class="mb-3">Uploaded Files</h2>
+
+
     <form id="selectBaseExcelForm" action="{{ route('excel.setBase') }}" method="POST">
         @csrf
         <table class="table table-bordered">
@@ -75,16 +77,87 @@
             </div>
             @if(isset($latestUpdatedBy) || isset($latestActionLog))
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <span class="form-label d-block mb-1">Latest Updated By</span>
                         <span class="fw-semibold">{{ $latestUpdatedBy ?? '-' }}</span>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <span class="form-label d-block mb-1">Action</span>
                         <span class="fw-semibold text-capitalize">{{ $latestActionLog ?? '-' }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="form-label d-block mb-1">Doc No</span>
+                        <span class="fw-semibold">{{ isset($latestSelection) ? $latestSelection->docselected : '-' }}</span>
                     </div>
                 </div>
             @endif
         </div>
     </form>
 </div>
+
+{{-- history of selection logs --}}
+@if(isset($selectLogs) && $selectLogs->count() > 0)
+    <!-- modal containing history table, mimic STs logs modal classes -->
+    <div class="modal fade" id="selectionHistoryModal" tabindex="-1" aria-labelledby="selectionHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="selectionHistoryModalLabel">Base File Selection History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
+                    {{-- filter controls for modal history --}}
+                    <form id="select-logs-filter-form" class="row g-2 mb-3">
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm" for="from_date">From</label>
+                            <input type="date" class="form-control form-control-sm" name="from_date" id="from_date" value="{{ request('from_date') }}">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm" for="to_date">To</label>
+                            <input type="date" class="form-control form-control-sm" name="to_date" id="to_date" value="{{ request('to_date') }}">
+                        </div>
+                        <div class="col-auto align-self-end">
+                            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                        </div>
+                    </form>
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Action</th>
+                                <th>File</th>
+                                <th>Doc No</th>
+                                <th>User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($selectLogs as $slog)
+                                <tr>
+                                    <td>{{ $slog->updated_at }}</td>
+                                    <td class="text-capitalize">{{ $slog->actionlogs }}</td>
+                                    <td>{{ $slog->excelname }}</td>
+                                    <td>{{ $slog->docselected ?? '-' }}</td>
+                                    <td>{{ $slog->createdby }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+@if(request()->filled('from_date') || request()->filled('to_date'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modalEl = document.getElementById('selectionHistoryModal');
+            if (modalEl) {
+                var m = new bootstrap.Modal(modalEl);
+                m.show();
+            }
+        });
+    </script>
+@endif

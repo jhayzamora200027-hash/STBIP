@@ -891,16 +891,6 @@
         <img src="{{ asset('images/dattachments/social technology bureau innovating solution logo.png') }}" alt="STB Innovating Solution Logo" class="sidebar-logo">
         <nav class="nav flex-column w-100">
             <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
-            <!-- Collapsible Reports Nav -->
-            <a class="nav-link d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#sidebarReportsCollapse" role="button" aria-expanded="false" aria-controls="sidebarReportsCollapse" id="sidebarReportsToggle" style="transition:background 0.15s, color 0.15s;">
-                <span><i class="bi bi-bar-chart me-2"></i>Reports</span>
-                <i class="bi bi-chevron-down small" id="sidebarReportsChevron"></i>
-            </a>
-            <div class="collapse" id="sidebarReportsCollapse">
-                
-                <a class="nav-link ms-4" {{ request()->routeIs('streport') ? 'active' : '' }} href="{{ route('streport') }}">ST's Adopted and Replicated Report</a>
-                <a class="nav-link ms-4" {{ request()->routeIs('kreport') ? 'active' : '' }} href="{{ route('kreport') }}">Knowledge Products Report</a>
-            </div>
             @if(Auth::check() && (Auth::user()->usergroup === 'admin' || Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'user'))
             <!-- Collapsible Upload Nav -->
             <a class="nav-link d-flex align-items-center justify-content-between {{ request()->routeIs('upload') ? 'active' : '' }}" data-bs-toggle="collapse" href="#sidebarUploadCollapse" role="button" aria-expanded="{{ request()->routeIs('upload') ? 'true' : 'false' }}" aria-controls="sidebarUploadCollapse" id="sidebarUploadToggle" style="transition:background 0.15s, color 0.15s;">
@@ -914,7 +904,6 @@
                 @endif
             </div>
             @endif
-            <a class="nav-link" href="#"><i class="bi bi-gear me-2"></i>Settings</a>
         </nav>
         <style>
             /* Collapsible sidebar nav custom styles */

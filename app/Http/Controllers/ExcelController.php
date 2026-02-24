@@ -30,10 +30,17 @@ class ExcelController extends Controller
             }
             session(['base_excel' => $storedFilename]);
             $userId = Auth::check() ? Auth::user()->user_id ?? Auth::user()->id : null;
+
+            // look up the document number associated with the chosen file (if any)
+            $docno = \App\Models\Uploadlog::where('excelname', $storedFilename)
+                        ->orderBy('created_at', 'desc')
+                        ->value('docno');
+
             $log = \App\Models\Selectdocslogs::create([
                 'createdby' => $userId,
                 'excelname' => $storedFilename,
                 'actionlogs' => 'select',
+                'docselected' => $docno,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -93,7 +100,16 @@ class ExcelController extends Controller
         // from a Google Sheet upload, reconstruct a viewable sheet URL.
         $currentSheetUrl = null;
         $baseExcel = null;
-        $selectLog = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc')->get();
+        // build query for selection history, applying optional date range filter
+        $selectQuery = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc');
+        if ($request->filled('from_date')) {
+            $selectQuery->whereDate('updated_at', '>=', $request->input('from_date'));
+        }
+        if ($request->filled('to_date')) {
+            $selectQuery->whereDate('updated_at', '<=', $request->input('to_date'));
+        }
+        $selectLog = $selectQuery->get();
+
         foreach ($selectLog as $entry) {
             if ($entry->excelname && trim($entry->excelname) !== '') {
                 $full = $excelDir . '/' . $entry->excelname;
@@ -111,6 +127,10 @@ class ExcelController extends Controller
         $latestSelection = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc')->first();
         $latestUpdatedBy = $latestSelection ? $latestSelection->createdby : null;
         $latestActionLog = $latestSelection ? $latestSelection->actionlogs : null;
+        // we will need the full latest model when rendering doc number on the page
+
+        // also keep the whole history in case the view wants to render it
+        $selectLogs = $selectLog;
 
         // Ensure the currently used base Excel (from latest selection log)
         // is reflected in the session so the corresponding radio button
@@ -120,11 +140,11 @@ class ExcelController extends Controller
         }
 
         if ($request->ajax()) {
-            $html = view('dashboard.maincomponents.partials.uploadingdocument_logs', compact('logs', 'currentSheetUrl', 'latestUpdatedBy', 'latestActionLog'))->render();
+            $html = view('dashboard.maincomponents.partials.uploadingdocument_logs', compact('logs', 'currentSheetUrl', 'latestUpdatedBy', 'latestActionLog', 'latestSelection', 'selectLogs'))->render();
             return response()->json(['html' => $html]);
         }
 
-        return view('dashboard.maincomponents.uploadingdocument', compact('logs', 'currentSheetUrl', 'latestUpdatedBy', 'latestActionLog'));
+        return view('dashboard.maincomponents.uploadingdocument', compact('logs', 'currentSheetUrl', 'latestUpdatedBy', 'latestActionLog', 'latestSelection', 'selectLogs'));
     }
 
     // Show the STs MOA Attachment upload page with region filter + pagination
@@ -672,8 +692,7 @@ public function chartData(Request $request)
         \App\Models\Selectdocslogs::create([
             'createdby' => $userId,
             'excelname' => $storedFilename,
-            'actionlogs' => 'refresh',
-            'created_at' => now(),
+            'actionlogs' => 'refresh',            'docselected' => $nextDocno,            'created_at' => now(),
             'updated_at' => now(),
         ]);
 

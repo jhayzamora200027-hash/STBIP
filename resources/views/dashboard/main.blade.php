@@ -656,7 +656,7 @@
 			{{-- embed STsReport under map using iframe (isolated) --}}
 			<div class="row mt-4">
 			    <div class="col-12">
-			        <iframe src="{{ route('streport') }}?embed=1" style="width:100%; height:80vh; border:none; min-height:600px;" title="STsReport"></iframe>
+			        <iframe id="streportFrame" src="{{ route('streport') }}?embed=1" style="width:100%; height:600px; max-height:600px; border:none; transition: height 0.3s ease;" title="STsReport"></iframe>
 			    </div>
 			</div>
 <!-- Doughnut Chart for ST Titles (inside main dashboard container, after totals/filtering) -->
@@ -1062,450 +1062,6 @@
             </div>
         </div>
 
-        <!-- Region Stats Modal moved here so it can overlay the entire dashboard -->
-        <div id="regionStatsModal" class="region-stats-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="regionStatsModalTitle" style="display:none;">
-          <div class="rsm-backdrop" data-action="close"></div>
-          <div class="rsm-panel" role="document">
-            <div class="rsm-header">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <img id="rsm-modal-image" src="" alt="Region image" class="rsm-modal-image" style="visibility:hidden;width:480px;height:480px;border-radius:12px;object-fit:contain;border:1px solid rgba(2,6,23,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.08);" />
-              </div>
-
-              <div id="rsm-container" class="rsm-container">
-                    <div class = 'container-form'>
-                        <div id="rsm-loading" class="rsm-loading" style="display:none;">Loading…</div> 
-                    </div>
-                <div id="rsm-cards" class="rsm-cards" style="display:none;">
-                  <div class="rsm-left">
-                    <div class="rsm-card rsm-prov-card">
-                      <div class="rsm-card-title">Provinces</div>
-                      <div id="rsm-provinces" class="rsm-provinces-list">—</div>
-                    </div>
-                  </div>
-
-                  <!-- Totals card moved inside container so it stays adjacent -->
-                  <div class="rsm-right">
-                    <div class="rsm-card">
-                        <div class="rsm-stats-grid">
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">Total STs</div>
-                            <div id="rsm-total-sts" class="rsm-stat-value">0</div>
-                          </div>
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">Total Expression of Interest</div>
-                            <div id="rsm-total-expr" class="rsm-stat-value">0</div>
-                          </div>
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">SB Resolutions</div>
-                            <div id="rsm-total-res" class="rsm-stat-value">0</div>
-                          </div>
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">Total MOA</div>
-                            <div id="rsm-total-moa" class="rsm-stat-value">0</div>
-                          </div>
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">MOA Attachments</div>
-                            <div id="rsm-total-moa-attachments" class="rsm-stat-value">0</div>
-                          </div>
-                          
-                          <!-- replicate/adopt placeholders (always 0) -->
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">Total Replicated</div>
-                            <div id="rsm-total-rep" class="rsm-stat-value">0</div>
-                          </div>
-                          <div class="rsm-stat">
-                            <div class="rsm-stat-label">Total Adopted</div>
-                            <div id="rsm-total-adopted" class="rsm-stat-value">0</div>
-                          </div>
-                        </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <button id="rsm-close" class="rsm-close" aria-label="Close">✕</button>
-            </div>
-            <div class="rsm-body"></div>
-          </div>
-        </div>
-
-        <style>
-/* Slider modal/global styles copied from STsReport partial */
-.slider-modal {
-    position: fixed !important;
-    inset: 0;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 999999 !important; /* above sidebar */
-    pointer-events: none;
-    display: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: pan-y pinch-zoom;
-}
-
-.slider-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    touch-action: none;
-}
-
-.slider-modal-content {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    margin: 0 !important;
-    padding: 0 !important;
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-    height: 100vh;
-    width: auto;
-    min-width: 280px;
-    max-width: 60vw;
-    background: transparent;
-    box-shadow: none;
-    touch-action: pan-y pinch-zoom;
-    -webkit-overflow-scrolling: touch;
-    transform-origin: center center;
-    will-change: width, left, transform;
-}
-
-/* ensure image remains responsive and pinch-zoomable */
-.slider-modal-viewport { width:100%; height:100%; transform-origin:center center; transition: transform 160ms ease; will-change: transform; }
-.slider-modal-viewport img,
-.slider-modal-content img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    max-width: 100%;
-    max-height: 100%;
-    transition: transform 0.28s cubic-bezier(.22,1,.36,1), box-shadow 0.2s ease;
-    transform-origin: center center;
-    transform: scale(1);
-    touch-action: none; /* gestures handled on container */
-    -webkit-user-drag: none;
-}
-
-/* programmatic zoom state (used by JS) */
-.slider-modal-content.zoomed img {
-    transition: transform 120ms ease;
-    /* actual scale is set inline by JS for pinch/double-tap */
-}
-
-/* small visual scale when modal opens */
-.slider-modal.open .slider-modal-content img { transform: scale(1.02); }
-
-/* Modal responsive + expand behavior */
-.slider-modal-content {
-    transition: width 320ms cubic-bezier(.2,.9,.2,1), left 320ms cubic-bezier(.2,.9,.2,1), transform 320ms ease;
-}
-.slider-modal-content.expanded {
-    left: 0 !important;
-    top: 0 !important;
-    width: calc(100vw - 16px) !important;
-    max-width: 100vw !important;
-    height: 100vh !important;
-    padding: 12px !important;
-    transform: none !important;
-}
-
-@media (max-width: 900px) {
-    #sliderModalContent { flex-direction: row !important; align-items: flex-start !important; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 12px !important; max-width: 96vw !important; width: calc(100vw - 24px) !important; }
-}
-
-.slider-modal-title { position:absolute; top:18px; left:24px; right:24px; z-index:4; display:flex; justify-content:center; pointer-events:none; }
-.slider-modal-title h3 { margin:0; padding:8px 14px; background: linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.32)); color:#fff; border-radius:10px; font-weight:600; font-size:18px; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,0.35); display:inline-flex; flex-direction:column; align-items:center; gap:4px; text-align:center; }
-.slider-modal-title .typed-text { display:block; white-space:normal; letter-spacing:0.2px; line-height:1.05; }
-.slider-modal-title .typed-text.line1 { font-size:20px; font-weight:700; margin-bottom:4px; }
-.slider-modal-title .typed-text.line2 { font-size:14px; font-weight:500; opacity:0.95; margin-top:0; }
-.slider-modal-title .caret { display:inline-block; margin-left:6px; opacity:1; color:#fff; animation: modal-caret-blink 1s steps(1) infinite; transform-origin:center; font-weight:700; }
-@keyframes modal-caret-blink { 50% { opacity:0; } }
-@media (max-width:900px) { .slider-modal-title { top:10px; left:12px; right:12px; } .slider-modal-title h3 { font-size:16px; padding:6px 10px; } .slider-modal-title .typed-text.line1 { font-size:18px; } .slider-modal-title .typed-text.line2 { font-size:13px; } }
-
-        /* additional slider‑related rules transferred from STsReport partial */
-        /* floating zoom control UI removed — gestures still work but controls are hidden */
-        .modal-zoom-controls .modal-zoom-reset { background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.12); padding:6px 8px; }
-
-        /* ensure controls are visible above the dark overlay */
-        .slider-modal .modal-zoom-controls .modal-zoom-btn { box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
-
-        /* Province listing card inside modal (white container + readable text) */
-        .slider-province-card { position: absolute; top:64px; right:18px; z-index:6; width:30px !important; max-width:30px !important; /* user requested fixed narrow width */
-            min-width:30px !important; /* allow height to grow based on content (header + fixed list) */
-            /* remove hard max-height so card doesn't shrink below list height */
-            /* height will be determined by inner .province-list which we fixed to 8 rows */
-            /* but also ensure card itself can't collapse below header+list */
-            height: calc(40px * 8 + 16px + 40px) !important;
-            min-height: calc(40px * 8 + 16px + 40px) !important;
-            max-height: calc(40px * 8 + 16px + 40px) !important;
-            overflow:auto; background: #ffffff; color:#0f1724; border-radius:10px; padding:2px; box-shadow: 0 12px 48px rgba(2,6,23,0.08); backdrop-filter: none; display:none; box-sizing:border-box; }
-        .slider-province-card[aria-hidden="false"] { display:block; }
-        /* Provinces card header with colored background */
-        .slider-province-card .province-card-title {
-            font-weight:700;
-            margin: -10px -10px 12px -10px; /* let header visually span the card padding */
-            font-size:0.95rem;
-            color: #ffffff;
-            padding: 10px 12px;
-            background: linear-gradient(90deg,#2563eb 0%, #1e40af 100%);
-            border-radius: 10px 10px 6px 6px;
-            display:flex; align-items:center; justify-content:space-between;
-            box-shadow: inset 0 -1px 0 rgba(255,255,255,0.03);
-        }
-        .slider-province-card .province-list { font-size:0.72rem; color:#0f1724; width:100%; box-sizing:border-box; overflow-wrap: break-word; word-break: break-word; }
-        #sliderProvinceList, #sliderBottomProvinceList { /* allow the province list to expand vertically before scrolling */
-    max-height: 210px; /* adjust as needed to show more rows */
-    height: auto;
-    overflow:auto;
-    -webkit-overflow-scrolling: touch;
-    padding:0 4px;
-}
-        /* make province containers scroll when too many entries and cap visible rows */
-        #sliderProvinceList,
-        #sliderBottomProvinceList,
-        .slider-province-card .province-list,
-        .slider-bottom-province-card .province-list {
-            /* fixed 8‑row height (40px each) with a little extra for gaps
-               list will always occupy the same space and scroll when overflow */
-            height: calc(40px * 8 + 16px) !important;
-            min-height: calc(40px * 8 + 16px) !important;
-            max-height: calc(40px * 8 + 16px) !important;
-            overflow-y: auto;
-        }
-
-        /* play extra defense: target container ids directly too */
-        #sliderProvinceList,
-        #sliderBottomProvinceList {
-            height: calc(40px * 8 + 16px) !important;
-            min-height: calc(40px * 8 + 16px) !important;
-            max-height: calc(40px * 8 + 16px) !important;
-            overflow-y: auto !important;
-        }
-        /* enforce a sensible, readable row height rather than 5px */
-        .slider-province-card .province-list .province-item,
-        .slider-bottom-province-card .province-list .province-item,
-        .rsm-provinces-list .province-item,
-        .slider-province-card .province-list .city-item {
-            height: 40px !important;
-            line-height: 40px !important;
-            padding: 0 6px !important;
-            margin-bottom: 2px !important;
-        }
-
-        .slider-province-card .province-list .province-item { padding:2px 1px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:2px; align-items:center; background: transparent; border-bottom: 1px solid rgba(2,6,23,0.04); margin-bottom:2px; max-width:100%; box-sizing:border-box; font-size:0.75rem; }
-        .slider-province-card .province-list .province-item:hover { background: #f8fafc; transform: translateY(-1px); }
-        .slider-province-card .province-list .province-empty { color:#6b7280; padding:8px 6px; }
-        /* ensure province names wrap/ellipsize instead of overflowing */
-        .slider-province-card .province-list .province-item .prov-name {
-            white-space: normal;
-            word-break: break-word;
-            flex:1 1 auto;
-            min-width:0;
-            font-size:0.75rem;
-        }
-
-        /* Region total STs card (prominent) */
-        .slider-province-total-card { position:absolute; top:8px; left:0; z-index:7; width:240px; height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#fff; color:#0f1724; border-radius:14px; padding:12px; box-shadow:0 18px 56px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); transform-origin:center; }
-        .slider-province-total-card[aria-hidden="true"] { display:none; }
-        .slider-province-total-card .region-st-title {
-                    display:block;
-                    width: calc(100% + 20px);
-                    margin-left: -10px;
-                    margin-right: -10px;
-                    padding: 12px 0;
-                    background: transparent;
-                    color: #0f1724;
-                    font-weight:700;
-                    font-size:1.05rem;
-                    border-radius: 14px 14px 0 0;
-                    text-align:center;
-                }
-                .slider-province-total-card .region-st-count { font-size:52px; font-weight:800; color:#000; line-height:1; padding-top:8px; }
-        @media (max-width:900px) { .slider-province-total-card { position:relative; left:auto; margin-top:8px; width:min(86vw,260px); height:auto; } }
-
-        /* end modal controls */
-
-        /* ================= REGION STATS MODAL ================= */
-        .region-stats-modal { position: fixed; inset: 0; display: none; z-index: 999999; align-items: center; justify-content: center; }
-        .region-stats-modal .rsm-backdrop { position: absolute; inset: 0; background: rgba(2,6,23,0.55); }
-        .region-stats-modal .rsm-panel { position: relative; width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; overflow: auto; background: transparent !important; border-radius: 12px; box-shadow: 0 60px 180px rgba(2,6,23,0.18); padding: 24px; display: flex; flex-direction: column; gap: 18px; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; box-sizing: border-box; transform-origin: center center; }
-        /* Region Stats Modal (slider center click) */
-
-.rsm-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-.rsm-header .rsm-modal-image { width: clamp(220px, 34vw, 640px); height: auto; max-height: calc(96vh - 220px); object-fit:contain; flex-shrink:0; }
-.rsm-close { background:transparent;border:none;font-size:20px; cursor:pointer; }
-.rsm-body { display:flex; flex-direction:column; gap:12px; }
-.rsm-cards {
-    display: grid;
-    /* reorganize columns: provinces, totals, expandable area, ST titles */
-    grid-template-columns: 360px 140px minmax(360px, 2fr) 300px;
-    grid-template-rows: auto auto;
-    gap: 12px 12px; /* horizontal 12px, vertical 12px spacing between rows and columns */
-}
-/* ensure ST titles column doesn't collapse and push into totals */
-/* no extra left margin so this panel sits immediately right of Totals */
-.rsm-listing-wrap[style*="grid-column: 3"] { min-width: 100px; max-width: 100px; width: 100px; margin-left: 40px;}
-#modalStatsChartWrap { margin-top: 20px; }
-#modalStatsChartWrap {
-    grid-column: 1 / span 2;
-    grid-row: 2;
-    /* margin-top handled earlier to create space */
-    padding: 30px; /* add card padding instead of graph padding */
-    /* enforce fixed width so grid tracks don't stretch it */
-    width: 500px !important;
-    min-width: 500px !important;
-    max-width: 500px;
-    flex: 0 0 500px !important;
-    box-sizing: border-box; /* include padding in width */
-}
-/* ensure the internal chart does not exceed the wrapper width */
-#modalStatsChart,
-#modalStatsChartWrap > canvas {
-    width: 100% !important;
-    max-width: 500px !important;
-    min-width: 500px !important;
-    box-sizing: border-box;
-}
-.slider-province-card {
-    padding: 30px; /* provide consistent padding inside provinces card */
-}
-.rsm-metrics { /* keep fallback */
-    flex:1 0 100%;
-}
-.rsm-container { display:flex; gap:28px; align-items:flex-start; width:100%; }
-.rsm-right { flex: 0 0 140px; /* expand totals panel width */ }
-/* ensure totals card itself matches column width */
-.rsm-right > .rsm-card { width:300px; max-width:300px; }
-/* totals now lives inside the grid so ordering and negative offsets aren’t needed */
-.rsm-right { order: 1; }
-.rsm-right > .rsm-card { margin-left: 20px; }
-.rsm-listing-wrap { order: 2; }
-/* force ST Titles container/card to a fixed 100px width */
-.rsm-listing-wrap,
-.rsm-listing-wrap .rsm-card {
-    width: 400px !important;
-    min-width: 400px !important;
-    max-width: 400px !important;
-    margin-left: -85px !important;
-    margin-top: 0px !important;
-}
-
-.rsm-container .rsm-cards {
-    flex: 0 0 clamp(460px, 36vw, 840px);
-    max-width: clamp(360px, 36vw, 840px);
-}
-/* when showing the modal with region metrics, allow the cards wrapper to expand/scroll */
-#sliderModalContent .rsm-container .rsm-cards {
-    min-width: 500px !important;
-    max-width: none !important;
-    overflow-x: auto !important;
-}
-/* override the previous min-width clamp for listing-wrap which would otherwise force 260px */
-.rsm-container .rsm-listing-wrap { flex: 1 1 auto; min-width: 100px !important; }
-@media (max-width:900px) { .rsm-container { flex-direction:column; } .rsm-container .rsm-cards, .rsm-container .rsm-listing-wrap { width:100%; max-width:none; } }
-.rsm-left { flex: 0 0 460px; max-width: 460px; }
-.rsm-right { flex:0 0 100px; }
-.rsm-card { background:#fff; border-radius:10px; padding:12px; border:1px solid rgba(2,6,23,0.04); box-shadow: 0 8px 20px rgba(2,6,23,0.04); }
-/* make sure provinces panel and the totals card both use only 12px
-   padding (the global rule already covers it, but this reinforces the intent
-   and resets any inner list spacing) */
-.rsm-prov-card,
-.rsm-right > .rsm-card {
-    padding: 12px;
-}
-.rsm-prov-card .rsm-provinces-list { padding-top:12px; }
-
-/* ensure province card in RSM has fixed height */
-.rsm-prov-card { height:405px; }
-.rsm-prov-card .rsm-provinces-list { height:100%; }
-/* allow full height for provinces list, remove restrictive max-height */
-.rsm-prov-card .rsm-provinces-list { max-height: none; height: 100%; width: 420px; min-width: 360px; overflow:auto; display:flex; flex-direction:column; gap:6px; padding-top:6px; -webkit-overflow-scrolling: touch; }
-.rsm-prov-item { padding:8px 10px; border-radius:8px; background:linear-gradient(180deg,#fff,#fafafa); box-shadow: inset 0 -1px 0 rgba(2,6,23,0.02); font-size:0.95rem; }
-/* ensure province name and badge are side-by-side in RSM card */
-.rsm-prov-item.province-item { display:flex; justify-content:space-between; align-items:center; width:330px !important; max-width:330px !important; overflow:hidden !important; }
-/* blunt override for city and ST entries too */
-.rsm-provinces-list .province-sublist .city-item,
-.slider-province-card .province-sublist .city-item,
-.slider-province-card .city-item,
-.rsm-provinces-list .province-sublist .st-item,
-.slider-province-card .st-item {
-    width: 320px !important;
-    max-width: 320px !important;
-    overflow: hidden !important;
-}
-.rsm-prov-item .province-badge { flex-shrink:0; }
-.rsm-stats-grid {
-    display: grid;
-    /* flow in columns, four rows per column; extras wrap into another column */
-    grid-auto-flow: column;
-    grid-template-rows: repeat(4, auto);
-    column-gap: 10px;
-    row-gap: 10px;
-    max-width: none; /* allow horizontal expansion for additional columns */
-}
-
-.rsm-stat { background:linear-gradient(180deg,#fff,#fbfdff); padding:10px; border-radius:8px; text-align:center; border:1px solid rgba(2,6,23,0.04); }
-/* make sure any other card-like container also has a defined border */
-.rsm-prov-card, .rsm-right > .rsm-card, .rsm-card { border:1px solid rgba(2,6,23,0.04); }
-.rsm-stat-label { font-size:0.82rem; color:#64748b; }
-.rsm-stat-value { font-weight:700; font-size:1.25rem; margin-top:6px; color:#0f1724; }
-.rsm-listing-wrap { margin-top:6px; }
-.rsm-listing-title { margin:0 0 8px 0; font-size:1rem; }
-.rsm-modal-image { width:72px; height:72px; border-radius:12px; object-fit:contain; display:block; transition: none; }
-.rsm-st-list { max-height: 730px; min-height: 730px; /* limit height to 900px as requested */
-    overflow:auto; border-radius:8px; border:1px solid rgba(2,6,23,0.04); padding:8px; background:#fff; -webkit-overflow-scrolling: touch; }
-.rsm-empty { color:#94a3b8; padding:8px; }
-@media (max-width:900px) { .rsm-header { flex-direction:column; align-items:center; gap:12px; } .rsm-header .rsm-modal-image { width: min(80vw, 360px); height: auto; max-height: 40vh; } .rsm-cards { display:flex; flex-direction:column; } .rsm-right { width:100%; } .rsm-left { width:100%; } .rsm-panel { width: calc(100% - 24px); } .rsm-prov-card .rsm-provinces-list, .rsm-st-list { max-height: 40vh; } .rsm-container { flex-direction: column; gap: 12px; } }
-/* preview must not intercept slider pointer events */
-.slider-bottom-preview img, .slider-bottom-preview .slider-bottom-label { pointer-events: none; }
-
-.slider-bottom-preview img { width:360px; height:360px; object-fit:contain; border-radius:12px; box-shadow: 0 12px 34px rgba(2,6,23,0.12); background: linear-gradient(180deg,#fff,#f8fafc); border: 1px solid rgba(2,6,23,0.04); transition: transform 220ms ease; }
-.slider-bottom-preview img:hover { transform: scale(1.02); }
-.slider-bottom-label { font-weight:800; color:#0f1724; font-size:1rem; text-align:center; margin-top:8px; background: rgba(255,255,255,0.95); padding:6px 10px; border-radius:6px; box-shadow: 0 8px 30px rgba(2,6,23,0.06); }
-
-@media (max-width:1200px) { .slider-bottom-preview img { width:300px; height:300px; } .slider-bottom-preview { width:320px; margin-left:12px; } }
-@media (max-width:900px) { .slider-bottom-preview { align-self:center; margin:12px auto 24px; width:160px; } .slider-bottom-preview img { width:160px; height:160px; } }
-
-/* bottom preview province-list specific styles */
-.slider-bottom-province-card { width:100%; margin-top:14px; background:transparent; padding:6px; box-shadow:none; border-radius:8px; height: calc(40px * 8 + 16px + 40px) !important; min-height: calc(40px * 8 + 16px + 40px) !important; max-height: calc(40px * 8 + 16px + 40px) !important; }
-.slider-bottom-province-card .province-list { height: calc(40px * 8 + 16px) !important; min-height: calc(40px * 8 + 16px) !important; max-height: calc(40px * 8 + 16px) !important; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:6px 4px; }
-/* rows inside bottom province card should also be fixed height */
-.slider-bottom-province-card .province-list .province-item {
-    height: 40px !important;
-    line-height: 40px !important;
-    padding: 0 6px !important;
-    margin-bottom: 2px !important;
-}
-.slider-bottom-province-card .province-item { padding:8px 10px; border-radius:8px; background: rgba(247,249,250,0.95); display:flex; justify-content:space-between; gap:8px; align-items:center; border:1px solid rgba(2,6,23,0.04); color:#0f1724; font-weight:600; font-size:0.95rem; }
-.slider-bottom-province-card .province-item .prov-name { font-weight:700; }
-.slider-bottom-province-card .province-empty { color:#6b7280; padding:8px 6px; }
-
-/* Popover tree — unified connectors, spacing, and arrows */
-.gcm-list { --gcm-line-left: 12px; --gcm-indent: 22px; --gcm-gap-y: 8px; font-size:0.95rem; color:#0f1724; }
-.gcm-mother { position:relative; padding-left: calc(var(--gcm-line-left) + 6px); margin-bottom: var(--gcm-gap-y); display:flex; flex-direction:column; gap:6px; }
-.gcm-mother .gcm-mother-link { display:block; color:#0369a1; font-weight:700; text-decoration:none; padding:4px 0; cursor:pointer; }
-.gcm-mother::before { /* short horizontal connector from vertical guide to mother */ content:''; position:absolute; left:calc(var(--gcm-line-left)); top:12px; width:12px; height:2px; background:#e6edf3; border-radius:2px; }
-
-.gcm-child-list, .gcm-subchild-list { position:relative; margin:6px 0 0 0; padding-left: calc(var(--gcm-indent)); }
-.gcm-child-list::before, .gcm-subchild-list::before { content:''; position:absolute; left: calc(var(--gcm-line-left)); top:0; bottom:0; width:1px; background:#e6edf3; border-radius:1px; }
-
-.gcm-child-list li, .gcm-subchild-list li { position:relative; margin-bottom: var(--gcm-gap-y); padding-left: 12px; display:flex; align-items:center; gap:8px; }
-.gcm-child-list li::before, .gcm-subchild-list li::before { content:''; position:absolute; left: calc(var(--gcm-line-left)); top: 50%; transform: translateY(-50%); width: 14px; height:1px; background:#e6edf3; border-radius:1px; }
-
-/* unified arrow + text styling */
-.gcm-child-list li > a, .gcm-subchild-list li > a { color:#0369a1; text-decoration:none; font-size:0.95rem; }
-.gcm-child-list li > span, .gcm-subchild-list li > span { color:#9ca3af; font-size:0.95rem; }
-.gcm-child-list li > a::before, .gcm-subchild-list li > a::before,
-.gcm-child-list li > span::before, .gcm-subchild-list li > span::before { content:'➜'; display:inline-block; margin-right:8px; color: currentColor; font-size:0.95rem; transform: translateY(-1px); opacity:0.95; }
-
-@media (max-width:520px) {
-  .gcm-child-list, .gcm-subchild-list { padding-left: 16px; }
-  .gcm-child-list li::before, .gcm-subchild-list li::before { width: 10px; left: calc(var(--gcm-line-left)); }
-  .gcm-mother::before { left: calc(var(--gcm-line-left)); }
-}
 
 </style>
 
@@ -1727,8 +1283,7 @@ window.allYears = @json($allYears ?? $years);
 				iframe.src = base + '?' + params.join('&');
 				// also send a message for live updates
 				try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears }, '*'); } catch(e){}
-			}
-			// local filtering of any card-gallery containers on this page
+			}			// local filtering of any card-gallery containers on this page
 			if (selRegions.length || selYears.length) {
 				$('.card-gallery .card').each(function(){
 					var $c = $(this);
@@ -1745,7 +1300,50 @@ window.allYears = @json($allYears ?? $years);
 			}
 		}
 
-		$('#region-select-orig').on('change', function() {
+		// global listener for expand/collapse messages from iframe
+if (!window._streportIframeExpanded) {
+    window._streportIframeExpanded = false;
+}
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'streportToggleHeight') {
+        const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
+        if (!iframe) return;
+        // ensure transition is set in case iframe was recreated
+        if (!iframe.style.transition) iframe.style.transition = 'height 0.3s ease';
+        // debug aid
+        console.log('[parent] received toggle message', e.data);
+        // if sender provided a specific height, apply it directly
+        if (e.data.height) {
+            iframe.style.height = e.data.height;
+            iframe.style.maxHeight = e.data.height;
+            // remember expansion state based on height (600px is our default collapsed size)
+            window._streportIframeExpanded = (e.data.height !== '600px');
+        } else {
+            // original toggle behaviour for backwards compatibility
+            // use fixed 1700px expansion rather than full viewport height
+            if (!window._streportIframeExpanded) {
+                iframe.style.height = '1700px';
+                iframe.style.maxHeight = '1700px';
+            } else {
+                iframe.style.height = '600px';
+                iframe.style.maxHeight = '600px';
+            }
+            window._streportIframeExpanded = !window._streportIframeExpanded;
+        }
+        // if we've just expanded, bring the iframe into view and focus it after the transition completes
+        if (window._streportIframeExpanded) {
+            // wait until the CSS transition settles (roughly 300ms)
+            setTimeout(() => {
+                try {
+                    iframe.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    iframe.focus && iframe.focus();
+                } catch(err) { console.warn('scrollIntoView failed', err); }
+            }, 350);
+        }
+    }
+});
+
+$('#region-select-orig').on('change', function() {
 			var selectedRegions = $(this).val() || [];
 			var provinces = [];
 			var cities = [];
