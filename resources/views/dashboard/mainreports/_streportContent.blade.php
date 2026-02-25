@@ -107,6 +107,7 @@ try { window.showReplicateConfirmPopover = showReplicateConfirmPopover; } catch(
 
 document.addEventListener("DOMContentLoaded", function () {
 
+
 	// strip ASCII control characters from a string (mirrors PHP cleanup)
 	function clean(s) {
 		return (s||'').toString().replace(/[\x00-\x1F\x7F]/g, '');
@@ -279,6 +280,23 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 			filterSliderByRegions(regs);
 			filterGalleryCards(regs, yrs);
+			// update graph for the most recently selected region
+			if (regs.length) {
+				var target = regs[regs.length-1];
+				// clear any cached payload so render runs fresh
+				window._lastRsmPayload = null;
+				var imgs = document.querySelectorAll('.slider-img');
+				for (var i = 0; i < imgs.length; i++) {
+					var nm = normalizeRegionText(imgs[i].getAttribute('data-region-name') || '');
+					if (nm === target) {
+						// if the slider library provides a click or activate method, use it;
+						// otherwise just render stats directly
+						try { imgs[i].click(); } catch(e) {}
+						renderRegionStatsForImg(imgs[i]);
+						break;
+					}
+				}
+			}
 		}
 	});
 
@@ -317,6 +335,8 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 
 	function updateSliderBottomPreview() {
+		// close any open gallery popover when the active region changes
+		try { closePopover(); } catch(e) {}
 		try {
 			const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
 			const preview = document.getElementById('sliderBottomCopy');
@@ -1199,24 +1219,33 @@ document.addEventListener("DOMContentLoaded", function () {
 					rsmEl('rsm-total-moa-attachments').textContent = String(moaAttachments || 0);
 
 				// --- build chart values (X order requested: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest)
-				try {
-					const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
-					const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
-					const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
-					const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
-					let perYearTransformed = null;
-					if (payload.perYearTotals) {
-						perYearTransformed = {};
-						Object.keys(payload.perYearTotals).forEach(y => {
-							const arr = payload.perYearTotals[y] || [0,0,0,0]; // [moaY, uploadedY, exprY, resY]
-							perYearTransformed[y] = [ Number(arr[1]||0), Number(arr[0]||0), Number(arr[3]||0), Number(arr[2]||0) ];
-						});
-					}
-					if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, perYearTransformed);
-				} catch(e) { console.error('modal chart error', e); }
+					// prepare a container outside the try so it's always in scope
+					let _chartData = { base: [], perYear: null };
+					try {
+						const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
+						const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
+						const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
+						const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
+						let perYearTransformed = null;
+						if (payload.perYearTotals) {
+							perYearTransformed = {};
+							Object.keys(payload.perYearTotals).forEach(y => {
+								const arr = payload.perYearTotals[y] || [0,0,0,0]; // [moaY, uploadedY, exprY, resY]
+								perYearTransformed[y] = [ Number(arr[1]||0), Number(arr[0]||0), Number(arr[3]||0), Number(arr[2]||0) ];
+							});
+						}
+						// postpone chart rendering until after metrics cards are visible
+						_chartData = {base: baseValuesOrdered, perYear: perYearTransformed};
+					} catch(e) { console.error('modal chart error', e); }
 
-					document.getElementById('rsm-loading').style.display = 'none';
-					rsmEl('rsm-cards').style.display = ''; 
+						document.getElementById('rsm-loading').style.display = 'none';
+						const _cardsEl = rsmEl('rsm-cards');
+						_cardsEl.style.display = '';
+						if (typeof initOrUpdateModalStatsChart === 'function') {
+							initOrUpdateModalStatsChart(_chartData.base, _chartData.perYear);
+						}
+						// ensure chart.js recalculates size if it already existed
+						try { if (modalStatsChart && typeof modalStatsChart.resize === 'function') modalStatsChart.resize(); } catch(e) {}
 
 					// load the ST listing (HTML partial) for the region
                 (function renderRegionAggregatedTitles(){
@@ -1325,8 +1354,43 @@ document.addEventListener("DOMContentLoaded", function () {
 // Chart instance for Region Stats modal (lazy-initialized)
 let modalStatsChart = null;
 function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
-    const el = fetchEl('modalStatsChart');
-    if (!el || typeof Chart === 'undefined') return;
+    // helper for checkbox controls (hoisted so update branch can call it)
+    function refreshControls(){
+        const ctrl = fetchEl('modalStatsChartControls');
+        if (!ctrl || !modalStatsChart) return;
+        // intentionally left blank; no user controls
+        ctrl.innerHTML = '';
+    }
+    // prefer local canvas; fetchEl may return parent element which can be null in embed context
+    let el = document.getElementById('modalStatsChart');
+    if (!el) el = fetchEl('modalStatsChart');
+    console.log('[STsReport] initOrUpdateModalStatsChart values', values, 'perYear', perYearTotals, 'canvas', el);
+    if (!el) { console.warn('[STsReport] modalStatsChart element not found'); return; }
+    // allow Chart.js from parent if embed context doesn’t have it
+    let ChartCtor = (typeof Chart !== 'undefined') ? Chart : (window.parent && window.parent.Chart);
+    if (!ChartCtor) {
+        console.warn('[STsReport] Chart.js not available anywhere; attempting to load dynamically');
+        // dynamically inject Chart.js and retry once loaded
+        const existing = document.querySelector('script[src*="chart.js"]');
+        if (!existing) {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+            s.onload = () => {
+                console.log('[STsReport] dynamic Chart.js loaded, retrying chart init');
+                initOrUpdateModalStatsChart(values, perYearTotals);
+            };
+            s.onerror = () => console.error('[STsReport] failed to load Chart.js dynamically');
+            document.head.appendChild(s);
+        } else {
+            // if script tag exists but library still not ready, wait briefly and retry
+            setTimeout(() => initOrUpdateModalStatsChart(values, perYearTotals), 200);
+        }
+        return;
+    }
+    // if the global Chart is missing or differs, we’re using the parent’s
+    if (typeof Chart === 'undefined' || ChartCtor !== Chart) {
+        console.log('[STsReport] using parent Chart.js');
+    }
     // X order requested by user: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest
     const labels = ['Uploaded MOA','Total MOA','SB Resolution','Expression of Interest'];
     const ctx = el.getContext('2d');
@@ -1336,23 +1400,18 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
 
     function buildDatasets(baseValues, perYear) {
         const datasets = [];
+        // primary "All" series: thin blue line with light gradient fill
         datasets.push({
             label: 'All',
             data: baseValues,
             borderColor: '#2563eb',
-            backgroundColor: gradient,
+            backgroundColor: 'rgba(37,99,235,0.16)',
             fill: true,
             cubicInterpolationMode: 'monotone',
-            tension: 0.42,
-            pointStyle: 'circle',
-            pointBackgroundColor: '#fff',
-            pointBorderColor: '#2563eb',
-            pointRadius: 10,
-            pointHitRadius: 40,
-            pointHoverRadius: 14,
-            pointHoverBorderWidth: 3,
-            borderWidth: 4,
-            showValues: true
+            tension: 0.3,
+            pointRadius: 0,                // hide individual points for minimalist look
+            pointHoverRadius: 6,
+            borderWidth: 2
         });
         if (!perYear) return datasets;
         const palette = ['#059669','#d97706','#7c3aed','#0ea5e9','#ef4444','#0891b2'];
@@ -1368,27 +1427,23 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                 backgroundColor: 'transparent',
                 fill: false,
                 cubicInterpolationMode: 'monotone',
-                tension: 0.42,
-                pointStyle: 'circle',
-                pointBackgroundColor: '#fff',
-                pointBorderColor: color,
-                pointRadius: 6,
-                pointHitRadius: 24,
-                pointHoverRadius: 10,
-                borderWidth: 3,
-                borderDash: [6,4],
-                showValues: true
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                borderWidth: 2,
+                borderDash: [4,4]
             });
         });
         return datasets;
     }
 
     if (!modalStatsChart) {
+        console.log('[STsReport] creating new modalStatsChart with values', values);
         const _maxVal = Math.max(1, ...(values.map(v => Number(v) || 0)));
         const _suggestedMax = Math.max(5, Math.ceil(_maxVal + Math.max(2, _maxVal * 0.15)));
         const _step = Math.ceil(_suggestedMax / 5);
 
-        modalStatsChart = new Chart(ctx, {
+        modalStatsChart = new ChartCtor(ctx, {
             type: 'line',
             data: { labels: labels, datasets: buildDatasets(values, perYearTotals) },
             options: {
@@ -1397,9 +1452,9 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                 interaction: { mode: 'nearest', intersect: false, axis: 'xy' },
                 onHover: null,
                 events: ['click'],
-                layout: { padding: { top: 6, right: 8, bottom: 18, left: 8 } },
+                layout: { padding: { top: 4, right: 12, bottom: 20, left: 6 } },
                 plugins: {
-                    legend: { display: true, position: 'top', align: 'center', labels: { usePointStyle: true, boxWidth: 24, padding: 8, font: { size: 16, weight: '700' } },
+                    legend: { display: true, position: 'top', align: 'center', labels: { usePointStyle: true, boxWidth: 16, padding: 6, font: { size: 14, weight: '600' } },
                         onClick: function(evt, legendItem, legend) {
                             const chart = legend.chart; const dsIndex = legendItem.datasetIndex; const currentlyVisible = chart.isDatasetVisible(dsIndex);
                             const dsLabel = chart.data.datasets[dsIndex] && chart.data.datasets[dsIndex].label;
@@ -1424,42 +1479,79 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                     tooltip: { enabled: false }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#374151', maxRotation: 0, autoSkip: false, font: { size: 18, weight: '700' }, padding: 4 }, title: { display: false, text: 'Metric', color: '#6b7280', font: { size: 13, weight: '700' }, padding: { top: 8 } } },
+                    x: { grid: { display: false }, ticks: { color: '#374151', maxRotation: 0, autoSkip: true, font: { size: 11, weight: '600' }, padding: 8,
+                        callback: function(val) {
+                            const lbl = this.getLabelForValue(val) || '';
+                            // explicit mapping for each metric
+                            switch(lbl) {
+                                case 'Uploaded MOA': return 'Upload MOA';
+                                case 'Total MOA': return 'Total MOA';
+                                case 'SB Resolution': return 'SB Res';
+                                case 'Expression of Interest': return ['Expr','Interest'];
+                                default: return lbl;
+                            }
+                        }
+                    }, title: { display: false } },
                     y: { beginAtZero: true, suggestedMax: _suggestedMax, ticks: { precision: 0, stepSize: _step, color: '#374151', font: { size: 14, weight: '600' } }, grid: { color: 'rgba(15,23,42,0.08)' }, title: { display: true, text: 'Number of STs', color: '#6b7280', font: { size: 13, weight: '700' }, padding: { bottom: 6 } } }
                 }
             },
-            plugins: [{
-                id: 'valueLabels',
-                beforeDatasetDraw: function(chart, args, options) { const dsIndex = args.index; const ds = chart.data.datasets[dsIndex]; const alpha = (chart._datasetAlphas && typeof chart._datasetAlphas[ds.label] !== 'undefined') ? chart._datasetAlphas[ds.label] : (chart.isDatasetVisible(dsIndex) ? 1 : 0); chart.ctx.save(); chart.ctx.globalAlpha = alpha; },
-                afterDatasetDraw: function(chart, args, options) { chart.ctx.restore(); },
-                afterDatasetsDraw: function(chart) {
-                    const ctx = chart.ctx; const active = chart.getActiveElements(); const activeIndex = (active && active.length) ? active[0].index : null;
-                    chart.data.datasets.forEach((dataset, dsIndex) => {
-                        if (dataset.showValues === false) return;
-                        const _alpha = (chart._labelAlphas && typeof chart._labelAlphas[dataset.label] !== 'undefined') ? chart._labelAlphas[dataset.label] : (chart.isDatasetVisible(dsIndex) ? 1 : 0);
-                        if (!_alpha || _alpha <= 0.01) return;
-                        const meta = chart.getDatasetMeta(dsIndex);
-                        if (!meta || !meta.data) return;
-                        meta.data.forEach((el, idx) => {
-                            const val = dataset.data[idx]; if (val === null || val === undefined) return; ctx.save(); ctx.globalAlpha = _alpha;
-                            const isSB = (idx === 2); // SB now at position 2 in the X order
-                            const isActive = (activeIndex === idx);
-                            if (isSB && isActive) {
-                                ctx.beginPath(); ctx.arc(el.x, el.y, 18, 0, Math.PI * 2); ctx.fillStyle = 'rgba(37,99,235,0.06)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(37,99,235,0.45)'; ctx.stroke();
-                                ctx.font = '900 28px Poppins, Inter, system-ui, sans-serif'; ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.strokeText(String(val), el.x, el.y - 34); ctx.fillStyle = (dataset && dataset.borderColor) ? dataset.borderColor : '#2563eb'; ctx.fillText(String(val), el.x, el.y - 34);
-                            } else if (isSB) {
-                                ctx.font = '800 18px Poppins, Inter, system-ui, sans-serif'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.strokeText(String(val), el.x, el.y - 24);
-                                ctx.fillStyle = (dataset && dataset.label && dataset.label !== 'All' && dataset.borderColor) ? dataset.borderColor : '#0b2540'; ctx.fillText(String(val), el.x, el.y - 24);
-                            } else {
-                                ctx.font = '700 16px Poppins, Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; const _labelColor = (dataset && dataset.label && dataset.label !== 'All' && dataset.borderColor) ? dataset.borderColor : '#0b2540'; ctx.fillStyle = _labelColor; ctx.fillText(String(val), el.x, el.y - 12);
-                            }
-                            ctx.restore();
+            // minimalist chart – plugins for value indicators
+            plugins: [
+                {
+                    id: 'simpleValues',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        chart.data.datasets.forEach((ds, dsIndex) => {
+                            if (!chart.isDatasetVisible(dsIndex)) return;
+                            const meta = chart.getDatasetMeta(dsIndex);
+                            ds.data.forEach((val, idx) => {
+                                const el = meta.data[idx];
+                                if (el && val != null) {
+                                    ctx.save();
+                                    ctx.font = '600 12px Poppins, Inter, system-ui, sans-serif';
+                                    ctx.fillStyle = ds.borderColor || '#000';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText(String(val), el.x, el.y - 6);
+                                    ctx.restore();
+                                }
+                            });
                         });
-                    });
+                    }
+                },
+                {
+                    id: 'endLineLabels',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        chart.data.datasets.forEach((ds, dsIndex) => {
+                            if (!chart.isDatasetVisible(dsIndex)) return;
+                            const meta = chart.getDatasetMeta(dsIndex);
+                            const len = meta.data.length;
+                            if (len === 0) return;
+                            const el = meta.data[len-1];
+                            const val = ds.data[len-1];
+                            if (el && val != null) {
+                                ctx.save();
+                                ctx.font = '700 12px Poppins, Inter, system-ui, sans-serif';
+                                ctx.fillStyle = ds.borderColor || '#000';
+                                ctx.textAlign = 'left';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(String(val), el.x + 8, el.y);
+                                ctx.restore();
+                            }
+                        });
+                    }
                 }
-            }]
+            ]
         });
         try { createChartHitZones(modalStatsChart); } catch(e) {}
+
+        // build and render show/hide controls.  We already defined a
+        // checkbox-friendly version earlier in the outer scope, so just
+        // call that helper here instead of redefining it.  This ensures the
+        // multi‑select dropdown used throughout the modal always has checkboxes
+        // (and avoids accidentally overriding the function).
+        refreshControls();
 
         // attach alpha animators + init alpha state
         modalStatsChart._labelAlphas = {}; modalStatsChart._labelFadeHandles = {};
@@ -1496,6 +1588,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
         })();
 
     } else {
+        console.log('[STsReport] updating existing modalStatsChart with values', values);
         const _maxVal = Math.max(1, ...(values.map(v => Number(v) || 0)));
         const _suggestedMax = Math.max(5, Math.ceil(_maxVal + Math.max(2, _maxVal * 0.15)));
         const _step = Math.ceil(_suggestedMax / 5);
@@ -1503,6 +1596,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
         modalStatsChart.data.datasets.forEach((ds, idx) => { _visMap[ds.label] = modalStatsChart.isDatasetVisible(idx); });
         modalStatsChart.data.labels = labels;
         modalStatsChart.data.datasets = buildDatasets(values, perYearTotals);
+        refreshControls();
         modalStatsChart.data.datasets.forEach((ds, idx) => {
             const vis = (typeof _visMap[ds.label] !== 'undefined') ? _visMap[ds.label] : true;
             modalStatsChart.setDatasetVisibility(idx, vis);
@@ -1983,6 +2077,91 @@ document.addEventListener('DOMContentLoaded', function(){
     try { _scheduleAutoResume(); } catch(e){}
   }
 
+  // automatically close any open gallery extension when the slider's active region changes
+  document.addEventListener('sliderActiveRegionChanged', function(e){
+      try { closePopover(); } catch(e){}
+      const region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
+      console.log('[RSM] sliderActiveRegionChanged event detail', e && e.detail, 'parent.regionMap keys', window.parent && window.parent.regionMap ? Object.keys(window.parent.regionMap) : 'NONE');
+      // update filter dropdowns when region changes
+      populateRegionFilters(region);
+  });
+
+  // helper to populate province/city/year selects based on regionMap
+  function populateRegionFilters(region) {
+      const provEl = document.getElementById('rsm-filter-prov');
+      const cityEl = document.getElementById('rsm-filter-city');
+      const yearEl = document.getElementById('rsm-filter-year');
+      // reset
+      if (provEl) provEl.innerHTML = '<option value="">All Provinces</option>';
+      if (cityEl) cityEl.innerHTML = '<option value="">All Cities</option>';
+      if (yearEl) yearEl.innerHTML = '<option value="">All Years</option>';
+      if (!region || !window.parent || !window.parent.regionMap) return;
+      const norm = normalizeRegionText(region);
+      const keys = Object.keys(window.parent.regionMap || {});
+      console.log('[RSM] populateRegionFilters region', region, 'normalized', norm, 'mapKeys', keys);
+      let map = window.parent.regionMap[norm];
+      if (!map) {
+          // try to find a key whose normalized form matches
+          for (const k of keys) {
+              if (normalizeRegionText(k) === norm) {
+                  console.log('[RSM] matched fallback key', k);
+                  map = window.parent.regionMap[k];
+                  break;
+              }
+          }
+      }
+      map = map || {};
+      const provs = Object.keys(map.provinces || {}).sort();
+      provs.forEach(p => {
+          if (provEl) provEl.appendChild(new Option(p, p));
+      });
+      // gather all cities across provinces for full-region list
+      const allCities = new Set();
+      provs.forEach(p => {
+          const cities = map.provinces[p] || [];
+          cities.forEach(c => allCities.add(c));
+      });
+      Array.from(allCities).sort().forEach(c => {
+          if (cityEl) cityEl.appendChild(new Option(c, c));
+      });
+      const yrs = (map.years || []).slice().sort();
+      yrs.forEach(y => {
+          if (yearEl) yearEl.appendChild(new Option(y, y));
+      });
+  }
+
+  // when province picker changes, refresh city list
+  const provSel = document.getElementById('rsm-filter-prov');
+  if (provSel) {
+      provSel.addEventListener('change', function(){
+          const cityEl2 = document.getElementById('rsm-filter-city');
+          if (!cityEl2) return;
+          cityEl2.innerHTML = '<option value="">All Cities</option>';
+          const lastEvent = provSel._lastRegionEvent || {};
+          let reg = lastEvent.regionName;
+          if (reg) reg = normalizeRegionText(reg);
+          if (reg && window.parent && window.parent.regionMap) {
+              const map = window.parent.regionMap[reg] || {};
+              if (this.value) {
+                  // specific province selected
+                  const cities = (map.provinces && map.provinces[this.value]) || [];
+                  cities.sort().forEach(c => cityEl2.appendChild(new Option(c, c)));
+              } else {
+                  // show all cities for region
+                  const allCities2 = new Set();
+                  Object.values(map.provinces || {}).forEach(arr => arr.forEach(c=>allCities2.add(c)));
+                  Array.from(allCities2).sort().forEach(c => cityEl2.appendChild(new Option(c, c)));
+              }
+          }
+      });
+  }
+
+  // store last region event on province element for use in change handler
+  document.addEventListener('sliderActiveRegionChanged', function(e){
+      const provSel2 = document.getElementById('rsm-filter-prov');
+      if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
+  });
+
   // open modal on gallery card click (delegated) — ignore clicks produced by drag/scroll
   const scroller = document.querySelector('.container-cards');
   if (scroller) {
@@ -2276,15 +2455,15 @@ document.addEventListener('DOMContentLoaded', function(){
         <div style="display:flex;align-items:center;gap:12px;flex-direction:column;">
           <img id="rsm-modal-image" src="" alt="Region image" class="rsm-modal-image" style="visibility:hidden;width:480px;height:480px;border-radius:12px;object-fit:contain; background:transparent; border:none; box-shadow:none;" />
           <!-- moved metrics under image -->
-          <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:500px !important; height:240px !important; overflow:hidden; box-sizing:border-box; margin-top:12px;">
+          <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:500px !important; height:312px !important; overflow:hidden; box-sizing:border-box; margin-top:12px;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
                   <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
                   <div style="display:flex; gap:8px; align-items:center;">
-                      <div id="modalStatsTotal" style="font-size:0.95rem; font-weight:800; color:#0b2540; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
+                      <div id="modalStatsTotal" style="font-size:0.5rem; font-weight:800; color:#8492a6; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
                   </div>
               </div>
               <div id="modalStatsChartControls" style="position:absolute; top:8px; right:8px; z-index:30; display:flex; gap:6px;"></div>
-              <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:255px;"></canvas>
+              <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:312px;"></canvas>
               <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
           </div>
         </div>
@@ -2292,8 +2471,28 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="rsm-prov-total-st" style="display:flex;gap:24px;">
           <div class="rsm-provinces-and-totals" style="display:flex;flex-direction:column;gap:12px;">
             <div class="rsm-card rsm-prov-card">
-              <div class="rsm-card-title">Provinces</div>
-              <div id="rsm-provinces" class="rsm-provinces-list">—</div>
+              <div class="rsm-card-title">Filtering fields</div>
+              <!-- filter fields for provinces and cities (UI only) -->
+              <div class="rsm-filter-fields" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                <div class="rsm-filter-group" style="width:100%;">
+                  <label for="rsm-filter-year" style="font-size:0.85rem; display:block; margin-bottom:4px;">Year</label>
+                  <select id="rsm-filter-year" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    <option value="">All Years</option>
+                  </select>
+                </div>
+                <div class="rsm-filter-group" style="width:100%;">
+                  <label for="rsm-filter-prov" style="font-size:0.85rem; display:block; margin-bottom:4px;">Province</label>
+                  <select id="rsm-filter-prov" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    <option value="">All Provinces</option>
+                  </select>
+                </div>
+                <div class="rsm-filter-group" style="width:100%;">
+                  <label for="rsm-filter-city" style="font-size:0.85rem; display:block; margin-bottom:4px;">City</label>
+                  <select id="rsm-filter-city" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    <option value="">All Cities</option>
+                  </select>
+                </div>
+              </div>
             </div>
             <div class="rsm-card">
                 <div class="rsm-stats-grid">
@@ -2581,8 +2780,9 @@ document.addEventListener('DOMContentLoaded', function(){
     width: 500px !important;
     min-width: 500px !important;
     max-width: 500px;
-    height: 300px !important; /* total outer height including padding */
-    flex: 0 0 500px !important;
+    height: 312px !important; /* total outer height including padding */
+    /* limit flex-basis to match the desired height rather than the previous 500px which forced a tall box */
+    flex: 0 0 312px !important;
     box-sizing: border-box; /* include padding in width */
 }
 /* ensure the internal chart does not exceed the wrapper width */
@@ -2591,7 +2791,7 @@ document.addEventListener('DOMContentLoaded', function(){
     width: 100% !important;
     max-width: 500px !important;
     min-width: 500px !important;
-    height: 240px !important; /* match wrapper content height */
+    height: 270px !important; /* match wrapper content height */
     box-sizing: border-box;
 }
 .slider-province-card {
@@ -2603,7 +2803,9 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-container { display:flex; gap:28px; align-items:flex-start; width:900px; max-width:100%; }
 .rsm-right { flex: 0 0 140px; /* expand totals panel width */ }
 /* ensure totals card itself matches column width */
-.rsm-right > .rsm-card { width:300px; max-width:300px; }
+.rsm-right > .rsm-card { /* flexible totals card */ width:100%; max-width:none; height:auto !important; max-height:none !important; box-sizing:border-box; overflow:visible; }
+/* same constraints for modal totals card which isn't under .rsm-right */
+.rsm-provinces-and-totals > .rsm-card { /* flexible province card container */ width:100%; max-width:none; height:auto !important; max-height:none !important; box-sizing:border-box; overflow:visible; }
 /* totals now lives inside the grid so ordering and negative offsets aren’t needed */
 .rsm-right { order: 1; }
 .rsm-right > .rsm-card { margin-left: 20px; }
@@ -2612,11 +2814,15 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-listing-wrap,
 .rsm-listing-wrap .rsm-card {
     /* match the fourth column size defined in .rsm-cards grid-template-columns */
-    width: 380px !important;
-    min-width: 380px !important;
-    max-width: 380px !important;
+    width: 500px !important;
+    min-width: 500px !important;
+    max-width: 500px !important;
     margin-left: 0 !important;
     margin-top: 0 !important;
+}
+/* force listing card height to 810px to prevent overlap/overflow */
+.rsm-listing-wrap .rsm-card {
+    height: 818px !important;
 }
 
 .rsm-container .rsm-cards {
@@ -2645,10 +2851,15 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-prov-card .rsm-provinces-list { padding-top:12px; }
 
 /* ensure province card in RSM has fixed height */
-.rsm-prov-card { height:405px; }
+.rsm-prov-card { /* allow variable height, but keep a reasonable minimum */ min-height:405px; height:auto; }
 .rsm-prov-card .rsm-provinces-list { height:100%; }
 /* allow full height for provinces list, remove restrictive max-height */
 .rsm-prov-card .rsm-provinces-list { max-height: none; height: 100%; width: 420px; min-width: 360px; overflow:auto; display:flex; flex-direction:column; gap:6px; padding-top:6px; -webkit-overflow-scrolling: touch; }
+/* filter fields styling to stretch across available width */
+.rsm-prov-card .rsm-filter-fields { width:100%; }
+.rsm-prov-card .rsm-filter-fields .rsm-filter-group { width:100%; }
+.rsm-prov-card .rsm-filter-fields select { width:100%; box-sizing:border-box; padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:0.95rem; }
+.rsm-prov-card .rsm-filter-fields label { font-weight:600; color:#333; }
 .rsm-prov-item { padding:8px 10px; border-radius:8px; background:linear-gradient(180deg,#fff,#fafafa); box-shadow: inset 0 -1px 0 rgba(2,6,23,0.02); font-size:0.95rem; }
 /* ensure province name and badge are side-by-side in RSM card */
 .rsm-prov-item.province-item { display:flex; justify-content:space-between; align-items:center; width:330px !important; max-width:330px !important; overflow:hidden !important; }

@@ -1308,8 +1308,10 @@ window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'streportToggleHeight') {
         const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
         if (!iframe) return;
-        // ensure transition is set in case iframe was recreated
-        if (!iframe.style.transition) iframe.style.transition = 'height 0.3s ease';
+        // ensure transition is set in case iframe was recreated; always reapply so collapse animates too
+        iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
+        // make sure overflow is hidden so changing height doesn't reveal content abruptly
+        iframe.style.overflow = 'hidden';
         // debug aid
         console.log('[parent] received toggle message', e.data);
         // if sender provided a specific height, apply it directly
@@ -1320,10 +1322,10 @@ window.addEventListener('message', function(e) {
             window._streportIframeExpanded = (e.data.height !== '600px');
         } else {
             // original toggle behaviour for backwards compatibility
-            // use fixed 1700px expansion rather than full viewport height
+            // use fixed 1500px expansion rather than full viewport height
             if (!window._streportIframeExpanded) {
-                iframe.style.height = '1700px';
-                iframe.style.maxHeight = '1700px';
+                iframe.style.height = '1500px';
+                iframe.style.maxHeight = '1500px';
             } else {
                 iframe.style.height = '600px';
                 iframe.style.maxHeight = '600px';

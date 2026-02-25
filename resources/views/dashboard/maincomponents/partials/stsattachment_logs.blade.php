@@ -1,5 +1,4 @@
 <div>
-    <h3 class="mb-3">STs Manager Logs</h3>
     {{-- date range filter --}}
     <form id="sts-logs-filter-form" class="row g-2 mb-3">
         <div class="col-auto">

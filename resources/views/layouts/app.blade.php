@@ -91,6 +91,11 @@
         font-size: 1.07rem;
         border-radius: 6px;
     }
+    /* extra left padding for checkbox variants */
+    .select2-results__option input[type=checkbox] {
+        margin-right: 6px;
+    }
+    /* when using dropdownCssClass we may already have extra left padding via .year-select-dropdown rules injected */
     .select2-results__option--highlighted {
         background: #e0f2f1;
     }
@@ -736,7 +741,7 @@
                                             <li>
                                                 <a class="dropdown-item" href="{{ route('admin.stsreportsectors') }}">
                                                     <i class="bi bi-diagram-3 me-2"></i>
-                                                    STs Report Sector Utilities
+                                                    Sector Utilities
                                                 </a>
                                             </li>
                                         </ul>
