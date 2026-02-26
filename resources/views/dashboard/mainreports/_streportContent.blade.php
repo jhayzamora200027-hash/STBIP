@@ -104,9 +104,69 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
 // ensure global reference exists immediately
 try { window.showReplicateConfirmPopover = showReplicateConfirmPopover; } catch(e) {}
 
+// helper used in multiple places to derive a canonical region text from
+// slider elements or event details. placed here at the top so it's
+// available regardless of which <script> block runs first.
+function deriveRegionFromSlider(source){
+    let name = '';
+    if (source && typeof source === 'object'){
+        if (source.regionName) name = source.regionName;
+        if (!name && source.src) {
+            const file = source.src.split('/').pop();
+            const filenameMap = {
+                '1.png':'Region I','2.png':'Region II','3.png':'Region III',
+                '4_a.png':'Region IV-A','4_b.png':'Region IV-B','5.png':'Region V',
+                '6.png':'Region VI','7.png':'Region VII','8.png':'Region VIII',
+                '9.png':'Region IX','10.png':'Region X','11.png':'Region XI',
+                '12.png':'Region XII','13.png':'CARAGA',
+                'barmm.png':'BARMM','car.png':'CAR','ncr.png':'NCR','nir.png':'NIR'
+            };
+            name = filenameMap[file] || '';
+        }
+        if (!name && source.regionNumber) {
+            const romans = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+            const num = parseInt(source.regionNumber,10);
+            if (!isNaN(num) && romans[num]) name = 'Region ' + romans[num];
+        }
+    }
+    if (!name && source && source.getAttribute) {
+        name = source.getAttribute('data-region-name') || '';
+        if (!name) {
+            const file = (source.dataset.img||source.src||'').split('/').pop();
+            const filenameMap2 = {
+                '1.png':'Region I','2.png':'Region II','3.png':'Region III',
+                '4_a.png':'Region IV-A','4_b.png':'Region IV-B','5.png':'Region V',
+                '6.png':'Region VI','7.png':'Region VII','8.png':'Region VIII',
+                '9.png':'Region IX','10.png':'Region X','11.png':'Region XI',
+                '12.png':'Region XII','13.png':'CARAGA',
+                'barmm.png':'BARMM','car.png':'CAR','ncr.png':'NCR','nir.png':'NIR'
+            };
+            name = filenameMap2[file] || '';
+        }
+    }
+    return name;
+}
+
 
 document.addEventListener("DOMContentLoaded", function () {
 
+	// load jquery+select2 to make filters multi-select/searchable
+	(function(){
+		function loadCss(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}        
+		function loadScript(u,cb){var s=document.createElement('script');s.onload=cb;s.src=u;document.head.appendChild(s);}        
+		function init(){
+			try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true }); }catch(e){ }
+		}
+		if (!window.jQuery){
+			loadScript('https://code.jquery.com/jquery-3.6.0.min.js',function(){
+				loadCss('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+				loadScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',init);
+			});
+		}else if (!jQuery.fn.select2){
+			loadCss('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+			loadScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',init);
+		}else{init();}
+	})();
 
 	// strip ASCII control characters from a string (mirrors PHP cleanup)
 	function clean(s) {
@@ -149,6 +209,8 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	// normalize various region strings to canonical slider labels
+	// helper used throughout to convert disparate region identifiers to the canonical keys
+	// stored in window.parent.regionMap.
 	function normalizeRegionText(r){
 		if (!r) return '';
 		var s = String(r).toLowerCase().trim();
@@ -196,7 +258,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// helper to hide/show slides based on a list of region names
 	function filterSliderByRegions(regions){
-		console.log('filterSliderByRegions called with', regions);
 		if (!regions || !regions.length) return;
 		const filenameToRegion = {
 			'1.png': 'Region I','2.png': 'Region II','3.png': 'Region III',
@@ -264,7 +325,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// listen for filter updates from parent frame (executed even before DOM ready)
 	window.addEventListener('message', function(e){
-		console.log('iframe message event', e.data);
 		if (e.data && e.data.type === 'streportFilters') {
 			var regs = (e.data.regions || []).map(normalizeRegionText);
 			var yrs = e.data.years || [];
@@ -335,6 +395,15 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 
 	function updateSliderBottomPreview() {
+		// when the slider center image moves (or user drags) we want the
+		// parent STsReport iframe to collapse if it was expanded. the parent
+		// listens for a `streportToggleHeight` message with an explicit
+		// height of 600px, so post that here. repeated messages harmless.
+		try {
+			if (window.parent && window.parent !== window && window.parent.postMessage) {
+				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+			}
+		} catch(_e) { /* ignore */ }
 		// close any open gallery popover when the active region changes
 		try { closePopover(); } catch(e) {}
 		try {
@@ -344,7 +413,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			if (!preview) return;
 			if (activeImg) {
 				const src = activeImg.dataset.img || activeImg.src;
-				const regionName = activeImg.getAttribute('data-region-name') || '';
+				let regionName = activeImg.getAttribute('data-region-name') || '';
 				const regionNumber = activeImg.getAttribute('data-region-number') || '';
 				preview.src = src;
 				preview.alt = regionName || ('Region ' + regionNumber);
@@ -353,6 +422,28 @@ document.addEventListener("DOMContentLoaded", function () {
 				if (label) label.textContent = regionName || ('Region ' + regionNumber);
 				// emit custom event so graphing code can react
 				document.dispatchEvent(new CustomEvent('sliderActiveRegionChanged', { detail: { src, regionName, regionNumber } }));
+
+                // also log years right away for debugging (bypass listener timing issues)
+                try {
+                    if (!regionName) {
+                        regionName = deriveRegionFromSlider({src, regionName, regionNumber});
+                    }
+                    if (regionName && window.parent && window.parent.regionMap) {
+                        const norm = normalizeRegionText(regionName);
+                        let map = window.parent.regionMap[norm];
+                        if (!map) {
+                            Object.keys(window.parent.regionMap || {}).some(k => {
+                                if (normalizeRegionText(k) === norm) {
+                                    map = window.parent.regionMap[k];
+                                    return true;
+                                }
+                                return false;
+                            });
+                        }
+                        const yrs = (map && map.years ? (map.years.slice().sort()) : []);
+                        console.log('[RSM] immediate years for slider region', regionName, yrs);
+                    }
+                } catch(e) { console.warn('[RSM] year log error', e); }
 
 				// fetch provinces for the active region and render into the bottom preview
 				try {
@@ -388,11 +479,25 @@ document.addEventListener("DOMContentLoaded", function () {
 		} catch (e) { console.error(e); }
 	}
 
+	// helper to tell parent iframe to collapse
+	function collapseStreportIframe(){
+		try {
+			if (window.parent && window.parent !== window && window.parent.postMessage) {
+				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+			}
+		} catch(_e) { }
+	}
+
 	// initial sync + attach to Swiper events
 	updateSliderBottomPreview();
 	if (swiper && typeof swiper.on === 'function') {
 		swiper.on('slideChangeTransitionEnd', updateSliderBottomPreview);
 		swiper.on('init', updateSliderBottomPreview);
+		// collapse immediately when a new slide starts moving (drag or arrow)
+		swiper.on('slideChangeTransitionStart', collapseStreportIframe);
+		// sometimes fast/forceful drags bypass transition events; the
+		// `slideChange` callback fires whenever the active index changes.
+		swiper.on('slideChange', collapseStreportIframe);
 	}
 
 	// helper that looks for an element first in the current document and
@@ -961,7 +1066,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // default stub — consumers may override window.replicateST with a real implementation
-    try { window.replicateST = window.replicateST || function(payload, sourceEl){ console.log('replicateST (stub)', payload); return new Promise(res => setTimeout(()=> res({ ok:true }), 600)); }; } catch(e) {}
+    try { window.replicateST = window.replicateST || function(payload, sourceEl){ return new Promise(res => setTimeout(()=> res({ ok:true }), 600)); }; } catch(e) {}
 
 
 
@@ -1210,6 +1315,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					rsmEl('rsm-total-sts').textContent = String(allRows.length || 0);
 				try { const modalTotal = document.getElementById('modalStatsTotal'); if (modalTotal) modalTotal.textContent = `Total STs: ${allRows.length || 0}`; } catch(e) {}
 					rsmEl('rsm-total-moa').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0));
+					rsmEl('rsm-total-res').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0));
 				rsmEl('rsm-total-expr').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0));
 					// Total MOA Attachment — sum uploaded counts across perYearTotals (attachments for MOA years)
 					let moaAttachments = 0;
@@ -1224,6 +1330,8 @@ document.addEventListener("DOMContentLoaded", function () {
 					try {
 						const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
 						const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
+					// keep the standalone SB-resolution stat card up to date too
+					rsmEl('rsm-total-res').textContent = String(totalRes);
 						const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
 						const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
 						let perYearTransformed = null;
@@ -1337,7 +1445,70 @@ document.addEventListener("DOMContentLoaded", function () {
 		document.addEventListener('click', function(ev){
 			const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : null;
 			if (!img) return;
-			console.log('[iframe] slider image clicked, rendering stats and toggling height');
+			// only react when the image is inside the active (center) slide
+			const slide = img.closest('.swiper-slide');
+			if (!slide || !slide.classList.contains('swiper-slide-active')) return;
+			// immediately log years for the clicked image's region
+			try {
+				// regionName attribute is empty for numeric slides; derive from img if needed
+				let regionName = img.getAttribute('data-region-name') || '';
+				if (!regionName) {
+					regionName = deriveRegionFromSlider(img) || '';
+				}
+				if (regionName && window.parent && window.parent.regionMap) {
+					const norm = normalizeRegionText(regionName);
+					let map = window.parent.regionMap[norm];
+					if (!map) {
+						Object.keys(window.parent.regionMap || {}).some(k => {
+							if (normalizeRegionText(k) === norm) {
+								map = window.parent.regionMap[k];
+								return true;
+							}
+							return false;
+						});
+					}
+					let yrs = [];
+					let provs = [];
+					let cities = [];
+					if (map) {
+						yrs = (map.years||[]).slice().sort();
+						provs = Object.keys(map.provinces||{}).sort();
+						const citiesSet = new Set();
+						provs.forEach(p => { (map.provinces[p]||[]).forEach(c=>citiesSet.add(c)); });
+						cities = Array.from(citiesSet).sort();
+					}
+					try {
+						const yearEl = document.getElementById('rsm-filter-year');
+						const provEl = document.getElementById('rsm-filter-prov');
+						const cityEl = document.getElementById('rsm-filter-city');
+						if (yearEl) {
+							if (yrs.length) {
+								yearEl.innerHTML = yrs.map(y=> '<option>'+y+'</option>').join('');
+							} else {
+								yearEl.innerHTML = '<option value="">No data found</option>';
+							}
+						}
+						if (provEl) {
+							if (provs.length) {
+								provEl.innerHTML = provs.map(p=> '<option>'+p+'</option>').join('');
+							} else {
+								provEl.innerHTML = '<option value="">No data found</option>';
+							}
+						}
+						if (cityEl) {
+							if (cities.length) {
+								cityEl.innerHTML = cities.map(c=> '<option>'+c+'</option>').join('');
+							} else {
+								cityEl.innerHTML = '<option value="">No data found</option>';
+							}
+						}
+					} catch(e){ console.warn('[iframe] update selects failed', e); }
+					// inform parent so filtering fields can be updated (optional)
+					try {
+						window.parent.postMessage({ type:'sliderRegionData', region: regionName, years: yrs, provinces: provs, cities: cities }, '*');
+					} catch(e) { console.warn('[iframe] post sliderRegionData failed', e); }
+				}
+			} catch(e) { console.warn('[iframe] click year log error', e); }
 			try { renderRegionStatsForImg(img); } catch(err) { console.error('renderRegionStatsForImg failed', err); }
 			try {
 				window.parent.postMessage({ type:'streportToggleHeight' }, '*');
@@ -1364,7 +1535,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
     // prefer local canvas; fetchEl may return parent element which can be null in embed context
     let el = document.getElementById('modalStatsChart');
     if (!el) el = fetchEl('modalStatsChart');
-    console.log('[STsReport] initOrUpdateModalStatsChart values', values, 'perYear', perYearTotals, 'canvas', el);
     if (!el) { console.warn('[STsReport] modalStatsChart element not found'); return; }
     // allow Chart.js from parent if embed context doesn’t have it
     let ChartCtor = (typeof Chart !== 'undefined') ? Chart : (window.parent && window.parent.Chart);
@@ -1376,7 +1546,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             const s = document.createElement('script');
             s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
             s.onload = () => {
-                console.log('[STsReport] dynamic Chart.js loaded, retrying chart init');
                 initOrUpdateModalStatsChart(values, perYearTotals);
             };
             s.onerror = () => console.error('[STsReport] failed to load Chart.js dynamically');
@@ -1386,10 +1555,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             setTimeout(() => initOrUpdateModalStatsChart(values, perYearTotals), 200);
         }
         return;
-    }
-    // if the global Chart is missing or differs, we’re using the parent’s
-    if (typeof Chart === 'undefined' || ChartCtor !== Chart) {
-        console.log('[STsReport] using parent Chart.js');
     }
     // X order requested by user: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest
     const labels = ['Uploaded MOA','Total MOA','SB Resolution','Expression of Interest'];
@@ -1438,7 +1603,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
     }
 
     if (!modalStatsChart) {
-        console.log('[STsReport] creating new modalStatsChart with values', values);
         const _maxVal = Math.max(1, ...(values.map(v => Number(v) || 0)));
         const _suggestedMax = Math.max(5, Math.ceil(_maxVal + Math.max(2, _maxVal * 0.15)));
         const _step = Math.ceil(_suggestedMax / 5);
@@ -1588,7 +1752,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
         })();
 
     } else {
-        console.log('[STsReport] updating existing modalStatsChart with values', values);
         const _maxVal = Math.max(1, ...(values.map(v => Number(v) || 0)));
         const _suggestedMax = Math.max(5, Math.ceil(_maxVal + Math.max(2, _maxVal * 0.15)));
         const _step = Math.ceil(_suggestedMax / 5);
@@ -2008,8 +2171,68 @@ document.addEventListener('DOMContentLoaded', function(){
     pop.style.left = (left + window.pageXOffset) + 'px';
     pop.style.top = (top + window.pageYOffset) + 'px';
 
-    // focus first interactive element inside popover
+    // focus first interactive element inside popover and ensure the
+    // extension itself is scrolled into view (use card for anchor if pop
+    // is absolutely positioned offscreen). doing this after a timeout
+    // lets layout settle.
     setTimeout(() => {
+      try {
+        // simple attempt first; keeps horizontal centering
+        pop.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+      } catch(e) {}
+      try {
+        // ensure the underlying card is visible as well
+        card && card.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+      } catch(e) {}
+      // additionally make sure the *entire* popover rectangle is within
+      // the viewport. if the element is taller than the viewport we can't fit
+      // it fully, so instead aim to center the popover's midpoint in the
+      // window (this brings the middle body area into view).
+      try {
+        const r = pop.getBoundingClientRect();
+        const margin = 12;
+        if (r.height <= window.innerHeight) {
+          if (r.top < margin) {
+            window.scrollBy({ top: r.top - margin, behavior:'smooth' });
+          } else if (r.bottom > window.innerHeight - margin) {
+            window.scrollBy({ top: r.bottom - window.innerHeight + margin, behavior:'smooth' });
+          }
+        } else {
+          // popover taller than viewport: center its midpoint
+          const popCenter = r.top + r.height/2;
+          const goal = window.innerHeight/2;
+          window.scrollBy({ top: popCenter - goal, behavior:'smooth' });
+        }
+        // finally, if there is an rsm-header within the popover, ensure its
+        // own midpoint is centered (this targets the header specifically).
+        // because you want to see more of the header's body, we add an extra
+        // downward offset equal to half the header height; this pushes the
+        // midpoint further down the screen so the middle of the header is
+        // clearly visible rather than being right at the top edge.
+        const hdr = pop.querySelector('.rsm-header');
+        if (hdr) {
+          const hr = hdr.getBoundingClientRect();
+          const hdrCenter = hr.top + hr.height/2;
+          const winCenter = window.innerHeight/2;
+          const extra = hr.height/2; // additional scroll amount
+          window.scrollBy({ top: hdrCenter - winCenter + extra, behavior:'smooth' });
+        }
+        // finally, nudge the whole popover midpoint down a bit more so the
+        // true centre of the extension is visible rather than the very top
+        try {
+          const pr = pop.getBoundingClientRect();
+          const popMid = pr.top + pr.height/2;
+          const winMid = window.innerHeight/2;
+          const extra2 = pr.height/4; // push the midpoint further down
+          window.scrollBy({ top: popMid - winMid + extra2, behavior:'smooth' });
+        } catch(_e) {}
+      } catch(_e) {}
+      // ensure the popover container itself can receive focus for overall
+      // keyboard interactions; this makes the whole extension 'active'.
+      try {
+        pop.tabIndex = -1;
+        pop.focus();
+      } catch(e) {}
       const first = pop.querySelector('a,button,[tabindex]');
       if (first) first.focus();
     }, 0);
@@ -2080,11 +2303,83 @@ document.addEventListener('DOMContentLoaded', function(){
   // automatically close any open gallery extension when the slider's active region changes
   document.addEventListener('sliderActiveRegionChanged', function(e){
       try { closePopover(); } catch(e){}
-      const region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
-      console.log('[RSM] sliderActiveRegionChanged event detail', e && e.detail, 'parent.regionMap keys', window.parent && window.parent.regionMap ? Object.keys(window.parent.regionMap) : 'NONE');
+      let region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
+      if (!region && e && e.detail) {
+          // try to derive a name from the detail object
+          region = deriveRegionFromSlider(e.detail) || null;
+      }
+      // remember last active region for other components (e.g. card click logging)
+      window.__lastActiveRegion = region;
+
+      // log available years, provinces, and cities for the new region
+      if (region && window.parent && window.parent.regionMap) {
+          const norm = normalizeRegionText(region);
+          let map = window.parent.regionMap[norm];
+          if (!map) {
+              // fallback to any matching key
+              Object.keys(window.parent.regionMap || {}).some(k => {
+                  if (normalizeRegionText(k) === norm) {
+                      map = window.parent.regionMap[k];
+                      return true;
+                  }
+                  return false;
+              });
+          }
+          const yrs = (map && map.years ? (map.years.slice().sort()) : []);
+          const provs = Object.keys(map.provinces || {}).sort();
+          const allCities = new Set();
+          provs.forEach(p=>{
+              (map.provinces[p]||[]).forEach(c=>allCities.add(c));
+          });
+          const cities = Array.from(allCities).sort();
+          console.log('[RSM] available region data', region, { years: yrs, provinces: provs, cities: cities });
+      }
       // update filter dropdowns when region changes
       populateRegionFilters(region);
   });
+
+
+  // helper to derive a canonical region name from slider data or image
+  // (duplicate from top, kept for safety but likely unused since global)
+  function deriveRegionFromSlider(source){
+      let name = '';
+      if (source && typeof source === 'object'){
+          if (source.regionName) name = source.regionName;
+          if (!name && source.src) {
+              const file = source.src.split('/').pop();
+              const filenameMap = {
+                  '1.png':'Region I','2.png':'Region II','3.png':'Region III',
+                  '4_a.png':'Region IV-A','4_b.png':'Region IV-B','5.png':'Region V',
+                  '6.png':'Region VI','7.png':'Region VII','8.png':'Region VIII',
+                  '9.png':'Region IX','10.png':'Region X','11.png':'Region XI',
+                  '12.png':'Region XII','13.png':'CARAGA',
+                  'barmm.png':'BARMM','car.png':'CAR','ncr.png':'NCR','nir.png':'NIR'
+              };
+              name = filenameMap[file] || '';
+          }
+          if (!name && source.regionNumber) {
+              const romans = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+              const num = parseInt(source.regionNumber,10);
+              if (!isNaN(num) && romans[num]) name = 'Region ' + romans[num];
+          }
+      }
+      if (!name && source && source.getAttribute) {
+          name = source.getAttribute('data-region-name') || '';
+          if (!name) {
+              const file = (source.dataset.img||source.src||'').split('/').pop();
+              const filenameMap2 = {
+                  '1.png':'Region I','2.png':'Region II','3.png':'Region III',
+                  '4_a.png':'Region IV-A','4_b.png':'Region IV-B','5.png':'Region V',
+                  '6.png':'Region VI','7.png':'Region VII','8.png':'Region VIII',
+                  '9.png':'Region IX','10.png':'Region X','11.png':'Region XI',
+                  '12.png':'Region XII','13.png':'CARAGA',
+                  'barmm.png':'BARMM','car.png':'CAR','ncr.png':'NCR','nir.png':'NIR'
+              };
+              name = filenameMap2[file] || '';
+          }
+      }
+      return name;
+  }
 
   // helper to populate province/city/year selects based on regionMap
   function populateRegionFilters(region) {
@@ -2092,19 +2387,17 @@ document.addEventListener('DOMContentLoaded', function(){
       const cityEl = document.getElementById('rsm-filter-city');
       const yearEl = document.getElementById('rsm-filter-year');
       // reset
-      if (provEl) provEl.innerHTML = '<option value="">All Provinces</option>';
-      if (cityEl) cityEl.innerHTML = '<option value="">All Cities</option>';
-      if (yearEl) yearEl.innerHTML = '<option value="">All Years</option>';
+      if (provEl) provEl.innerHTML = '';
+      if (cityEl) cityEl.innerHTML = '';
+      if (yearEl) yearEl.innerHTML = '';
       if (!region || !window.parent || !window.parent.regionMap) return;
       const norm = normalizeRegionText(region);
       const keys = Object.keys(window.parent.regionMap || {});
-      console.log('[RSM] populateRegionFilters region', region, 'normalized', norm, 'mapKeys', keys);
       let map = window.parent.regionMap[norm];
       if (!map) {
           // try to find a key whose normalized form matches
           for (const k of keys) {
               if (normalizeRegionText(k) === norm) {
-                  console.log('[RSM] matched fallback key', k);
                   map = window.parent.regionMap[k];
                   break;
               }
@@ -2136,7 +2429,7 @@ document.addEventListener('DOMContentLoaded', function(){
       provSel.addEventListener('change', function(){
           const cityEl2 = document.getElementById('rsm-filter-city');
           if (!cityEl2) return;
-          cityEl2.innerHTML = '<option value="">All Cities</option>';
+          cityEl2.innerHTML = '';
           const lastEvent = provSel._lastRegionEvent || {};
           let reg = lastEvent.regionName;
           if (reg) reg = normalizeRegionText(reg);
@@ -2216,10 +2509,29 @@ document.addEventListener('DOMContentLoaded', function(){
       // debug: log what prevented the click (if anything)
       const scrollerDragged = (scroller.dataset && scroller.dataset.pointerDragging === '1');
       const scrolledSinceDown = Math.abs((scroller.scrollLeft||0) - (pointerStartScroll||0)) > 4;
-      console.log('[STsReport] card click', { title: card.dataset.title, isDragging, scrollerDragged, scrolledSinceDown, scrollLeft: scroller.scrollLeft, pointerStartScroll });
+
+      // also print available years for the currently active region (if known)
+      try {
+          const region = window.__lastActiveRegion || null;
+          if (region && window.parent && window.parent.regionMap) {
+              const norm = normalizeRegionText(region);
+              let map = window.parent.regionMap[norm];
+              if (!map) {
+                  Object.keys(window.parent.regionMap || {}).some(k => {
+                      if (normalizeRegionText(k) === norm) {
+                          map = window.parent.regionMap[k];
+                          return true;
+                      }
+                      return false;
+                  });
+              }
+              const yrs = (map && map.years ? map.years.slice().sort() : []);
+              console.log('[STsReport] active region on card click', region, 'years', yrs);
+          }
+      } catch(e){ console.warn('error logging region years', e); }
+
       // ignore clicks that are the result of dragging/scrolling
       if (isDragging || scrollerDragged || scrolledSinceDown) {
-        console.log('[STsReport] click ignored (drag/scroll detected)');
         ev.stopPropagation();
         ev.preventDefault();
         return;
@@ -2245,8 +2557,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (modal && modal.getAttribute && modal.getAttribute('aria-hidden') === 'false') return;
     const scrollerMain = document.querySelector('.container-cards');
     const scrollerDragged = scrollerMain && scrollerMain.dataset && scrollerMain.dataset.pointerDragging === '1';
-    console.log('[STsReport] document-level card click', { title: card.dataset && card.dataset.title, scrollerDragged, scrollLeft: scrollerMain && scrollerMain.scrollLeft });
-    if (scrollerDragged) { console.log('[STsReport] document-level click ignored (dragging)'); return; }
+    if (scrollerDragged) { return; }
     ev.preventDefault();
     openModalForCard(card);
   });
@@ -2475,23 +2786,37 @@ document.addEventListener('DOMContentLoaded', function(){
               <!-- filter fields for provinces and cities (UI only) -->
               <div class="rsm-filter-fields" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
                 <div class="rsm-filter-group" style="width:100%;">
-                  <label for="rsm-filter-year" style="font-size:0.85rem; display:block; margin-bottom:4px;">Year</label>
-                  <select id="rsm-filter-year" style="width:100%; padding:4px 6px; font-size:0.9rem;">
-                    <option value="">All Years</option>
-                  </select>
-                </div>
-                <div class="rsm-filter-group" style="width:100%;">
+                    <div class="rsm-filter-group" style="width:100%;">
                   <label for="rsm-filter-prov" style="font-size:0.85rem; display:block; margin-bottom:4px;">Province</label>
-                  <select id="rsm-filter-prov" style="width:100%; padding:4px 6px; font-size:0.9rem;">
-                    <option value="">All Provinces</option>
+                  <select id="rsm-filter-prov" multiple class="rsm-select2" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    @if(!empty($provinces) && is_array($provinces))
+                        @foreach($provinces as $province)
+                            <option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
+                        @endforeach
+                    @endif
                   </select>
-                </div>
-                <div class="rsm-filter-group" style="width:100%;">
+                  <div class="rsm-filter-group" style="width:100%;">
                   <label for="rsm-filter-city" style="font-size:0.85rem; display:block; margin-bottom:4px;">City</label>
-                  <select id="rsm-filter-city" style="width:100%; padding:4px 6px; font-size:0.9rem;">
-                    <option value="">All Cities</option>
+                  <select id="rsm-filter-city" multiple class="rsm-select2" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    @if(!empty($cities) && is_array($cities))
+                        @foreach($cities as $city)
+                            <option value="{{ $city }}" {{ collect(request('municipality'))->contains($city) ? 'selected' : '' }}>{{ $city }}</option>
+                        @endforeach
+                    @endif
                   </select>
                 </div>
+                </div>
+                  <label for="rsm-filter-year" style="font-size:0.85rem; display:block; margin-bottom:4px;">Year</label>
+                  <select id="rsm-filter-year" multiple class="rsm-select2" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    @if(!empty($years) && is_array($years))
+                        @foreach($years as $year)
+                            <option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
+                        @endforeach
+                    @endif
+                  </select>
+                </div>
+                
+                
               </div>
             </div>
             <div class="rsm-card">
@@ -2746,6 +3071,10 @@ document.addEventListener('DOMContentLoaded', function(){
 @media (max-width:900px) { .swiper { transform: none; width: 100%; } }
 
 /* hide source image while modal clone is animating so it looks "taken" */
+/* non-centered slides should not be clickable */
+.swiper-slide:not(.swiper-slide-active) .slider-img {
+    pointer-events: none;
+}
 .slider-img.modal-hidden { opacity: 0; transition: opacity 180ms ease; pointer-events: none; }
 
 /* slider styles moved to main */

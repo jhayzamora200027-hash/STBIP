@@ -1271,18 +1271,14 @@ window.allYears = @json($allYears ?? $years);
 			selRegions = selRegions.map(function(r){
 				return inferRegionCodeFromRegionText(r) || r;
 			});
-			// update iframe src so embedded STsReport picks up same params
+			// notify iframe about the new selections; we intentionally do **not**
+			// reload it so the embedded report (totals, ST listing) stays fixed.
 			var iframe = document.querySelector('iframe');
 			if (iframe) {
-				var base = iframe.dataset.baseSrc || iframe.src.split('?')[0];
-				var params = [];
-				selRegions.forEach(r => params.push('region[]=' + encodeURIComponent(r)));
-				selYears.forEach(y => params.push('year_of_moa[]=' + encodeURIComponent(y)));
-				params.push('embed=1');
-				iframe.dataset.baseSrc = base;
-				iframe.src = base + '?' + params.join('&');
-				// also send a message for live updates
-				try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears }, '*'); } catch(e){}
+				// tell the embedded report about the selections but indicate that
+				// this message originates from the outer filter form; the iframe
+				// should mirror slide/gallery visibility but not load new totals.
+				try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears, skipTotals: true }, '*'); } catch(e){}
 			}			// local filtering of any card-gallery containers on this page
 			if (selRegions.length || selYears.length) {
 				$('.card-gallery .card').each(function(){
@@ -1312,9 +1308,6 @@ window.addEventListener('message', function(e) {
         iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
         // make sure overflow is hidden so changing height doesn't reveal content abruptly
         iframe.style.overflow = 'hidden';
-        // debug aid
-        console.log('[parent] received toggle message', e.data);
-        // if sender provided a specific height, apply it directly
         if (e.data.height) {
             iframe.style.height = e.data.height;
             iframe.style.maxHeight = e.data.height;

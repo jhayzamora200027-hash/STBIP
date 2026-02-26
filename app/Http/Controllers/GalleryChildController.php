@@ -56,8 +56,29 @@ class GalleryChildController extends Controller
                 'created_by' => $data['created_by'],
             ]);
 
+            if ($request->ajax()) {
+                // reload card with children and subchildren for updated HTML
+                $card = GalleryCard::with([
+                    'creator',
+                    'updater',
+                    'children' => function($q){ $q->whereNull('parent_child_id')->orderBy('docno','asc'); },
+                    'children.histories',
+                    'children.creator',
+                    'children.updater',
+                    'children.children' => function($q){ $q->orderBy('docno','asc'); },
+                    'children.children.histories',
+                    'children.children.creator',
+                    'children.children.updater'
+                ])->find($galleryCard->id);
+                $html = view('admin._gallery_card_row', ['card' => $card])->render();
+                return response()->json(['success' => true, 'card_id' => $galleryCard->id, 'rowHtml' => $html]);
+            }
+
             return redirect()->route('admin.stsreportsectors')->with('success', 'Child added.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Failed to add child.'], 500);
+            }
             return redirect()->back()->withInput()->with('error', 'Failed to add child.');
         }
     }
@@ -93,19 +114,61 @@ class GalleryChildController extends Controller
 
             $galleryChild->update($data);
 
+            if ($request->ajax()) {
+                $card = GalleryCard::with([
+                    'creator',
+                    'updater',
+                    'children' => function($q){ $q->whereNull('parent_child_id')->orderBy('docno','asc'); },
+                    'children.histories',
+                    'children.creator',
+                    'children.updater',
+                    'children.children' => function($q){ $q->orderBy('docno','asc'); },
+                    'children.children.histories',
+                    'children.children.creator',
+                    'children.children.updater'
+                ])->find($galleryChild->gallery_card_id);
+                $html = view('admin._gallery_card_row', ['card' => $card])->render();
+                return response()->json(['success' => true, 'card_id' => $galleryChild->gallery_card_id, 'rowHtml' => $html]);
+            }
+
             return redirect()->route('admin.stsreportsectors')->with('success', 'Child updated.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Failed to update child.'], 500);
+            }
             return redirect()->back()->withInput()->with('error', 'Failed to update child.');
         }
     }
 
-    public function destroy(GalleryChild $galleryChild)
+    public function destroy(Request $request, GalleryChild $galleryChild)
     {
         try {
+            $cardId = $galleryChild->gallery_card_id;
             $galleryChild->delete();
+
+            if ($request->ajax()) {
+                // after deletion return fresh row for parent card
+                $card = GalleryCard::with([
+                    'creator',
+                    'updater',
+                    'children' => function($q){ $q->whereNull('parent_child_id')->orderBy('docno','asc'); },
+                    'children.histories',
+                    'children.creator',
+                    'children.updater',
+                    'children.children' => function($q){ $q->orderBy('docno','asc'); },
+                    'children.children.histories',
+                    'children.children.creator',
+                    'children.children.updater'
+                ])->find($cardId);
+                $html = view('admin._gallery_card_row', ['card' => $card])->render();
+                return response()->json(['success' => true, 'card_id' => $cardId, 'rowHtml' => $html]);
+            }
 
             return redirect()->route('admin.stsreportsectors')->with('success', 'Child deleted.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Failed to delete child.'], 500);
+            }
             return redirect()->back()->with('error', 'Failed to delete child.');
         }
     }

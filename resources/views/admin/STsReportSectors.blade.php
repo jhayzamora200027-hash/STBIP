@@ -207,162 +207,7 @@
                     </thead>
                     <tbody>
                         @foreach($galleryCards ?? [] as $card)
-                        <tr class="gallery-row" data-bs-toggle="collapse" data-bs-target="#children-panel-{{ $card->id }}" aria-expanded="false" aria-controls="children-panel-{{ $card->id }}" style="cursor:pointer;">
-                            <td class="text-muted small"><span class="badge bg-light text-dark">{{ $card->status ?? 'On going' }}</span></td>
-                            <td>
-                                <span class="me-2"><i class="bi bi-caret-down-fill text-muted expand-icon" style="transform:rotate(-90deg);"></i></span>
-                                <strong>{{ $card->docno ?? $card->order ?? '-' }}</strong>
-                            </td>
-                            <td class="text-center">
-                                @if($card->image)
-                                    @php
-                                        $imgSrc = (\Illuminate\Support\Facades\Storage::disk('public')->exists($card->image))
-                                            ? asset('storage/' . $card->image)
-                                            : (file_exists(public_path($card->image)) ? asset($card->image) : null);
-                                    @endphp
-                                    @if($imgSrc)
-                                        <img src="{{ $imgSrc }}" alt="preview" class="gallery-thumb rounded" style="width:56px;height:38px;object-fit:cover;"> 
-                                    @else
-                                        <span class="text-muted small">&mdash;</span>
-                                    @endif
-                                @else
-                                    <span class="text-muted small">&mdash;</span>
-                                @endif
-                            </td>
-                            <td>{{ $card->title }}</td>
-
-                            <td>{{ $card->url }}</td>
-                            <td>{{ $card->creator ? $card->creator->name : ($card->created_by ?? '') }}</td>
-                            <td>{{ $card->updater ? $card->updater->name : ($card->updated_by ?? '') }}</td>
-                            <td>{{ $card->is_active ? 'Yes' : 'No' }}</td>
-                            <td>
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button class="btn btn-sm btn-secondary btn-edit-card"
-                                        data-id="{{ $card->id }}"
-                                        data-title="{{ e($card->title) }}"
-                                        data-url="{{ e($card->url) }}"
-                                        data-is-active="{{ $card->is_active ? 1 : 0 }}"
-                                        data-status="{{ $card->status ?? 'On going' }}">Edit</button>
-                                    <form action="{{ route('admin.gallery.destroy', $card->id) }}" method="POST" class="m-0">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this card?')">Delete</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="children-row" id="children-row-{{ $card->id }}">
-                            <td colspan="9">
-                                <div id="children-panel-{{ $card->id }}" class="collapse children-panel @if(old('parent_card_id') == $card->id || (old('editing_child_id') && $card->children->pluck('id')->contains(old('editing_child_id')))) show @endif">
-                                    <div class="card card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong>Children for "{{ $card->title }}"</strong>
-                                        <small class="text-muted">{{ $card->children->count() }} child(ren)</small>
-                                    </div>
-
-                                    <h6 class="mb-2">Existing children</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-sm mb-2">
-                                            <thead>
-                                                <tr><th>Title</th><th>DocNo</th><th>URL</th><th>Active</th><th>Status</th><th>Created By</th><th>Updated By</th><th style="width:260px">Actions</th></tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($card->children ?? [] as $child)
-                                                <tr>
-                                                    <td>{{ $child->title }}</td>
-                                                    <td>{{ $child->docno }}</td>
-                                                    <td><small class="text-muted">{{ $child->url ?? '-' }}</small></td>
-                                                    <td>{{ $child->is_active ? 'Yes' : 'No' }}</td>
-                                                    <td><span class="badge bg-light text-dark">{{ $child->status ?? 'On going' }}</span></td>
-                                                    <td>{{ $child->creator ? $child->creator->name : ($child->created_by ?? '') }}</td>
-                                                    <td>{{ $child->updater ? $child->updater->name : ($child->updated_by ?? '') }}</td>
-                                                    <td>
-                                                        @php
-                                                            $childHistoriesJson = $child->histories->map(function($h){
-                                                                return [
-                                                                    'docno' => $h->docno,
-                                                                    'previous_docno' => $h->previous_docno,
-                                                                    'creator' => $h->creator ? $h->creator->name : ($h->created_by ?? ''),
-                                                                    'created_at' => (string) $h->created_at,
-                                                                ];
-                                                            })->toJson();
-                                                        @endphp
-
-                                                        <div class="d-flex gap-2 flex-wrap">
-                                                            <button type="button" class="btn btn-sm btn-secondary btn-edit-child"
-                                                              data-id="{{ $child->id }}"
-                                                              data-title="{{ e($child->title) }}"
-                                                              data-url="{{ e($child->url) }}"
-                                                              data-is-active="{{ $child->is_active ? 1 : 0 }}"
-                                                              data-status="{{ $child->status ?? 'On going' }}"
-                                                              data-is-mother="{{ $child->is_mother ? 1 : 0 }}"
-                                                              data-docno="{{ e($child->docno) }}"
-                                                              data-histories='{{ $childHistoriesJson }}'>Edit</button>
-
-                                                            @if($child->is_mother)
-                                                                @php
-                                                                    $subChildrenJson = $child->children->map(function($c){
-                                                                        return [
-                                                                            'id' => $c->id,
-                                                                            'title' => $c->title,
-                                                                            'docno' => $c->docno,
-                                                                            'url' => $c->url,
-                                                                            'is_active' => (bool) $c->is_active,
-                                                                            'status' => $c->status ?? 'On going',
-                                                                            'created_by' => $c->creator ? $c->creator->name : ($c->created_by ?? ''),
-                                                                            'updated_by' => $c->updater ? $c->updater->name : ($c->updated_by ?? ''),
-                                                                            'created_at' => (string) $c->created_at,
-                                                                        ];
-                                                                    })->toJson();
-                                                                    $childHistoriesJson = $child->histories->map(function($h){
-                                                                        return [
-                                                                            'docno' => $h->docno,
-                                                                            'previous_docno' => $h->previous_docno,
-                                                                            'creator' => $h->creator ? $h->creator->name : ($h->created_by ?? ''),
-                                                                            'created_at' => (string) $h->created_at,
-                                                                        ];
-                                                                    })->toJson();
-                                                                @endphp
-                                                                <button type="button" class="btn btn-sm btn-info btn-manage-subchildren"
-                                                                    data-card-id="{{ $card->id }}"
-                                                                    data-child-id="{{ $child->id }}"
-                                                                    data-child-title="{{ e($child->title) }}"
-                                                                    data-child-docno="{{ e($child->docno) }}"
-                                                                    data-child-url="{{ e($child->url ?? '') }}"
-                                                                    data-child-is-active="{{ $child->is_active ? 1 : 0 }}"
-                                                                    data-child-status="{{ $child->status ?? 'On going' }}"
-                                                                    data-child-created-by="{{ $child->creator ? $child->creator->name : ($child->created_by ?? '') }}"
-                                                                    data-child-histories='{{ $childHistoriesJson }}'
-                                                                    data-subchildren='{{ $subChildrenJson }}'>
-                                                                    Manage Sub-children
-                                                                </button>
-                                                            @endif
-
-                                                            <form action="{{ route('admin.gallery.children.destroy', $child->id) }}" method="POST" class="m-0">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this child?')">Delete</button>
-                                                            </form>
-                                                        </div>
-                                                    </td>
-                                                
-                                                {{-- sub-children moved to modal; placeholder left intentionally empty --}}
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <hr>
-
-                                    <h6>Add child for "{{ $card->title }}"</h6>
-                                    <div class="mb-2">
-                                        <button type="button" class="btn btn-sm btn-success btn-open-add-child" data-card-id="{{ $card->id }}">Add Child</button>
-                                    </div>
-
-                                </div>
-                            </td>
-                        </tr>
+                            @include('admin._gallery_card_row', ['card' => $card])
                         @endforeach
                     </tbody>
                 </table>
@@ -379,7 +224,7 @@
         <h5 class="modal-title">Edit child</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="editChildForm" method="POST" action="">
+      <form id="editChildForm" method="POST" action="" class="ajax-form">
         @csrf
         @method('PUT')
         <input type="hidden" name="editing_child_id" id="editing_child_id" value="{{ old('editing_child_id') }}">
@@ -449,7 +294,7 @@
         <h5 class="modal-title">Add child</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="addChildForm" method="POST" action="">
+      <form id="addChildForm" method="POST" action="" class="ajax-form">
         @csrf
         <input type="hidden" name="parent_card_id" id="add_parent_card_id" value="{{ old('parent_card_id') }}">
         <div class="modal-body">
@@ -499,7 +344,7 @@
         <h5 class="modal-title">Add sub-child</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="addSubChildForm" method="POST" action="">
+      <form id="addSubChildForm" method="POST" action="" class="ajax-form">
         @csrf
         <input type="hidden" name="parent_card_id" id="add_sub_parent_card_id" value="{{ old('parent_card_id') }}">
         <input type="hidden" name="parent_child_id" id="add_parent_child_id" value="{{ old('parent_child_id') }}">
@@ -563,7 +408,7 @@
 
         <!-- inline Add Sub-child form (appears inside this modal) -->
         <div id="manageSub_inlineAddWrap" class="mb-3" style="display:none;">
-          <form id="manageSub_inlineAddForm" method="POST" action="">
+          <form id="manageSub_inlineAddForm" method="POST" action="" class="ajax-form">
             @csrf
             <input type="hidden" name="parent_card_id" id="manageSub_add_parent_card_id" value="">
             <input type="hidden" name="parent_child_id" id="manageSub_add_parent_child_id" value="">
@@ -688,6 +533,111 @@
 </div>
 
 <script>
+// utility: replace an existing card row (gallery-row + children-row)
+function replaceCardRow(cardId, html){
+    var parser = new DOMParser();
+    var doc = parser.parseFromString('<table>' + html + '</table>', 'text/html');
+    var newGalleryRow = doc.querySelector('tr.gallery-row');
+    var newChildrenRow = doc.querySelector('tr.children-row');
+    if(!newGalleryRow || !newChildrenRow) return;
+    var galleryRow = document.querySelector('tr.gallery-row[data-bs-target="#children-panel-' + cardId + '"]');
+    var childrenRow = document.getElementById('children-row-' + cardId);
+    var wasOpen = false;
+    if(childrenRow){
+        var panelEl = childrenRow.querySelector('.children-panel');
+        wasOpen = panelEl && panelEl.classList.contains('show');
+    }
+    if(galleryRow && childrenRow) {
+        galleryRow.parentNode.replaceChild(newGalleryRow, galleryRow);
+        childrenRow.parentNode.replaceChild(newChildrenRow, childrenRow);
+    }
+    // re-bind events on newly inserted rows and forms
+    initGalleryRowEvents();
+    initChildControlListeners();
+    initAjaxForms();
+    // restore collapse state if needed
+    if(wasOpen){
+        var newPanel = document.querySelector('#children-panel-' + cardId);
+        if(newPanel){
+            var inst = bootstrap.Collapse.getInstance(newPanel);
+            if(!inst) inst = new bootstrap.Collapse(newPanel, {toggle:false});
+            inst.show();
+        }
+    }
+}
+
+// generic ajax submit helper
+function ajaxSubmit(form, successCb, errorCb){
+    // determine method and ensure Laravel-friendly override behaviour
+    var override = (form.querySelector('input[name="_method"]') || {}).value;
+    var method = override || form.method || 'POST';
+    var url = form.action;
+    var data = new FormData(form);
+    // if we have an override, always submit as POST; Laravel will respect the hidden _method
+    var fetchMethod = method.toUpperCase();
+    if (override) fetchMethod = 'POST';
+
+    // include CSRF token header if available (Laravel expects X-CSRF-TOKEN)
+    var headers = {
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if(meta){ headers['X-CSRF-TOKEN'] = meta.getAttribute('content'); }
+    // debug: log submitted data for troubleshooting
+    console.debug('ajaxSubmit', fetchMethod, url);
+    data.forEach(function(v,k){ console.debug('  ', k, v); });
+    fetch(url, {
+        method: fetchMethod,
+        headers: headers,
+        body: data
+    }).then(function(resp){
+        if(resp.ok) return resp.json();
+        return resp.json().then(function(j){ throw j; });
+    }).then(function(json){
+        if(json.success){
+            successCb && successCb(json);
+        } else {
+            errorCb && errorCb(json);
+        }
+        if(typeof hideLoader === 'function') hideLoader();
+    }).catch(function(err){
+        console.error('ajax error', err);
+        if(typeof hideLoader === 'function') hideLoader();
+        errorCb && errorCb(err);
+    });
+}
+
+// display validation errors on a form (expects Laravel-style errors object)
+function showFormErrors(form, errors){
+    // clear previous state
+    form.querySelectorAll('.is-invalid').forEach(function(el){ el.classList.remove('is-invalid'); });
+    form.querySelectorAll('.invalid-feedback').forEach(function(el){ el.remove(); });
+    if(!errors) return;
+    Object.entries(errors).forEach(function([field,msgs]){
+        var input = form.querySelector('[name="'+field+'"]');
+        if(!input) return;
+        input.classList.add('is-invalid');
+        var fb = document.createElement('div');
+        fb.className = 'invalid-feedback';
+        fb.textContent = msgs[0] || '';
+        if(input.parentNode) input.parentNode.appendChild(fb);
+    });
+}
+
+// make initAjaxForms globally available
+function initAjaxForms(){
+    document.querySelectorAll('form.ajax-form').forEach(function(f){
+        if (f.dataset.ajaxBound) return;
+        f.dataset.ajaxBound = '1';
+        f.addEventListener('submit', function(e){
+            e.preventDefault();
+            ajaxSubmit(f, function(json){
+                if(json.rowHtml){ replaceCardRow(json.card_id, json.rowHtml); }
+            });
+        });
+    });
+}
+
 // Helper: populate and show Edit Child modal
 function openEditChildModal(data){
     var id = data.id;
@@ -853,12 +803,11 @@ function openEditCardModal(data){
     });
 }
 
-document.addEventListener('DOMContentLoaded', function(){
 
-    // clickable rows toggle their children panel; ignore clicks on interactive controls
+function initGalleryRowEvents(){
     document.querySelectorAll('.gallery-row').forEach(function(row){
         row.addEventListener('click', function(e){
-            if (e.target.closest('button, a, input, select, textarea, form')) return; // don't toggle when interacting with controls
+            if (e.target.closest('button, a, input, select, textarea, form')) return;
             var sel = row.getAttribute('data-bs-target');
             if (!sel) return;
             var targetEl = document.querySelector(sel);
@@ -868,7 +817,6 @@ document.addEventListener('DOMContentLoaded', function(){
             inst.toggle();
         });
 
-        // hook icon rotation to collapse events (use the actual collapse target like sidebar does)
         var icon = row.querySelector('.expand-icon');
         var sel = row.getAttribute('data-bs-target');
         if (!sel) return;
@@ -876,18 +824,14 @@ document.addEventListener('DOMContentLoaded', function(){
         if (!panel || !icon) return;
         if (panel.classList.contains('show')) { icon.style.transform = 'rotate(0deg)'; row.classList.add('expanded'); }
 
-        // show / shown: add expanded + animate state
         panel.addEventListener('show.bs.collapse', function(){
             icon.style.transform = 'rotate(0deg)';
             row.classList.add('expanded');
             row.classList.add('animating');
         });
         panel.addEventListener('shown.bs.collapse', function(){
-            // animation finished
             row.classList.remove('animating');
         });
-
-        // hide / hidden: remove expanded after animation finishes
         panel.addEventListener('hide.bs.collapse', function(){
             icon.style.transform = 'rotate(-90deg)';
             row.classList.add('animating');
@@ -897,7 +841,9 @@ document.addEventListener('DOMContentLoaded', function(){
             row.classList.remove('animating');
         });
     });
+}
 
+function initChildControlListeners(){
     // open edit modal when Edit button is clicked
     document.querySelectorAll('.btn-edit-child').forEach(function(btn){
         btn.addEventListener('click', function(){
@@ -919,7 +865,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // open edit modal for gallery card (make edit action uniform)
     document.querySelectorAll('.btn-edit-card').forEach(function(btn){
         btn.addEventListener('click', function(e){
-            e.stopPropagation(); // prevent row toggle when clicking Edit
+            e.stopPropagation();
             var data = {
                 id: btn.getAttribute('data-id'),
                 title: btn.getAttribute('data-title'),
@@ -930,7 +876,6 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     });
 
-    // open Add Child modal when Add Child button is clicked
     document.querySelectorAll('.btn-open-add-child').forEach(function(btn){
         btn.addEventListener('click', function(){
             var cardId = btn.getAttribute('data-card-id');
@@ -938,7 +883,6 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     });
 
-    // open Add Sub-child modal when Add Sub-child button is clicked
     document.querySelectorAll('.btn-open-add-subchild').forEach(function(btn){
         btn.addEventListener('click', function(){
             var cardId = btn.getAttribute('data-card-id');
@@ -946,6 +890,124 @@ document.addEventListener('DOMContentLoaded', function(){
             openAddSubChildModal({ cardId: cardId, parentChildId: parentChildId });
         });
     });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    initGalleryRowEvents();
+    initChildControlListeners();
+
+
+    // handle child add/edit/sub forms specifically
+    ['addChildForm','editChildForm','addSubChildForm','manageSub_inlineAddForm'].forEach(function(id){
+        var form = document.getElementById(id);
+        if(form && !form.dataset.bound){
+            form.dataset.bound = '1';
+            form.addEventListener('submit', function(e){
+                e.preventDefault();
+                ajaxSubmit(form, function(json){
+                    if(json.rowHtml){
+                        replaceCardRow(json.card_id, json.rowHtml);
+                        if (currentManageState && document.getElementById('manageSubChildrenModal').classList.contains('show')) {
+                            var btn = document.querySelector('.btn-manage-subchildren[data-card-id="'+currentManageState.cardId+'"][data-child-id="'+currentManageState.childId+'"]');
+                            if(btn){
+                                try { currentManageState.subs = JSON.parse(btn.getAttribute('data-subchildren')||'[]'); } catch(e){currentManageState.subs = [];}                                
+                            }
+                            populateManageSubModal(currentManageState);
+                        }
+                    }
+                    var mod = form.closest('.modal');
+                    if(mod){
+                        var bs = bootstrap.Modal.getInstance(mod);
+                        if(bs) bs.hide();
+                    }
+                }, function(err){
+                    if(err && err.errors){
+                        showFormErrors(form, err.errors);
+                    }
+                });
+            });
+        }
+    });
+
+    // state for currently open manage modal (used for refresh)
+    var currentManageState = null;
+
+    function populateManageSubModal(state){
+        if(!state) return;
+        var cardId = state.cardId;
+        var childId = state.childId;
+        var childTitle = state.childTitle || 'Sub-children';
+        var subs = state.subs || [];
+        var parentHistories = state.parentHistories || [];
+
+        var modal = document.getElementById('manageSubChildrenModal');
+        document.getElementById('manageSub_childTitle').textContent = 'Sub-children for "' + childTitle + '"';
+        document.getElementById('manageSub_childCount').textContent = (subs.length || 0) + ' sub-child(ren)';
+
+        var tbody = document.getElementById('manageSub_tbody');
+        tbody.innerHTML = '';
+
+        var parentNode = {
+            id: childId,
+            title: childTitle,
+            docno: state.docno || '-',
+            url: state.url || '',
+            is_active: state.is_active || 0,
+            status: state.status || 'On going',
+            created_by: state.created_by || '',
+            histories: parentHistories,
+            children: subs || []
+        };
+
+        function renderSubRows(nodes, level){
+            nodes.forEach(function(n){
+                var tr = document.createElement('tr');
+                var indent = '<div style="padding-left:' + (level*18) + 'px;">' + (n.title || '') + '</div>';
+                var titleHtml = indent + (n.children && n.children.length ? ' <span class="badge bg-secondary ms-2">' + n.children.length + '</span>' : '');
+                var histAttr = ' data-histories="' + (n.histories ? (JSON.stringify(n.histories).replace(/'/g,'&#39;').replace(/\"/g,'&quot;')) : '[]') + '"';
+
+                tr.innerHTML = '<td>' + titleHtml + '</td>' +
+                               '<td>' + (n.docno || '') + '</td>' +
+                               '<td><small class="text-muted">' + (n.url || '-') + '</small></td>' +
+                               '<td>' + (n.is_active ? 'Yes' : 'No') + '</td>' +
+                               '<td>' + (n.status || 'On going') + '</td>' +
+                               '<td>' + (n.created_by || '') + '</td>' +
+                               '<td>' + (n.updated_by || '') + '</td>' +
+                               '<td style="white-space:nowrap; width:170px;">' +
+                                 '<div class="d-flex gap-2 flex-wrap" style="display:flex;gap:.5rem;align-items:center;">' +
+                                   '<button type="button" class="btn btn-sm btn-secondary btn-edit-subchild" aria-label="Edit sub-child" data-id="'+n.id+'" data-title="'+(n.title||'')+'" data-url="'+(n.url||'')+'" data-docno="'+(n.docno||'')+'" data-is-active="'+(n.is_active?1:0)+'" data-status="'+(n.status||'On going')+'"'+histAttr+'>Edit</button>' +
+                                   '<form action="/admin/gallery-children/'+n.id+'" method="POST" class="m-0 ajax-form" style="display:inline-block;margin:0;" onsubmit="return confirm(\'Delete this sub-child?\');">' +
+                                      '@csrf'.replace('@csrf','{!! csrf_field() !!}') +
+                                      '<input type="hidden" name="_method" value="DELETE">' +
+                                      '<button type="submit" class="btn btn-sm btn-danger" aria-label="Delete sub-child">Delete</button>' +
+                                   '</form>' +
+                                 '</div>' +
+                               '</td>';
+                tbody.appendChild(tr);
+                if (n.children && n.children.length) renderSubRows(n.children, level + 1);
+            });
+        }
+
+        renderSubRows(parentNode.children || [], 0);
+
+        tbody.querySelectorAll('.btn-edit-subchild').forEach(function(b){
+            b.addEventListener('click', function(){
+                var data = {
+                    id: b.getAttribute('data-id'),
+                    title: b.getAttribute('data-title'),
+                    url: b.getAttribute('data-url'),
+                    docno: b.getAttribute('data-docno'),
+                    is_active: parseInt(b.getAttribute('data-is-active')||'1',10),
+                    status: b.getAttribute('data-status') || 'On going',
+                    is_mother: 0,
+                    histories: []
+                };
+                try { data.histories = JSON.parse(b.getAttribute('data-histories') || '[]'); } catch(e){ data.histories = []; }
+                openEditChildModal(data);
+            });
+        });
+        initAjaxForms();
+    }
 
     // open Manage Sub-children modal (populates list)
     document.querySelectorAll('.btn-manage-subchildren').forEach(function(btn){
@@ -956,28 +1018,27 @@ document.addEventListener('DOMContentLoaded', function(){
             var subs = [];
             try { subs = JSON.parse(btn.getAttribute('data-subchildren') || '[]'); } catch(e){ subs = []; }
 
-            var modal = document.getElementById('manageSubChildrenModal');
-            document.getElementById('manageSub_childTitle').textContent = 'Sub-children for "' + childTitle + '"';
-            document.getElementById('manageSub_childCount').textContent = (subs.length || 0) + ' sub-child(ren)';
-
-            var tbody = document.getElementById('manageSub_tbody');
-            tbody.innerHTML = '';
-
-            // read parent histories and build parent node
             var parentHistories = [];
             try { parentHistories = JSON.parse(btn.getAttribute('data-child-histories') || '[]'); } catch(e){ parentHistories = []; }
 
-            var parentNode = {
-                id: childId,
-                title: childTitle,
+            currentManageState = { cardId, childId, childTitle, subs, parentHistories,
                 docno: btn.getAttribute('data-child-docno') || '-',
                 url: btn.getAttribute('data-child-url') || '',
-                is_active: parseInt(btn.getAttribute('data-child-is-active') || '0', 10),
+                is_active: parseInt(btn.getAttribute('data-child-is-active') || '0',10),
                 status: btn.getAttribute('data-child-status') || 'On going',
-                created_by: btn.getAttribute('data-child-created-by') || '',
-                histories: parentHistories,
-                children: subs || []
+                created_by: btn.getAttribute('data-child-created-by') || ''
             };
+
+            populateManageSubModal(currentManageState);
+
+            var modal = document.getElementById('manageSubChildrenModal');
+            var bs = new bootstrap.Modal(modal);
+            bs.show();
+        });
+
+        // helper to expose inline add for JS outside this handler
+        window.showManageSubInlineAdd = function(a,b,c){ showManageSubInlineAdd(a,b,c); };
+    });
 
             function renderSubRows(nodes, level){
                 nodes.forEach(function(n){
@@ -996,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                    '<td style="white-space:nowrap; width:170px;">' +
                                      '<div class="d-flex gap-2 flex-wrap" style="display:flex;gap:.5rem;align-items:center;">' +
                                        '<button type="button" class="btn btn-sm btn-secondary btn-edit-subchild" aria-label="Edit sub-child" data-id="'+n.id+'" data-title="'+(n.title||'')+'" data-url="'+(n.url||'')+'" data-docno="'+(n.docno||'')+'" data-is-active="'+(n.is_active?1:0)+'" data-status="'+(n.status||'On going')+'"'+histAttr+'>Edit</button>' +
-                                       '<form action="/admin/gallery-children/'+n.id+'" method="POST" class="m-0" style="display:inline-block;margin:0;" onsubmit="return confirm(\'Delete this sub-child?\');">' +
+                                       '<form action="/admin/gallery-children/'+n.id+'" method="POST" class="m-0 ajax-form" style="display:inline-block;margin:0;" onsubmit="return confirm(\'Delete this sub-child?\');">' +
                                           '@csrf'.replace('@csrf','{!! csrf_field() !!}') +
                                           '<input type="hidden" name="_method" value="DELETE">' +
                                           '<button type="submit" class="btn btn-sm btn-danger" aria-label="Delete sub-child">Delete</button>' +
@@ -1028,6 +1089,13 @@ document.addEventListener('DOMContentLoaded', function(){
                     openEditChildModal(data);
                 });
             });
+            // attach ajax submit to any new forms inside the subchildren table
+            initAjaxForms();
+            // hook up delete forms that were just injected
+            initAjaxForms();
+
+            // newly added delete forms need ajax binding as well
+            initAjaxForms();
 
             // wire Add Sub-child button inside modal (shows inline add form)
             var addBtn = document.getElementById('manageSub_addSubchildBtn');
@@ -1086,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
         // helper to expose inline add for JS outside this handler
         window.showManageSubInlineAdd = function(a,b,c){ showManageSubInlineAdd(a,b,c); };
-    });
+    
 
     // If server-side validation failed for adding a child, reopen Add Child modal with old() values
     @if(old('parent_card_id') && !old('parent_child_id'))
@@ -1156,7 +1224,6 @@ document.addEventListener('DOMContentLoaded', function(){
             status: {!! json_encode(old('status', 'On going')) !!}
         });
     @endif
-});
-</script>
 
+</script>
 @endsection

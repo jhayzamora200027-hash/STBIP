@@ -23,12 +23,12 @@
     <table class="table mb-0" style="table-layout: fixed; width: 100%; font-size: 0.82rem;">
         <thead style="background: linear-gradient(90deg,#0f766e 0%,#0ea5e9 60%,#38bdf8 100%); color:#fff;">
             <tr style="font-size:0.9rem;">
-                <th style="width: 9%;">Region</th>
-                <th style="width: 18%;">Province</th>
-                <th style="width: 18%;">City/Municipality</th>
-                <th style="width: 36%;">Title of ST</th>
-                <th class="text-center" style="width: 8%;">Year of MOA</th>
-                <th class="text-center" style="width: 11%;">Attachment</th>
+                <th style="width: 9%; min-width:9%; max-width: 27%; max-height: 2px;">Region</th>
+                <th style="width: 18%; min-width:18%; max-width: 36%; max-height: 2px;">Province</th>
+                <th style="width: 18%; min-width:18%; max-width: 36%; max-height: 2px;">City/Municipality</th>
+                <th style="width: 36%; min-width:36%; max-width: 72%; max-height: 2px;">Title of ST</th>
+                <th class="text-center" style="width: 8%; min-width:8%; max-width: 24%; max-height: 2px;">Year of MOA</th>
+                <th class="text-center" style="width: 11%; min-width:11%; max-width: 33%; max-height: 2px;">Attachment</th>
             </tr>
         </thead>
         <tbody style="background:#ffffff;">

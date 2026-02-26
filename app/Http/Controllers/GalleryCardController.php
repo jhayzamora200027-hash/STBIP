@@ -60,8 +60,15 @@ class GalleryCardController extends Controller
 
             GalleryCard::create($data);
 
+            if ($request->ajax()) {
+                // simply signal success; client can reload page fragment if needed
+                return response()->json(['success' => true]);
+            }
             return redirect()->route('admin.stsreportsectors')->with('success', 'Gallery card added.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Failed to add gallery card.'], 500);
+            }
             return redirect()->back()->withInput()->with('error', 'Failed to add gallery card.');
         }
     }
@@ -98,13 +105,19 @@ class GalleryCardController extends Controller
         unset($data['docno']);
             $galleryCard->update($data);
 
+            if ($request->ajax()) {
+                return response()->json(['success' => true]);
+            }
             return redirect()->route('admin.stsreportsectors')->with('success', 'Gallery card updated.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Failed to update gallery card.'], 500);
+            }
             return redirect()->back()->withInput()->with('error', 'Failed to update gallery card.');
         }
     }
 
-    public function destroy(GalleryCard $galleryCard)
+    public function destroy(Request $request, GalleryCard $galleryCard)
     {
         try {
             if ($galleryCard->image && Storage::disk('public')->exists($galleryCard->image)) {
@@ -112,9 +125,36 @@ class GalleryCardController extends Controller
             }
             $galleryCard->delete();
 
+            if ($request->ajax()) {
+                return response()->json(['success' => true]);
+            }
             return redirect()->route('admin.stsreportsectors')->with('success', 'Gallery card deleted.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Failed to delete gallery card.'], 500);
+            }
             return redirect()->back()->with('error', 'Failed to delete gallery card.');
         }
+    }
+
+    /**
+     * Return HTML for a single gallery card row (two table rows) – used by AJAX updates.
+     */
+    public function rowPartial(GalleryCard $galleryCard)
+    {
+        $card = GalleryCard::with([
+            'creator',
+            'updater',
+            'children' => function($q){ $q->whereNull('parent_child_id')->orderBy('docno','asc'); },
+            'children.histories',
+            'children.creator',
+            'children.updater',
+            'children.children' => function($q){ $q->orderBy('docno','asc'); },
+            'children.children.histories',
+            'children.children.creator',
+            'children.children.updater'
+        ])->find($galleryCard->id);
+
+        return view('admin._gallery_card_row', ['card' => $card]);
     }
 }

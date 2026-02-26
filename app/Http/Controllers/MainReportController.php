@@ -296,15 +296,26 @@ class MainReportController extends Controller
 
         // Apply filters from request
 
+        // when the report is being shown inside the iframe the parent page
+        // already manages filtering for the slider/gallery via postMessage; the
+        // totals graphs and title listing should remain at the unfiltered global
+        // level. detect the `embed` flag and clear any location/year selections
+        // so the subsequent `$data` arrays are left untouched.
+        $selectedRegions = $request->input('region', []);
+        $selectedProvinces = $request->input('province', []);
+        $selectedMunicipalities = $request->input('municipality', []);
+        $selectedYears = (array) $request->input('year_of_moa', []);
+        if ($embed) {
+            $selectedRegions = [];
+            $selectedProvinces = [];
+            $selectedMunicipalities = [];
+            $selectedYears = [];
+        }
 
         // First, filter by region/province/municipality only (for bar chart)
         $regionFilteredData = $data;
         // propagate embed flag to view data
         $viewData['embed'] = $embed;
-        $selectedRegions = $request->input('region', []);
-        $selectedProvinces = $request->input('province', []);
-        $selectedMunicipalities = $request->input('municipality', []);
-        $selectedYears = (array) $request->input('year_of_moa', []);
 
         if (!empty($selectedRegions)) {
             $regionFilteredData = array_filter($regionFilteredData, function($row) use ($selectedRegions) {
@@ -386,6 +397,15 @@ class MainReportController extends Controller
         $selectedProvinces = $request->input('province', []);
         $selectedMunicipalities = $request->input('municipality', []);
         $selectedYears = (array) $request->input('year_of_moa', []);
+        if ($request->query('embed')) {
+            // ignore outer filters when embedded so the listing always shows
+            // the full dataset; parent page already applies visual hints via
+            // postMessage if needed.
+            $selectedRegions = [];
+            $selectedProvinces = [];
+            $selectedMunicipalities = [];
+            $selectedYears = [];
+        }
 
         if (!empty($selectedRegions)) {
             $regionFilteredData = array_filter($regionFilteredData, function($row) use ($selectedRegions) {

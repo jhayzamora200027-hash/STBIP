@@ -9,6 +9,7 @@ use App\Http\Controllers\StsMoaListingwithUploadingController;
 use App\Http\Controllers\StsAttachmentController;
 use App\Http\Controllers\STsReportController;
 use App\Http\Controllers\GalleryCardController;
+use App\Http\Controllers\DragDropController;
 
 
 
@@ -30,6 +31,10 @@ Route::get('/', function () {
     $view = $controller->index(request());
     return view('dashboard.main', $view->getData());
 })->name('main')->middleware('guest');
+
+// simple drag & drop design page (uses GrapesJS via CDN)
+Route::get('/drag-drop', [DragDropController::class, 'index'])->name('dragdrop.index');
+Route::post('/drag-drop/save', [DragDropController::class, 'save'])->name('dragdrop.save');
 
 
 
@@ -142,6 +147,8 @@ Route::middleware(['auth'])->group(function () {
     // Child entries for gallery cards (children of a "mother" card)
     Route::post('/admin/gallery-cards/{galleryCard}/children', [\App\Http\Controllers\GalleryChildController::class, 'store'])
         ->name('admin.gallery.children.store');
+    // utility route for ajax-refreshing a single card row
+    Route::get('/admin/gallery-cards/{galleryCard}/row', [GalleryCardController::class, 'rowPartial']);
     Route::put('/admin/gallery-children/{galleryChild}', [\App\Http\Controllers\GalleryChildController::class, 'update'])
         ->name('admin.gallery.children.update');
     Route::delete('/admin/gallery-children/{galleryChild}', [\App\Http\Controllers\GalleryChildController::class, 'destroy'])
