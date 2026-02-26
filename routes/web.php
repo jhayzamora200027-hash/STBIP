@@ -9,7 +9,6 @@ use App\Http\Controllers\StsMoaListingwithUploadingController;
 use App\Http\Controllers\StsAttachmentController;
 use App\Http\Controllers\STsReportController;
 use App\Http\Controllers\GalleryCardController;
-use App\Http\Controllers\DragDropController;
 
 
 
@@ -32,10 +31,7 @@ Route::get('/', function () {
     return view('dashboard.main', $view->getData());
 })->name('main')->middleware('guest');
 
-// simple drag & drop design page (uses GrapesJS via CDN)
-Route::get('/drag-drop', [DragDropController::class, 'index'])->name('dragdrop.index');
-Route::post('/drag-drop/save', [DragDropController::class, 'save'])->name('dragdrop.save');
-
+// drag-drop editor removed; routes retired
 
 
 // Profile (authenticated users)
@@ -65,12 +61,6 @@ Route::get('/main', function () {
     $view = $controller->index(request());
     return view('dashboard.main', $view->getData());
 });
-
-
-Route::get('/kreport', function () {
-    return view('dashboard.mainreports.KnowledgeReport');
-})->name('kreport');
-
 Route::get('/streport', [MainReportController::class, 'index'])->name('streport');
 Route::post('/streport/prewarm', [MainReportController::class, 'prewarm'])->name('streport.prewarm');
 

@@ -19,7 +19,10 @@ class DragDropController extends Controller
         // load previously saved markup if available
         $html = Storage::exists('dragdrop.html') ? Storage::get('dragdrop.html') : '<h1>Start dragging components here</h1>';
         // pass embed flag so the standard layout hides navbar/sidebar via its CSS rules
-        return view('dragdrop.editor', ['dashboardHtml' => $html, 'embed' => true]);
+        return view('dragdrop.editor', [
+            'dashboardHtml' => $html,
+            'embed' => true,
+        ]);
     }
 
     /**

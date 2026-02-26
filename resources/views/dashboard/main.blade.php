@@ -529,7 +529,7 @@
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
 				<div class="card-body">
-					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
 						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 					})->count() }}</h1>
 				</div>
@@ -537,7 +537,7 @@
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL EXPRESSION OF INTEREST</div>
 				<div class="card-body">
-					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
 						$val = $row['with_expr'] ?? null;
 						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
 						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
@@ -547,7 +547,7 @@
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL SB RESOLUTION</div>
 				<div class="card-body">
-					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
 						$val = $row['with_res'] ?? null;
 						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
 						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
@@ -557,7 +557,7 @@
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL MEMORANDUM OF AGREEMENT</div>
 				<div class="card-body">
-					<h1 style="font-size:2rem;">{{ collect($data)->filter(function($row){
+					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
 						$val = $row['with_moa'] ?? null;
 						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
 						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;

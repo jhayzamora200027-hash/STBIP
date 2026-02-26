@@ -2423,6 +2423,154 @@ document.addEventListener('DOMContentLoaded', function(){
       });
   }
 
+  // --- client-side filter apply/reset handlers ---------------------------------
+  function _getSelectedValues(id) {
+      const el = document.getElementById(id);
+      if (!el) return [];
+      try {
+          // prefer Select2 / jQuery value when available
+          try { if (window.jQuery && jQuery(el).data('select2')) { const v = jQuery(el).val(); return Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []); } } catch(e) {}
+          if (el.selectedOptions && el.selectedOptions.length) return Array.from(el.selectedOptions).map(o => o.value);
+          // fallback
+          return Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
+      } catch(e) { return []; }
+  }
+
+  function renderStTitlesFromRows(rows, regionParam) {
+      try {
+          const stListEl = rsmEl('rsm-st-list');
+          const headerEl = rsmEl('rsm-st-listing-header');
+          if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+          if (!stListEl) return;
+          if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
+          const titleMap = {};
+          rows.forEach(r => {
+              const t = (r && r.title) ? String(r.title).trim() : '';
+              if (!t) return; titleMap[t] = (titleMap[t] || 0) + 1;
+          });
+          const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
+          if (!entries.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
+          const totalSts = rows.length; const uniqueTitles = entries.length;
+          const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#475569;font-weight:700;font-size:0.88rem;">` +
+                     `<div>Unique titles: ${uniqueTitles}</div><div>Total STs: ${totalSts}</div></div>`;
+          html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+          entries.forEach(([title, count]) => {
+              html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
+                      `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
+                      `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
+                      `</div>`;
+          });
+          html += '</div>';
+          stListEl.innerHTML = html;
+          // wire handlers
+          stListEl.onclick = function(ev){ const row = ev.target.closest('.rsm-st-summary-row'); if (!row) return; ev.stopPropagation(); const title = row.getAttribute('data-title')||''; showReplicateConfirmPopover(row, { title: title, row: { title: title } }); };
+      } catch(e) { console.error('renderStTitlesFromRows', e); }
+  }
+
+  function applyRsmFilters(){
+      try {
+          let payload = window._lastRsmPayload || null;
+          if (!payload || !Array.isArray(payload.allRows)) {
+              console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
+              // try to derive region param from last active region or modal image
+              const regionParam = (window.__lastActiveRegion) || (document.getElementById('rsm-modal-image') && document.getElementById('rsm-modal-image').getAttribute('data-region-name')) || null;
+              if (!regionParam) { console.warn('[RSM] cannot derive region to fetch payload'); return; }
+              try {
+                  // perform same AJAX used elsewhere
+                  const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
+                  fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
+              } catch(e) { console.error('[RSM] fetch fallback exception', e); }
+              return;
+          }
+          const allRows = payload.allRows.slice();
+          const provs = _getSelectedValues('rsm-filter-prov');
+          const cities = _getSelectedValues('rsm-filter-city');
+          const years = _getSelectedValues('rsm-filter-year');
+          const filtered = allRows.filter(r => {
+              let ok = true;
+              if (provs && provs.length) ok = provs.some(p => ((r.province||'').toString().trim() === (p||'').toString().trim()));
+              if (ok && cities && cities.length) ok = cities.some(c => ((r.city||'').toString().trim() === (c||'').toString().trim()));
+              if (ok && years && years.length) {
+                  // try several possible year fields
+                  const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
+                  ok = years.some(y => (yval === (y||'').toString().trim()));
+              }
+              return ok;
+          });
+
+          console.log('[RSM] applying filters', {provs, cities, years, totalRows: allRows.length});
+          // update totals
+          const totalSts = filtered.length || 0;
+          const totalMoa = filtered.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
+          const totalRes = filtered.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
+          const totalExpr = filtered.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
+          const moaAttachments = 0;
+          rsmEl('rsm-total-sts').textContent = String(totalSts);
+          rsmEl('rsm-total-moa').textContent = String(totalMoa);
+          rsmEl('rsm-total-res').textContent = String(totalRes);
+          rsmEl('rsm-total-expr').textContent = String(totalExpr);
+          rsmEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
+
+          // update chart (base values only)
+          const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
+          if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, null);
+
+          // update ST titles listing
+          renderStTitlesFromRows(filtered, (payload && payload.region) || window.__lastActiveRegion || 'this region');
+
+          // update provinces list to only show provinces present in filtered rows
+          try {
+              const provEl = rsmEl('rsm-provinces');
+              if (provEl) {
+                  const byProv = {};
+                  filtered.forEach(r => { const p = (r.province||'').toString().trim() || 'UNKNOWN'; byProv[p] = byProv[p] || []; byProv[p].push(r); });
+                  const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                  const provincesArr = Object.keys(byProv).sort();
+                  provEl.innerHTML = provincesArr.length ? provincesArr.map(p => `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${byProv[p].length}</div></div>`).join('') : '<div class="rsm-empty">No provinces match filters</div>';
+              }
+          } catch(e) {}
+
+      } catch(e) { console.error('applyRsmFilters', e); }
+  }
+
+  function resetRsmFilters(){
+      try {
+          ['rsm-filter-prov','rsm-filter-city','rsm-filter-year'].forEach(id => {
+              const el = document.getElementById(id);
+              if (!el) return;
+              Array.from(el.options || []).forEach(o => o.selected = false);
+              // if select2 is present, trigger update
+              try { if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val([]).trigger('change'); } catch(e) {}
+          });
+      } catch(e){}
+      // re-run rendering with full payload
+      try { const payload = window._lastRsmPayload || null; if (payload && Array.isArray(payload.allRows)) { renderStTitlesFromRows(payload.allRows, (payload && payload.region) || window.__lastActiveRegion || 'this region'); if (typeof initOrUpdateModalStatsChart === 'function') { const allRows = payload.allRows; const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0); const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0); const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0); initOrUpdateModalStatsChart([0, totalMoa, totalRes, totalExpr], payload.perYearTotals || null); } }
+      } catch(e){ console.error('resetRsmFilters', e); }
+  }
+
+  // expose handlers and bind buttons; include delegated fallback
+  try { window.applyRsmFilters = applyRsmFilters; window.resetRsmFilters = resetRsmFilters; } catch(e) { console.warn('[RSM] failed to expose filter functions', e); }
+  try {
+      const btnA = document.getElementById('rsm-filter-apply');
+      const btnR = document.getElementById('rsm-filter-reset');
+      if (btnA) { btnA.addEventListener('click', function(ev){ ev.preventDefault(); applyRsmFilters(); }); console.log('[RSM] bound apply button'); }
+      else console.warn('[RSM] apply button not found');
+      if (btnR) { btnR.addEventListener('click', function(ev){ ev.preventDefault(); resetRsmFilters(); }); console.log('[RSM] bound reset button'); }
+      else console.warn('[RSM] reset button not found');
+  } catch(e) { console.error('[RSM] binding filter buttons failed', e); }
+
+  // Delegated click handler as a fallback in case buttons are added later or replaced
+  document.addEventListener('click', function(ev){
+      try {
+          const a = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-apply') : null;
+          if (a) { ev.preventDefault(); try { applyRsmFilters(); } catch(e) { console.error('applyRsmFilters failed', e); } return; }
+          const r = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-reset') : null;
+          if (r) { ev.preventDefault(); try { resetRsmFilters(); } catch(e) { console.error('resetRsmFilters failed', e); } return; }
+      } catch(e) { /* ignore delegation errors */ }
+  });
+
+
   // when province picker changes, refresh city list
   const provSel = document.getElementById('rsm-filter-prov');
   if (provSel) {
@@ -2814,7 +2962,12 @@ document.addEventListener('DOMContentLoaded', function(){
                         @endforeach
                     @endif
                   </select>
-                </div>
+                                </div>
+                                <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+                                      <button type="button" id="rsm-filter-apply" class="rsm-filter-btn" style="padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;" onclick="(function(){try{var s=document.getElementById('rsm-filter-status'); if(window.applyRsmFilters){ window.applyRsmFilters(); if(s) s.textContent='Filter applied'; console.log('[RSM] inline: invoked applyRsmFilters'); } else { if(s) s.textContent='No handler'; console.warn('[RSM] inline: applyRsmFilters missing'); } }catch(e){ console.error('[RSM] inline apply error', e); var s2=document.getElementById('rsm-filter-status'); if(s2) s2.textContent='Error'; }})();">Filter</button>
+                                      <button type="button" id="rsm-filter-reset" class="rsm-filter-btn" style="padding:8px 12px;background:transparent;color:#374151;border:1px solid rgba(2,6,23,0.06);border-radius:8px;cursor:pointer;font-weight:600;" onclick="(function(){try{var s=document.getElementById('rsm-filter-status'); if(window.resetRsmFilters){ window.resetRsmFilters(); if(s) s.textContent='Reset'; console.log('[RSM] inline: invoked resetRsmFilters'); } else { if(s) s.textContent='No handler'; console.warn('[RSM] inline: resetRsmFilters missing'); } }catch(e){ console.error('[RSM] inline reset error', e); var s2=document.getElementById('rsm-filter-status'); if(s2) s2.textContent='Error'; }})();">Reset</button>
+                                    <div id="rsm-filter-status" style="font-size:0.85rem;color:#556;min-width:120px;">&nbsp;</div>
+                                </div>
                 
                 
               </div>
