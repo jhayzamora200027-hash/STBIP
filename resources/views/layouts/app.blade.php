@@ -562,17 +562,19 @@
     // Close all nested menus when main dropdown closes
     const mainDropdown = document.getElementById('navbarDropdown');
 
-    mainDropdown.addEventListener('hide.bs.dropdown', function () {
-        document.querySelectorAll('.dropdown-menu .dropdown-menu')
-            .forEach(function (submenu) {
-                submenu.classList.remove('show');
-            });
+    if (mainDropdown) {
+        mainDropdown.addEventListener('hide.bs.dropdown', function () {
+            document.querySelectorAll('.dropdown-menu .dropdown-menu')
+                .forEach(function (submenu) {
+                    submenu.classList.remove('show');
+                });
 
-                document.querySelectorAll('.dropdown-item.dropdown-toggle')
-                    .forEach(function (toggle) {
-                        toggle.classList.remove('show');
-                    });
-            });
+            document.querySelectorAll('.dropdown-item.dropdown-toggle')
+                .forEach(function (toggle) {
+                    toggle.classList.remove('show');
+                });
+        });
+    }
 
         });
         </script>

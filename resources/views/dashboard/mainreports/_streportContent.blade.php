@@ -1,5 +1,16 @@
 <script>
 
+// global DOM utility helpers (must be available before any other script blocks)
+function fetchEl(id) {
+    // look in parent frame first for same-origin embedding
+    if (window.parent && window.parent !== window && window.parent.document) {
+        const pe = window.parent.document.getElementById(id);
+        if (pe) return pe;
+    }
+    return document.getElementById(id);
+}
+function rsmEl(id) { return fetchEl(id); }
+
 // global replicate popover helper (defined early so it exists even if DOMContentLoaded has passed)
 function showReplicateConfirmPopover(targetEl, stInfo = {}) {
     try {
@@ -155,7 +166,18 @@ document.addEventListener("DOMContentLoaded", function () {
 		function loadCss(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}        
 		function loadScript(u,cb){var s=document.createElement('script');s.onload=cb;s.src=u;document.head.appendChild(s);}        
 		function init(){
-			try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true }); }catch(e){ }
+			try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true });
+                // after select2 has replaced the <select>, attach listeners to it
+                const $prov = jQuery('#rsm-filter-prov');
+                if ($prov.length) {
+                    $prov.on('change.select2 select2:select select2:unselect', function(){
+                        console.log('[RSM] select2 province event fired');
+                        setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+                    });
+                    // if there is already a selection, update once now
+                    setTimeout(()=>{ updateProvinceFilters(); },0);
+                }
+            }catch(e){ console.error('[RSM] select2 init error', e); }
 		}
 		if (!window.jQuery){
 			loadScript('https://code.jquery.com/jquery-3.6.0.min.js',function(){
@@ -504,14 +526,8 @@ document.addEventListener("DOMContentLoaded", function () {
 	// then in the parent frame (if same‑origin). this allows the modal
 	// markup to live outside the iframe while the script continues to run
 	// inside it.
-	function fetchEl(id) {
-		if (window.parent && window.parent !== window && window.parent.document) {
-			const pe = window.parent.document.getElementById(id);
-			if (pe) return pe;
-		}
-		return document.getElementById(id);
-	}
-
+	// NOTE: global fetchEl is already defined at the top of the file,
+	// so we just refer to that rather than redeclare.
 	// variant that accepts a CSS selector and queries both parent and local documents
 	function fetchQS(selector) {
 		if (window.parent && window.parent !== window && window.parent.document) {
@@ -530,7 +546,10 @@ document.addEventListener("DOMContentLoaded", function () {
 	const modalTitle = fetchEl("sliderModalTitle");
 	
 	// helper for region stats elements (also looked up in parent)
-	function rsmEl(id) { return fetchEl(id); }
+	// public API used in numerous handlers outside the DOMContentLoaded
+	// callback, so define it at top level rather than inside the ready
+	// listener. (global rsmEl already exists)
+	
 
 
 	// shared truthiness helper for parsed Excel fields (boolean or textual 'true')
@@ -1850,7 +1869,7 @@ function createChartHitZones(chart) {
                     })->values();
             @endphp
             <a class="card card-link" href="{{ $card->url ?? '#' }}" data-href="{{ $card->url ?? '#' }}" data-title="{{ $card->title }}" aria-label="{{ $card->title }}" data-children='@json($__cardChildren)'>
-                <div class="imgContainer">
+                <div class="imgContainer" style= "background-color: transparent !important; border: none !important;">
                     <div class="logo-badge">
                         @if($card->image)
                             <img src="{{ asset('storage/' . $card->image) }}" alt="{{ $card->title }} logo">
@@ -2469,17 +2488,80 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function applyRsmFilters(){
+      // local truthiness helper in case outer scope failed to define it
+      const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
       try {
           let payload = window._lastRsmPayload || null;
           if (!payload || !Array.isArray(payload.allRows)) {
               console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
               // try to derive region param from last active region or modal image
-              const regionParam = (window.__lastActiveRegion) || (document.getElementById('rsm-modal-image') && document.getElementById('rsm-modal-image').getAttribute('data-region-name')) || null;
-              if (!regionParam) { console.warn('[RSM] cannot derive region to fetch payload'); return; }
+              // try several places to figure out which region the user is
+              // currently looking at. historically we relied solely on
+              // __lastActiveRegion or the modal image, but in some embed
+              // scenarios those values can still be null. fall back to the
+              // province selector (which stores the last region event) and
+              // finally the active slider image so filters work even if the
+              // user hasn't clicked anything yet.
+              let regionParam = null;
+              if (window.__lastActiveRegion) {
+                  regionParam = window.__lastActiveRegion;
+              }
+              if (!regionParam) {
+                  const provSel = document.getElementById('rsm-filter-prov');
+                  if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                      regionParam = provSel._lastRegionEvent.regionName;
+                  }
+              }
+              if (!regionParam) {
+                  const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+                  if (activeImg) {
+                      regionParam = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+                  }
+              }
+              if (!regionParam) {
+                  const modalImg = document.getElementById('rsm-modal-image');
+                  if (modalImg) regionParam = modalImg.getAttribute('data-region-name');
+              }
+              // if we still don't know the region, try to infer it from the
+              // selected province (use parent.regionMap which was populated
+              // when the iframe was loaded). this covers cases where the
+              // user just picked a province without ever clicking the slider.
+              if (!regionParam) {
+                  try {
+                      const provSel = document.getElementById('rsm-filter-prov');
+                      if (provSel && provSel.value && window.parent && window.parent.regionMap) {
+                          const provVal = provSel.value.toString().trim().toLowerCase();
+                          Object.keys(window.parent.regionMap || {}).some(r => {
+                              const map = window.parent.regionMap[r] || {};
+                              const list = Object.keys(map.provinces || {});
+                              if (list.some(p=>p.toString().trim().toLowerCase() === provVal)) {
+                                  regionParam = r;
+                                  return true;
+                              }
+                              return false;
+                          });
+                      }
+                  } catch(_){ }
+              }
+              // if we got a bare number (sheet names are numeric in some
+              // spreadsheets) convert it to the canonical form the backend
+              // expects. normalizeRegionText does not handle digits, so do it
+              // manually here.
+              if (/^\d+$/.test(regionParam)) {
+                  const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
+                  const num = parseInt(regionParam,10);
+                  regionParam = 'Region ' + (romans[num] || regionParam);
+              }
+              console.log('[RSM] derived regionParam for fallback', regionParam);
+              if (!regionParam) {
+                  console.warn('[RSM] cannot derive region to fetch payload');
+                  return;
+              }
               try {
                   // perform same AJAX used elsewhere
                   const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                  fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
+                  console.log('[RSM] fetching payload url', url);
+                  fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
               } catch(e) { console.error('[RSM] fetch fallback exception', e); }
               return;
           }
@@ -2489,8 +2571,16 @@ document.addEventListener('DOMContentLoaded', function(){
           const years = _getSelectedValues('rsm-filter-year');
           const filtered = allRows.filter(r => {
               let ok = true;
-              if (provs && provs.length) ok = provs.some(p => ((r.province||'').toString().trim() === (p||'').toString().trim()));
-              if (ok && cities && cities.length) ok = cities.some(c => ((r.city||'').toString().trim() === (c||'').toString().trim()));
+              // normalize row values for case-insensitive comparison
+              const rowProv = (r.province||'').toString().trim().toLowerCase();
+              // ST rows use "municipality" instead of city; accept either
+              const rowCity = ((r.city||r.municipality)||'').toString().trim().toLowerCase();
+              if (provs && provs.length) {
+                  ok = provs.some(p => rowProv === (p||'').toString().trim().toLowerCase());
+              }
+              if (ok && cities && cities.length) {
+                  ok = cities.some(c => rowCity === (c||'').toString().trim().toLowerCase());
+              }
               if (ok && years && years.length) {
                   // try several possible year fields
                   const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
@@ -2500,17 +2590,44 @@ document.addEventListener('DOMContentLoaded', function(){
           });
 
           console.log('[RSM] applying filters', {provs, cities, years, totalRows: allRows.length});
+          // debug values for first few rows (helps troubleshoot mismatches)
+          try { console.debug('[RSM] sample row provinces', allRows.slice(0,5).map(r=>r.province)); } catch(e) {}
           // update totals
           const totalSts = filtered.length || 0;
           const totalMoa = filtered.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
           const totalRes = filtered.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
           const totalExpr = filtered.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
           const moaAttachments = 0;
-          rsmEl('rsm-total-sts').textContent = String(totalSts);
-          rsmEl('rsm-total-moa').textContent = String(totalMoa);
-          rsmEl('rsm-total-res').textContent = String(totalRes);
-          rsmEl('rsm-total-expr').textContent = String(totalExpr);
-          rsmEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
+
+          // refresh city/year selects based on filtered rows as well
+          try {
+              const cityEl2 = document.getElementById('rsm-filter-city');
+              const yearEl2 = document.getElementById('rsm-filter-year');
+              if (cityEl2) cityEl2.innerHTML = '';
+              if (yearEl2) yearEl2.innerHTML = '';
+              const citySet = new Set();
+              const yearSet = new Set();
+              filtered.forEach(r => {
+                  const cityName = ((r.municipality||r.city)||'').toString().trim();
+                  if (cityName) citySet.add(cityName);
+                  const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
+                  if (yval) yearSet.add(yval);
+              });
+              Array.from(citySet).sort().forEach(c => cityEl2 && cityEl2.appendChild(new Option(c, c)));
+              Array.from(yearSet).sort().forEach(y => yearEl2 && yearEl2.appendChild(new Option(y, y)));
+              if (cityEl2 && window.jQuery && jQuery(cityEl2).data('select2')) {
+                  jQuery(cityEl2).val([]).trigger('change.select2');
+              }
+              if (yearEl2 && window.jQuery && jQuery(yearEl2).data('select2')) {
+                  jQuery(yearEl2).val([]).trigger('change.select2');
+              }
+          } catch(e) { console.error('refresh city/year from filtered failed', e); }
+
+          fetchEl('rsm-total-sts').textContent = String(totalSts);
+          fetchEl('rsm-total-moa').textContent = String(totalMoa);
+          fetchEl('rsm-total-res').textContent = String(totalRes);
+          fetchEl('rsm-total-expr').textContent = String(totalExpr);
+          fetchEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
 
           // update chart (base values only)
           const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
@@ -2574,27 +2691,115 @@ document.addEventListener('DOMContentLoaded', function(){
   // when province picker changes, refresh city list
   const provSel = document.getElementById('rsm-filter-prov');
   if (provSel) {
-      provSel.addEventListener('change', function(){
-          const cityEl2 = document.getElementById('rsm-filter-city');
-          if (!cityEl2) return;
-          cityEl2.innerHTML = '';
-          const lastEvent = provSel._lastRegionEvent || {};
-          let reg = lastEvent.regionName;
-          if (reg) reg = normalizeRegionText(reg);
-          if (reg && window.parent && window.parent.regionMap) {
-              const map = window.parent.regionMap[reg] || {};
-              if (this.value) {
-                  // specific province selected
-                  const cities = (map.provinces && map.provinces[this.value]) || [];
-                  cities.sort().forEach(c => cityEl2.appendChild(new Option(c, c)));
-              } else {
-                  // show all cities for region
-                  const allCities2 = new Set();
-                  Object.values(map.provinces || {}).forEach(arr => arr.forEach(c=>allCities2.add(c)));
-                  Array.from(allCities2).sort().forEach(c => cityEl2.appendChild(new Option(c, c)));
+      function deriveCurrentRegion(){
+          // replicate regionParam derivation from applyRsmFilters
+          let region = window.__lastActiveRegion || null;
+          if (!region) {
+              const provSel = document.getElementById('rsm-filter-prov');
+              if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                  region = provSel._lastRegionEvent.regionName;
               }
           }
+          if (!region) {
+              const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+              if (activeImg) {
+                  region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+              }
+          }
+          if (!region) {
+              const modalImg = document.getElementById('rsm-modal-image');
+              if (modalImg) region = modalImg.getAttribute('data-region-name');
+          }
+          return region;
+      }
+
+      function updateProvinceFilters(){
+          console.log('[RSM] updateProvinceFilters called');
+          const cityEl2 = document.getElementById('rsm-filter-city');
+          const yearEl2 = document.getElementById('rsm-filter-year');
+          if (cityEl2) cityEl2.innerHTML = '';
+          if (yearEl2) yearEl2.innerHTML = '';
+
+          const provs = _getSelectedValues('rsm-filter-prov');
+          let payload = window._lastRsmPayload || {};
+          let allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
+          console.log('[RSM] province selection, building cities from', provs, 'rows', allRows.length);
+          if (!allRows.length) {
+              // attempt to fetch payload same as applyRsmFilters does
+              const regionParam = deriveCurrentRegion();
+              if (regionParam) {
+                  const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
+                  fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
+                    .then(p => {
+                        window._lastRsmPayload = p;
+                        payload = p;
+                        allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
+                        console.log('[RSM] fetched payload for province filter, rows', allRows.length);
+                        // rerun the filter logic now that we have rows
+                        updateProvinceFilters();
+                    }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
+                  return; // bail now; will re-enter when fetch completes
+              }
+          }
+
+          const citySet = new Set();
+          const yearSet = new Set();
+          // log unique provinces present in allRows for debugging
+          try {
+              const uniqueProvs = Array.from(new Set(allRows.map(r=>(r.province||'').toString().trim()))).filter(Boolean);
+              console.log('[RSM] provinces in payload', uniqueProvs);
+          } catch(e){}
+          allRows.forEach(r => {
+              const prov = (r.province||'').toString().trim();
+              if (!provs.length || provs.some(p=>p.toString().trim() === prov)) {
+                  const cityName = ((r.municipality||r.city)||'').toString().trim();
+                  if (cityName) citySet.add(cityName);
+                  const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
+                  if (yval) yearSet.add(yval);
+              }
+          });
+          console.log('[RSM] computed cities', Array.from(citySet).sort());
+
+
+          // helper that rewrites underlying <select> and reinitializes
+          // select2 so the dropdown list is up‑to‑date even if already open
+          function fillSelect(el, items) {
+              if (!el) return;
+              // clear existing options
+              if (window.jQuery && jQuery(el).data('select2')) {
+                  const $e = jQuery(el);
+                  $e.find('option').remove();
+                  items.forEach(i => $e.append(new Option(i,i)));
+                  $e.trigger('change'); // tell select2 to refresh
+              } else {
+                  el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join('');
+              }
+          }
+
+          fillSelect(cityEl2, Array.from(citySet).sort());
+          fillSelect(yearEl2, Array.from(yearSet).sort());
+      }
+
+      provSel.addEventListener('change', function(ev){
+          // delay until value has been updated by select2
+          setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
       });
+      // also bind for select2 events: both the namespaced change and the
+      // more granular select/unselect events which fire when choices are
+      // added/removed via the UI.
+      if (window.jQuery && jQuery(provSel).data('select2')) {
+          const $prov = jQuery(provSel);
+          $prov.on('change.select2 select2:select select2:unselect', function(ev){
+              setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+          });
+      }
+      // fallback listener on document in case select2 replaces the element
+      document.addEventListener('change', function(ev){
+          if (ev.target && ev.target.id === 'rsm-filter-prov') {
+              setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+          }
+      });
+
   }
 
   // store last region event on province element for use in change handler
@@ -2602,6 +2807,21 @@ document.addEventListener('DOMContentLoaded', function(){
       const provSel2 = document.getElementById('rsm-filter-prov');
       if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
   });
+
+  // fallback: poll the province selection and rebuild lists when it changes
+  (function(){
+      let lastProvs = null;
+      setInterval(function(){
+          const provs = _getSelectedValues('rsm-filter-prov');
+          const provsStr = provs.join('|');
+          if (provsStr !== (lastProvs||'')) {
+              console.log('[RSM] polling detected province change', provs);
+              lastProvs = provsStr;
+              updateProvinceFilters();
+              applyRsmFilters();
+          }
+      }, 500);
+  })();
 
   // open modal on gallery card click (delegated) — ignore clicks produced by drag/scroll
   const scroller = document.querySelector('.container-cards');
@@ -2856,6 +3076,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- Slider (Swiper) -->
 <div class="slider-wrapper">
     <div class="swiper mySwiper">
+
         <div class="swiper-wrapper">
             @php
                 $sliderImages = [
@@ -3084,7 +3305,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards:not(.dragging):not(.is-scrolling) .card.card-lifted { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
 
 /* image starts centered then animates to left on expand */
-.container-cards .card .imgContainer { position:absolute; top:8px; left:50%; transform:translate(-50%, 0); width:140px; height:140px; z-index:3; box-shadow: 0 8px 34px rgba(2,6,23,0.08); border-radius:8px; overflow:visible; background: transparent; display:flex; align-items:center; justify-content:center; transition: left 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1), top 420ms ease; }
+.container-cards .card .imgContainer { position:absolute; top:8px; left:50%; transform:translate(-50%, 0); width:140px; height:140px; z-index:3; overflow:visible; background: transparent; display:flex; align-items:center; justify-content:center; transition: left 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1), top 420ms ease; }
 .container-cards .card .imgContainer img { width:100%; height:100%; object-fit:contain; display:block; }
 .logo-badge { width:96px; height:96px; border-radius:999px; background: transparent; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 28px rgba(2,6,23,0.08); overflow:hidden; }
 .logo-badge img { width:72%; height:72%; object-fit:contain; display:block; }
@@ -3160,7 +3381,7 @@ document.addEventListener('DOMContentLoaded', function(){
 @media (max-width: 900px) {
   /* Stack cards vertically on narrow screens for better tap targets */
   .container-cards { flex-direction: column; align-items: center; gap:24px; padding:12px; }
-  .container-cards .card { flex: 0 0 92%; max-width:920px; width: 92%; margin:12px 0; height: auto; min-height: auto; padding:18px; }
+  .container-cards .card { flex: 0 0 92%; max-width:920px; width: 92%; margin:12px 0; height: auto; min-height: auto; padding:18px;}
   .container-cards .card .imgContainer { position: relative; left: 50%; transform: translateX(-50%); top: 0; width:180px; height:180px; margin-bottom:14px; }
   .logo-badge { width:96px; height:96px; }
   .container-cards .card .content { width:100%; margin-left:0; padding-left:0; opacity:1; visibility:visible; }
@@ -3207,18 +3428,45 @@ document.addEventListener('DOMContentLoaded', function(){
 }
 
 /* ===== Swiper slider (copied/simplified from demo1) ===== */
-.slider-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 100vw; overflow: hidden; /* keep top margin, horizontal offset via inner swiper */ margin: 2rem auto 0; }
+.slider-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* break out of any parent container so the carousel spans the
+       full viewport width */
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    overflow: hidden;
+    /* keep top margin; remove auto horizontal centering since we're
+       full‑width now */
+    margin-top: 2rem;
+}
+
 
 /* ensure gallery above slider when necessary */
 .gallery, .container-cards { position: relative; z-index: 10; }
 /* slider sizing and centering: fixed pixel dimensions to avoid zoom stretch */
-.swiper { width: 800px; /* fixed width */ max-width: 800px; height: 300px; /* reasonable fixed height */ max-height: 300px; margin: 0 0 0 30vw; transform: none; transition: transform 320ms cubic-bezier(.2,.9,.2,1); }
+.swiper {
+    /* fixed container width to 1200px for wider card spread */
+    width: 1700px !important;
+    max-width: 1700px !important;
+    height: 300px; /* reasonable fixed height */
+    max-height: 300px;
+    margin: 0 auto; /* center within wrapper */
+    transform: none;
+    transition: transform 320ms cubic-bezier(.2,.9,.2,1);
+}
 .swiper-slide { width: 220px; /* fixed size to fit container */ height: 240px; border-radius: 20px; overflow: hidden; transition: 0.4s ease; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 .swiper-slide img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px; }
 /* even smaller zoom so layout stays tight */
 .swiper-slide-active { transform: scale(1.08); }
 .swiper-button-next, .swiper-button-prev { color: #0d47a1; }
-@media (max-width:1200px) { .swiper { transform: translateX(-100px); } }
+/* removed left offset; full-width slider should fill available space */
+@media (max-width:1200px) { .swiper { transform: none; /* was translateX(-100px) */ } }
 /* ensure slides scale down slightly on small viewports */
 @media (max-width:800px) { .swiper-slide { width: 180px; height: 200px; } }
 @media (max-width:900px) { .swiper { transform: none; width: 100%; } }

@@ -175,6 +175,7 @@ class STsReportController extends Controller
         $region = $request->input('region_image');
 
         $filtered = $all['data'];
+        $province = $request->input('province');
         if (!empty($region)) {
             $filtered = array_filter($filtered, function ($row) use ($region) {
                 // sanitize title/municipality for trimming tests as well
@@ -186,6 +187,11 @@ class STsReportController extends Controller
                 }
                 $raw = strtolower(trim($row['region'] ?? ''));
                 return $raw !== '' && strpos($raw, strtolower($region)) !== false;
+            });
+        }
+        if (!empty($province)) {
+            $filtered = array_filter($filtered, function($r) use ($province) {
+                return strtolower(trim($r['province'] ?? '')) === strtolower(trim($province));
             });
         }
 
