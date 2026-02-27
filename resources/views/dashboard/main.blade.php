@@ -366,7 +366,6 @@
 		}
 
 		.st-map-figure-wrapper { margin-right: 8px !important; }
-		.st-map-region-list { margin-right: 0 !important; }
 
 		@media (max-width: 991.98px) {
 			.st-map-card-body { justify-content: center !important; padding-right: 24px !important; }
@@ -383,6 +382,7 @@
 			flex: 0 0 360px !important;
 			max-width: 360px !important;
 			width: 360px !important;
+			margin-right: 0 !important; 
 		}
 
 		@media (max-width: 991.98px) {
@@ -458,7 +458,7 @@
 	.map-overlay-card .card-body { padding: 6px 0; background: transparent; display: flex; align-items: center; justify-content: center; padding-top: 6px; padding-bottom: 6px; min-height: 140px; }
 	.map-overlay-totals .st-dashboard-card .card-header {
 		display: inline-block;
-		width: 96px; /* pill width */
+		width: 150px; /* pill width */
 		max-width: 100%;
 		margin: 0 auto -6px;
 		font-size: 0.7rem;
@@ -590,7 +590,7 @@
 					<div class="col-12 p-0">
 						<div class="card st-dashboard-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 							<div class="card-header text-center">PHILIPPINES MAP & REGIONS</div>
-								<div class="card-body st-map-card-body" style="padding: 24px 24px; display:flex; flex-wrap:wrap; gap:24px; justify-content:flex-end; align-items:flex-start; padding-left: 150px;">
+								<div class="card-body st-map-card-body" style="padding: 24px 24px; display:flex; flex-wrap:wrap; gap:150px; justify-content:flex-end; align-items:flex-start; padding-left: 435px;">
 									<div class="st-map-figure-wrapper" style="position:relative; flex: 0 0 420px; max-width:420px; width:420px; display:flex; flex-direction:column; align-items:center;">
 										<object id="philippines-map" data="{{ asset('images/philippines.svg') }}" type="image/svg+xml" style="width:100%; max-width:420px; height:auto; display:block;"></object>
 										<div id="map-region-label" style="margin-top:10px; font-size:0.95rem; font-weight:600; color:#10aeb5; text-align:center; min-height:22px;">
