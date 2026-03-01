@@ -11,6 +11,540 @@ function fetchEl(id) {
 }
 function rsmEl(id) { return fetchEl(id); }
 
+// --- client-side filter apply/reset handlers ---------------------------------
+// utility used by several filtering routines.  use `rsmEl` so that
+// we support scenarios where the filter controls live in a parent frame
+// (eg. when the report is embedded); the original implementation blindly
+// used `document.getElementById` which meant selections were always empty
+// when the iframe context changed.  also keep the same logging as before.
+function _getSelectedValues(id) {
+    const el = rsmEl ? rsmEl(id) : document.getElementById(id);
+    if (!el) return [];
+    try {
+        // prefer Select2 / jQuery value when available
+        try { if (window.jQuery && jQuery(el).data('select2')) {
+                    const v = jQuery(el).val();
+                    const result = Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []);
+                    console.log('[RSM] _getSelectedValues (select2) for', id, result);
+                    return result;
+                } } catch(e) {}
+        if (el.selectedOptions && el.selectedOptions.length) {
+            const res = Array.from(el.selectedOptions).map(o => o.value);
+            console.log('[RSM] _getSelectedValues (native) for', id, res);
+            return res;
+        }
+        // fallback
+        const res = Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
+        console.log('[RSM] _getSelectedValues (fallback) for', id, res);
+        return res;
+    } catch(e) { console.error('[RSM] _getSelectedValues error', e); return []; }
+}
+
+// helpers used by filter routines. defining them here at the top of the
+// first <script> block guarantees they exist before any filtering code
+// may execute (previously they lived in a later <script> block which
+// sometimes caused `ReferenceError: getRowCity is not defined`).
+function getRowCity(r){
+    // server-side logic builds hierarchy using municipality first, so
+    // mirror that order here. many rows only set `municipality` and leave
+    // `city` blank, which was previously causing the filter to always
+    // return an empty string and thus never match.
+    return ((r && (r.municipality || r.city)) || '').toString().trim();
+}
+function getRowYear(r){
+    return ((r && (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of)) || '').toString().trim();
+}
+
+// make a harmless placeholder available immediately so that code which
+// fires before the real implementation loads doesn't throw an error.
+// the real version will overwrite this when it is defined later in the
+// same script block, but at least callers can safely invoke it early.
+if (!window.updateProvinceFilters) {
+    window.updateProvinceFilters = function(){
+        console.warn('[RSM] updateProvinceFilters placeholder invoked before definition');
+    };
+}
+
+function renderStTitlesFromRows(rows, regionParam) {
+    try {
+        const stListEl = rsmEl('rsm-st-list');
+        const headerEl = rsmEl('rsm-st-listing-header');
+        if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+        if (!stListEl) return;
+        if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
+        const titleMap = {};
+        rows.forEach(r => {
+            const t = (r && r.title) ? String(r.title).trim() : '';
+            if (!t) return; titleMap[t] = (titleMap[t] || 0) + 1;
+        });
+        const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
+        if (!entries.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
+        const totalSts = rows.length; const uniqueTitles = entries.length;
+        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#475569;font-weight:700;font-size:0.88rem;">` +
+                   `<div>Unique titles: ${uniqueTitles}</div><div>Total STs: ${totalSts}</div></div>`;
+        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+        entries.forEach(([title, count]) => {
+            html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
+                    `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
+                    `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
+                    `</div>`;
+        });
+        html += '</div>';
+        stListEl.innerHTML = html;
+        // wire handlers
+        stListEl.onclick = function(ev){ const row = ev.target.closest('.rsm-st-summary-row'); if (!row) return; ev.stopPropagation(); const title = row.getAttribute('data-title')||''; showReplicateConfirmPopover(row, { title: title, row: { title: title } }); };
+    } catch(e) { console.error('renderStTitlesFromRows', e); }
+}
+
+function applyRsmFilters(){
+    // local truthiness helper in case outer scope failed to define it
+    const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
+    // make sure city/year options exist before we read selections; the
+    // list is built by updateProvinceFilters which is normally invoked
+    // when the province selector changes. only refresh if the selects are
+    // empty, otherwise we risk clearing the user's choice when they try to
+    // filter by city or year alone.
+    try {
+        const cityElInit = document.getElementById('rsm-filter-city');
+        const yearElInit = document.getElementById('rsm-filter-year');
+        const needPopulate = (cityElInit && cityElInit.options.length === 0) ||
+                             (yearElInit && yearElInit.options.length === 0);
+        if (needPopulate && typeof updateProvinceFilters === 'function') {
+            updateProvinceFilters();
+        }
+    } catch(e) { console.warn('[RSM] initial province filter update failed', e); }
+    try {
+        // close any open select2 dropdowns so the underlying <select> has
+        // the correct value before we read it. this helps when user clicks
+        // the filter button while the dropdown is still open.
+        try {
+            if (window.jQuery) {
+                ['#rsm-filter-prov','#rsm-filter-city','#rsm-filter-year'].forEach(sel=>{
+                    const $el = jQuery(sel);
+                    if ($el && $el.data('select2')) {
+                        $el.select2('close');
+                    }
+                });
+            }
+        } catch(_e){}
+        // log the selection values for debugging
+        const provsDbg = _getSelectedValues('rsm-filter-prov');
+        const citiesDbg = _getSelectedValues('rsm-filter-city');
+        const yearsDbg = _getSelectedValues('rsm-filter-year');
+        const rawCityVal = (window.jQuery && jQuery('#rsm-filter-city').length) ? jQuery('#rsm-filter-city').val() : null;
+        console.log('[RSM] applyRsmFilters called', { provs: provsDbg, cities: citiesDbg, years: yearsDbg, rawCityVal });
+        let payload = window._lastRsmPayload || null;
+        if (!payload || !Array.isArray(payload.allRows)) {
+            console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
+            // try to derive region param from last active region or modal image
+            // try several places to figure out which region the user is
+            // currently looking at. historically we relied solely on
+            // __lastActiveRegion or the modal image, but in some embed
+            // scenarios those values can still be null. fall back to the
+            // province selector (which stores the last region event) and
+            // finally the active slider image so filters work even if the
+            // user hasn't clicked anything yet.
+            let regionParam = null;
+            if (window.__lastActiveRegion) {
+                regionParam = window.__lastActiveRegion;
+            }
+            if (!regionParam) {
+                const provSel = document.getElementById('rsm-filter-prov');
+                if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                    regionParam = provSel._lastRegionEvent.regionName;
+                }
+            }
+            if (!regionParam) {
+                const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+                if (activeImg) {
+                    regionParam = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+                }
+            }
+            if (!regionParam) {
+                const modalImg = document.getElementById('rsm-modal-image');
+                if (modalImg) regionParam = modalImg.getAttribute('data-region-name');
+            }
+            // if we still don't know the region, try to infer it from the
+            // selected province (use parent.regionMap which was populated
+            // when the iframe was loaded). this covers cases where the
+            // user just picked a province without ever clicking the slider.
+            if (!regionParam) {
+                try {
+                    const provSel = document.getElementById('rsm-filter-prov');
+                    if (provSel && provSel.value && window.parent && window.parent.regionMap) {
+                        const provVal = provSel.value.toString().trim().toLowerCase();
+                        Object.keys(window.parent.regionMap || {}).some(r => {
+                            const map = window.parent.regionMap[r] || {};
+                            const list = Object.keys(map.provinces || {});
+                            if (list.some(p=>p.toString().trim().toLowerCase() === provVal)) {
+                                regionParam = r;
+                                return true;
+                            }
+                            return false;
+                        });
+                    }
+                } catch(_){ }
+            }
+            // if we got a bare number (sheet names are numeric in some
+            // spreadsheets) convert it to the canonical form the backend
+            // expects. normalizeRegionText does not handle digits, so do it
+            // manually here.
+            if (/^\d+$/.test(regionParam)) {
+                const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
+                const num = parseInt(regionParam,10);
+                regionParam = 'Region ' + (romans[num] || regionParam);
+            }
+            console.log('[RSM] derived regionParam for fallback', regionParam);
+            if (!regionParam) {
+                console.warn('[RSM] cannot derive region to fetch payload');
+                return;
+            }
+            try {
+                // perform same AJAX used elsewhere
+                const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
+                console.log('[RSM] fetching payload url', url);
+                fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
+            } catch(e) { console.error('[RSM] fetch fallback exception', e); }
+            return;
+        }
+        const allRows = payload.allRows.slice();
+        const provs = _getSelectedValues('rsm-filter-prov');
+        const cities = _getSelectedValues('rsm-filter-city');
+        const years = _getSelectedValues('rsm-filter-year');
+        // capture selections so we can restore them if we rebuild the
+        // city/year dropdowns further down. this prevents the UI from
+        // clearing the user's choice when applyRsmFilters runs again.
+        const savedCities = cities.slice();
+        const savedYears = years.slice();
+        const filtered = allRows.filter(r => {
+            let ok = true;
+            // normalize row values for case-insensitive comparison
+            const rowProv = (r.province||'').toString().trim().toLowerCase();
+            // guard against missing helper (shouldn't happen now, but safe)
+            const rowCity = (typeof getRowCity === 'function'
+                ? getRowCity(r)
+                : ((r && (r.municipality||r.city))||'').toString().trim()
+            ).toLowerCase();
+            if (provs && provs.length) {
+                ok = provs.some(p => rowProv === (p||'').toString().trim().toLowerCase());
+            }
+            if (ok && cities && cities.length) {
+                // log each comparison to see why the row is kept/dropped
+                let matchedCity = false;
+                cities.forEach(c => {
+                    const normC = (c||'').toString().trim().toLowerCase();
+                    // allow substring matches so minor formatting differences
+                    // (extra words, punctuation, accents) don't defeat the filter.
+                    const isMatch = rowCity.includes(normC) || normC.includes(rowCity);
+                    console.debug('[RSM] compare row city', rowCity, 'with', normC, '=>', isMatch);
+                    if (isMatch) matchedCity = true;
+                });
+                if (!matchedCity) {
+                    console.debug('[RSM] city filter rejected row', r, 'city', rowCity, 'selected', cities);
+                }
+                ok = matchedCity;
+            }
+            if (ok && years && years.length) {
+                const yval = (typeof getRowYear === 'function' ? getRowYear(r) : ((r && (r.year_of_moa||r.moa_year||r.moa_year_of||r.moa_year_of_moa||r.moa_year_of))||'').toString().trim());
+                ok = years.some(y => (yval === (y||'').toString().trim()));
+            }
+            return ok;
+        });
+
+        console.log('[RSM] applying filters', {provs, cities, years, totalRows: allRows.length});
+        // debug values for first few rows (helps troubleshoot mismatches)
+        try { console.debug('[RSM] sample row provinces', allRows.slice(0,5).map(r=>r.province)); } catch(e) {}
+        try { console.debug('[RSM] sample row cities', allRows.slice(0,5).map(r=>getRowCity(r))); } catch(e) {}
+        try { console.debug('[RSM] sample row years', allRows.slice(0,5).map(r=>getRowYear(r))); } catch(e) {}
+        // update totals
+        const totalSts = filtered.length || 0;
+        const totalMoa = filtered.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
+        const totalRes = filtered.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
+        const totalExpr = filtered.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
+        const moaAttachments = 0;
+
+        // refresh city/year selects based on filtered rows as well. keep
+        // any existing selection so the user doesn't lose their choice.
+        try {
+            const cityEl2 = document.getElementById('rsm-filter-city');
+            const yearEl2 = document.getElementById('rsm-filter-year');
+            if (cityEl2) cityEl2.innerHTML = '';
+            if (yearEl2) yearEl2.innerHTML = '';
+            const citySet = new Set();
+            const yearSet = new Set();
+            filtered.forEach(r => {
+                const cityName = getRowCity(r);
+                if (cityName) citySet.add(cityName);
+                const yval = (typeof getRowYear === 'function' ? getRowYear(r) : ((r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of) || '').toString().trim());
+                if (yval) yearSet.add(yval);
+            });
+            Array.from(citySet).sort().forEach(c => cityEl2 && cityEl2.appendChild(new Option(c, c)));
+            Array.from(yearSet).sort().forEach(y => yearEl2 && yearEl2.appendChild(new Option(y, y)));
+            // restore previously selected values if still present
+            if (cityEl2) {
+                if (window.jQuery && jQuery(cityEl2).data('select2')) {
+                    const available = Array.from(cityEl2.options).map(o=>o.value);
+                    const toSet = savedCities.filter(v=>available.includes(v));
+                    jQuery(cityEl2).val(toSet).trigger('change.select2');
+                } else {
+                    Array.from(cityEl2.options).forEach(o => { o.selected = savedCities.includes(o.value); });
+                }
+            }
+            if (yearEl2) {
+                if (window.jQuery && jQuery(yearEl2).data('select2')) {
+                    const availableY = Array.from(yearEl2.options).map(o=>o.value);
+                    const toSetY = savedYears.filter(v=>availableY.includes(v));
+                    jQuery(yearEl2).val(toSetY).trigger('change.select2');
+                } else {
+                    Array.from(yearEl2.options).forEach(o => { o.selected = savedYears.includes(o.value); });
+                }
+            }
+        } catch(e) { console.error('refresh city/year from filtered failed', e); }
+
+        fetchEl('rsm-total-sts').textContent = String(totalSts);
+        fetchEl('rsm-total-moa').textContent = String(totalMoa);
+        fetchEl('rsm-total-res').textContent = String(totalRes);
+        fetchEl('rsm-total-expr').textContent = String(totalExpr);
+        fetchEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
+
+        // update chart (base values only)
+        const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
+        if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, null);
+
+        // update ST titles listing
+        renderStTitlesFromRows(filtered, (payload && payload.region) || window.__lastActiveRegion || 'this region');
+
+        // update provinces list to only show provinces present in filtered rows
+        try {
+            const provEl = rsmEl('rsm-provinces');
+            if (provEl) {
+                const byProv = {};
+                filtered.forEach(r => { const p = (r.province||'').toString().trim() || 'UNKNOWN'; byProv[p] = byProv[p] || []; byProv[p].push(r); });
+                const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const provincesArr = Object.keys(byProv).sort();
+                provEl.innerHTML = provincesArr.length ? provincesArr.map(p => `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${byProv[p].length}</div></div>`).join('') : '<div class="rsm-empty">No provinces match filters</div>';
+            }
+        } catch(e) {}
+
+    } catch(e) { console.error('applyRsmFilters', e); }
+}
+
+function resetRsmFilters(){
+    try {
+        ['rsm-filter-prov','rsm-filter-city','rsm-filter-year'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            Array.from(el.options || []).forEach(o => o.selected = false);
+            // if select2 is present, trigger update
+            try { if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val([]).trigger('change'); } catch(e) {}
+        });
+    } catch(e){}
+    // re-run rendering with full payload
+    try { const payload = window._lastRsmPayload || null; if (payload && Array.isArray(payload.allRows)) { renderStTitlesFromRows(payload.allRows, (payload && payload.region) || window.__lastActiveRegion || 'this region'); if (typeof initOrUpdateModalStatsChart === 'function') { const allRows = payload.allRows; const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0); const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0); const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0); initOrUpdateModalStatsChart([0, totalMoa, totalRes, totalExpr], payload.perYearTotals || null); } }
+    } catch(e){ console.error('resetRsmFilters', e); }
+}
+
+// expose handlers and bind buttons; include delegated fallback
+try { window.applyRsmFilters = applyRsmFilters; window.resetRsmFilters = resetRsmFilters; } catch(e) { console.warn('[RSM] failed to expose filter functions', e); }
+try {
+    const btnA = document.getElementById('rsm-filter-apply');
+    const btnR = document.getElementById('rsm-filter-reset');
+    if (btnA) { btnA.addEventListener('click', function(ev){ ev.preventDefault(); applyRsmFilters(); }); console.log('[RSM] bound apply button'); }
+    else console.warn('[RSM] apply button not found');
+    if (btnR) { btnR.addEventListener('click', function(ev){ ev.preventDefault(); resetRsmFilters(); }); console.log('[RSM] bound reset button'); }
+    else console.warn('[RSM] reset button not found');
+} catch(e) { console.error('[RSM] binding filter buttons failed', e); }
+
+// Delegated click handler as a fallback in case buttons are added later or replaced
+document.addEventListener('click', function(ev){
+    try {
+        const a = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-apply') : null;
+        if (a) { ev.preventDefault(); try { applyRsmFilters(); } catch(e) { console.error('applyRsmFilters failed', e); } return; }
+        const r = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-reset') : null;
+        if (r) { ev.preventDefault(); try { resetRsmFilters(); } catch(e) { console.error('resetRsmFilters failed', e); } return; }
+    } catch(e) { /* ignore delegation errors */ }
+});
+
+
+// when province picker changes, refresh city list
+const provSel = document.getElementById('rsm-filter-prov');
+if (provSel) {
+    function deriveCurrentRegion(){
+        // replicate regionParam derivation from applyRsmFilters
+        let region = window.__lastActiveRegion || null;
+        if (!region) {
+            const provSel = document.getElementById('rsm-filter-prov');
+            if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                region = provSel._lastRegionEvent.regionName;
+            }
+        }
+        if (!region) {
+            const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+            if (activeImg) {
+                region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+            }
+        }
+        if (!region) {
+            const modalImg = document.getElementById('rsm-modal-image');
+            if (modalImg) region = modalImg.getAttribute('data-region-name');
+        }
+        return region;
+    }
+
+    function updateProvinceFilters(){
+        console.log('[RSM] updateProvinceFilters called');
+        const cityEl2 = document.getElementById('rsm-filter-city');
+        const yearEl2 = document.getElementById('rsm-filter-year');
+        if (cityEl2) cityEl2.innerHTML = '';
+        if (yearEl2) yearEl2.innerHTML = '';
+
+        const provs = _getSelectedValues('rsm-filter-prov');
+        let payload = window._lastRsmPayload || {};
+        let allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
+        console.log('[RSM] province selection, building cities from', provs, 'rows', allRows.length);
+        if (!allRows.length) {
+            // attempt to fetch payload same as applyRsmFilters does
+            const regionParam = deriveCurrentRegion();
+            if (regionParam) {
+                const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
+                fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
+                  .then(p => {
+                      window._lastRsmPayload = p;
+                      payload = p;
+                      allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
+                      console.log('[RSM] fetched payload for province filter, rows', allRows.length);
+                      // rerun the filter logic now that we have rows
+                      updateProvinceFilters();
+                  }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
+                return; // bail now; will re-enter when fetch completes
+            }
+        }
+
+        const citySet = new Set();
+        const yearSet = new Set();
+        // log unique provinces present in allRows for debugging
+        try {
+            const uniqueProvs = Array.from(new Set(allRows.map(r=>(r.province||'').toString().trim()))).filter(Boolean);
+            console.log('[RSM] provinces in payload', uniqueProvs);
+        } catch(e){}
+        allRows.forEach(r => {
+            const prov = (r.province||'').toString().trim();
+            if (!provs.length || provs.some(p=>p.toString().trim() === prov)) {
+                const cityName = getRowCity(r);
+                if (cityName) citySet.add(cityName);
+                const yval = getRowYear(r);
+                if (yval) yearSet.add(yval);
+            }
+        });
+        console.log('[RSM] computed cities', Array.from(citySet).sort());
+
+
+        // helper that rewrites underlying <select> and reinitializes
+        // select2 so the dropdown list is up‑to‑date even if already open
+        function fillSelect(el, items) {
+            if (!el) return;
+            // clear existing options
+            if (window.jQuery && jQuery(el).data('select2')) {
+                const $e = jQuery(el);
+                $e.find('option').remove();
+                items.forEach(i => $e.append(new Option(i,i)));
+                $e.trigger('change'); // tell select2 to refresh
+            } else {
+                el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join('');
+            }
+        }
+
+        fillSelect(cityEl2, Array.from(citySet).sort());
+        fillSelect(yearEl2, Array.from(yearSet).sort());
+    }
+
+    // province changes should refresh dependent selects and re-filter
+    provSel.addEventListener('change', function(ev){
+        setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+    });
+    // also update when city or year are selected (no need to rebuild lists)
+    const citySel = rsmEl ? rsmEl('rsm-filter-city') : document.getElementById('rsm-filter-city');
+    if (citySel) {
+        console.log('[RSM] attaching change listener to city select');
+        citySel.addEventListener('change', function(ev){
+            console.log('[RSM] city select change event');
+            setTimeout(applyRsmFilters,0);
+        });
+    } else {
+        console.warn('[RSM] city select not found when binding listener');
+    }
+    const yearSel = rsmEl ? rsmEl('rsm-filter-year') : document.getElementById('rsm-filter-year');
+    if (yearSel) {
+        console.log('[RSM] attaching change listener to year select');
+        yearSel.addEventListener('change', function(ev){
+            console.log('[RSM] year select change event');
+            setTimeout(applyRsmFilters,0);
+        });
+    } else {
+        console.warn('[RSM] year select not found when binding listener');
+    }
+
+    // also bind for select2 events: handle all three selects so users
+    // picking values via the UI will auto‑apply filters without extra clicks.
+    if (window.jQuery) {
+        const $prov = jQuery(provSel);
+        if ($prov.data('select2')) {
+            $prov.on('change.select2 select2:select select2:unselect', function(ev){
+                setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+            });
+        }
+        if (citySel && jQuery(citySel).data('select2')) {
+            jQuery(citySel).on('change.select2 select2:select select2:unselect', function(){
+                console.log('[RSM] select2 city change event');
+                setTimeout(applyRsmFilters,0);
+            });
+        }
+        if (yearSel && jQuery(yearSel).data('select2')) {
+            jQuery(yearSel).on('change.select2 select2:select select2:unselect', function(){
+                console.log('[RSM] select2 year change event');
+                setTimeout(applyRsmFilters,0);
+            });
+        }
+    }
+
+    // fallback listener on document in case select2 replaces the element
+    document.addEventListener('change', function(ev){
+        if (ev.target && ev.target.id === 'rsm-filter-prov') {
+            setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+        }
+        if (ev.target && (ev.target.id === 'rsm-filter-city' || ev.target.id === 'rsm-filter-year')) {
+            setTimeout(applyRsmFilters,0);
+        }
+    });
+
+    // expose the province helper globally so other early code (select2 init,
+    // inline buttons, messages from parent etc.) can call it without needing
+    // to know about the local scope above.
+    try { window.updateProvinceFilters = updateProvinceFilters; } catch(e) {}
+}
+
+// store last region event on province element for use in change handler
+document.addEventListener('sliderActiveRegionChanged', function(e){
+    const provSel2 = document.getElementById('rsm-filter-prov');
+    if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
+});
+
+// fallback: poll the province selection and rebuild lists when it changes
+(function(){
+    let lastProvs = null;
+    setInterval(function(){
+        const provs = _getSelectedValues('rsm-filter-prov');
+        const provsStr = provs.join('|');
+        if (provsStr !== (lastProvs||'')) {
+            console.log('[RSM] polling detected province change', provs);
+            lastProvs = provsStr;
+            updateProvinceFilters();
+            applyRsmFilters();
+        }
+    }, 500);
+})();
+
 // global replicate popover helper (defined early so it exists even if DOMContentLoaded has passed)
 function showReplicateConfirmPopover(targetEl, stInfo = {}) {
     try {
@@ -172,10 +706,30 @@ document.addEventListener("DOMContentLoaded", function () {
                 if ($prov.length) {
                     $prov.on('change.select2 select2:select select2:unselect', function(){
                         console.log('[RSM] select2 province event fired');
-                        setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+                        setTimeout(()=>{
+                            // these functions are defined later in the file; guard against
+                            // the case where the user interacts before the second script
+                            // block has executed (see errors in console). if they're not
+                            // ready yet we'll simply log and wait for the normal
+                            // binding later on to take effect.
+                            if (typeof updateProvinceFilters === 'function') {
+                                updateProvinceFilters();
+                            } else {
+                                console.warn('[RSM] updateProvinceFilters not available yet');
+                            }
+                            if (typeof applyRsmFilters === 'function') {
+                                applyRsmFilters();
+                            } else {
+                                console.warn('[RSM] applyRsmFilters not available yet');
+                            }
+                        },0);
                     });
                     // if there is already a selection, update once now
-                    setTimeout(()=>{ updateProvinceFilters(); },0);
+                    setTimeout(()=>{
+                        if (typeof updateProvinceFilters === 'function') {
+                            updateProvinceFilters();
+                        }
+                    },0);
                 }
             }catch(e){ console.error('[RSM] select2 init error', e); }
 		}
@@ -2409,51 +2963,105 @@ document.addEventListener('DOMContentLoaded', function(){
       if (provEl) provEl.innerHTML = '';
       if (cityEl) cityEl.innerHTML = '';
       if (yearEl) yearEl.innerHTML = '';
-      if (!region || !window.parent || !window.parent.regionMap) return;
-      const norm = normalizeRegionText(region);
-      const keys = Object.keys(window.parent.regionMap || {});
-      let map = window.parent.regionMap[norm];
-      if (!map) {
-          // try to find a key whose normalized form matches
+      // Prefer client-provided regionMap (populated by parent). If missing
+      // or empty, fetch the aggregated JSON from the server endpoint so
+      // selects can be populated even when embedded or when regionMap
+      // hasn't been preloaded.
+      const norm = region ? normalizeRegionText(region) : '';
+      const keys = Object.keys((window.parent && window.parent.regionMap) ? window.parent.regionMap : {});
+      let map = (window.parent && window.parent.regionMap) ? window.parent.regionMap[norm] : null;
+
+      function fillFromMap(m) {
+          m = m || {};
+          const provs = Object.keys(m.provinces || {}).sort();
+          provs.forEach(p => { if (provEl) provEl.appendChild(new Option(p, p)); });
+          // gather all cities across provinces for full-region list
+          const allCities = new Set();
+          provs.forEach(p => { (m.provinces[p] || []).forEach(c => allCities.add(c)); });
+          Array.from(allCities).sort().forEach(c => { if (cityEl) cityEl.appendChild(new Option(c, c)); });
+          const yrs = (m.years || []).slice().sort();
+          yrs.forEach(y => { if (yearEl) yearEl.appendChild(new Option(y, y)); });
+          // refresh select2 widgets if present
+          try { if (provEl && window.jQuery && jQuery(provEl).data('select2')) jQuery(provEl).trigger('change.select2'); } catch(e){}
+          try { if (cityEl && window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).trigger('change.select2'); } catch(e){}
+          try { if (yearEl && window.jQuery && jQuery(yearEl).data('select2')) jQuery(yearEl).trigger('change.select2'); } catch(e){}
+      }
+
+      if (map && Object.keys(map.provinces || {}).length) {
+          fillFromMap(map);
+          return;
+      }
+
+      // attempt to find a matching key in parent.regionMap (normalized match)
+      if (!map && keys.length) {
           for (const k of keys) {
-              if (normalizeRegionText(k) === norm) {
-                  map = window.parent.regionMap[k];
-                  break;
-              }
+              if (normalizeRegionText(k) === norm) { map = window.parent.regionMap[k]; break; }
           }
       }
-      map = map || {};
-      const provs = Object.keys(map.provinces || {}).sort();
-      provs.forEach(p => {
-          if (provEl) provEl.appendChild(new Option(p, p));
-      });
-      // gather all cities across provinces for full-region list
-      const allCities = new Set();
-      provs.forEach(p => {
-          const cities = map.provinces[p] || [];
-          cities.forEach(c => allCities.add(c));
-      });
-      Array.from(allCities).sort().forEach(c => {
-          if (cityEl) cityEl.appendChild(new Option(c, c));
-      });
-      const yrs = (map.years || []).slice().sort();
-      yrs.forEach(y => {
-          if (yearEl) yearEl.appendChild(new Option(y, y));
-      });
+      if (map && Object.keys(map.provinces || {}).length) { fillFromMap(map); return; }
+
+      // fallback: fetch aggregated data from server endpoint
+      if (region) {
+          const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(region);
+          fetch(url).then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
+            .then(payload => {
+                // server returns { provinces: [...], grouped: {prov: {city:[rows]}}, availableYears }
+                const m = { provinces: {}, years: [] };
+                try {
+                    if (Array.isArray(payload.provinces)) {
+                        payload.provinces.forEach(p => { m.provinces[p] = Object.keys(payload.grouped && payload.grouped[p] ? payload.grouped[p] : {}); });
+                    }
+                    if (Array.isArray(payload.availableYears)) m.years = payload.availableYears.slice();
+                } catch(e) { console.error('populateRegionFilters: payload parse', e); }
+                fillFromMap(m);
+                // also cache last payload for other code paths
+                try { window._lastRsmPayload = payload; } catch(e){}
+            }).catch(err => {
+                console.error('populateRegionFilters fetch failed', err);
+            });
+      }
   }
 
   // --- client-side filter apply/reset handlers ---------------------------------
+  // helper used throughout the filtering logic – introduced here again for
+  // the later script block.  the implementation is identical to the one
+  // declared earlier but updated to use `rsmEl` so it works inside iframe
+  // embeddings.
   function _getSelectedValues(id) {
-      const el = document.getElementById(id);
+      const el = rsmEl ? rsmEl(id) : document.getElementById(id);
       if (!el) return [];
       try {
           // prefer Select2 / jQuery value when available
-          try { if (window.jQuery && jQuery(el).data('select2')) { const v = jQuery(el).val(); return Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []); } } catch(e) {}
-          if (el.selectedOptions && el.selectedOptions.length) return Array.from(el.selectedOptions).map(o => o.value);
+          try { if (window.jQuery && jQuery(el).data('select2')) {
+                      const v = jQuery(el).val();
+                      const result = Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []);
+                      console.log('[RSM] _getSelectedValues (select2) for', id, result);
+                      return result;
+                  } } catch(e) {}
+          if (el.selectedOptions && el.selectedOptions.length) {
+              const res = Array.from(el.selectedOptions).map(o => o.value);
+              console.log('[RSM] _getSelectedValues (native) for', id, res);
+              return res;
+          }
           // fallback
-          return Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
-      } catch(e) { return []; }
+          const res = Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
+          console.log('[RSM] _getSelectedValues (fallback) for', id, res);
+          return res;
+      } catch(e) { console.error('[RSM] _getSelectedValues error', e); return []; }
   }
+
+  // the city/year helpers were originally defined earlier in the
+// first <script> block so that filtering logic can run as soon as the
+// page loads.  keep these comments here in case this block is moved
+// independently, but do not redeclare the functions to avoid
+// confusion; they already exist on the global scope.
+//
+// function getRowCity(r){
+//     return ((r.city||r.municipality)||'').toString().trim();
+// }
+// function getRowYear(r){
+//     return (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
+// }
 
   function renderStTitlesFromRows(rows, regionParam) {
       try {
@@ -2487,169 +3095,18 @@ document.addEventListener('DOMContentLoaded', function(){
       } catch(e) { console.error('renderStTitlesFromRows', e); }
   }
 
-  function applyRsmFilters(){
-      // local truthiness helper in case outer scope failed to define it
-      const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
-      try {
-          let payload = window._lastRsmPayload || null;
-          if (!payload || !Array.isArray(payload.allRows)) {
-              console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
-              // try to derive region param from last active region or modal image
-              // try several places to figure out which region the user is
-              // currently looking at. historically we relied solely on
-              // __lastActiveRegion or the modal image, but in some embed
-              // scenarios those values can still be null. fall back to the
-              // province selector (which stores the last region event) and
-              // finally the active slider image so filters work even if the
-              // user hasn't clicked anything yet.
-              let regionParam = null;
-              if (window.__lastActiveRegion) {
-                  regionParam = window.__lastActiveRegion;
-              }
-              if (!regionParam) {
-                  const provSel = document.getElementById('rsm-filter-prov');
-                  if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
-                      regionParam = provSel._lastRegionEvent.regionName;
-                  }
-              }
-              if (!regionParam) {
-                  const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
-                  if (activeImg) {
-                      regionParam = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
-                  }
-              }
-              if (!regionParam) {
-                  const modalImg = document.getElementById('rsm-modal-image');
-                  if (modalImg) regionParam = modalImg.getAttribute('data-region-name');
-              }
-              // if we still don't know the region, try to infer it from the
-              // selected province (use parent.regionMap which was populated
-              // when the iframe was loaded). this covers cases where the
-              // user just picked a province without ever clicking the slider.
-              if (!regionParam) {
-                  try {
-                      const provSel = document.getElementById('rsm-filter-prov');
-                      if (provSel && provSel.value && window.parent && window.parent.regionMap) {
-                          const provVal = provSel.value.toString().trim().toLowerCase();
-                          Object.keys(window.parent.regionMap || {}).some(r => {
-                              const map = window.parent.regionMap[r] || {};
-                              const list = Object.keys(map.provinces || {});
-                              if (list.some(p=>p.toString().trim().toLowerCase() === provVal)) {
-                                  regionParam = r;
-                                  return true;
-                              }
-                              return false;
-                          });
-                      }
-                  } catch(_){ }
-              }
-              // if we got a bare number (sheet names are numeric in some
-              // spreadsheets) convert it to the canonical form the backend
-              // expects. normalizeRegionText does not handle digits, so do it
-              // manually here.
-              if (/^\d+$/.test(regionParam)) {
-                  const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
-                  const num = parseInt(regionParam,10);
-                  regionParam = 'Region ' + (romans[num] || regionParam);
-              }
-              console.log('[RSM] derived regionParam for fallback', regionParam);
-              if (!regionParam) {
-                  console.warn('[RSM] cannot derive region to fetch payload');
-                  return;
-              }
-              try {
-                  // perform same AJAX used elsewhere
-                  const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                  console.log('[RSM] fetching payload url', url);
-                  fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
-              } catch(e) { console.error('[RSM] fetch fallback exception', e); }
-              return;
-          }
-          const allRows = payload.allRows.slice();
-          const provs = _getSelectedValues('rsm-filter-prov');
-          const cities = _getSelectedValues('rsm-filter-city');
-          const years = _getSelectedValues('rsm-filter-year');
-          const filtered = allRows.filter(r => {
-              let ok = true;
-              // normalize row values for case-insensitive comparison
-              const rowProv = (r.province||'').toString().trim().toLowerCase();
-              // ST rows use "municipality" instead of city; accept either
-              const rowCity = ((r.city||r.municipality)||'').toString().trim().toLowerCase();
-              if (provs && provs.length) {
-                  ok = provs.some(p => rowProv === (p||'').toString().trim().toLowerCase());
-              }
-              if (ok && cities && cities.length) {
-                  ok = cities.some(c => rowCity === (c||'').toString().trim().toLowerCase());
-              }
-              if (ok && years && years.length) {
-                  // try several possible year fields
-                  const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
-                  ok = years.some(y => (yval === (y||'').toString().trim()));
-              }
-              return ok;
-          });
+  // if early stub handlers ran before the real functions were ready we
+  // mark a flag; once the above real implementation exists, replay any
+  // pending filter request so that user actions aren’t lost.
+  try {
+      if (window._rsmFilterRequested) {
+          console.log('[RSM] replaying pending filters after initialization');
+          updateProvinceFilters();
+          applyRsmFilters();
+          window._rsmFilterRequested = false;
+      }
+  } catch(e) { console.error('[RSM] pending filter replay failed', e); }
 
-          console.log('[RSM] applying filters', {provs, cities, years, totalRows: allRows.length});
-          // debug values for first few rows (helps troubleshoot mismatches)
-          try { console.debug('[RSM] sample row provinces', allRows.slice(0,5).map(r=>r.province)); } catch(e) {}
-          // update totals
-          const totalSts = filtered.length || 0;
-          const totalMoa = filtered.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
-          const totalRes = filtered.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
-          const totalExpr = filtered.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
-          const moaAttachments = 0;
-
-          // refresh city/year selects based on filtered rows as well
-          try {
-              const cityEl2 = document.getElementById('rsm-filter-city');
-              const yearEl2 = document.getElementById('rsm-filter-year');
-              if (cityEl2) cityEl2.innerHTML = '';
-              if (yearEl2) yearEl2.innerHTML = '';
-              const citySet = new Set();
-              const yearSet = new Set();
-              filtered.forEach(r => {
-                  const cityName = ((r.municipality||r.city)||'').toString().trim();
-                  if (cityName) citySet.add(cityName);
-                  const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
-                  if (yval) yearSet.add(yval);
-              });
-              Array.from(citySet).sort().forEach(c => cityEl2 && cityEl2.appendChild(new Option(c, c)));
-              Array.from(yearSet).sort().forEach(y => yearEl2 && yearEl2.appendChild(new Option(y, y)));
-              if (cityEl2 && window.jQuery && jQuery(cityEl2).data('select2')) {
-                  jQuery(cityEl2).val([]).trigger('change.select2');
-              }
-              if (yearEl2 && window.jQuery && jQuery(yearEl2).data('select2')) {
-                  jQuery(yearEl2).val([]).trigger('change.select2');
-              }
-          } catch(e) { console.error('refresh city/year from filtered failed', e); }
-
-          fetchEl('rsm-total-sts').textContent = String(totalSts);
-          fetchEl('rsm-total-moa').textContent = String(totalMoa);
-          fetchEl('rsm-total-res').textContent = String(totalRes);
-          fetchEl('rsm-total-expr').textContent = String(totalExpr);
-          fetchEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
-
-          // update chart (base values only)
-          const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
-          if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, null);
-
-          // update ST titles listing
-          renderStTitlesFromRows(filtered, (payload && payload.region) || window.__lastActiveRegion || 'this region');
-
-          // update provinces list to only show provinces present in filtered rows
-          try {
-              const provEl = rsmEl('rsm-provinces');
-              if (provEl) {
-                  const byProv = {};
-                  filtered.forEach(r => { const p = (r.province||'').toString().trim() || 'UNKNOWN'; byProv[p] = byProv[p] || []; byProv[p].push(r); });
-                  const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                  const provincesArr = Object.keys(byProv).sort();
-                  provEl.innerHTML = provincesArr.length ? provincesArr.map(p => `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${byProv[p].length}</div></div>`).join('') : '<div class="rsm-empty">No provinces match filters</div>';
-              }
-          } catch(e) {}
-
-      } catch(e) { console.error('applyRsmFilters', e); }
-  }
 
   function resetRsmFilters(){
       try {
@@ -2711,73 +3168,6 @@ document.addEventListener('DOMContentLoaded', function(){
               if (modalImg) region = modalImg.getAttribute('data-region-name');
           }
           return region;
-      }
-
-      function updateProvinceFilters(){
-          console.log('[RSM] updateProvinceFilters called');
-          const cityEl2 = document.getElementById('rsm-filter-city');
-          const yearEl2 = document.getElementById('rsm-filter-year');
-          if (cityEl2) cityEl2.innerHTML = '';
-          if (yearEl2) yearEl2.innerHTML = '';
-
-          const provs = _getSelectedValues('rsm-filter-prov');
-          let payload = window._lastRsmPayload || {};
-          let allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
-          console.log('[RSM] province selection, building cities from', provs, 'rows', allRows.length);
-          if (!allRows.length) {
-              // attempt to fetch payload same as applyRsmFilters does
-              const regionParam = deriveCurrentRegion();
-              if (regionParam) {
-                  const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                  fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
-                    .then(p => {
-                        window._lastRsmPayload = p;
-                        payload = p;
-                        allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
-                        console.log('[RSM] fetched payload for province filter, rows', allRows.length);
-                        // rerun the filter logic now that we have rows
-                        updateProvinceFilters();
-                    }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
-                  return; // bail now; will re-enter when fetch completes
-              }
-          }
-
-          const citySet = new Set();
-          const yearSet = new Set();
-          // log unique provinces present in allRows for debugging
-          try {
-              const uniqueProvs = Array.from(new Set(allRows.map(r=>(r.province||'').toString().trim()))).filter(Boolean);
-              console.log('[RSM] provinces in payload', uniqueProvs);
-          } catch(e){}
-          allRows.forEach(r => {
-              const prov = (r.province||'').toString().trim();
-              if (!provs.length || provs.some(p=>p.toString().trim() === prov)) {
-                  const cityName = ((r.municipality||r.city)||'').toString().trim();
-                  if (cityName) citySet.add(cityName);
-                  const yval = (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
-                  if (yval) yearSet.add(yval);
-              }
-          });
-          console.log('[RSM] computed cities', Array.from(citySet).sort());
-
-
-          // helper that rewrites underlying <select> and reinitializes
-          // select2 so the dropdown list is up‑to‑date even if already open
-          function fillSelect(el, items) {
-              if (!el) return;
-              // clear existing options
-              if (window.jQuery && jQuery(el).data('select2')) {
-                  const $e = jQuery(el);
-                  $e.find('option').remove();
-                  items.forEach(i => $e.append(new Option(i,i)));
-                  $e.trigger('change'); // tell select2 to refresh
-              } else {
-                  el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join('');
-              }
-          }
-
-          fillSelect(cityEl2, Array.from(citySet).sort());
-          fillSelect(yearEl2, Array.from(yearSet).sort());
       }
 
       provSel.addEventListener('change', function(ev){
@@ -3523,6 +3913,7 @@ document.addEventListener('DOMContentLoaded', function(){
     min-width: 500px !important;
     height: 270px !important; /* match wrapper content height */
     box-sizing: border-box;
+    padding-right: 30px; /* account for wrapper padding */
 }
 .slider-province-card {
     padding: 30px; /* provide consistent padding inside provinces card */
