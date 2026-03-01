@@ -350,7 +350,7 @@ try { window.applyRsmFilters = applyRsmFilters; window.resetRsmFilters = resetRs
 try {
     const btnA = document.getElementById('rsm-filter-apply');
     const btnR = document.getElementById('rsm-filter-reset');
-    if (btnA) { btnA.addEventListener('click', function(ev){ ev.preventDefault(); applyRsmFilters(); }); console.log('[RSM] bound apply button'); }
+    if (btnA) { btnA.addEventListener('click', function(ev){ ev.preventDefault(); console.log('[RSM] apply button clicked'); applyRsmFilters(); }); console.log('[RSM] bound apply button'); }
     else console.warn('[RSM] apply button not found');
     if (btnR) { btnR.addEventListener('click', function(ev){ ev.preventDefault(); resetRsmFilters(); }); console.log('[RSM] bound reset button'); }
     else console.warn('[RSM] reset button not found');
@@ -491,6 +491,7 @@ if (provSel) {
         const $prov = jQuery(provSel);
         if ($prov.data('select2')) {
             $prov.on('change.select2 select2:select select2:unselect', function(ev){
+                console.log('[RSM] select2 province change event');
                 setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
             });
         }
@@ -506,6 +507,24 @@ if (provSel) {
                 setTimeout(applyRsmFilters,0);
             });
         }
+
+        // delegated listeners in case select2 or other code replaces the elements
+        jQuery(document).on('change', '#rsm-filter-city', function(){
+            console.log('[RSM] delegated change on city');
+            setTimeout(applyRsmFilters,0);
+        });
+        jQuery(document).on('change', '#rsm-filter-year', function(){
+            console.log('[RSM] delegated change on year');
+            setTimeout(applyRsmFilters,0);
+        });
+        jQuery(document).on('select2:select select2:unselect', '#rsm-filter-city', function(){
+            console.log('[RSM] delegated select2 event on city');
+            setTimeout(applyRsmFilters,0);
+        });
+        jQuery(document).on('select2:select select2:unselect', '#rsm-filter-year', function(){
+            console.log('[RSM] delegated select2 event on year');
+            setTimeout(applyRsmFilters,0);
+        });
     }
 
     // fallback listener on document in case select2 replaces the element
@@ -533,13 +552,29 @@ document.addEventListener('sliderActiveRegionChanged', function(e){
 // fallback: poll the province selection and rebuild lists when it changes
 (function(){
     let lastProvs = null;
+    let lastCities = null;
+    let lastYears = null;
     setInterval(function(){
         const provs = _getSelectedValues('rsm-filter-prov');
+        const cities = _getSelectedValues('rsm-filter-city');
+        const years = _getSelectedValues('rsm-filter-year');
         const provsStr = provs.join('|');
+        const citiesStr = cities.join('|');
+        const yearsStr = years.join('|');
         if (provsStr !== (lastProvs||'')) {
             console.log('[RSM] polling detected province change', provs);
             lastProvs = provsStr;
             updateProvinceFilters();
+            applyRsmFilters();
+        }
+        if (citiesStr !== (lastCities||'')) {
+            console.log('[RSM] polling detected city change', cities);
+            lastCities = citiesStr;
+            applyRsmFilters();
+        }
+        if (yearsStr !== (lastYears||'')) {
+            console.log('[RSM] polling detected year change', years);
+            lastYears = yearsStr;
             applyRsmFilters();
         }
     }, 500);
