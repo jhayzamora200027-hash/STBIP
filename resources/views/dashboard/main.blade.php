@@ -666,12 +666,11 @@
 						<div class="card-header text-center">SUMMARY OF ST TITLES</div>
 						<div class="card-body" style="padding: 32px 16px;">
 							<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 32px; width: 100%;">
-								 <!-- Additional Text Box -->
-									<div style="
+								 <!-- Additional Text Box --><div id="stTitlesInsight" style="
 										bottom: 10px; 
 										padding: 10px; 
 										width: 500px;
-										height: 500px;
+										height:auto;
 										left: 10px;
 										border: 2px solid #333; 
 										background-color: rgba(255,255,255,0.8);
@@ -679,8 +678,8 @@
 										font-weight: bold;
 										position:absolute;
 										
-									">
-										Year MOA Data Info
+									;height:auto;font-size:1.1rem;line-height:1.4;">
+										Insight
 									</div>
 								<div style="flex: 0 0 460px; width: 460px; max-width: 460px; min-width: 460px; height: 480px; display: flex; align-items: center; justify-content: center; position: relative; left:500px">
 									<canvas id="stTitlesDoughnut" style="position:relative; z-index:2; width: 440px; height: 440px; max-width: 440px; min-width: 440px;"></canvas>
@@ -1264,6 +1263,7 @@ window.allYears = @json($allYears ?? $years);
 			if (s.includes('cagayan valley')) return 'Region II';
 			if (s.includes('central luzon')) return 'Region III';
 			if (s.includes('calabarzon')) return 'Region IV-A';
+            if (s.includes('calborazon')) return 'Region IV-A';
 			if (s.includes('mimaropa')) return 'Region IV-B';
 			if (s.includes('bicol')) return 'Region V';
 			if (s.includes('western visayas')) return 'Region VI';
@@ -1635,7 +1635,36 @@ $('#region-select-orig').on('change', function() {
 		const total = stTitleData.reduce((a, b) => a + b, 0);
 		const stTitlePercentages = stTitleData.map(v => ((v / total) * 100));
 
-		// Split titles into main (> 0.5%) and low (<= 0.5%) groups
+			// update insight box with overall totals and some narrative explanation
+			const insightEl = document.getElementById('stTitlesInsight');
+			if (insightEl) {
+				if (total > 0) {
+					const topLabel = stTitleLabels[0] || '';
+					const topPercent = stTitlePercentages[0] ? stTitlePercentages[0].toFixed(1) : '0.0';
+					const titleCount = stTitleLabels.length;
+					// additional narrative metrics
+					const top3Percent = stTitlePercentages.slice(0,3).reduce((a,b)=>a+b,0).toFixed(1);
+					const insightThreshold = 0.5;
+					const lowTitles = stTitlePercentages.filter(p => p <= insightThreshold);
+					const lowCount = lowTitles.length;
+					const lowSum = lowTitles.reduce((a,b)=>a+b,0).toFixed(1);
+					insightEl.style.display = '';
+					// build structured narrative
+					let narrative = '';
+					// Portfolio Structure
+					narrative += `<strong>Portfolio Structure</strong>: top 3 titles supply ${top3Percent}% of total adoption (${titleCount} titles).`;
+					narrative += `<br>${lowCount} low‑share title(s) (≤ ${insightThreshold}%) together make up ${lowSum}% of STs, indicating a long‑tail innovation profile.`;
+					// Scaling Efficiency placeholder (may require external data)
+					narrative += `<br><br><strong>Scaling Efficiency</strong>: adoption intensity and replication metrics not shown here.`;
+					// Risk & Stability
+					narrative += `<br><br><strong>Risk & Stability</strong>: concentration risk exists with top programs dominating; long tail offers innovation reservoir.`;
+					// Performance signal
+					narrative += `<br><br><strong>Performance Signal</strong>: system appears managed for replication and nationwide rollout.`;
+					insightEl.innerHTML = narrative;
+				} else {
+					insightEl.style.display = 'none';
+				}
+			}
 		const thresholdPercent = 0.5;
 		const mainLabels = [];
 		const mainData = [];
@@ -2577,7 +2606,8 @@ $('#region-select-orig').on('change', function() {
 				if (s.includes('ilocos')) return 'Region I';
 				if (s.includes('cagayan valley')) return 'Region II';
 				if (s.includes('central luzon')) return 'Region III';
-				if (s.includes('calabarzon')) return 'Region IV-A';
+				// accept a couple of common variants/misspellings
+				if (s.includes('calabarzon') || s.includes('calborazon')) return 'Region IV-A';
 				if (s.includes('mimaropa')) return 'Region IV-B';
 				if (s.includes('bicol')) return 'Region V';
 				if (s.includes('western visayas')) return 'Region VI';
@@ -2905,3 +2935,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	</script>
 
 	@endsection
+
+
+

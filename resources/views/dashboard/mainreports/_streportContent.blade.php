@@ -11,45 +11,6 @@ function fetchEl(id) {
 }
 function rsmEl(id) { return fetchEl(id); }
 
-// helper that determines what region the UI is currently showing. this
-// duplicates the logic used in several places below but keeps it together
-// so we can compare cached payloads against the live region and fetch a
-// fresh payload if they ever diverge (this prevents filters from running
-// against stale data after a slider transition).
-function getCurrentRegion(){
-    let region = null;
-    if (window.__lastActiveRegion) {
-        region = window.__lastActiveRegion;
-    }
-    if (!region) {
-        const provSel = document.getElementById('rsm-filter-prov');
-        if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
-            region = provSel._lastRegionEvent.regionName;
-        }
-    }
-    if (!region) {
-        const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
-        if (activeImg) {
-            region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
-        }
-    }
-    if (!region) {
-        const modalImg = document.getElementById('rsm-modal-image');
-        if (modalImg) region = modalImg.getAttribute('data-region-name');
-    }
-    // normalize digits ("2" -> "Region II") to keep in step with server
-    if (/^\d+$/.test(region)) {
-        const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
-        const num = parseInt(region,10);
-        region = 'Region ' + (romans[num] || region);
-    }
-    // finally run through our canonical normalizer if available
-    if (typeof normalizeRegionText === 'function') {
-        try { region = normalizeRegionText(region); } catch(e) {}
-    }
-    return region;
-}
-
 // --- client-side filter apply/reset handlers ---------------------------------
 // utility used by several filtering routines.  use `rsmEl` so that
 // we support scenarios where the filter controls live in a parent frame
@@ -94,35 +55,6 @@ function getRowYear(r){
     return ((r && (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of)) || '').toString().trim();
 }
 
-// globally-available helper used by filters and other listeners. defined
-// at the top of the script so that calls from applyRsmFilters will not
-// throw even if the province dropdown has not yet been attached to the
-// DOM.  The implementation mirrors the later in-file blocks but lives
-// in the global scope.
-function deriveCurrentRegion(){
-    let region = window.__lastActiveRegion || null;
-    if (!region) {
-        const provSel = document.getElementById('rsm-filter-prov');
-        if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
-            region = provSel._lastRegionEvent.regionName;
-        }
-    }
-    if (!region) {
-        const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
-        if (activeImg) {
-            region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
-        }
-    }
-    if (!region) {
-        const modalImg = document.getElementById('rsm-modal-image');
-        if (modalImg) region = modalImg.getAttribute('data-region-name');
-    }
-    if (typeof normalizeRegionText === 'function') {
-        try { region = normalizeRegionText(region); } catch(e) {}
-    }
-    return region;
-}
-
 // make a harmless placeholder available immediately so that code which
 // fires before the real implementation loads doesn't throw an error.
 // the real version will overwrite this when it is defined later in the
@@ -137,20 +69,7 @@ function renderStTitlesFromRows(rows, regionParam) {
     try {
         const stListEl = rsmEl('rsm-st-list');
         const headerEl = rsmEl('rsm-st-listing-header');
-        // determine display region from cached payload / active region;
-        // fall back to provided parameter only if other sources missing.
-        let disp = 'this region';
-        if (window._lastRsmPayload && window._lastRsmPayload.region) {
-            disp = window._lastRsmPayload.region;
-        } else if (window.__lastActiveRegion) {
-            disp = window.__lastActiveRegion;
-        } else if (regionParam) {
-            disp = regionParam;
-        }
-        if (typeof normalizeRegionText === 'function') {
-            try { disp = normalizeRegionText(disp); } catch(e) {}
-        }
-        if (headerEl) headerEl.textContent = `ST Titles for ${disp}`;
+        if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
         if (!stListEl) return;
         if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
         const titleMap = {};
@@ -179,21 +98,48 @@ function renderStTitlesFromRows(rows, regionParam) {
 }
 
 function applyRsmFilters(){
-    // local truthiness helper in case outer scope failed to define it
-    const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
-
-    // if our cached payload belongs to a different region than the UI is
-    // currently showing then drop it so that the subsequent logic will
-    // trigger a fresh fetch. this guards against timing issues where a
-    // slider change may still be in-flight when the user clicks "Filter".
-    let payload = window._lastRsmPayload || null;
-    const currentRegion = getCurrentRegion();
-    if (payload && payload.region && currentRegion && payload.region !== currentRegion) {
-        console.warn('[RSM] discarding stale payload', payload.region, 'expected', currentRegion);
+    // determine the region we are filtering for; this is necessary because
+    // calls to applyRsmFilters can happen at any time (poller, user click,
+    // region switch) and we must ignore stale selections when the region
+    // changes.  prefer the slider's active image since it's the most
+    // reliable indicator of the current region.
+    let currentRegion = null;
+    const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+    if (activeImg) {
+        currentRegion = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+    }
+    if (!currentRegion && window.__lastActiveRegion) {
+        currentRegion = window.__lastActiveRegion;
+    }
+    if (!currentRegion) {
+        // fallback logic from earlier in this function
+        try {
+            const provSel = document.getElementById('rsm-filter-prov');
+            if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                currentRegion = provSel._lastRegionEvent.regionName;
+            }
+        } catch(_){ }
+        if (!currentRegion) {
+            const modalImg = document.getElementById('rsm-modal-image');
+            if (modalImg) currentRegion = modalImg.getAttribute('data-region-name');
+        }
+    }
+    if (typeof normalizeRegionText === 'function' && currentRegion) {
+        try { currentRegion = normalizeRegionText(currentRegion); } catch(e){}
+    }
+    // if the region changed since last time, clear everything
+    if (window._lastFilterRegion && currentRegion && window._lastFilterRegion !== currentRegion) {
+        console.log('[RSM] region change observed in applyRsmFilters', window._lastFilterRegion, '=>', currentRegion);
+        window._lastFilterRegion = currentRegion;
         window._lastRsmPayload = null;
-        payload = null;
+        try { if (typeof resetRsmFilters === 'function') resetRsmFilters(); } catch(_){ }
+    }
+    if (!window._lastFilterRegion && currentRegion) {
+        window._lastFilterRegion = currentRegion;
     }
 
+    // local truthiness helper in case outer scope failed to define it
+    const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
     // make sure city/year options exist before we read selections; the
     // list is built by updateProvinceFilters which is normally invoked
     // when the province selector changes. only refresh if the selects are
@@ -227,8 +173,8 @@ function applyRsmFilters(){
         const citiesDbg = _getSelectedValues('rsm-filter-city');
         const yearsDbg = _getSelectedValues('rsm-filter-year');
         const rawCityVal = (window.jQuery && jQuery('#rsm-filter-city').length) ? jQuery('#rsm-filter-city').val() : null;
-        const currentRegion = deriveCurrentRegion() || window.__lastActiveRegion || (window._lastRsmPayload && window._lastRsmPayload.region);
-        console.log('[RSM] applyRsmFilters called', { provs: provsDbg, cities: citiesDbg, years: yearsDbg, rawCityVal, currentRegion });
+        console.log('[RSM] applyRsmFilters called', { provs: provsDbg, cities: citiesDbg, years: yearsDbg, rawCityVal });
+        let payload = window._lastRsmPayload || null;
         if (!payload || !Array.isArray(payload.allRows)) {
             console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
             // try to derive region param from last active region or modal image
@@ -263,7 +209,6 @@ function applyRsmFilters(){
             // selected province (use parent.regionMap which was populated
             // when the iframe was loaded). this covers cases where the
             // user just picked a province without ever clicking the slider.
-            console.log('[RSM] derived regionParam (pre-province)', regionParam);
             if (!regionParam) {
                 try {
                     const provSel = document.getElementById('rsm-filter-prov');
@@ -273,7 +218,7 @@ function applyRsmFilters(){
                             const map = window.parent.regionMap[r] || {};
                             const list = Object.keys(map.provinces || {});
                             if (list.some(p=>p.toString().trim().toLowerCase() === provVal)) {
-                                try { regionParam = normalizeRegionText(r); } catch(e) { regionParam = r; }
+                                regionParam = r;
                                 return true;
                             }
                             return false;
@@ -299,7 +244,7 @@ function applyRsmFilters(){
                 // perform same AJAX used elsewhere
                 const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
                 console.log('[RSM] fetching payload url', url);
-                fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); try { p.region = normalizeRegionText(regionParam); } catch(e) { p.region = regionParam; } window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
+                fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
             } catch(e) { console.error('[RSM] fetch fallback exception', e); }
             return;
         }
@@ -408,9 +353,7 @@ function applyRsmFilters(){
         if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, null);
 
         // update ST titles listing
-        const hdrRegion = (payload && payload.region) || window.__lastActiveRegion || 'this region';
-        console.log('[RSM] hdrRegion for render', hdrRegion, 'payload.region', payload && payload.region, 'lastActive', window.__lastActiveRegion);
-        renderStTitlesFromRows(filtered, hdrRegion);
+        renderStTitlesFromRows(filtered, (payload && payload.region) || window.__lastActiveRegion || 'this region');
 
         // update provinces list to only show provinces present in filtered rows
         try {
@@ -464,9 +407,81 @@ document.addEventListener('click', function(ev){
 });
 
 
+// utility: given a list of provinces, figure out which region they belong
+// to (according to parent.regionMap) and move the slider there if needed. this
+// prevents the user picking a province from a different region than the one
+// currently loaded, which previously resulted in an empty filter.
+function maybeSwitchRegionForProvinces(provs) {
+    // returns true if we initiated a slider click to change regions
+    if (!provs || !provs.length) return false;
+    if (!(window.parent && window.parent.regionMap)) return false;
+    // normalize list for comparisons
+    const normProvs = provs.map(p=>p.toString().trim().toLowerCase());
+    let targetRegion = null;
+    Object.keys(window.parent.regionMap).some(r => {
+        const list = Object.keys(window.parent.regionMap[r].provinces||{});
+        if (list.some(p=>normProvs.includes(p.trim().toLowerCase()))) {
+            targetRegion = r;
+            return true;
+        }
+        return false;
+    });
+    if (!targetRegion) return false;
+    // if the slider is already showing the right region, nothing to do
+    const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+    const currentRegion = activeImg ? (activeImg.getAttribute('data-region-name')||activeImg.getAttribute('data-region-number')) : null;
+    if (currentRegion && normalizeRegionText(currentRegion) === normalizeRegionText(targetRegion)) {
+        return false;
+    }
+    // locate the matching slide and navigate to it. prefer using the
+    // swiper instance so the transition is smooth and events fire reliably;
+    // fall back to clicking the image if the swiper API isn't accessible.
+    const imgs = document.querySelectorAll('.slider-img');
+    for (let i=0;i<imgs.length;i++) {
+        const nm = normalizeRegionText(imgs[i].getAttribute('data-region-name')||'');
+        if (nm === normalizeRegionText(targetRegion)) {
+            try {
+                if (window.swiper && typeof window.swiper.slideToLoop === 'function') {
+                    // slideToLoop accepts (index, speed, runCallbacks)
+                    window.swiper.slideToLoop(i, 800, true);
+                } else if (window.swiper && typeof window.swiper.slideTo === 'function') {
+                    window.swiper.slideTo(i, 800, true);
+                } else {
+                    imgs[i].click();
+                }
+            } catch(e) {
+                try { imgs[i].click(); } catch(_){}
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 // when province picker changes, refresh city list
 const provSel = document.getElementById('rsm-filter-prov');
 if (provSel) {
+    function deriveCurrentRegion(){
+        // replicate regionParam derivation from applyRsmFilters
+        let region = window.__lastActiveRegion || null;
+        if (!region) {
+            const provSel = document.getElementById('rsm-filter-prov');
+            if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                region = provSel._lastRegionEvent.regionName;
+            }
+        }
+        if (!region) {
+            const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+            if (activeImg) {
+                region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+            }
+        }
+        if (!region) {
+            const modalImg = document.getElementById('rsm-modal-image');
+            if (modalImg) region = modalImg.getAttribute('data-region-name');
+        }
+        return region;
+    }
 
     function updateProvinceFilters(){
         console.log('[RSM] updateProvinceFilters called');
@@ -484,16 +499,15 @@ if (provSel) {
             const regionParam = deriveCurrentRegion();
             if (regionParam) {
                 const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                                fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
-                                    .then(p => {
-                                            try { p.region = normalizeRegionText(regionParam); } catch(e) { p.region = regionParam; }
-                                            window._lastRsmPayload = p;
-                                            payload = p;
-                                            allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
-                                            console.log('[RSM] fetched payload for province filter, rows', allRows.length);
-                                            // rerun the filter logic now that we have rows
-                                            updateProvinceFilters();
-                                    }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
+                fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
+                  .then(p => {
+                      window._lastRsmPayload = p;
+                      payload = p;
+                      allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
+                      console.log('[RSM] fetched payload for province filter, rows', allRows.length);
+                      // rerun the filter logic now that we have rows
+                      updateProvinceFilters();
+                  }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
                 return; // bail now; will re-enter when fetch completes
             }
         }
@@ -569,6 +583,11 @@ if (provSel) {
         if ($prov.data('select2')) {
             $prov.on('change.select2 select2:select select2:unselect', function(ev){
                 console.log('[RSM] select2 province change event');
+                try {
+                    const provs = _getSelectedValues('rsm-filter-prov');
+                    const switched = maybeSwitchRegionForProvinces(provs);
+                    if (switched) return;
+                } catch(e) { console.error('[RSM] maybeSwitchRegionForProvinces error', e); }
                 setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
             });
         }
@@ -621,20 +640,9 @@ if (provSel) {
 }
 
 // store last region event on province element for use in change handler
-// also update __lastActiveRegion immediately so filters don't run on stale
-// value when the later listener hasn't attached yet.
 document.addEventListener('sliderActiveRegionChanged', function(e){
     const provSel2 = document.getElementById('rsm-filter-prov');
     if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
-    // mirror normalization logic from the later handler
-    let region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
-    if (!region && e && e.detail) {
-        region = deriveRegionFromSlider(e.detail) || null;
-    }
-    if (region && typeof normalizeRegionText === 'function') {
-        try { region = normalizeRegionText(region); } catch(_){}
-    }
-    try { window.__lastActiveRegion = region; } catch(_){ }
 });
 
 // fallback: poll the province selection and rebuild lists when it changes
@@ -829,6 +837,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 if ($prov.length) {
                     $prov.on('change.select2 select2:select select2:unselect', function(){
                         console.log('[RSM] select2 province event fired');
+                        let switched = false;
+                        try {
+                            const provs = _getSelectedValues('rsm-filter-prov');
+                            switched = maybeSwitchRegionForProvinces(provs);
+                        } catch(e){ console.error('[RSM] maybeSwitchRegionForProvinces error', e); }
+                        if (switched) {
+                            // slider click will trigger its own filters later
+                            return;
+                        }
                         setTimeout(()=>{
                             // these functions are defined later in the file; guard against
                             // the case where the user interacts before the second script
@@ -906,6 +923,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			prevEl: ".swiper-button-prev",
 		},
 	});
+	// expose swiper globally so helpers can use it
+	try { window.swiper = swiper; } catch(e) {}
 
 	// normalize various region strings to canonical slider labels
 	// helper used throughout to convert disparate region identifiers to the canonical keys
@@ -1044,6 +1063,9 @@ document.addEventListener("DOMContentLoaded", function () {
 				var target = regs[regs.length-1];
 				// clear any cached payload so render runs fresh
 				window._lastRsmPayload = null;
+				window._lastFilterRegion = null;
+				try { if (typeof resetRsmFilters === 'function') resetRsmFilters(); } catch(_){ }
+				try { const hdr = rsmEl('rsm-st-listing-header'); if (hdr) hdr.textContent = 'ST Titles for this region'; } catch(_){ }
 				var imgs = document.querySelectorAll('.slider-img');
 				for (var i = 0; i < imgs.length; i++) {
 					var nm = normalizeRegionText(imgs[i].getAttribute('data-region-name') || '');
@@ -1162,17 +1184,12 @@ document.addEventListener("DOMContentLoaded", function () {
 							'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 						};
 						const mappedRegion = filenameToRegion[fileName] || null;
-						let regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
-					console.log('[RSM] bottom preview regionParam before normalize', regionParam);
-				// normalize before using for fetch/listing
-				if (typeof normalizeRegionText === 'function') {
-					try { regionParam = normalizeRegionText(regionParam); console.log('[RSM] bottom preview normalized regionParam', regionParam); } catch(e){}
-				}
+						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
 						bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
-                        fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
-                            .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-                            .then(payload => { try { payload.region = normalizeRegionText(regionParam); } catch(e) { payload.region = regionParam; } renderBottomProvinceList(payload); })
-                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
+						fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
+							.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
+							.then(payload => renderBottomProvinceList(payload))
+							.catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
 					}
 				} catch(e) { console.error(e); }
 			} else {
@@ -1637,7 +1654,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Use demo1 AJAX endpoint which returns {provinces, grouped, allRows, uploadedCount...}
         fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionKey))
             .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-            .then(payload => { try { payload.region = normalizeRegionText(regionKey); } catch(e) { payload.region = regionKey; } try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
+            .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
 .catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
 
@@ -1799,15 +1816,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 			};
 			const mappedRegion = filenameToRegion[fileName] || null;
-			let regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
-			console.log('[RSM] initial regionParam from image', regionParam, 'file', fileName, 'mapped', mappedRegion);
-			// ensure canonical form (eg. "CALABARZON" -> "Region IV-A")
-			if (typeof normalizeRegionText === 'function') {
-				try {
-					regionParam = normalizeRegionText(regionParam);
-					console.log('[RSM] normalized regionParam to', regionParam);
-				} catch(e){ console.error('normalizeRegionText failed', e); }
-			}
+			const regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
 
 			// no modal wrappers – simply update image and data
 			const titleEl = rsmEl('rsm-modal-image');
@@ -1854,9 +1863,8 @@ document.addEventListener("DOMContentLoaded", function () {
 						}).join('');
 						provEl.setAttribute('aria-hidden','false');
 
-                        // store last payload for quick lookup when interacting with provinces/cities
-                        try { payload.region = normalizeRegionText(regionParam); } catch(e) { payload.region = regionParam; }
-                        window._lastRsmPayload = payload;
+						// store last payload for quick lookup when interacting with provinces/cities
+						window._lastRsmPayload = payload;
 
 						// capture-phase handler: ensure city clicks always render inline STs (runs before bubble handlers that may stopPropagation)
 						try {
@@ -2071,12 +2079,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         const stListEl = rsmEl('rsm-st-list');
                         const headerEl = rsmEl('rsm-st-listing-header');
                         if (headerEl) {
-                            // normalise regionParam before displaying
-                            let hdr = regionParam || 'this region';
-                            if (typeof normalizeRegionText === 'function') {
-                                try { hdr = normalizeRegionText(hdr); } catch(e) {}
-                            }
-                            headerEl.textContent = `ST Titles for ${hdr}`;
+                            headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
                         }
                         if (!stListEl) return;
                         const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
@@ -3023,8 +3026,1573 @@ document.addEventListener('DOMContentLoaded', function(){
           // try to derive a name from the detail object
           region = deriveRegionFromSlider(e.detail) || null;
       }
+      // remember last active region for other components (e.g. card click logging)
+      window.__lastActiveRegion = region;
+      // update header immediately
+      try { const hdr = rsmEl('rsm-st-listing-header'); if (hdr) hdr.textContent = `ST Titles for ${region || ''}`; } catch(_){ }
+      // clear previous filters/payload so we start clean
+      try { window._lastRsmPayload = null; window._lastFilterRegion = null; if (typeof resetRsmFilters === 'function') resetRsmFilters(); } catch(_){ }
+
+      // log available years, provinces, and cities for the new region
+      if (region && window.parent && window.parent.regionMap) {
+          const norm = normalizeRegionText(region);
+          let map = window.parent.regionMap[norm];
+          if (!map) {
+              // fallback to any matching key
+              Object.keys(window.parent.regionMap || {}).some(k => {
+                  if (normalizeRegionText(k) === norm) {
+                      map = window.parent.regionMap[k];
+                      return true;
+                  }
+                  return false;
+              });
+          }
+          const yrs = (map && map.years ? (map.years.slice().sort()) : []);
+          const provs = Object.keys(map.provinces || {}).sort();
+          const allCities = new Set();
+          provs.forEach(p=>{
+              (map.provinces[p]||[]).forEach(c=>allCities.add(c));
+          });
+          const cities = Array.from(allCities).sort();
+          console.log('[RSM] available region data', region, { years: yrs, provinces: provs, cities: cities });
+      }
+      // update filter dropdowns when region changes
+      populateRegionFilters(region);
+      try { if (typeof resetRsmFilters === 'function') resetRsmFilters(); } catch(_){ }
+      try { setTimeout(applyRsmFilters,0); } catch(_){ }
+  });
+
+
+  // helper to derive a canonical region name from slider data or image
+  // (duplicate from top, kept for safety but likely unused since global)
+  function deriveRegionFromSlider(source){
+      let name = '';
+      if (source && typeof source === 'object'){
+          if (source.regionName) name = source.regionName;
+          if (!name && source.src) {
+              const file = source.src.split('/').pop();
+              const filenameMap = {
+                  '1.png':'Region I','2.png':'Region II','3.png':'Region III',
+                  '4_a.png':'Region IV-A','4_b.png':'Region IV-B','5.png':'Region V',
+                  '6.png':'Region VI','7.png':'Region VII','8.png':'Region VIII',
+                  '9.png':'Region IX','10.png':'Region X','11.png':'Region XI',
+                  '12.png':'Region XII','13.png':'CARAGA',
+                  'barmm.png':'BARMM','car.png':'CAR','ncr.png':'NCR','nir.png':'NIR'
+              };
+              name = filenameMap[file] || '';
+          }
+          if (!name && source.regionNumber) {
+              const romans = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+              const num = parseInt(source.regionNumber,10);
+              if (!isNaN(num) && romans[num]) name = 'Region ' + romans[num];
+          }
+      }
+      if (!name && source && source.getAttribute) {
+          name = source.getAttribute('data-region-name') || '';
+          if (!name) {
+              const file = (source.dataset.img||source.src||'').split('/').pop();
+              const filenameMap2 = {
+                  '1.png':'Region I','2.png':'Region II','3.png':'Region III',
+                  '4_a.png':'Region IV-A','4_b.png':'Region IV-B','5.png':'Region V',
+                  '6.png':'Region VI','7.png':'Region VII','8.png':'Region VIII',
+                  '9.png':'Region IX','10.png':'Region X','11.png':'Region XI',
+                  '12.png':'Region XII','13.png':'CARAGA',
+                  'barmm.png':'BARMM','car.png':'CAR','ncr.png':'NCR','nir.png':'NIR'
+              };
+              name = filenameMap2[file] || '';
+          }
+      }
+      return name;
+  }
+
+  // helper to populate province/city/year selects based on regionMap
+  function populateRegionFilters(region) {
+      const provEl = document.getElementById('rsm-filter-prov');
+      const cityEl = document.getElementById('rsm-filter-city');
+      const yearEl = document.getElementById('rsm-filter-year');
+      // reset DOM options and clear any select2 selections
+      if (provEl) {
+          provEl.innerHTML = '';
+          try { if (window.jQuery && jQuery(provEl).data('select2')) jQuery(provEl).val([]).trigger('change'); } catch(_){ }
+      }
+      if (cityEl) {
+          cityEl.innerHTML = '';
+          try { if (window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).val([]).trigger('change'); } catch(_){ }
+      }
+      if (yearEl) {
+          yearEl.innerHTML = '';
+          try { if (window.jQuery && jQuery(yearEl).data('select2')) jQuery(yearEl).val([]).trigger('change'); } catch(_){ }
+      }
+      // Prefer client-provided regionMap (populated by parent). If missing
+      // or empty, fetch the aggregated JSON from the server endpoint so
+      // selects can be populated even when embedded or when regionMap
+      // hasn't been preloaded.
+      const norm = region ? normalizeRegionText(region) : '';
+      const keys = Object.keys((window.parent && window.parent.regionMap) ? window.parent.regionMap : {});
+      let map = (window.parent && window.parent.regionMap) ? window.parent.regionMap[norm] : null;
+
+      function fillFromMap(m) {
+          m = m || {};
+          const provs = Object.keys(m.provinces || {}).sort();
+          provs.forEach(p => { if (provEl) provEl.appendChild(new Option(p, p)); });
+          // gather all cities across provinces for full-region list
+          const allCities = new Set();
+          provs.forEach(p => { (m.provinces[p] || []).forEach(c => allCities.add(c)); });
+          Array.from(allCities).sort().forEach(c => { if (cityEl) cityEl.appendChild(new Option(c, c)); });
+          const yrs = (m.years || []).slice().sort();
+          yrs.forEach(y => { if (yearEl) yearEl.appendChild(new Option(y, y)); });
+          // refresh select2 widgets if present
+          try { if (provEl && window.jQuery && jQuery(provEl).data('select2')) jQuery(provEl).trigger('change.select2'); } catch(e){}
+          try { if (cityEl && window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).trigger('change.select2'); } catch(e){}
+          try { if (yearEl && window.jQuery && jQuery(yearEl).data('select2')) jQuery(yearEl).trigger('change.select2'); } catch(e){}
+      }
+
+      if (map && Object.keys(map.provinces || {}).length) {
+          fillFromMap(map);
+          return;
+      }
+
+      // attempt to find a matching key in parent.regionMap (normalized match)
+      if (!map && keys.length) {
+          for (const k of keys) {
+              if (normalizeRegionText(k) === norm) { map = window.parent.regionMap[k]; break; }
+          }
+      }
+      if (map && Object.keys(map.provinces || {}).length) { fillFromMap(map); return; }
+
+      // fallback: fetch aggregated data from server endpoint
+      if (region) {
+          const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(region);
+          fetch(url).then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
+            .then(payload => {
+                // server returns { provinces: [...], grouped: {prov: {city:[rows]}}, availableYears }
+                const m = { provinces: {}, years: [] };
+                try {
+                    if (Array.isArray(payload.provinces)) {
+                        payload.provinces.forEach(p => { m.provinces[p] = Object.keys(payload.grouped && payload.grouped[p] ? payload.grouped[p] : {}); });
+                    }
+                    if (Array.isArray(payload.availableYears)) m.years = payload.availableYears.slice();
+                } catch(e) { console.error('populateRegionFilters: payload parse', e); }
+                fillFromMap(m);
+                // also cache last payload for other code paths
+                try { window._lastRsmPayload = payload; } catch(e){}
+                // once new rows are available, re-run filtering so the
+                // UI updates (header/chart) to the freshly-loaded region.
+                try { setTimeout(applyRsmFilters,0); } catch(_){ }
+            }).catch(err => {
+                console.error('populateRegionFilters fetch failed', err);
+            });
+      }
+  }
+
+  // --- client-side filter apply/reset handlers ---------------------------------
+  // helper used throughout the filtering logic – introduced here again for
+  // the later script block.  the implementation is identical to the one
+  // declared earlier but updated to use `rsmEl` so it works inside iframe
+  // embeddings.
+  function _getSelectedValues(id) {
+      const el = rsmEl ? rsmEl(id) : document.getElementById(id);
+      if (!el) return [];
+      try {
+          // prefer Select2 / jQuery value when available
+          try { if (window.jQuery && jQuery(el).data('select2')) {
+                      const v = jQuery(el).val();
+                      const result = Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []);
+                      console.log('[RSM] _getSelectedValues (select2) for', id, result);
+                      return result;
+                  } } catch(e) {}
+          if (el.selectedOptions && el.selectedOptions.length) {
+              const res = Array.from(el.selectedOptions).map(o => o.value);
+              console.log('[RSM] _getSelectedValues (native) for', id, res);
+              return res;
+          }
+          // fallback
+          const res = Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
+          console.log('[RSM] _getSelectedValues (fallback) for', id, res);
+          return res;
+      } catch(e) { console.error('[RSM] _getSelectedValues error', e); return []; }
+  }
+
+  // the city/year helpers were originally defined earlier in the
+// first <script> block so that filtering logic can run as soon as the
+// page loads.  keep these comments here in case this block is moved
+// independently, but do not redeclare the functions to avoid
+// confusion; they already exist on the global scope.
+//
+// function getRowCity(r){
+//     return ((r.city||r.municipality)||'').toString().trim();
+// }
+// function getRowYear(r){
+//     return (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
+// }
+
+  function renderStTitlesFromRows(rows, regionParam) {
+      try {
+          const stListEl = rsmEl('rsm-st-list');
+          const headerEl = rsmEl('rsm-st-listing-header');
+          if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+          if (!stListEl) return;
+          if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
+          const titleMap = {};
+          rows.forEach(r => {
+              const t = (r && r.title) ? String(r.title).trim() : '';
+              if (!t) return; titleMap[t] = (titleMap[t] || 0) + 1;
+          });
+          const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
+          if (!entries.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
+          const totalSts = rows.length; const uniqueTitles = entries.length;
+          const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#475569;font-weight:700;font-size:0.88rem;">` +
+                     `<div>Unique titles: ${uniqueTitles}</div><div>Total STs: ${totalSts}</div></div>`;
+          html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+          entries.forEach(([title, count]) => {
+              html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
+                      `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
+                      `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
+                      `</div>`;
+          });
+          html += '</div>';
+          stListEl.innerHTML = html;
+          // wire handlers
+          stListEl.onclick = function(ev){ const row = ev.target.closest('.rsm-st-summary-row'); if (!row) return; ev.stopPropagation(); const title = row.getAttribute('data-title')||''; showReplicateConfirmPopover(row, { title: title, row: { title: title } }); };
+      } catch(e) { console.error('renderStTitlesFromRows', e); }
+  }
+
+  // if early stub handlers ran before the real functions were ready we
+  // mark a flag; once the above real implementation exists, replay any
+  // pending filter request so that user actions aren’t lost.
+  try {
+      if (window._rsmFilterRequested) {
+          console.log('[RSM] replaying pending filters after initialization');
+          updateProvinceFilters();
+          applyRsmFilters();
+          window._rsmFilterRequested = false;
+      }
+  } catch(e) { console.error('[RSM] pending filter replay failed', e); }
+
+
+  function resetRsmFilters(){
+      try {
+          ['rsm-filter-prov','rsm-filter-city','rsm-filter-year'].forEach(id => {
+              const el = document.getElementById(id);
+              if (!el) return;
+              Array.from(el.options || []).forEach(o => o.selected = false);
+              // if select2 is present, trigger update
+              try { if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val([]).trigger('change'); } catch(e) {}
+          });
+      } catch(e){}
+      // re-run rendering with full payload
+      try { const payload = window._lastRsmPayload || null; if (payload && Array.isArray(payload.allRows)) { renderStTitlesFromRows(payload.allRows, (payload && payload.region) || window.__lastActiveRegion || 'this region'); if (typeof initOrUpdateModalStatsChart === 'function') { const allRows = payload.allRows; const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0); const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0); const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0); initOrUpdateModalStatsChart([0, totalMoa, totalRes, totalExpr], payload.perYearTotals || null); } }
+      } catch(e){ console.error('resetRsmFilters', e); }
+  }
+
+  // expose handlers and bind buttons; include delegated fallback
+  try { window.applyRsmFilters = applyRsmFilters; window.resetRsmFilters = resetRsmFilters; } catch(e) { console.warn('[RSM] failed to expose filter functions', e); }
+  try {
+      const btnA = document.getElementById('rsm-filter-apply');
+      const btnR = document.getElementById('rsm-filter-reset');
+      if (btnA) { btnA.addEventListener('click', function(ev){ ev.preventDefault(); applyRsmFilters(); }); console.log('[RSM] bound apply button'); }
+      else console.warn('[RSM] apply button not found');
+      if (btnR) { btnR.addEventListener('click', function(ev){ ev.preventDefault(); resetRsmFilters(); }); console.log('[RSM] bound reset button'); }
+      else console.warn('[RSM] reset button not found');
+  } catch(e) { console.error('[RSM] binding filter buttons failed', e); }
+
+  // Delegated click handler as a fallback in case buttons are added later or replaced
+  document.addEventListener('click', function(ev){
+      try {
+          const a = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-apply') : null;
+          if (a) { ev.preventDefault(); try { applyRsmFilters(); } catch(e) { console.error('applyRsmFilters failed', e); } return; }
+          const r = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-reset') : null;
+          if (r) { ev.preventDefault(); try { resetRsmFilters(); } catch(e) { console.error('resetRsmFilters failed', e); } return; }
+      } catch(e) { /* ignore delegation errors */ }
+  });
+
+
+  // when province picker changes, refresh city list
+  const provSel = document.getElementById('rsm-filter-prov');
+  if (provSel) {
+      function deriveCurrentRegion(){
+          // replicate regionParam derivation from applyRsmFilters
+          let region = window.__lastActiveRegion || null;
+          if (!region) {
+              const provSel = document.getElementById('rsm-filter-prov');
+              if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+                  region = provSel._lastRegionEvent.regionName;
+              }
+          }
+          if (!region) {
+              const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+              if (activeImg) {
+                  region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+              }
+          }
+          if (!region) {
+              const modalImg = document.getElementById('rsm-modal-image');
+              if (modalImg) region = modalImg.getAttribute('data-region-name');
+          }
+          return region;
+      }
+
+      provSel.addEventListener('change', function(ev){
+          // before running filters, if the user selected a province that
+          // doesn’t belong to the currently‑loaded region, switch the
+          // slider so the payload matches their choice.
+          try {
+              const provs = _getSelectedValues('rsm-filter-prov');
+              const switched = maybeSwitchRegionForProvinces(provs);
+              if (switched) return;
+          } catch(e) { console.error('[RSM] maybeSwitchRegionForProvinces error', e); }
+          // delay until value has been updated by select2
+          setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+      });
+      // also bind for select2 events: both the namespaced change and the
+      // more granular select/unselect events which fire when choices are
+      // added/removed via the UI.
+      if (window.jQuery && jQuery(provSel).data('select2')) {
+          const $prov = jQuery(provSel);
+          $prov.on('change.select2 select2:select select2:unselect', function(ev){
+              try {
+                  const provs = _getSelectedValues('rsm-filter-prov');
+                  maybeSwitchRegionForProvinces(provs);
+              } catch(e) { console.error('[RSM] maybeSwitchRegionForProvinces error', e); }
+              setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+          });
+      }
+      // fallback listener on document in case select2 replaces the element
+      document.addEventListener('change', function(ev){
+          if (ev.target && ev.target.id === 'rsm-filter-prov') {
+              setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
+          }
+      });
+
+  }
+
+  // store last region event on province element for use in change handler
+  document.addEventListener('sliderActiveRegionChanged', function(e){
+      const provSel2 = document.getElementById('rsm-filter-prov');
+      if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
+  });
+
+  // fallback: poll the province selection and rebuild lists when it changes
+  (function(){
+      let lastProvs = null;
+      setInterval(function(){
+          const provs = _getSelectedValues('rsm-filter-prov');
+          const provsStr = provs.join('|');
+          if (provsStr !== (lastProvs||'')) {
+              console.log('[RSM] polling detected province change', provs);
+              lastProvs = provsStr;
+              updateProvinceFilters();
+              applyRsmFilters();
+          }
+      }, 500);
+  })();
+
+  // open modal on gallery card click (delegated) — ignore clicks produced by drag/scroll
+  const scroller = document.querySelector('.container-cards');
+  if (scroller) {
+    let isPointerDown = false;
+    let isDragging = false;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerStartScroll = 0;
+    const DRAG_THRESHOLD = 10; // px - movement larger than this is considered a drag
+
+    const onPointerDown = (ev) => {
+      isPointerDown = true;
+      isDragging = false;
+      pointerStartX = ev.clientX ?? (ev.touches && ev.touches[0] && ev.touches[0].clientX) ?? 0;
+      pointerStartY = ev.clientY ?? (ev.touches && ev.touches[0] && ev.touches[0].clientY) ?? 0;
+      pointerStartScroll = scroller.scrollLeft || 0;
+    };
+
+    const onPointerMove = (ev) => {
+      if (!isPointerDown) return;
+      const x = ev.clientX ?? (ev.touches && ev.touches[0] && ev.touches[0].clientX) ?? 0;
+      const y = ev.clientY ?? (ev.touches && ev.touches[0] && ev.touches[0].clientY) ?? 0;
+      if (Math.abs(x - pointerStartX) > DRAG_THRESHOLD || Math.abs(y - pointerStartY) > DRAG_THRESHOLD) {
+        isDragging = true;
+      }
+    };
+
+    const onPointerUp = () => {
+      isPointerDown = false;
+      // keep `isDragging` truthy for the next click event; clear on the next tick
+      setTimeout(() => { isDragging = false; }, 0);
+    };
+
+    // pointer events + fallbacks for older environments
+    scroller.addEventListener('pointerdown', onPointerDown, { passive: true });
+    scroller.addEventListener('pointermove', onPointerMove, { passive: true });
+    scroller.addEventListener('pointerup', onPointerUp);
+    scroller.addEventListener('pointercancel', onPointerUp);
+
+    scroller.addEventListener('touchstart', onPointerDown, { passive: true });
+    scroller.addEventListener('touchmove', onPointerMove, { passive: true });
+    scroller.addEventListener('touchend', onPointerUp);
+
+    scroller.addEventListener('mousedown', onPointerDown);
+    scroller.addEventListener('mousemove', onPointerMove);
+    scroller.addEventListener('mouseup', onPointerUp);
+
+    scroller.addEventListener('click', function(ev){
+
+      const card = ev.target && ev.target.closest ? ev.target.closest('.card-link') : null;
+      if (!card) return;
+      // debug: log what prevented the click (if anything)
+      const scrollerDragged = (scroller.dataset && scroller.dataset.pointerDragging === '1');
+      const scrolledSinceDown = Math.abs((scroller.scrollLeft||0) - (pointerStartScroll||0)) > 4;
+
+      // also print available years for the currently active region (if known)
+      try {
+          const region = window.__lastActiveRegion || null;
+          if (region && window.parent && window.parent.regionMap) {
+              const norm = normalizeRegionText(region);
+              let map = window.parent.regionMap[norm];
+              if (!map) {
+                  Object.keys(window.parent.regionMap || {}).some(k => {
+                      if (normalizeRegionText(k) === norm) {
+                          map = window.parent.regionMap[k];
+                          return true;
+                      }
+                      return false;
+                  });
+              }
+              const yrs = (map && map.years ? map.years.slice().sort() : []);
+              console.log('[STsReport] active region on card click', region, 'years', yrs);
+          }
+      } catch(e){ console.warn('error logging region years', e); }
+
+      // ignore clicks that are the result of dragging/scrolling
+      if (isDragging || scrollerDragged || scrolledSinceDown) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        return;
+      }
+      ev.preventDefault();
+      openModalForCard(card);
+    });
+
+    scroller.addEventListener('keydown', function(e){
+      const trigger = e.target && e.target.closest ? e.target.closest('.card-link') : null;
+      if (!trigger) return;
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); openModalForCard(trigger); }
+    });
+  }
+
+  // document-level fallback: handle clicks on cloned/duplicated cards that may exist outside the main scroller
+  document.addEventListener('click', function(ev){
+    const card = ev.target && ev.target.closest ? ev.target.closest('.card-link') : null;
+    if (!card) return;
+    // if this card is inside the main scroller, let the scroller's click handler handle it (avoid double-open)
+    if (card.closest && card.closest('.container-cards')) return;
+    // avoid reopening when modal already visible
+    if (modal && modal.getAttribute && modal.getAttribute('aria-hidden') === 'false') return;
+    const scrollerMain = document.querySelector('.container-cards');
+    const scrollerDragged = scrollerMain && scrollerMain.dataset && scrollerMain.dataset.pointerDragging === '1';
+    if (scrollerDragged) { return; }
+    ev.preventDefault();
+    openModalForCard(card);
+  });
+
+  // expose a helper so you can manually open the modal from the browser console for debugging
+  try { window.openSTsModal = function(el){ if (!el) el = document.querySelector('.card-link'); return el ? openModalForCard(el) : null; }; } catch(e){}
+
+  modalClose.addEventListener('click', closeModal);
+  modal.querySelector('.gcm-backdrop').addEventListener('click', closeModal);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){
+      // close popover first if visible, else the centered modal
+      const pop = document.getElementById('galleryPopover');
+      if (pop && pop.getAttribute('aria-hidden') === 'false') return closePopover();
+      if (modal && modal.getAttribute && modal.getAttribute('aria-hidden') === 'false') return closeModal();
+    }
+  });
+
+  // delegated handler for modal body:
+  // - open child/sub-child anchors in a new tab
+  // - toggle mother rows
+  modalBody.addEventListener('click', function(e){
+    const a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (a) {
+      const href = a.getAttribute('href') || '#';
+      if (href && href !== '#') {
+        try { window.open(href, '_blank', 'noopener,noreferrer'); } catch(err) { a.target = '_blank'; }
+      }
+      e.preventDefault();
+      return;
+    }
+
+    const btn = e.target && e.target.closest ? e.target.closest('.gcm-mother-toggle') : null;
+    if (!btn) return;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    const mother = btn.closest('.gcm-mother');
+    const list = mother && mother.querySelector('.gcm-child-list');
+    if (list) list.style.display = expanded ? 'none' : 'block';
+  });
+
+  // delegated toggle for mother rows inside popover (same behavior)
+  const popBodyEl = document.getElementById('galleryPopoverBody');
+  if (popBodyEl) popBodyEl.addEventListener('click', function(e){
+    // If an anchor inside the popover body was clicked, open it in a new tab (fallback)
+    const a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (a) {
+      const href = a.getAttribute('href') || '#';
+      // ignore placeholder hashes
+      if (href && href !== '#') {
+        // prefer native target if present; fallback to window.open to ensure new tab
+        try { window.open(href, '_blank', 'noopener,noreferrer'); } catch(err) { a.target = '_blank'; }
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // delegated toggle for mother rows inside popover (same behavior as modal)
+    const btn = e.target && e.target.closest ? e.target.closest('.gcm-mother-toggle') : null;
+    if (!btn) return;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    const mother = btn.closest('.gcm-mother');
+    const list = mother && mother.querySelector('.gcm-child-list');
+    if (list) list.style.display = expanded ? 'none' : 'block';
+  });
+});
+</script>
+
+
+@else
+<!-- fallback: original static gallery -->
+<section class="card-gallery" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
+	<div class="container-cards" style="pointer-events:auto;">
+		<a class="card card-link" href="#" data-href="/category/older-person" data-title="Older Person" aria-label="Older Person">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Older Person logo.png') }}" alt="Older Person logo"></div>
+			</div>
+			<div class="content">
+				<h2>Older Person</h2>
+				<p>Support and services for older persons.</p>
+			</div>
+		</a>
+
+		<a class="card card-link" href="#" data-href="/category/internally-displaced-person" data-title="Internally Displaced Person" aria-label="Internally Displaced Person">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Internally Displaced Person logo.png') }}" alt="Internally Displaced Person logo"></div>
+			</div>
+			<div class="content">
+				<h2>Internally Displaced Person</h2>
+				<p>Assistance for displaced communities.</p>
+			</div>
+		</a>
+
+		<a class="card card-link" href="#" data-href="/category/indigenous-peoples" data-title="Indigenous Peoples" aria-label="Indigenous Peoples">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Indenuos peoples logo.png') }}" alt="Indigenous Peoples logo"></div>
+			</div>
+			<div class="content">
+				<h2>Indigenous Peoples</h2>
+				<p>Programs for indigenous communities.</p>
+			</div>
+		</a>
+
+		<a class="card card-link" href="#" data-href="/category/women" data-title="Women" aria-label="Women">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Women logo.png') }}" alt="Women logo"></div>
+			</div>
+			<div class="content">
+				<h2>Women</h2>
+				<p>Programs and services for women empowerment.</p>
+			</div>
+		</a>
+
+		<a class="card card-link" href="#" data-href="/category/person-with-disability" data-title="Person with Disability" aria-label="Person with Disability">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Person with disability logo.png') }}" alt="Person with disability logo"></div>
+			</div>
+			<div class="content">
+				<h2>Person with Disability</h2>
+				<p>Accessibility and inclusive support.</p>
+			</div>
+		</a>
+
+		<a class="card card-link" href="#" data-href="/category/children-and-youth" data-title="Children & Youth" aria-label="Children and Youth">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Children and Youth logo.png') }}" alt="Children and Youth logo"></div>
+			</div>
+			<div class="content">
+				<h2>Children & Youth</h2>
+				<p>are vital assets of the nation and the foundation of future development. Ensuring their survival, protection, development, and meaningful participation through access to quality education, health, protection services, life skills, and opportunities for engagement enables them to reach their full potential and become responsible, productive, and empowered members of society</p>
+			</div>
+		</a>
+
+		<a class="card card-link" href="#" data-href="/category/family" data-title="Family" aria-label="Family">
+			<div class="imgContainer">
+				<div class="logo-badge"><img src="{{ asset('images/dattachments/Family logo.png') }}" alt="Family logo"></div>
+			</div>
+			<div class="content">
+				<h2>Family</h2>
+				<p>Family-focused support and community programs.</p>
+			</div>
+		</a>
+	</div>
+</section>
+@endif
+
+<!-- Slider (Swiper) -->
+<div class="slider-wrapper">
+    <div class="swiper mySwiper">
+
+        <div class="swiper-wrapper">
+            @php
+                $sliderImages = [
+                    '1.png','2.png','3.png','4_a.png','4_b.png','5.png',
+                    '6.png','7.png','8.png','9.png','10.png',
+                    '11.png','12.png','13.png',
+                    'barmm.png','car.png','ncr.png','nir.png'
+                ];
+            @endphp
+
+            @foreach ($sliderImages as $img)
+                @php
+                    $base = pathinfo($img, PATHINFO_FILENAME);
+                    $regionNameAttr = '';
+                    if (!is_numeric($base)) {
+                        $special = [
+                            'barmm' => 'BARMM',
+                            'car' => 'Cordillera Administrative Region',
+                            'ncr' => 'National Capital Region',
+                            'nir' => 'Negros Island Region',
+                            '4_a' => 'CALABARZON',
+                            '4_b' => 'MIMAROPA',
+                        ];
+                        $regionNameAttr = $special[$base] ?? ucwords(str_replace(['_','-'], ' ', $base));
+                    }
+                @endphp
+                <div class="swiper-slide">
+                    <img src="/images/ST Regional Nav Slide/{{ $img }}"
+                         class="slider-img"
+                         data-img="/images/ST Regional Nav Slide/{{ $img }}"
+                         data-region-number="{{ $loop->iteration }}"
+                         data-region-name="{{ $regionNameAttr }}">
+                </div>
+            @endforeach
+
+        </div>
+
+    </div>
+
+<!-- slider modal markup has been moved to main layout for global display -->
+            </div>
+        </div>
+    </div>
+    <!-- external Total-STs card (commented out) -->
+        <!--
+        <div id="sliderProvinceTotalCard" class="slider-province-total-card" aria-hidden="true" role="status" aria-label="Region total STs">
+            <div class="region-st-title">Total STs</div>
+            <div id="sliderProvinceTotalCardCount" class="region-st-count">0</div>
+        </div>
+        -->
+</div>
+
+  <div id="regionStatsPanel" class="rsm-panel" role="document">
+    <div class="rsm-header">
+      <div class="rsm-header-left" style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-direction:column;">
+          <img id="rsm-modal-image" src="" alt="Region image" class="rsm-modal-image" style="visibility:hidden;width:480px;height:480px;border-radius:12px;object-fit:contain; background:transparent; border:none; box-shadow:none;" />
+          <!-- moved metrics under image -->
+          <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:500px !important; height:312px !important; overflow:hidden; box-sizing:border-box; margin-top:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                      <div id="modalStatsTotal" style="font-size:0.5rem; font-weight:800; color:#8492a6; background:#eef2ff; padding:4px 8px; border-radius:999px;">Total STs: 0</div>
+                  </div>
+              </div>
+              <div id="modalStatsChartControls" style="position:absolute; top:8px; right:8px; z-index:30; display:flex; gap:6px;"></div>
+              <canvas id="modalStatsChart" width="960" height="480" style="display:block; width:100%; height:312px;"></canvas>
+              <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
+          </div>
+        </div>
+        <!-- provinces/totals plus ST titles grouped together -->
+        <div class="rsm-prov-total-st" style="display:flex;gap:24px;">
+          <div class="rsm-provinces-and-totals" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="rsm-card rsm-prov-card">
+              <div class="rsm-card-title">Filtering fields</div>
+              <!-- filter fields for provinces and cities (UI only) -->
+              <div class="rsm-filter-fields" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                <div class="rsm-filter-group" style="width:100%;">
+                    <div class="rsm-filter-group" style="width:100%;">
+                  <label for="rsm-filter-prov" style="font-size:0.85rem; display:block; margin-bottom:4px;">Province</label>
+                  <select id="rsm-filter-prov" multiple class="rsm-select2" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    @if(!empty($provinces) && is_array($provinces))
+                        @foreach($provinces as $province)
+                            <option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
+                        @endforeach
+                    @endif
+                  </select>
+                  <div class="rsm-filter-group" style="width:100%;">
+                  <label for="rsm-filter-city" style="font-size:0.85rem; display:block; margin-bottom:4px;">City</label>
+                  <select id="rsm-filter-city" multiple class="rsm-select2" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    @if(!empty($cities) && is_array($cities))
+                        @foreach($cities as $city)
+                            <option value="{{ $city }}" {{ collect(request('municipality'))->contains($city) ? 'selected' : '' }}>{{ $city }}</option>
+                        @endforeach
+                    @endif
+                  </select>
+                </div>
+                </div>
+                  <label for="rsm-filter-year" style="font-size:0.85rem; display:block; margin-bottom:4px;">Year</label>
+                  <select id="rsm-filter-year" multiple class="rsm-select2" style="width:100%; padding:4px 6px; font-size:0.9rem;">
+                    @if(!empty($years) && is_array($years))
+                        @foreach($years as $year)
+                            <option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
+                        @endforeach
+                    @endif
+                  </select>
+                                </div>
+                                <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+                                      <button type="button" id="rsm-filter-apply" class="rsm-filter-btn" style="padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;" onclick="(function(){try{var s=document.getElementById('rsm-filter-status'); if(window.applyRsmFilters){ window.applyRsmFilters(); if(s) s.textContent='Filter applied'; console.log('[RSM] inline: invoked applyRsmFilters'); } else { if(s) s.textContent='No handler'; console.warn('[RSM] inline: applyRsmFilters missing'); } }catch(e){ console.error('[RSM] inline apply error', e); var s2=document.getElementById('rsm-filter-status'); if(s2) s2.textContent='Error'; }})();">Filter</button>
+                                      <button type="button" id="rsm-filter-reset" class="rsm-filter-btn" style="padding:8px 12px;background:transparent;color:#374151;border:1px solid rgba(2,6,23,0.06);border-radius:8px;cursor:pointer;font-weight:600;" onclick="(function(){try{var s=document.getElementById('rsm-filter-status'); if(window.resetRsmFilters){ window.resetRsmFilters(); if(s) s.textContent='Reset'; console.log('[RSM] inline: invoked resetRsmFilters'); } else { if(s) s.textContent='No handler'; console.warn('[RSM] inline: resetRsmFilters missing'); } }catch(e){ console.error('[RSM] inline reset error', e); var s2=document.getElementById('rsm-filter-status'); if(s2) s2.textContent='Error'; }})();">Reset</button>
+                                    <div id="rsm-filter-status" style="font-size:0.85rem;color:#556;min-width:120px;">&nbsp;</div>
+                                </div>
+                
+                
+              </div>
+            </div>
+            <div class="rsm-card">
+                <div class="rsm-stats-grid">
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total STs</div>
+                    <div id="rsm-total-sts" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total Expression of Interest</div>
+                    <div id="rsm-total-expr" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">SB Resolutions</div>
+                    <div id="rsm-total-res" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total MOA</div>
+                    <div id="rsm-total-moa" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">MOA Attachments</div>
+                    <div id="rsm-total-moa-attachments" class="rsm-stat-value">0</div>
+                  </div>
+                  <!-- replicate/adopt placeholders (always 0) -->
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total Replicated</div>
+                    <div id="rsm-total-rep" class="rsm-stat-value">0</div>
+                  </div>
+                  <div class="rsm-stat">
+                    <div class="rsm-stat-label">Total Adopted</div>
+                    <div id="rsm-total-adopt" class="rsm-stat-value">0</div>
+                  </div>
+                </div>
+            </div>
+          </div>
+
+          <!-- ST Titles card now right of provinces/totals -->
+          <div class="rsm-listing-wrap" style="margin-top:0;">
+            <div class="rsm-card">
+              <h4 id="rsm-st-listing-header" class="rsm-listing-title">ST Titles — select a city to view</h4>
+              <div id="rsm-st-list" class="rsm-st-list"><div class="rsm-empty">Select a city to view ST titles</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="rsm-container" class="rsm-container">
+				<div class = 'container-form'>
+					<div id="rsm-loading" class="rsm-loading" style="display:none;">Loading…</div> 
+				</div>
+        <div id="rsm-cards" class="rsm-cards" style="display:none;">
+          <!-- metrics moved into header; this section intentionally left empty -->
+        </div>
+      </div>
+
+    </div>
+    <div class="rsm-body">
+	
+    </div>
+  </div>
+
+
+<style>
+    .imgContainer {
+        background: transparent !important;
+        /* If there's a background-color, override it */
+        background-color: transparent !important;
+        
+        
+    }
+/* Scoped card styles — do NOT override global page styles */
+.card-gallery { display:flex; justify-content:center; align-items:center; padding:28px 12px; position:relative; z-index:60; pointer-events:auto; width: 120vw; margin-left: 0; overflow-x: auto; -ms-overflow-style: none; /* IE/Edge */ scrollbar-width: none; /* Firefox */ }
+.card-gallery::-webkit-scrollbar { display: none; /* WebKit */ }
+
+.card-gallery * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+.card-gallery .container-cards, .card-gallery .container-cards .card, .card-gallery .container-cards .imgContainer { pointer-events: auto; }
+/* visual pause indicator while debugging hover */
+.card-gallery .container-cards.autoscroll-paused { opacity:0.94; }
+.card-gallery .container-cards.autoscroll-paused::after { content: 'Paused'; position:absolute; right:20px; top:10px; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; padding:6px 8px; border-radius:999px; z-index:9999; pointer-events:none; }
+
+/* marquee fallback when content is not wider than viewport */
+.marquee-force { overflow:hidden; }
+/* default CSS marquee (used only for the pure CSS fallback) */
+.marquee-track { display:flex; gap:18px; align-items:center; animation: marquee 30s linear infinite; will-change: transform; }
+/* when we use JS transform-mode, disable the CSS animation so JS controls the motion */
+.marquee-track.js-transform { animation: none !important; }
+/* also pause any remaining CSS animation when user hovers */
+.container-cards.autoscroll-paused .marquee-track { animation-play-state: paused !important; }
+@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+/* single-row scroller */
+.container-cards { display:flex; gap:30px; flex-wrap:nowrap; justify-content:flex-start; align-items:flex-start; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; padding:12px 8px; }
+.container-cards::-webkit-scrollbar{ height:10px; }
+.container-cards::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.08); border-radius:6px; }
+/* collapsed card (single-row) — left badge initially centered above */
+.container-cards { display:flex; gap:20px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; }
+.container-cards::-webkit-scrollbar{ display:none; }
+/* allow drag-to-scroll affordance */
+.container-cards { cursor: grab; -webkit-user-select: none; user-select: none; }
+.container-cards.dragging { cursor: grabbing; }
+
+/* when autoscroll is paused we disable drag affordance */
+.container-cards.autoscroll-paused { cursor: default; }
+.container-cards img { -webkit-user-drag: none; user-drag: none; }
+.container-cards .card { background:var(--card-bg); flex:0 0 180px; height:170px; margin:6px 6px; padding:10px; border-radius:12px; box-shadow: 0 6px 24px rgba(2,6,23,0.08); transition: flex-basis 360ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease; overflow:visible; position:relative; display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; cursor:pointer; }
+/* expand width to the right only */
+/* only allow hover expansion when the scroller is NOT actively scrolling or being drag-scrolled */
+.container-cards:not(.dragging):not(.is-scrolling) .card:hover { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
+
+/* Programmatic "lifted" state should visually match :hover so the extension remains visible
+   when JS sets/keeps the card lifted (eg. popover is open). */
+.container-cards:not(.dragging):not(.is-scrolling) .card.card-lifted { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
+
+/* image starts centered then animates to left on expand */
+.container-cards .card .imgContainer { position:absolute; top:8px; left:50%; transform:translate(-50%, 0); width:140px; height:140px; z-index:3; overflow:visible; background: transparent; display:flex; align-items:center; justify-content:center; transition: left 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1), top 420ms ease; }
+.container-cards .card .imgContainer img { width:100%; height:100%; object-fit:contain; display:block; }
+.logo-badge { width:96px; height:96px; border-radius:999px; background: transparent; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 28px rgba(2,6,23,0.08); overflow:hidden; }
+.logo-badge img { width:72%; height:72%; object-fit:contain; display:block; }
+
+/* collapsed-title: show card title when not expanded */
+.container-cards .card[data-title]::after {
+    content: attr(data-title);
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    font-size: 0.70rem;
+    color: #374151; /* gray-700 */
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 1;
+    z-index: 5; /* ensure title is above the image badge */
+    transition: opacity 220ms ease, transform 220ms ease;
+}
+
+/* hide collapsed label while card expands / types / focused (image-hover or keyboard focus)
+   also hide when the card is hovered/ lifted to show the content panel
+   NOTE: do NOT hide when the card merely has `.title-typed` (keeps collapsed label visible after typing completes) */
+.container-cards .card.image-hover::after,
+.container-cards .card.typing-active::after,
+.container-cards .card:focus-visible::after,
+.container-cards:not(.dragging):not(.is-scrolling) .card:hover::after,
+.container-cards .card.card-lifted::after {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+} 
+
+/* content panel (hidden when collapsed) — revealed to the right and shifted to avoid overlap */
+.container-cards .card .content { width:0; opacity:0; visibility:hidden; overflow:hidden; transition: width 360ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease, margin-left 360ms cubic-bezier(.2,.9,.2,1); display:flex; flex-direction:column; justify-content:center; padding:0; margin-left:0; z-index:1; }
+.container-cards .card .content h2 { font-size:0.95rem; margin:0 0 6px 0; text-align:left; }
+.container-cards .card .content p { color:#505050; font-size:0.92rem; line-height:1.35; margin:0; text-align:left; max-width:520px; opacity:0; transition: opacity 200ms ease; }
+/* paragraph visible only after the title has finished typing (class `title-typed`) */
+.container-cards .card.title-typed .content p { opacity:1; }
+/* when expanded, move the content to the right so the badge doesn't cover text */
+.container-cards:not(.dragging):not(.is-scrolling) .card:hover .content,
+.container-cards .card:focus-visible .content,
+.container-cards .card.typing-active .content,
+.container-cards .card.card-lifted .content {
+    margin-left:180px; /* shift past the badge */
+    width: calc(100% - 220px);
+    opacity:1;
+    visibility:visible;
+    padding-left:20px;
+}
+
+/* animate image to left when expanded or during typing */
+.container-cards:not(.dragging):not(.is-scrolling) .card:hover .imgContainer,
+.container-cards .card:focus-visible .imgContainer,
+.container-cards .card.typing-active .imgContainer,
+.container-cards .card.card-lifted .imgContainer {
+  left:18px;
+  top:50%;
+  transform:translate(0, -50%);
+}
+
+.card-link:focus-visible { outline: 3px solid rgba(16,174,181,0.18); outline-offset:4px; border-radius:12px; }
+
+/* typing cursor */
+.content p.typing::after, .content h2.typing::after { content: '\007C'; margin-left:6px; display:inline-block; opacity:1; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.card-link:focus-visible { outline: 3px solid rgba(16,174,181,0.25); outline-offset:4px; border-radius:10px; }
+.container-cards .card .content h2 { font-size:0.95rem; margin-bottom:6px; color: #111827; }
+.container-cards .card .content p { color:#505050; font-size:0.86rem; line-height:1.35; }
+@media (max-width: 1200px) { .container-cards { gap:12px; } .logo-badge { width:92px; height:92px; } .container-cards .card { flex:0 0 240px; } }
+@media (max-width: 820px) { .container-cards .card { flex:0 0 220px; } .container-cards .card .imgContainer { width:180px; height:180px; left:12px; } .logo-badge { width:76px; height:76px; } }
+@media (max-width: 900px) {
+  /* Stack cards vertically on narrow screens for better tap targets */
+  .container-cards { flex-direction: column; align-items: center; gap:24px; padding:12px; }
+  .container-cards .card { flex: 0 0 92%; max-width:920px; width: 92%; margin:12px 0; height: auto; min-height: auto; padding:18px;}
+  .container-cards .card .imgContainer { position: relative; left: 50%; transform: translateX(-50%); top: 0; width:180px; height:180px; margin-bottom:14px; }
+  .logo-badge { width:96px; height:96px; }
+  .container-cards .card .content { width:100%; margin-left:0; padding-left:0; opacity:1; visibility:visible; }
+  .container-cards .card .content h2 { font-size:1rem; }
+  .container-cards .card .content p { font-size:0.95rem; line-height:1.5; }
+  .container-cards .card::after { display:none; } /* hide collapsed label on small screens */
+}
+@media (max-width: 420px) { .container-cards { gap:14px; } .container-cards .card { width:94%; max-width:360px; margin:10px 0; padding:14px; } .container-cards .card .imgContainer { width:140px; height:140px; left:calc(50% - 70px); } .logo-badge { width:72px; height:72px; } }
+
+/* Improved dropdown (right-edge, accessible, animated) */
+.card-dropdown { position:absolute; right:12px; top:50%; transform:translateY(-50%) scale(0.98); background: #fff; border-radius:10px; padding:10px; box-shadow: 0 14px 40px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); width: 300px; max-height:360px; overflow:auto; font-size:0.92rem; color:#111827; opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s cubic-bezier(.2,.9,.2,1); z-index:30; }
+/* hide inline per-card dropdowns by default (but show on hover) */
+.container-cards .card .card-dropdown { display: none !important; pointer-events: none !important; }
+/* show inline dropdown when hovering/focusing the card (override the above) */
+.container-cards .card:hover .card-dropdown,
+.container-cards .card:focus-within .card-dropdown {
+  display: block !important; /* show on hover */
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(-50%) scale(1) !important;
+}
+/* keep demo-visible rule removed */
+
+/* Floating dropdown (used on hover/focus of a card) */
+.card-dropdown.card-dropdown-floating { position: absolute; right: auto; top: auto; transform: none !important; opacity:1 !important; pointer-events:auto !important; display: none; width: 320px; max-height: 420px; z-index: 999999; box-shadow: 0 18px 60px rgba(2,6,23,0.12); border-radius:10px; }
+
+
+.card-dropdown.card-dropdown-floating[aria-hidden="false"] { display:block; }
+@media (max-width:920px) { .card-dropdown { display:none !important; } }
+.card-dropdown-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:6px; border-bottom:1px solid rgba(2,6,23,0.05); margin-bottom:8px; font-weight:700; font-size:0.95rem; }
+.card-dropdown-all { font-size:0.8rem; color:#2563eb; text-decoration:none; padding:4px 6px; border-radius:6px; background:transparent; border:1px solid rgba(37,99,235,0.08); }
+.card-dropdown-list { margin:0; padding:0; list-style:none; }
+.card-dropdown-item { padding:6px 6px; border-radius:6px; }
+.card-dropdown-link { color:#0f1724; text-decoration:none; display:block; padding:4px 6px; border-radius:4px; }
+.card-dropdown-link:focus, .card-dropdown-link:hover { background:#f8fafc; outline:none; color:#0369a1; }
+.card-dropdown-sublist { margin-top:6px; padding-left:12px; list-style:none; }
+.card-dropdown-sublink { color:#475569; font-size:0.85rem; }
+.card-dropdown-empty { color:#9ca3af; font-size:0.9rem; }
+@media (max-width:920px) { .card-dropdown { display:none !important; } }
+
+/* Disable desktop hover expansion for touch devices */
+@media (hover: none) {
+  .container-cards:not(.dragging):not(.is-scrolling) .card:hover { transform: none; box-shadow: 0 6px 24px rgba(2,6,23,0.08); flex-basis: 240px; }
+}
+
+/* ===== Swiper slider (copied/simplified from demo1) ===== */
+.slider-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* break out of any parent container so the carousel spans the
+       full viewport width */
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    overflow: hidden;
+    /* keep top margin; remove auto horizontal centering since we're
+       full‑width now */
+    margin-top: 2rem;
+}
+
+
+/* ensure gallery above slider when necessary */
+.gallery, .container-cards { position: relative; z-index: 10; }
+/* slider sizing and centering: fixed pixel dimensions to avoid zoom stretch */
+.swiper {
+    /* fixed container width to 1200px for wider card spread */
+    width: 1700px !important;
+    max-width: 1700px !important;
+    height: 300px; /* reasonable fixed height */
+    max-height: 300px;
+    margin: 0 auto; /* center within wrapper */
+    transform: none;
+    transition: transform 320ms cubic-bezier(.2,.9,.2,1);
+}
+.swiper-slide { width: 220px; /* fixed size to fit container */ height: 240px; border-radius: 20px; overflow: hidden; transition: 0.4s ease; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+
+getBoundingClientRect(); const { scaleX, scaleY } = hitTestScale(); const cx = (evt.clientX - rect.left) * scaleX; const cy = (evt.clientY - rect.top) * scaleY; let over = false; for (let i = 0; i < boxes.length; i++) { 
+    if (isPointInBox(cx, cy, boxes[i])) { over = true; break; } } canvas.style.cursor = over ? 'pointer' : ''; };
+            canvas.addEventListener('click', onCanvasClickForLegend); canvas.addEventListener('mousemove', onCanvasMoveForLegend);
+        })();
+
+    } else {
+        const _maxVal = Math.max(1, ...(values.map(v => Number(v) || 0)));
+        const _suggestedMax = Math.max(5, Math.ceil(_maxVal + Math.max(2, _maxVal * 0.15)));
+        const _step = Math.ceil(_suggestedMax / 5);
+        const _visMap = {};
+        modalStatsChart.data.datasets.forEach((ds, idx) => { _visMap[ds.label] = modalStatsChart.isDatasetVisible(idx); });
+        modalStatsChart.data.labels = labels;
+        modalStatsChart.data.datasets = buildDatasets(values, perYearTotals);
+        refreshControls();
+        modalStatsChart.data.datasets.forEach((ds, idx) => {
+            const vis = (typeof _visMap[ds.label] !== 'undefined') ? _visMap[ds.label] : true;
+            modalStatsChart.setDatasetVisibility(idx, vis);
+            if (!modalStatsChart._labelAlphas) modalStatsChart._labelAlphas = {};
+            modalStatsChart._labelAlphas[ds.label] = (typeof modalStatsChart._labelAlphas[ds.label] !== 'undefined') ? modalStatsChart._labelAlphas[ds.label] : (vis ? 1 : 0);
+            if (!modalStatsChart._datasetAlphas) modalStatsChart._datasetAlphas = {};
+            modalStatsChart._datasetAlphas[ds.label] = (typeof modalStatsChart._datasetAlphas[ds.label] !== 'undefined') ? modalStatsChart._datasetAlphas[ds.label] : (vis ? 1 : 0);
+        });
+        modalStatsChart.options.scales.y.suggestedMax = _suggestedMax;
+        modalStatsChart.options.scales.y.ticks.stepSize = _step;
+        modalStatsChart.update();
+        try { createChartHitZones(modalStatsChart); } catch(e) {}
+    }
+}
+
+function createChartHitZones(chart) {
+    try {
+        const canvas = chart && chart.canvas;
+        const zonesContainer = document.getElementById('modalStatsChartZones');
+        if (!zonesContainer || !canvas) return;
+        zonesContainer.innerHTML = '';
+        zonesContainer.style.pointerEvents = 'auto';
+        const meta = chart.getDatasetMeta(0);
+        const pts = (meta && meta.data) ? meta.data : [];
+        if (!pts.length) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width || 1;
+        const scaleY = canvas.height / rect.height || 1;
+        const xCoords = pts.map(p => p.x);
+        const horizDists = pts.map((p, i) => {
+            const left = i > 0 ? Math.abs(p.x - xCoords[i-1]) : Infinity;
+            const right = i < xCoords.length - 1 ? Math.abs(xCoords[i+1] - p.x) : Infinity;
+            return Math.min(left, right);
+        });
+        pts.forEach((p, i) => {
+            const cssLeft = (p.x / scaleX);
+            const cssTop = (p.y / scaleY);
+            const horizGapCss = (horizDists[i] === Infinity) ? 120 : (horizDists[i] / scaleX);
+            const preferredR = Math.max(12, Math.min(36, Math.round(horizGapCss * 0.32)));
+            const minR = 8;
+            const maxAllowedByEdges = Math.floor(Math.min(cssLeft, rect.width - cssLeft, cssTop, rect.height - cssTop));
+            let r = Math.min(preferredR, Math.max(minR, maxAllowedByEdges));
+            let finalLeft = cssLeft; let finalTop = cssTop;
+            if (maxAllowedByEdges < minR) {
+                finalLeft = Math.max(minR, Math.min(rect.width - minR, cssLeft));
+                finalTop = Math.max(minR, Math.min(rect.height - minR, cssTop));
+                r = Math.max(6, Math.min(preferredR, Math.floor(Math.min(rect.width, rect.height) / 6)));
+            }
+            const zone = document.createElement('div');
+            zone.className = 'chart-hit-zone'; zone.dataset.idx = i; zone.style.position = 'absolute'; zone.style.left = (finalLeft) + 'px'; zone.style.top = (finalTop) + 'px'; zone.style.width = (r * 2) + 'px'; zone.style.height = (r * 2) + 'px'; zone.style.transform = 'translate(-50%, -50%)'; zone.style.borderRadius = '50%'; zone.style.pointerEvents = 'auto'; zone.style.zIndex = 9999; zone.style.background = 'transparent';
+            zone.addEventListener('pointerenter', function(e) { e.stopPropagation(); try { if (e.pointerId && zone.setPointerCapture) zone.setPointerCapture(e.pointerId); } catch (err) {} chart.setActiveElements([{ datasetIndex: 0, index: i }]); chart.tooltip.setActiveElements([{ datasetIndex: 0, index: i }], { x: p.x, y: p.y }); canvas.style.cursor = 'pointer'; chart.update(); });
+            zone.addEventListener('pointerleave', function(e) { e.stopPropagation(); try { if (e.pointerId && zone.releasePointerCapture) zone.releasePointerCapture(e.pointerId); } catch (err) {} try { chart.setActiveElements([]); chart.tooltip.setActiveElements([], { x: 0, y: 0 }); } catch (err) {} canvas.style.cursor = ''; chart.update(); });
+            zone.addEventListener('click', function(ev) { ev.stopPropagation(); try { const idx = Number(zone.dataset.idx || 0); chart.setActiveElements([{ datasetIndex: 0, index: idx }]); chart.tooltip.setActiveElements([{ datasetIndex: 0, index: idx }], { x: p.x, y: p.y }); chart.update(); } catch (err) {} });
+            zonesContainer.appendChild(zone);
+        });
+    } catch (e) { /* ignore */ }
+}
+
+	// Unified replicate popover — single component for All ST Titles and ST Titles panel
+	(function initUnifiedReplicatePopover() { return; /* modal popover removed */
+		if (window.__unifiedReplicatePopoverBound) return;
+		window.__unifiedReplicatePopoverBound = true;
+		const pop = document.getElementById('stReplicatePopover');
+	})();
+});
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+@if(isset($galleryCards) && $galleryCards->count())
+<section class="card-gallery" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
+    <div class="container-cards" style="pointer-events:auto;">
+        @foreach($galleryCards as $card)
+            @php
+                // include all top-level children (show inactive children as muted in the popover)
+                $__cardChildren = $card->children
+                    ->filter(function($c){ return is_null($c->parent_child_id); })
+                    ->map(function($c){
+                        return [
+                            'title' => $c->title,
+                            'url' => $c->url,
+                            'active' => (int) $c->is_active,
+                            'status' => $c->status ?? 'On going',
+                            'children' => ($c->children && $c->children->count())
+                                ? $c->children->map(function($s){ return ['title' => $s->title, 'url' => $s->url, 'active' => (int) $s->is_active, 'status' => $s->status ?? 'On going']; })->values()
+                                : []
+                        ];
+                    })->values();
+            @endphp
+            <a class="card card-link" href="{{ $card->url ?? '#' }}" data-href="{{ $card->url ?? '#' }}" data-title="{{ $card->title }}" aria-label="{{ $card->title }}" data-children='@json($__cardChildren)'>
+                <div class="imgContainer" style= "background-color: transparent !important; border: none !important;">
+                    <div class="logo-badge">
+                        @if($card->image)
+                            <img src="{{ asset('storage/' . $card->image) }}" alt="{{ $card->title }} logo">
+                        @elseif($card->icon_class)
+                            <i class="{{ $card->icon_class }}" style="font-size:48px;color:#4da1f7;"></i>
+                        @else
+                            <div style="width:72px;height:72px;border-radius:999px;background:#f1f5f9;"></div>
+                        @endif
+                    </div>
+                </div>
+                <div class="content">
+                    <h2>{{ $card->title }}</h2>
+                    <p>{{ $card->description }}</p>
+                </div>
+            </a>
+        @endforeach
+    </div>
+</section>
+
+
+
+<!-- Gallery children modal (opens on gallery card click) -->
+<div id="galleryChildrenModal" class="gallery-children-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="galleryChildrenModalTitle" style="display:none;">
+  <div class="gcm-backdrop" data-action="close" style="position:fixed; inset:0; background:rgba(0,0,0,0.45);"></div>
+  <div class="gcm-panel" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(820px,calc(100% - 48px)); max-height:80vh; overflow:auto; background:#fff; border-radius:12px; padding:18px; box-shadow:0 18px 60px rgba(2,6,23,0.12); z-index:100000;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:1.05rem;"><a id="galleryChildrenModalTitle" href="#" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;display:inline-block;cursor:pointer;"></a></h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="gcm-close" aria-label="Close" style="background:transparent;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+    </div>
+    <div id="gcm-body" class="gcm-body" style="font-size:0.95rem;color:#0f1724;"></div>
+  </div>
+</div>
+
+<!-- Popover: shown anchored to the clicked card (used instead of the centered modal) -->
+<div id="galleryPopover" class="gallery-popover" role="dialog" aria-hidden="true"
+     style="position:absolute; display:none; z-index:100250; min-width:260px; max-width:420px; width:fit-content; background:#fff; border-radius:12px; padding:12px; box-shadow:0 18px 60px rgba(2,6,23,0.12);">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+    <a id="galleryPopoverTitle" href="#" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#0369a1;text-decoration:none;display:block;cursor:pointer;"> </a>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="galleryPopoverClose" aria-label="Close popover" style="background:transparent;border:none;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+  </div>
+  <div id="galleryPopoverBody" style="font-size:0.95rem;color:#0f1724; max-height:60vh; overflow:auto;"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const modal = document.getElementById('galleryChildrenModal');
+  const modalTitle = document.getElementById('galleryChildrenModalTitle');
+  const modalBody = document.getElementById('gcm-body');
+  const modalClose = document.getElementById('gcm-close');
+
+
+  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+
+  // helper: returns true when gallery popover is currently visible
+  function isPopoverOpen(){
+    try {
+      if (window.__galleryPopoverActive) return true; // defensive global
+      const p = document.getElementById('galleryPopover');
+      return p && p.getAttribute('aria-hidden') === 'false';
+    } catch(e){ return !!window.__galleryPopoverActive; }
+  }
+
+  function renderChildrenTree(items){
+    if (!items || !items.length) return '<div class="gcm-empty" style="color:#6b7280;">No items</div>';
+    let html = '<div class="gcm-list" style="display:flex;flex-direction:column;gap:10px;">';
+    items.forEach((m,mi) => {
+      // default: render all mother rows expanded so child + sub-child lists are visible
+      // render the mother title as a clickable link (if a URL exists) and keep a separate toggle button
+      html += `<div class="gcm-mother" style="display:flex;flex-direction:column;gap:6px;">`;
+      if (m.url) {
+        html += `<div style="display:flex;align-items:center;gap:8px;"><a class="gcm-mother-link" href="${escapeAttr(m.url||'#')}" target="_blank" rel="noopener noreferrer" style="display:block;width:100%;text-align:left;font-weight:700;font-size:1rem;color:#0369a1;text-decoration:none;padding:4px 0;cursor:pointer;">${escapeHtml(m.title)}</a><button class="gcm-mother-toggle" aria-expanded="true" data-index="${mi}" style="background:transparent;border:none;cursor:pointer;color:#0369a1;font-size:0.95rem;padding:4px 6px;"></button></div>`;
+      } else {
+        // no URL: render the mother title as a toggle but keep it visually blue
+      html += `<button class="gcm-mother-toggle" aria-expanded="true" data-index="${mi}" style="text-align:left;background:transparent;border:none;font-weight:700;font-size:1rem;cursor:pointer;color:#0369a1;">${escapeHtml(m.title)}</button>`;
+      }
+      if (m.children && m.children.length) {
+        // show child list by default
+        html += '<ul class="gcm-child-list" style="display:block;margin:4px 0 0 12px;padding-left:0;list-style:none;">';
+        m.children.forEach(c => {
+          // render active children as links, inactive as muted/plain text
+          if (c.active === 1 || c.active === '1' || c.active === true) {
+            html += `<li style="margin-bottom:6px;"><a href="${escapeAttr(c.url||'#')}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(c.title)}</a>`;
+          } else {
+            html += `<li style="margin-bottom:6px;"><span style="color:#9ca3af;">${escapeHtml(c.title)}</span>`;
+          }
+
+          if (c.children && c.children.length) {
+            // render sub-children; inactive sub-children are muted
+            html += '<ul class="gcm-subchild-list" style="margin-top:6px;margin-left:12px;list-style:none;padding-left:0;">';
+            c.children.forEach(sc => {
+              if (sc.active === 1 || sc.active === '1' || sc.active === true) {
+                html += `<li style="margin-bottom:4px;"><a href="${escapeAttr(sc.url||'#')}" target="_blank" rel="noopener noreferrer" style="color:#475569;text-decoration:none;font-size:0.95rem;">${escapeHtml(sc.title)}</a></li>`;
+              } else {
+                html += `<li style="margin-bottom:4px;"><span style="color:#9ca3af;font-size:0.95rem;">${escapeHtml(sc.title)}</span></li>`;
+              }
+            });
+            html += '</ul>';
+          }
+          html += '</li>';
+        });
+        html += '</ul>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // open a small popover anchored to the clicked card (preferred over the centered modal)
+  function openModalForCard(card){
+    // when popover is opening we want to lock the scrolling/wrapping logic so the track
+    // doesn't jump (especially for cards near the duplicated boundary). resume after close.
+    wrapSuspended = true;
+
+    // defensive: ensure any previously-open popover is fully cleaned up before opening a new one
+    try { closePopover(); } catch(e){}
+
+    const title = card.dataset.title || card.getAttribute('aria-label') || '';
+    const href = card.dataset.href || card.getAttribute('href') || '#';
+    let items = [];
+    try { items = card.dataset.children ? JSON.parse(card.dataset.children) : []; } catch(e){ console.error('[STsReport] failed to parse card.dataset.children', card && card.dataset && card.dataset.children, e); items = []; }
+
+    // fallback for duplicated/cloned cards that may not carry data-children:
+    if ((!items || !items.length) && card && card.dataset && (card.dataset.title || card.dataset.href)) {
+        try {
+            const keyTitle = card.dataset.title || '';
+            const keyHref = card.dataset.href || '';
+            const candidates = Array.from(document.querySelectorAll('.card-link'));
+            const source = candidates.find(el => (el.dataset && el.dataset.children) && (el.dataset.title === keyTitle || el.dataset.href === keyHref));
+            if (source && source.dataset && source.dataset.children) {
+                try { items = JSON.parse(source.dataset.children || '[]'); } catch(e) { items = items || []; }
+            }
+        } catch(e) { /* ignore fallback errors */ }
+    }
+
+    // populate popover
+    const pop = document.getElementById('galleryPopover');
+    const popBody = document.getElementById('galleryPopoverBody');
+    const popTitle = document.getElementById('galleryPopoverTitle');
+
+    popTitle.textContent = title;
+    try { popTitle.href = href || '#'; popTitle.setAttribute('aria-label', title); } catch(e) {}
+    // Render popover with two status panes ("On going" / "Completed"). Mothers remain top-level headers in both views.
+    function renderChildrenByStatus(list, status){
+      if (!Array.isArray(list)) return '<div class="gcm-empty" style="color:#6b7280;">No items</div>';
+      let sections = '';
+
+      // Include mother when ANY descendant (child OR sub-child) matches the status.
+      list.forEach((m) => {
+        const children = Array.isArray(m.children) ? m.children : [];
+
+        // For each top-level child determine if it should be shown:
+        // - show if child.status matches OR any of its sub-children match
+        const childrenToShow = children.map(c => {
+          const subs = Array.isArray(c.children) ? c.children : [];
+          const matchingSubs = subs.filter(sc => (sc.status||'On going') === status);
+          const childMatches = (c.status||'On going') === status;
+          if (childMatches || matchingSubs.length) return { child: c, matchingSubs };
+          return null;
+        }).filter(Boolean);
+
+        // if this `m` is a grouped mother (has nested children) we only show it when
+        // some descendant matches; otherwise, if m itself is a standalone item (no nested children)
+        // show it when its own status matches the selected status.
+        if (children.length > 0) {
+          if (!childrenToShow.length) return;
+        } else {
+          // standalone entry: treat `m` itself as an item (show only when m.status matches)
+          if ((m.status || 'On going') !== status) return;
+        }
+
+        let motherHtml = '<div class="gcm-mother" style="display:flex;flex-direction:column;gap:6px;">';
+        // only render a header when this entry is a grouped mother (has nested children)
+        if (children.length > 0) {
+          if (m.url) motherHtml += `<div style="display:flex;align-items:center;gap:8px;"><a href="${escapeAttr(m.url||'#')}" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#0369a1;text-decoration:none;">${escapeHtml(m.title)}</a></div>`;
+          else motherHtml += `<div style="font-weight:700;color:#0369a1;">${escapeHtml(m.title)}</div>`;
+        }
+
+        motherHtml += '<ul style="margin:4px 0 0 12px;padding-left:0;list-style:none;">';
+
+        // if this `m` has no nested children but `m` itself matches the status,
+        // render `m` as a standalone list item so top-level entries (like SWPDOP) appear
+        if (children.length === 0 && (m.status || 'On going') === status) {
+          if (m.url && m.url.trim()) {
+            motherHtml += `<li style="margin-bottom:6px;"><a href="${escapeAttr(m.url)}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(m.title)}</a></li>`;
+          } else {
+            motherHtml += `<li style="margin-bottom:6px;"><span style="color:#475569;">${escapeHtml(m.title)}</span></li>`;
+          }
+        }
+
+        childrenToShow.forEach(entry => {
+          const c = entry.child;
+          const matchingSubs = entry.matchingSubs;
+
+          // Render child — clickable if it has a URL, otherwise plain text.
+          if (c.url && c.url.trim()) {
+            motherHtml += `<li style="margin-bottom:6px;"><a href="${escapeAttr(c.url)}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(c.title)}</a>`;
+          } else {
+            motherHtml += `<li style="margin-bottom:6px;"><span style="color:#475569;">${escapeHtml(c.title)}</span>`;
+          }
+
+          // If the child itself matches the requested status, show its matching sub-children as well (if any)
+          if (matchingSubs && matchingSubs.length) {
+            motherHtml += '<ul style="margin-top:6px;margin-left:12px;list-style:none;padding-left:0;">';
+            matchingSubs.forEach(sc => {
+              if (sc.url && sc.url.trim()) {
+                motherHtml += `<li style="margin-bottom:4px;"><a href="${escapeAttr(sc.url)}" target="_blank" rel="noopener noreferrer" style="color:#475569;text-decoration:none;font-size:0.95rem;">${escapeHtml(sc.title)}</a></li>`;
+              } else {
+                motherHtml += `<li style="margin-bottom:4px;"><span style="color:#475569;font-size:0.95rem;">${escapeHtml(sc.title)}</span></li>`;
+              }
+            });
+            motherHtml += '</ul>';
+          }
+
+          motherHtml += '</li>';
+        });
+
+        motherHtml += '</ul>';
+        motherHtml += '</div>';
+
+        sections += motherHtml;
+      });
+
+      if (!sections) return '<div class="gcm-empty" style="color:#6b7280;">No items in this status</div>';
+      return `<div class="gcm-list" style="display:flex;flex-direction:column;gap:10px;">${sections}</div>`;
+    }
+
+    // build the tabbed status popover (hover over tabs switches view)
+    const tabHtml = `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <button class="gcm-status-btn active" data-status="Completed" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:linear-gradient(180deg,#ffffff,#f8fafc);cursor:pointer;font-weight:600;color:#0b2540;">Completed</button>
+        <button class="gcm-status-btn" data-status="On going" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:transparent;cursor:pointer;font-weight:600;color:#6b7280;">On going</button>
+      </div>
+      <div class="gcm-status-views">
+        <div class="gcm-status-view" data-status="Completed">${renderChildrenByStatus(items, 'Completed')}</div>
+        <div class="gcm-status-view" data-status="On going" style="display:none">${renderChildrenByStatus(items, 'On going')}</div>
+      </div>
+    `;
+
+    popBody.innerHTML = tabHtml;
+
+    // wire hover / click behavior for the status buttons
+    try {
+      const tabs = popBody.querySelectorAll('.gcm-status-btn');
+      const views = popBody.querySelectorAll('.gcm-status-view');
+      tabs.forEach(t => {
+        const showFor = (st) => {
+          tabs.forEach(x => { x.classList.toggle('active', x === t); x.style.background = (x === t) ? 'linear-gradient(180deg,#ffffff,#f8fafc)' : 'transparent'; x.style.color = (x === t) ? '#0b2540' : '#6b7280'; } );
+          views.forEach(v => v.style.display = (v.getAttribute('data-status') === st) ? 'block' : 'none');
+        };
+        t.addEventListener('mouseenter', () => showFor(t.getAttribute('data-status')) );
+        t.addEventListener('focus', () => showFor(t.getAttribute('data-status')) );
+        t.addEventListener('click', (ev) => { ev.preventDefault(); showFor(t.getAttribute('data-status')); });
+      });
+    } catch(e){ console.error('status tabs wiring failed', e); }
+
+    // also ensure the centered modal title (fallback) has the href available
+    try { if (modalTitle) { modalTitle.textContent = title; modalTitle.href = href || '#'; modalTitle.setAttribute('aria-label', title); } } catch(e) {}
+
+    // show & position popover
+    pop.setAttribute('aria-hidden','false');
+    pop.style.display = 'block';
+
+    // mark popover anchor and pause gallery autoscroll while popover is open
+    try { window.__galleryPopoverActive = true; } catch(e){}
+    try { pop._anchor = card; } catch(e){}
+    try { pop._anchorKey = (card && (card.dataset && (card.dataset.title || card.dataset.href))) || ''; } catch(e){}
+
+    // add lifted class to all matching (duplicated) cards so the extension remains visible while popover is open
+    try {
+        const key = pop._anchorKey || '';
+        if (key) {
+            document.querySelectorAll('.card-link').forEach(function(el){
+                try { if ((el.dataset && (el.dataset.title === key || el.dataset.href === key)) ) el.classList.add('card-lifted'); } catch(e){}
+            });
+        }
+    } catch(e){}
+
+    try { _clearAutoResume(); } catch(e){}
+    try { running = false; scroller.classList.add('autoscroll-paused'); } catch(e){}
+    // pause CSS animation (if present) and freeze transform-track offset when in transform-mode
+    try { const track = document.querySelector('.marquee-track'); if (track) { track.style.animationPlayState = 'paused'; track.dataset.frozen = '1'; } } catch(e){}
+    // cancel any hover-snap so the popover holds the gallery steady
+    try { cancelHoverSnap(card); } catch(e){}
+
+    // Prefer to anchor the popover to the card's right edge ("extension edge").
+    // If insufficient horizontal space, flip to the left; otherwise center as a fallback.
+    const rect = card.getBoundingClientRect();
+    // ensure pop is rendered to compute size
+    const popRect = pop.getBoundingClientRect();
+    const margin = 8;
+
+    // primary placement: to the RIGHT of the card (aligned vertically center)
+    let left = Math.round(rect.right + margin);
+    let top = Math.round(rect.top + (rect.height - popRect.height) / 2);
+
+    // if right-side placement would overflow, try left-side placement
+    if (left + popRect.width > window.innerWidth - margin) {
+      const leftAlt = Math.round(rect.left - popRect.width - margin);
+      if (leftAlt >= margin) {
+        left = leftAlt;
+      } else {
+        // final fallback: horizontally center near the card (clamped)
+        left = Math.round(rect.left + (rect.width / 2) - (popRect.width / 2));
+        left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
+      }
+    }
+
+    // clamp vertical position so popover remains visible
+    top = Math.max(margin, Math.min(top, window.innerHeight - popRect.height - margin));
+
+    // account for document scroll
+    pop.style.left = (left + window.pageXOffset) + 'px';
+    pop.style.top = (top + window.pageYOffset) + 'px';
+
+    // focus first interactive element inside popover and ensure the
+    // extension itself is scrolled into view (use card for anchor if pop
+    // is absolutely positioned offscreen). doing this after a timeout
+    // lets layout settle.
+    setTimeout(() => {
+      try {
+        // simple attempt first; keeps horizontal centering
+        pop.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+      } catch(e) {}
+      try {
+        // ensure the underlying card is visible as well
+        card && card.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+      } catch(e) {}
+      // additionally make sure the *entire* popover rectangle is within
+      // the viewport. if the element is taller than the viewport we can't fit
+      // it fully, so instead aim to center the popover's midpoint in the
+      // window (this brings the middle body area into view).
+      try {
+        const r = pop.getBoundingClientRect();
+        const margin = 12;
+        if (r.height <= window.innerHeight) {
+          if (r.top < margin) {
+            window.scrollBy({ top: r.top - margin, behavior:'smooth' });
+          } else if (r.bottom > window.innerHeight - margin) {
+            window.scrollBy({ top: r.bottom - window.innerHeight + margin, behavior:'smooth' });
+          }
+        } else {
+          // popover taller than viewport: center its midpoint
+          const popCenter = r.top + r.height/2;
+          const goal = window.innerHeight/2;
+          window.scrollBy({ top: popCenter - goal, behavior:'smooth' });
+        }
+        // finally, if there is an rsm-header within the popover, ensure its
+        // own midpoint is centered (this targets the header specifically).
+        // because you want to see more of the header's body, we add an extra
+        // downward offset equal to half the header height; this pushes the
+        // midpoint further down the screen so the middle of the header is
+        // clearly visible rather than being right at the top edge.
+        const hdr = pop.querySelector('.rsm-header');
+        if (hdr) {
+          const hr = hdr.getBoundingClientRect();
+          const hdrCenter = hr.top + hr.height/2;
+          const winCenter = window.innerHeight/2;
+          const extra = hr.height/2; // additional scroll amount
+          window.scrollBy({ top: hdrCenter - winCenter + extra, behavior:'smooth' });
+        }
+        // finally, nudge the whole popover midpoint down a bit more so the
+        // true centre of the extension is visible rather than the very top
+        try {
+          const pr = pop.getBoundingClientRect();
+          const popMid = pr.top + pr.height/2;
+          const winMid = window.innerHeight/2;
+          const extra2 = pr.height/4; // push the midpoint further down
+          window.scrollBy({ top: popMid - winMid + extra2, behavior:'smooth' });
+        } catch(_e) {}
+      } catch(_e) {}
+      // ensure the popover container itself can receive focus for overall
+      // keyboard interactions; this makes the whole extension 'active'.
+      try {
+        pop.tabIndex = -1;
+        pop.focus();
+      } catch(e) {}
+      const first = pop.querySelector('a,button,[tabindex]');
+      if (first) first.focus();
+    }, 0);
+
+    // attach one-time handlers to close popover on outside click / Escape / resize / scroll
+    function _docClick(ev){ if (!pop.contains(ev.target) && !card.contains(ev.target)) closePopover(); }
+    function _onKey(ev){ if (ev.key === 'Escape') closePopover(); }
+    function _onScroll(){ closePopover(); }
+
+    document.addEventListener('click', _docClick);
+    document.addEventListener('keydown', _onKey);
+    window.addEventListener('resize', _onScroll);
+    (document.querySelector('.container-cards') || window).addEventListener('scroll', _onScroll, { passive:true });
+
+    // wire close button
+    const popCloseBtn = document.getElementById('galleryPopoverClose');
+    if (popCloseBtn) popCloseBtn.onclick = closePopover;
+
+    // store cleanup references so closePopover can remove them
+    pop._cleanup = { _docClick, _onKey, _onScroll };
+  }
+
+  function closeModal(){
+    // keep the centered modal available as fallback — hide both
+    try { closePopover(); } catch(e){}
+    modal.setAttribute('aria-hidden','true');
+    modal.style.display = 'none';
+  }
+
+  function closePopover(){
+    const pop = document.getElementById('galleryPopover');
+    if (!pop || pop.getAttribute('aria-hidden') === 'true') return;
+    pop.setAttribute('aria-hidden','true');
+    pop.style.display = 'none';
+    // remove attached handlers
+    try {
+      const c = pop._cleanup || {};
+      if (c._docClick) document.removeEventListener('click', c._docClick);
+      if (c._onKey) document.removeEventListener('keydown', c._onKey);
+      if (c._onScroll) window.removeEventListener('resize', c._onScroll);
+      const sc = document.querySelector('.container-cards') || window;
+      sc.removeEventListener('scroll', c._onScroll);
+    } catch(e){}
+    pop._cleanup = null;
+
+    // defensive cleanup: remove any leftover lifted state that could block interaction
+    try { document.querySelectorAll('.card-link.card-lifted').forEach(el => el.classList.remove('card-lifted')); } catch(e){}
+    try {
+        // remove 'card-lifted' from any duplicated cards that matched the popover anchor key
+        const anchorKey = pop && pop._anchorKey ? pop._anchorKey : null;
+        if (anchorKey) {
+            document.querySelectorAll('.card-link').forEach(function(el){
+                try { if (el.dataset && (el.dataset.title === anchorKey || el.dataset.href === anchorKey)) el.classList.remove('card-lifted'); } catch(e){}
+            });
+        }
+    } catch(e){}
+
+    try { pop._anchor = null; pop._anchorKey = null; } catch(e){}
+    try { window.__galleryPopoverActive = false; } catch(e){}
+    // allow wrapping again once the popover fully closes
+    wrapSuspended = false;
+    // restore CSS animation / thaw transform-track
+    try { const track = document.querySelector('.marquee-track'); if (track) { track.dataset.frozen = '0'; track.style.animationPlayState = ''; } } catch(e){}
+    // allow auto-resume (but only if no extension/popover remains open) — schedule rather than immediate
+    try { _scheduleAutoResume(); } catch(e){}
+  }
+
+  // automatically close any open gallery extension when the slider's active region changes
+  document.addEventListener('sliderActiveRegionChanged', function(e){
+      try { closePopover(); } catch(e){}
+      let region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
+      if (!region && e && e.detail) {
+          // try to derive a name from the detail object
+          region = deriveRegionFromSlider(e.detail) || null;
+      }
     // remember last active region for other components (e.g. card click logging)
     try { window.__lastActiveRegion = (typeof normalizeRegionText === 'function') ? normalizeRegionText(region) : region; } catch(e) { window.__lastActiveRegion = region; }
+    // update the ST titles header right away
+    try { const hdr = rsmEl('rsm-st-listing-header'); if (hdr) hdr.textContent = `ST Titles for ${window.__lastActiveRegion || ''}`; } catch(_){ }
 
       // log available years, provinces, and cities for the new region
       if (region && window.parent && window.parent.regionMap) {
@@ -3101,10 +4669,19 @@ document.addEventListener('DOMContentLoaded', function(){
       const provEl = document.getElementById('rsm-filter-prov');
       const cityEl = document.getElementById('rsm-filter-city');
       const yearEl = document.getElementById('rsm-filter-year');
-      // reset
-      if (provEl) provEl.innerHTML = '';
-      if (cityEl) cityEl.innerHTML = '';
-      if (yearEl) yearEl.innerHTML = '';
+      // reset DOM options and clear any select2 selections
+      if (provEl) {
+          provEl.innerHTML = '';
+          try { if (window.jQuery && jQuery(provEl).data('select2')) jQuery(provEl).val([]).trigger('change'); } catch(_){ }
+      }
+      if (cityEl) {
+          cityEl.innerHTML = '';
+          try { if (window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).val([]).trigger('change'); } catch(_){ }
+      }
+      if (yearEl) {
+          yearEl.innerHTML = '';
+          try { if (window.jQuery && jQuery(yearEl).data('select2')) jQuery(yearEl).val([]).trigger('change'); } catch(_){ }
+      }
       // Prefer client-provided regionMap (populated by parent). If missing
       // or empty, fetch the aggregated JSON from the server endpoint so
       // selects can be populated even when embedded or when regionMap
@@ -3158,6 +4735,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 fillFromMap(m);
                 // also cache last payload for other code paths
                 try { payload.region = normalizeRegionText(region); window._lastRsmPayload = payload; } catch(e){}
+                try { setTimeout(applyRsmFilters,0); } catch(_){ }
             }).catch(err => {
                 console.error('populateRegionFilters fetch failed', err);
             });
@@ -3211,14 +4789,25 @@ document.addEventListener('DOMContentLoaded', function(){
           const headerEl = rsmEl('rsm-st-listing-header');
           // debug: log incoming parameters and payload
           console.log('[RSM] renderStTitlesFromRows called', { regionParam, payload: window._lastRsmPayload, lastActive: window.__lastActiveRegion });
-          // determine header text using payload or active region; fall back
-          // to passed param only if necessary.
+          // determine header text. prefer the active slider image since
+          // that's the one currently showing – this prevents stale
+          // __lastActiveRegion values from misleading us.
           let disp = 'this region';
-          if (window._lastRsmPayload && window._lastRsmPayload.region) {
+          try {
+              const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+              if (activeImg) {
+                  const candidate = (activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number') || '').toString();
+                  if (candidate) disp = candidate;
+              }
+          } catch(_){ }
+          // fallback to payload/lastActive/param if header still blank
+          if ((!disp || disp === 'this region') && window._lastRsmPayload && window._lastRsmPayload.region) {
               disp = window._lastRsmPayload.region;
-          } else if (window.__lastActiveRegion) {
+          }
+          if ((!disp || disp === 'this region') && window.__lastActiveRegion) {
               disp = window.__lastActiveRegion;
-          } else if (regionParam) {
+          }
+          if ((!disp || disp === 'this region') && regionParam) {
               disp = regionParam;
           }
           console.log('[RSM] renderStTitlesFromRows disp before normalization', disp);
@@ -3309,6 +4898,11 @@ document.addEventListener('DOMContentLoaded', function(){
   if (provSel) {
 
       provSel.addEventListener('change', function(ev){
+          try {
+              const provs = _getSelectedValues('rsm-filter-prov');
+              const switched = maybeSwitchRegionForProvinces(provs);
+              if (switched) return; // don't run filters until new payload loads
+          } catch(e) { console.error('[RSM] maybeSwitchRegionForProvinces error', e); }
           // delay until value has been updated by select2
           setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
       });
@@ -3318,6 +4912,10 @@ document.addEventListener('DOMContentLoaded', function(){
       if (window.jQuery && jQuery(provSel).data('select2')) {
           const $prov = jQuery(provSel);
           $prov.on('change.select2 select2:select select2:unselect', function(ev){
+              try {
+                  const provs = _getSelectedValues('rsm-filter-prov');
+                  maybeSwitchRegionForProvinces(provs);
+              } catch(e) { console.error('[RSM] maybeSwitchRegionForProvinces error', e); }
               setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
           });
       }
@@ -4907,57 +6505,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     cancelLift(card);
                     cancelHoverSnap(card);
                     try {
-                        if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); }
-                        else { running = false; scroller.classList.add('autoscroll-paused'); }
-                    } catch(e){ if (!hoverSnap.active) { running = true; scroller.classList.remove('autoscroll-paused'); } }
-                }
-                document.addEventListener('mouseover', docOverHandler, true);
-                document.addEventListener('mouseout', docOutHandler, true);
-
-                // fallback: document-level mousemove using bounding-box check (works even when events are intercepted)
-                let _lastHoverCard = null;
-                let _lastMousePos = { x: 0, y: 0 };
-                let _mouseRaf = null;
-
-                // ensure expanded content remains visible without centering the card
-                function smoothScrollLeftTo(target, duration = 260){
-                    if (useTransformFallback) return; // skip for transform-mode
-                    target = Math.max(0, Math.min(originalWidth - scroller.clientWidth, Math.round(target)));
-                    const start = scroller.scrollLeft;
-                    const delta = target - start;
-                    if (Math.abs(delta) < 2) return;
-                    const startTs = performance.now();
-                    function step(ts){
-                        const t = Math.min(1, (ts - startTs) / duration);
-                        // easeInOutQuad
-                        const eased = t < 0.5 ? 2*t*t : -1 + (4 - 2*t) * t;
-                        scroller.scrollLeft = Math.round(start + delta * eased);
-                        if (t < 1) requestAnimationFrame(step);
-                    }
-                    requestAnimationFrame(step);
-                }
-
-                function ensureExpandedVisible(card){
-                    if (!card || useTransformFallback) return;
-                    try {
-                        const scRect = scroller.getBoundingClientRect();
-                        const cRect = card.getBoundingClientRect();
-                        const visibleW = scroller.clientWidth || scRect.width;
-                        const EXPAND_MARGIN = 24;
-                        const cardWidth = card.offsetWidth || (cRect.width || 240);
-                        const expandedGuess = Math.max(760, Math.round(cardWidth * 1.6));
-                        const visualLeftAfterCenter = Math.round(cRect.left - scRect.left);
-                        const expandedRight = visualLeftAfterCenter + expandedGuess;
-                        const expandedLeft = visualLeftAfterCenter;
-
-                        let shift = 0;
-                        if (expandedRight > (visibleW - EXPAND_MARGIN)) {
-                            shift = expandedRight - (visibleW - EXPAND_MARGIN);
-                        } else if (expandedLeft < EXPAND_MARGIN) {
-                            shift = expandedLeft - EXPAND_MARGIN; // negative
-                        }
-
-                        if (shift !== 0) {
                             const newScroll = scroller.scrollLeft + shift;
                             smoothScrollLeftTo(newScroll, 260);
                         }

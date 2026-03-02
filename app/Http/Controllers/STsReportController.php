@@ -64,7 +64,8 @@ class STsReportController extends Controller
         if (strpos($regionText, 'ilocos') !== false) return 'Region I';
         if (strpos($regionText, 'cagayan valley') !== false) return 'Region II';
         if (strpos($regionText, 'central luzon') !== false) return 'Region III';
-        if (strpos($regionText, 'calabarzon') !== false) return 'Region IV-A';
+        // accept the familiar acronym and common misspelling
+        if (strpos($regionText, 'calabarzon') !== false || strpos($regionText, 'calborazon') !== false) return 'Region IV-A';
         if (strpos($regionText, 'mimaropa') !== false) return 'Region IV-B';
         if (strpos($regionText, 'bicol') !== false) return 'Region V';
         if (strpos($regionText, 'western visayas') !== false) return 'Region VI';
@@ -125,17 +126,23 @@ class STsReportController extends Controller
         $filteredData = $all['data'];
 
         if (!empty($region)) {
-            $filteredData = array_filter($all['data'], function ($row) use ($region) {
+            // normalise the input just as ajaxRegionHierarchy does
+            $lookupRegion = $region;
+            $norm = $this->inferRegionCodeFromRow(['region' => $region]);
+            if ($norm !== null) {
+                $lookupRegion = $norm;
+            }
+            $filteredData = array_filter($all['data'], function ($row) use ($lookupRegion) {
                 $title = trim($row['title'] ?? '');
                 if ($title === '') {
                     return false; // discard whitespace-only titles early
                 }
                 $code = $this->inferRegionCodeFromRow($row);
-                if ($code !== null && $code === $region) {
+                if ($code !== null && $code === $lookupRegion) {
                     return true;
                 }
                 $raw = strtolower(trim($row['region'] ?? ''));
-                return $raw !== '' && strpos($raw, strtolower($region)) !== false;
+                return $raw !== '' && strpos($raw, strtolower($lookupRegion)) !== false;
             });
         }
 
@@ -188,17 +195,28 @@ class STsReportController extends Controller
 
         $filtered = $all['data'];
         $province = $request->input('province');
+        // normalise the incoming region parameter before we start filtering; this
+        // allows callers to supply either a canonical code ("Region IV-A") or
+        // one of the aliases/typos like "CALABARZON" and still match rows whose
+        // inferred code is the canonical form.
+        $lookupRegion = $region;
         if (!empty($region)) {
-            $filtered = array_filter($filtered, function ($row) use ($region) {
+            $norm = $this->inferRegionCodeFromRow(['region' => $region]);
+            if ($norm !== null) {
+                $lookupRegion = $norm;
+            }
+        }
+        if (!empty($region)) {
+            $filtered = array_filter($filtered, function ($row) use ($lookupRegion) {
                 // sanitize title/municipality for trimming tests as well
                 $clean = function($s) { return preg_replace('/[\x00-\x1F\x7F]+/u','', (string)$s); };
                 $row['title'] = trim($clean($row['title'] ?? ''));
                 $code = $this->inferRegionCodeFromRow($row);
-                if ($code !== null && $code === $region) {
+                if ($code !== null && $code === $lookupRegion) {
                     return true;
                 }
                 $raw = strtolower(trim($row['region'] ?? ''));
-                return $raw !== '' && strpos($raw, strtolower($region)) !== false;
+                return $raw !== '' && strpos($raw, strtolower($lookupRegion)) !== false;
             });
         }
         if (!empty($province)) {

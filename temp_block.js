@@ -142,7 +142,8 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (s.includes('ilocos')) return 'Region I';
 		if (s.includes('cagayan valley')) return 'Region II';
 		if (s.includes('central luzon')) return 'Region III';
-		if (s.includes('calabarzon')) return 'Region IV-A';
+		// treat typo as IV-A as well
+		if (s.includes('calabarzon') || s.includes('calborazon')) return 'Region IV-A';
 		if (s.includes('mimaropa')) return 'Region IV-B';
 		if (s.includes('bicol')) return 'Region V';
 		if (s.includes('western visayas')) return 'Region VI';
@@ -195,7 +196,9 @@ document.addEventListener("DOMContentLoaded", function () {
 			const img = slide.querySelector('img');
 			if (!img) return;
 			const fileName = (img.dataset.img||img.src||'').split('/').pop();
-			const region = filenameToRegion[fileName] || img.getAttribute('data-region-name') || ('Region ' + (img.getAttribute('data-region-number')||''));
+			// same fallback as main script: use mapped name or explicit name,
+			// otherwise use the raw number so digit-normalizer can convert it.
+			const region = filenameToRegion[fileName] || img.getAttribute('data-region-name') || (img.getAttribute('data-region-number')||'');
 			if (regions.includes(region)) {
 				slide.style.display = '';
 			} else {
@@ -514,8 +517,8 @@ document.addEventListener("DOMContentLoaded", function () {
 		'1': 'Ilocos Region',
 		'2': 'Cagayan Valley',
 		'3': 'Central Luzon',
-		'4a': 'CALABARZON',
-		'4b': 'MIMAROPA',
+		'4a': 'Region IV-A – CALABARZON',
+		'4b': 'Region IV-B – MIMAROPA',
 		'5': 'Bicol Region',
 		'6': 'Western Visayas',
 		'7': 'Central Visayas',
