@@ -11,6 +11,45 @@ function fetchEl(id) {
 }
 function rsmEl(id) { return fetchEl(id); }
 
+// helper that determines what region the UI is currently showing. this
+// duplicates the logic used in several places below but keeps it together
+// so we can compare cached payloads against the live region and fetch a
+// fresh payload if they ever diverge (this prevents filters from running
+// against stale data after a slider transition).
+function getCurrentRegion(){
+    let region = null;
+    if (window.__lastActiveRegion) {
+        region = window.__lastActiveRegion;
+    }
+    if (!region) {
+        const provSel = document.getElementById('rsm-filter-prov');
+        if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+            region = provSel._lastRegionEvent.regionName;
+        }
+    }
+    if (!region) {
+        const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+        if (activeImg) {
+            region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+        }
+    }
+    if (!region) {
+        const modalImg = document.getElementById('rsm-modal-image');
+        if (modalImg) region = modalImg.getAttribute('data-region-name');
+    }
+    // normalize digits ("2" -> "Region II") to keep in step with server
+    if (/^\d+$/.test(region)) {
+        const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
+        const num = parseInt(region,10);
+        region = 'Region ' + (romans[num] || region);
+    }
+    // finally run through our canonical normalizer if available
+    if (typeof normalizeRegionText === 'function') {
+        try { region = normalizeRegionText(region); } catch(e) {}
+    }
+    return region;
+}
+
 // --- client-side filter apply/reset handlers ---------------------------------
 // utility used by several filtering routines.  use `rsmEl` so that
 // we support scenarios where the filter controls live in a parent frame
@@ -55,6 +94,35 @@ function getRowYear(r){
     return ((r && (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of)) || '').toString().trim();
 }
 
+// globally-available helper used by filters and other listeners. defined
+// at the top of the script so that calls from applyRsmFilters will not
+// throw even if the province dropdown has not yet been attached to the
+// DOM.  The implementation mirrors the later in-file blocks but lives
+// in the global scope.
+function deriveCurrentRegion(){
+    let region = window.__lastActiveRegion || null;
+    if (!region) {
+        const provSel = document.getElementById('rsm-filter-prov');
+        if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
+            region = provSel._lastRegionEvent.regionName;
+        }
+    }
+    if (!region) {
+        const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+        if (activeImg) {
+            region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
+        }
+    }
+    if (!region) {
+        const modalImg = document.getElementById('rsm-modal-image');
+        if (modalImg) region = modalImg.getAttribute('data-region-name');
+    }
+    if (typeof normalizeRegionText === 'function') {
+        try { region = normalizeRegionText(region); } catch(e) {}
+    }
+    return region;
+}
+
 // make a harmless placeholder available immediately so that code which
 // fires before the real implementation loads doesn't throw an error.
 // the real version will overwrite this when it is defined later in the
@@ -69,7 +137,20 @@ function renderStTitlesFromRows(rows, regionParam) {
     try {
         const stListEl = rsmEl('rsm-st-list');
         const headerEl = rsmEl('rsm-st-listing-header');
-        if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+        // determine display region from cached payload / active region;
+        // fall back to provided parameter only if other sources missing.
+        let disp = 'this region';
+        if (window._lastRsmPayload && window._lastRsmPayload.region) {
+            disp = window._lastRsmPayload.region;
+        } else if (window.__lastActiveRegion) {
+            disp = window.__lastActiveRegion;
+        } else if (regionParam) {
+            disp = regionParam;
+        }
+        if (typeof normalizeRegionText === 'function') {
+            try { disp = normalizeRegionText(disp); } catch(e) {}
+        }
+        if (headerEl) headerEl.textContent = `ST Titles for ${disp}`;
         if (!stListEl) return;
         if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
         const titleMap = {};
@@ -100,6 +181,19 @@ function renderStTitlesFromRows(rows, regionParam) {
 function applyRsmFilters(){
     // local truthiness helper in case outer scope failed to define it
     const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
+
+    // if our cached payload belongs to a different region than the UI is
+    // currently showing then drop it so that the subsequent logic will
+    // trigger a fresh fetch. this guards against timing issues where a
+    // slider change may still be in-flight when the user clicks "Filter".
+    let payload = window._lastRsmPayload || null;
+    const currentRegion = getCurrentRegion();
+    if (payload && payload.region && currentRegion && payload.region !== currentRegion) {
+        console.warn('[RSM] discarding stale payload', payload.region, 'expected', currentRegion);
+        window._lastRsmPayload = null;
+        payload = null;
+    }
+
     // make sure city/year options exist before we read selections; the
     // list is built by updateProvinceFilters which is normally invoked
     // when the province selector changes. only refresh if the selects are
@@ -133,8 +227,8 @@ function applyRsmFilters(){
         const citiesDbg = _getSelectedValues('rsm-filter-city');
         const yearsDbg = _getSelectedValues('rsm-filter-year');
         const rawCityVal = (window.jQuery && jQuery('#rsm-filter-city').length) ? jQuery('#rsm-filter-city').val() : null;
-        console.log('[RSM] applyRsmFilters called', { provs: provsDbg, cities: citiesDbg, years: yearsDbg, rawCityVal });
-        let payload = window._lastRsmPayload || null;
+        const currentRegion = deriveCurrentRegion() || window.__lastActiveRegion || (window._lastRsmPayload && window._lastRsmPayload.region);
+        console.log('[RSM] applyRsmFilters called', { provs: provsDbg, cities: citiesDbg, years: yearsDbg, rawCityVal, currentRegion });
         if (!payload || !Array.isArray(payload.allRows)) {
             console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
             // try to derive region param from last active region or modal image
@@ -169,6 +263,7 @@ function applyRsmFilters(){
             // selected province (use parent.regionMap which was populated
             // when the iframe was loaded). this covers cases where the
             // user just picked a province without ever clicking the slider.
+            console.log('[RSM] derived regionParam (pre-province)', regionParam);
             if (!regionParam) {
                 try {
                     const provSel = document.getElementById('rsm-filter-prov');
@@ -178,7 +273,7 @@ function applyRsmFilters(){
                             const map = window.parent.regionMap[r] || {};
                             const list = Object.keys(map.provinces || {});
                             if (list.some(p=>p.toString().trim().toLowerCase() === provVal)) {
-                                regionParam = r;
+                                try { regionParam = normalizeRegionText(r); } catch(e) { regionParam = r; }
                                 return true;
                             }
                             return false;
@@ -204,7 +299,7 @@ function applyRsmFilters(){
                 // perform same AJAX used elsewhere
                 const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
                 console.log('[RSM] fetching payload url', url);
-                fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
+                fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { console.log('[RSM] payload received', p); try { p.region = normalizeRegionText(regionParam); } catch(e) { p.region = regionParam; } window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
             } catch(e) { console.error('[RSM] fetch fallback exception', e); }
             return;
         }
@@ -313,7 +408,9 @@ function applyRsmFilters(){
         if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, null);
 
         // update ST titles listing
-        renderStTitlesFromRows(filtered, (payload && payload.region) || window.__lastActiveRegion || 'this region');
+        const hdrRegion = (payload && payload.region) || window.__lastActiveRegion || 'this region';
+        console.log('[RSM] hdrRegion for render', hdrRegion, 'payload.region', payload && payload.region, 'lastActive', window.__lastActiveRegion);
+        renderStTitlesFromRows(filtered, hdrRegion);
 
         // update provinces list to only show provinces present in filtered rows
         try {
@@ -370,27 +467,6 @@ document.addEventListener('click', function(ev){
 // when province picker changes, refresh city list
 const provSel = document.getElementById('rsm-filter-prov');
 if (provSel) {
-    function deriveCurrentRegion(){
-        // replicate regionParam derivation from applyRsmFilters
-        let region = window.__lastActiveRegion || null;
-        if (!region) {
-            const provSel = document.getElementById('rsm-filter-prov');
-            if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
-                region = provSel._lastRegionEvent.regionName;
-            }
-        }
-        if (!region) {
-            const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
-            if (activeImg) {
-                region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
-            }
-        }
-        if (!region) {
-            const modalImg = document.getElementById('rsm-modal-image');
-            if (modalImg) region = modalImg.getAttribute('data-region-name');
-        }
-        return region;
-    }
 
     function updateProvinceFilters(){
         console.log('[RSM] updateProvinceFilters called');
@@ -408,15 +484,16 @@ if (provSel) {
             const regionParam = deriveCurrentRegion();
             if (regionParam) {
                 const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
-                  .then(p => {
-                      window._lastRsmPayload = p;
-                      payload = p;
-                      allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
-                      console.log('[RSM] fetched payload for province filter, rows', allRows.length);
-                      // rerun the filter logic now that we have rows
-                      updateProvinceFilters();
-                  }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
+                                fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
+                                    .then(p => {
+                                            try { p.region = normalizeRegionText(regionParam); } catch(e) { p.region = regionParam; }
+                                            window._lastRsmPayload = p;
+                                            payload = p;
+                                            allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
+                                            console.log('[RSM] fetched payload for province filter, rows', allRows.length);
+                                            // rerun the filter logic now that we have rows
+                                            updateProvinceFilters();
+                                    }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
                 return; // bail now; will re-enter when fetch completes
             }
         }
@@ -544,9 +621,20 @@ if (provSel) {
 }
 
 // store last region event on province element for use in change handler
+// also update __lastActiveRegion immediately so filters don't run on stale
+// value when the later listener hasn't attached yet.
 document.addEventListener('sliderActiveRegionChanged', function(e){
     const provSel2 = document.getElementById('rsm-filter-prov');
     if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
+    // mirror normalization logic from the later handler
+    let region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
+    if (!region && e && e.detail) {
+        region = deriveRegionFromSlider(e.detail) || null;
+    }
+    if (region && typeof normalizeRegionText === 'function') {
+        try { region = normalizeRegionText(region); } catch(_){}
+    }
+    try { window.__lastActiveRegion = region; } catch(_){ }
 });
 
 // fallback: poll the province selection and rebuild lists when it changes
@@ -1074,12 +1162,17 @@ document.addEventListener("DOMContentLoaded", function () {
 							'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 						};
 						const mappedRegion = filenameToRegion[fileName] || null;
-						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
+						let regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
+					console.log('[RSM] bottom preview regionParam before normalize', regionParam);
+				// normalize before using for fetch/listing
+				if (typeof normalizeRegionText === 'function') {
+					try { regionParam = normalizeRegionText(regionParam); console.log('[RSM] bottom preview normalized regionParam', regionParam); } catch(e){}
+				}
 						bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
-						fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
-							.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-							.then(payload => renderBottomProvinceList(payload))
-							.catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
+                        fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
+                            .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
+                            .then(payload => { try { payload.region = normalizeRegionText(regionParam); } catch(e) { payload.region = regionParam; } renderBottomProvinceList(payload); })
+                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
 					}
 				} catch(e) { console.error(e); }
 			} else {
@@ -1544,7 +1637,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Use demo1 AJAX endpoint which returns {provinces, grouped, allRows, uploadedCount...}
         fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionKey))
             .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-            .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
+            .then(payload => { try { payload.region = normalizeRegionText(regionKey); } catch(e) { payload.region = regionKey; } try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
 .catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
 
@@ -1706,7 +1799,15 @@ document.addEventListener("DOMContentLoaded", function () {
 				'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 			};
 			const mappedRegion = filenameToRegion[fileName] || null;
-			const regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
+			let regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
+			console.log('[RSM] initial regionParam from image', regionParam, 'file', fileName, 'mapped', mappedRegion);
+			// ensure canonical form (eg. "CALABARZON" -> "Region IV-A")
+			if (typeof normalizeRegionText === 'function') {
+				try {
+					regionParam = normalizeRegionText(regionParam);
+					console.log('[RSM] normalized regionParam to', regionParam);
+				} catch(e){ console.error('normalizeRegionText failed', e); }
+			}
 
 			// no modal wrappers – simply update image and data
 			const titleEl = rsmEl('rsm-modal-image');
@@ -1753,8 +1854,9 @@ document.addEventListener("DOMContentLoaded", function () {
 						}).join('');
 						provEl.setAttribute('aria-hidden','false');
 
-						// store last payload for quick lookup when interacting with provinces/cities
-						window._lastRsmPayload = payload;
+                        // store last payload for quick lookup when interacting with provinces/cities
+                        try { payload.region = normalizeRegionText(regionParam); } catch(e) { payload.region = regionParam; }
+                        window._lastRsmPayload = payload;
 
 						// capture-phase handler: ensure city clicks always render inline STs (runs before bubble handlers that may stopPropagation)
 						try {
@@ -1969,7 +2071,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         const stListEl = rsmEl('rsm-st-list');
                         const headerEl = rsmEl('rsm-st-listing-header');
                         if (headerEl) {
-                            headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+                            // normalise regionParam before displaying
+                            let hdr = regionParam || 'this region';
+                            if (typeof normalizeRegionText === 'function') {
+                                try { hdr = normalizeRegionText(hdr); } catch(e) {}
+                            }
+                            headerEl.textContent = `ST Titles for ${hdr}`;
                         }
                         if (!stListEl) return;
                         const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
@@ -2916,8 +3023,8 @@ document.addEventListener('DOMContentLoaded', function(){
           // try to derive a name from the detail object
           region = deriveRegionFromSlider(e.detail) || null;
       }
-      // remember last active region for other components (e.g. card click logging)
-      window.__lastActiveRegion = region;
+    // remember last active region for other components (e.g. card click logging)
+    try { window.__lastActiveRegion = (typeof normalizeRegionText === 'function') ? normalizeRegionText(region) : region; } catch(e) { window.__lastActiveRegion = region; }
 
       // log available years, provinces, and cities for the new region
       if (region && window.parent && window.parent.regionMap) {
@@ -3050,7 +3157,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 } catch(e) { console.error('populateRegionFilters: payload parse', e); }
                 fillFromMap(m);
                 // also cache last payload for other code paths
-                try { window._lastRsmPayload = payload; } catch(e){}
+                try { payload.region = normalizeRegionText(region); window._lastRsmPayload = payload; } catch(e){}
             }).catch(err => {
                 console.error('populateRegionFilters fetch failed', err);
             });
@@ -3102,7 +3209,24 @@ document.addEventListener('DOMContentLoaded', function(){
       try {
           const stListEl = rsmEl('rsm-st-list');
           const headerEl = rsmEl('rsm-st-listing-header');
-          if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
+          // debug: log incoming parameters and payload
+          console.log('[RSM] renderStTitlesFromRows called', { regionParam, payload: window._lastRsmPayload, lastActive: window.__lastActiveRegion });
+          // determine header text using payload or active region; fall back
+          // to passed param only if necessary.
+          let disp = 'this region';
+          if (window._lastRsmPayload && window._lastRsmPayload.region) {
+              disp = window._lastRsmPayload.region;
+          } else if (window.__lastActiveRegion) {
+              disp = window.__lastActiveRegion;
+          } else if (regionParam) {
+              disp = regionParam;
+          }
+          console.log('[RSM] renderStTitlesFromRows disp before normalization', disp);
+          if (typeof normalizeRegionText === 'function') {
+              try { disp = normalizeRegionText(disp); } catch(e) {}
+          }
+          console.log('[RSM] renderStTitlesFromRows disp after normalization', disp);
+          if (headerEl) headerEl.textContent = `ST Titles for ${disp}`;
           if (!stListEl) return;
           if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
           const titleMap = {};
@@ -3183,27 +3307,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // when province picker changes, refresh city list
   const provSel = document.getElementById('rsm-filter-prov');
   if (provSel) {
-      function deriveCurrentRegion(){
-          // replicate regionParam derivation from applyRsmFilters
-          let region = window.__lastActiveRegion || null;
-          if (!region) {
-              const provSel = document.getElementById('rsm-filter-prov');
-              if (provSel && provSel._lastRegionEvent && provSel._lastRegionEvent.regionName) {
-                  region = provSel._lastRegionEvent.regionName;
-              }
-          }
-          if (!region) {
-              const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
-              if (activeImg) {
-                  region = activeImg.getAttribute('data-region-name') || activeImg.getAttribute('data-region-number');
-              }
-          }
-          if (!region) {
-              const modalImg = document.getElementById('rsm-modal-image');
-              if (modalImg) region = modalImg.getAttribute('data-region-name');
-          }
-          return region;
-      }
 
       provSel.addEventListener('change', function(ev){
           // delay until value has been updated by select2
@@ -3228,9 +3331,19 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   // store last region event on province element for use in change handler
+  // also update canonical lastActiveRegion just in case this handler fires
+  // before the other (earlier in file) listener attaches.
   document.addEventListener('sliderActiveRegionChanged', function(e){
       const provSel2 = document.getElementById('rsm-filter-prov');
       if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
+      let region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
+      if (!region && e && e.detail) {
+          region = deriveCurrentRegion(); // already normalized
+      }
+      if (region && typeof normalizeRegionText === 'function') {
+          try { region = normalizeRegionText(region); } catch(_){}
+      }
+      try { window.__lastActiveRegion = region; } catch(_){ }
   });
 
   // fallback: poll the province selection and rebuild lists when it changes
@@ -3885,7 +3998,7 @@ document.addEventListener('DOMContentLoaded', function(){
     transform: none;
     transition: transform 320ms cubic-bezier(.2,.9,.2,1);
 }
-.swiper-slide { width: 220px; /* fixed size to fit container */ height: 240px; border-radius: 20px; overflow: hidden; transition: 0.4s ease; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.swiper-slide { width: 500px; /* fixed size to fit container */ height: 240px; border-radius: 20px; overflow: hidden; transition: 0.4s ease; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 .swiper-slide img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px; }
 /* even smaller zoom so layout stays tight */
 .swiper-slide-active { transform: scale(1.08); }

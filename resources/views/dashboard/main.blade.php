@@ -666,13 +666,29 @@
 						<div class="card-header text-center">SUMMARY OF ST TITLES</div>
 						<div class="card-body" style="padding: 32px 16px;">
 							<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 32px; width: 100%;">
-								<div style="flex: 0 0 460px; width: 460px; max-width: 460px; min-width: 460px; height: 480px; display: flex; align-items: center; justify-content: center; position: relative;">
+								 <!-- Additional Text Box -->
+									<div style="
+										bottom: 10px; 
+										padding: 10px; 
+										width: 500px;
+										height: 500px;
+										left: 10px;
+										border: 2px solid #333; 
+										background-color: rgba(255,255,255,0.8);
+										border-radius: 5px;
+										font-weight: bold;
+										position:absolute;
+										
+									">
+										Year MOA Data Info
+									</div>
+								<div style="flex: 0 0 460px; width: 460px; max-width: 460px; min-width: 460px; height: 480px; display: flex; align-items: center; justify-content: center; position: relative; left:500px">
 									<canvas id="stTitlesDoughnut" style="position:relative; z-index:2; width: 440px; height: 440px; max-width: 440px; min-width: 440px;"></canvas>
 									<!-- Inner doughnut for titles at or below 0.5% -->
 									<canvas id="stTitlesDoughnutLow" style="position:absolute; z-index:1; width: 220px; height: 220px; max-width: 240px; min-width: 200px; top:50%; left:50%; transform:translate(-50%, -50%);"></canvas>
 									<div id="doughnutTooltip" style="position:absolute;pointer-events:none;z-index:20;display:none;"></div>
 								</div>
-								<div id="stCategoryList" style="flex: 0 0 370px; width: 370px; max-width: 370px; min-width: 370px; height: 440px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background: #fafdff; border-radius: 12px; box-shadow: 0 2px 8px rgba(16,174,181,0.07); padding: 12px 8px;"></div>
+								<div id="stCategoryList" style="flex: 0 0 370px; width: 370px; max-width: 370px; min-width: 370px; height: 440px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background: #fafdff; border-radius: 12px; box-shadow: 0 2px 8px rgba(16,174,181,0.07); padding: 12px 8px; margin-left: 500px;"></div>
 								<!-- Custom tooltip for category list -->
 
 								<script>
@@ -708,12 +724,33 @@
 				<div class="card-header text-center">Filteration STs/Region</div>
 				<div class="card-body" style="padding: 32px 16px;">
 <div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; width: 100%; flex-wrap:wrap; gap:24px;">
-							<div class="year-chart-wrap" style="flex: 1 1 600px; width: 600px; max-width: 600px; min-width: 320px; height: 400px; display: flex; align-items: center; justify-content: center; position: relative;">
-							<canvas id="yearMoaBar" style="width: 580px; height: 380px; max-width: 580px; min-width: 320px;"></canvas>
-							</div>
+							<div style="display: flex; gap: 20px; align-items: center;">
+								<div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
+								
+								<!-- Year MOA Bar -->
+								<div class="year-chart-wrap" style="flex: 0 0 600px; height: 400px; display: flex; align-items: center; justify-content: center;">
+									<canvas id="yearMoaBar" style="width: 580px; height: 380px;"></canvas>
+								</div>
+
+								<!-- My Chart Container -->
+								<div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
+									<!-- Top My Chart -->
+									<div style="height: 200px; display: flex; align-items: center; justify-content: center;">
+									<canvas id="myLineChart1" style="width: 300px; height: 200px;"></canvas>
+									</div>
+
+									 <!-- Duplicate Line Chart -->
+										<div style="width: 300px; height: 200px; display: flex; align-items: center; justify-content: center;">
+											<canvas id="myLineChart2" style="width: 300px; height: 200px;"></canvas>
+										</div>
+								</div>
+
+</div>
+</div>
+							
 
 						<!-- Filter (moved OUTSIDE the chart wrapper) -->
-						<div class="year-filter-wrap" style="position:absolute; right:24px; top:50%; transform:translateY(-50%); z-index:6; flex:0 0 320px; max-width:320px; width:320px;">
+						<div class="year-filter-wrap" style="position:absolute; top:50%; transform:translateY(-50%); z-index:6; flex:0 0 320px; max-width:320px; width:320px;">
 							<div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
 								<div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
 								<div class="card-body" style="padding:12px;">
@@ -2812,6 +2849,57 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     }
 }
 
+	window.onload = function() {
+    const lineData = {
+        labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+        datasets: [{
+            label: 'My Line Dataset',
+            data: [65, 59, 80, 81, 56, 55, 40],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            fill: false,
+            tension: 0.1
+        }]
+    };
+
+    const lineConfig = {
+        type: 'line',
+        data: lineData,
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    };
+
+    // Initialize both line charts
+    new Chart(document.getElementById('myLineChart1').getContext('2d'), lineConfig);
+    new Chart(document.getElementById('myLineChart2').getContext('2d'), lineConfig);
+	new Chart(document.getElementById('myLineChart3').getContext('2d'), lineConfig);
+
+
+    // Example for yearMoaBar (also line chart)
+    new Chart(document.getElementById('yearMoaBar').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+            datasets: [{
+                label: 'Year MOA Data',
+                data: [10, 20, 15, 30, 25],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                fill: false,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+};
+        
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));
 
 	</script>

@@ -111,6 +111,17 @@ class STsReportController extends Controller
         $all = $this->getAllData();
         $region = $request->input('region_image');
 
+        // normalize the supplied region so callers can display a canonical
+        // label even if the parameter was an alias such as "Calabarzon".
+        $normalizedRegion = null;
+        if (!empty($region)) {
+            $normalizedRegion = $this->inferRegionCodeFromRow(['region' => $region]);
+            if ($normalizedRegion === null) {
+                // fall back to the original value if we cannot map it
+                $normalizedRegion = $region;
+            }
+        }
+
         $filteredData = $all['data'];
 
         if (!empty($region)) {
@@ -130,6 +141,7 @@ class STsReportController extends Controller
 
         return view('partials.st_listing_rows', [
             'filteredData' => $filteredData,
+            'region' => $normalizedRegion,
         ]);
     }
 
@@ -318,7 +330,17 @@ class STsReportController extends Controller
             $perYearTotals[$yr] = [ (int)$moaY, (int)$uploadedY, (int)$exprY, (int)$resY ];
         }
 
+        // include canonical region label so callers need not re-normalize
+        $canon = null;
+        if (!empty($region)) {
+            $canon = $this->inferRegionCodeFromRow(['region' => $region]);
+            if ($canon === null) {
+                $canon = $region;
+            }
+        }
+
         return response()->json([
+            'region' => $canon,
             'provinces' => $provinces,
             'grouped' => $grouped,
             'allRows' => $filtered,

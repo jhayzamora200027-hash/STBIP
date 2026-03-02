@@ -4,6 +4,8 @@
     <div class="modal-content modal-login-bg border-0">
       <div class="modal-body p-0">
         <div class="modal-login-content">
+          <h1>STB Inventory Portal</h1>
+          {{-- <img src="/images/dattachments/DSWD STB Bagong Pil logo.png" style="width:400px; height: 100px;margin-bottom:16px;"> --}}
           <h2 id="loginModalLabel">Login</h2>
           @if(session('error'))
             <div class="alert alert-danger">{{ session('error') }}</div>

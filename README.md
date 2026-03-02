@@ -70,10 +70,9 @@ php artisan config:clear
 
 # 3) Front-end (first time or when package.json changes)
 npm install
-# development (live reload)
 npm run dev
-# or production build (creates public/build/manifest.json)
 npm run build
+
 
 # 4) Database
 php artisan migrate
