@@ -12,14 +12,16 @@ class STsReportController extends Controller
         $path = $stsReportController->findLatestExcelPath();
 
         if (!$path) {
-            return ['data' => [], 'regions' => []];
+            return ['data' => [], 'regions' => [], 'headers' => []];
         }
 
         $parsed = $stsReportController->getParsedData($path);
 
+        // return headers too – callers that don't need them can ignore it
         return [
             'data' => $parsed['data'] ?? [],
             'regions' => $parsed['regions'] ?? [],
+            'headers' => $parsed['headers'] ?? [],
         ];
     }
 
@@ -64,8 +66,7 @@ class STsReportController extends Controller
         if (strpos($regionText, 'ilocos') !== false) return 'Region I';
         if (strpos($regionText, 'cagayan valley') !== false) return 'Region II';
         if (strpos($regionText, 'central luzon') !== false) return 'Region III';
-        // accept the familiar acronym and common misspelling
-        if (strpos($regionText, 'calabarzon') !== false || strpos($regionText, 'calborazon') !== false) return 'Region IV-A';
+        if (strpos($regionText, 'calabarzon') !== false) return 'Region IV-A';
         if (strpos($regionText, 'mimaropa') !== false) return 'Region IV-B';
         if (strpos($regionText, 'bicol') !== false) return 'Region V';
         if (strpos($regionText, 'western visayas') !== false) return 'Region VI';
@@ -112,43 +113,25 @@ class STsReportController extends Controller
         $all = $this->getAllData();
         $region = $request->input('region_image');
 
-        // normalize the supplied region so callers can display a canonical
-        // label even if the parameter was an alias such as "Calabarzon".
-        $normalizedRegion = null;
-        if (!empty($region)) {
-            $normalizedRegion = $this->inferRegionCodeFromRow(['region' => $region]);
-            if ($normalizedRegion === null) {
-                // fall back to the original value if we cannot map it
-                $normalizedRegion = $region;
-            }
-        }
-
         $filteredData = $all['data'];
 
         if (!empty($region)) {
-            // normalise the input just as ajaxRegionHierarchy does
-            $lookupRegion = $region;
-            $norm = $this->inferRegionCodeFromRow(['region' => $region]);
-            if ($norm !== null) {
-                $lookupRegion = $norm;
-            }
-            $filteredData = array_filter($all['data'], function ($row) use ($lookupRegion) {
+            $filteredData = array_filter($all['data'], function ($row) use ($region) {
                 $title = trim($row['title'] ?? '');
                 if ($title === '') {
                     return false; // discard whitespace-only titles early
                 }
                 $code = $this->inferRegionCodeFromRow($row);
-                if ($code !== null && $code === $lookupRegion) {
+                if ($code !== null && $code === $region) {
                     return true;
                 }
                 $raw = strtolower(trim($row['region'] ?? ''));
-                return $raw !== '' && strpos($raw, strtolower($lookupRegion)) !== false;
+                return $raw !== '' && strpos($raw, strtolower($region)) !== false;
             });
         }
 
         return view('partials.st_listing_rows', [
             'filteredData' => $filteredData,
-            'region' => $normalizedRegion,
         ]);
     }
 
@@ -193,30 +176,37 @@ class STsReportController extends Controller
         $all = $this->getAllData();
         $region = $request->input('region_image');
 
+        // short‑term cache keyed by region|province to speed up repeated clicks
+        $cacheKey = 'region_hierarchy_' . md5(($region ?: '') . '|' . ($request->input('province') ?: ''));
+        if (\Cache::has($cacheKey)) {
+            return response()->json(\Cache::get($cacheKey));
+        }
+
         $filtered = $all['data'];
-        $province = $request->input('province');
-        // normalise the incoming region parameter before we start filtering; this
-        // allows callers to supply either a canonical code ("Region IV-A") or
-        // one of the aliases/typos like "CALABARZON" and still match rows whose
-        // inferred code is the canonical form.
-        $lookupRegion = $region;
-        if (!empty($region)) {
-            $norm = $this->inferRegionCodeFromRow(['region' => $region]);
-            if ($norm !== null) {
-                $lookupRegion = $norm;
+        // determine status column indexes from headers (if available)
+        $headersArr = $all['headers'] ?? [];
+        $idxOng = null;
+        $idxDis = null;
+        foreach ($headersArr as $i => $h) {
+            if ($idxOng === null && stripos($h, 'ongoing') !== false) {
+                $idxOng = $i;
+            }
+            if ($idxDis === null && (stripos($h, 'dissolved') !== false || stripos($h, 'inactive') !== false)) {
+                $idxDis = $i;
             }
         }
+        $province = $request->input('province');
         if (!empty($region)) {
-            $filtered = array_filter($filtered, function ($row) use ($lookupRegion) {
+            $filtered = array_filter($filtered, function ($row) use ($region) {
                 // sanitize title/municipality for trimming tests as well
                 $clean = function($s) { return preg_replace('/[\x00-\x1F\x7F]+/u','', (string)$s); };
                 $row['title'] = trim($clean($row['title'] ?? ''));
                 $code = $this->inferRegionCodeFromRow($row);
-                if ($code !== null && $code === $lookupRegion) {
+                if ($code !== null && $code === $region) {
                     return true;
                 }
                 $raw = strtolower(trim($row['region'] ?? ''));
-                return $raw !== '' && strpos($raw, strtolower($lookupRegion)) !== false;
+                return $raw !== '' && strpos($raw, strtolower($region)) !== false;
             });
         }
         if (!empty($province)) {
@@ -240,6 +230,30 @@ class STsReportController extends Controller
                 || trim($clean($r['municipality'] ?? $r['city'] ?? '')) !== '';
         }));
 
+        // attach computed status string to each remaining row so client code
+        // can simply look at r.status. mimic MainReportController logic.
+        if (!empty($headersArr)) {
+            $truthy = function ($v) {
+                if (is_bool($v)) return $v;
+                $s = strtolower(trim((string)$v));
+                return in_array($s, ['1','true','yes','y','✓'], true);
+            };
+            foreach ($filtered as &$r) {
+                $st = '';
+                if (!empty($r['status'])) {
+                    $st = strtolower($r['status']);
+                }
+                if (!$st && $idxOng !== null && isset($r['row'][$idxOng]) && $truthy($r['row'][$idxOng])) {
+                    $st = 'ongoing';
+                }
+                if (!$st && $idxDis !== null && isset($r['row'][$idxDis]) && $truthy($r['row'][$idxDis])) {
+                    $st = 'dissolved';
+                }
+                $r['status'] = $st;
+            }
+            unset($r);
+        }
+
         list($provinces, $grouped) = $this->buildHierarchy($filtered);
 
         // compute attachment/year summaries (unchanged from previous logic)
@@ -260,33 +274,15 @@ class STsReportController extends Controller
 
                 $attachmentsQuery = \App\Models\StsAttachment::query();
                 $attachmentsQuery->where('action', 'added');
-                $attachmentsQuery->where(function ($q) use ($filtered) {
-                    foreach ($filtered as $row) {
-                        $q->orWhere(function ($sub) use ($row) {
-                            $sub->where('region', $row['region'] ?? null)
-                                ->where('province', $row['province'] ?? null)
-                                ->where('municipality', $row['municipality'] ?? ($row['city'] ?? null))
-                                ->where('title', $row['title'] ?? null)
-                                ->where('year_of_moa', $row['year_of_moa'] ?? null);
-                        });
-                    }
-                });
-                $attachments = $attachmentsQuery->get();
-
-                $attachmentKeys = [];
-                foreach ($attachments as $att) {
-                    $key = implode('|', [
-                        $att->region,
-                        $att->province,
-                        $att->municipality,
-                        $att->title,
-                        $att->year_of_moa,
-                    ]);
-                    if (isset($filteredKeys[$key])) {
-                        $attachmentKeys[$key] = true;
-                    }
+                $keysList = array_keys($filteredKeys);
+                if (!empty($keysList)) {
+                    $attachmentsQuery->whereIn(
+                        \DB::raw("CONCAT(region,'|',province,'|',municipality,'|',title,'|',year_of_moa)"),
+                        $keysList
+                    );
                 }
-                $uploadedCount = count($attachmentKeys);
+                $attachments = $attachmentsQuery->get();
+                $uploadedCount = $attachments->count();
             }
         } catch (\Throwable $ex) {
             $uploadedCount = 0;
@@ -321,25 +317,16 @@ class STsReportController extends Controller
                 if (!empty($filteredKeysYear)) {
                     $attachmentsQuery = \App\Models\StsAttachment::query();
                     $attachmentsQuery->where('action', 'added');
-                    $attachmentsQuery->where(function ($q) use ($rowsForYear) {
-                        foreach ($rowsForYear as $row) {
-                            $q->orWhere(function ($sub) use ($row) {
-                                $sub->where('region', $row['region'] ?? null)
-                                    ->where('province', $row['province'] ?? null)
-                                    ->where('municipality', $row['municipality'] ?? ($row['city'] ?? null))
-                                    ->where('title', $row['title'] ?? null)
-                                    ->where('year_of_moa', $row['year_of_moa'] ?? null);
-                            });
-                        }
-                    });
+                    $keysListYear = array_keys($filteredKeysYear);
+                    if (!empty($keysListYear)) {
+                        $attachmentsQuery->whereIn(
+                            \DB::raw("CONCAT(region,'|',province,'|',municipality,'|',title,'|',year_of_moa)"),
+                            $keysListYear
+                        );
+                    }
                     $attachments = $attachmentsQuery->get();
 
-                    $attachmentKeys = [];
-                    foreach ($attachments as $att) {
-                        $key = implode('|', [ $att->region, $att->province, $att->municipality, $att->title, $att->year_of_moa ]);
-                        if (isset($filteredKeysYear[$key])) $attachmentKeys[$key] = true;
-                    }
-                    $uploadedY = count($attachmentKeys);
+                    $uploadedY = $attachments->count();
                 }
             } catch (\Throwable $ex) {
                 $uploadedY = 0;
@@ -348,23 +335,17 @@ class STsReportController extends Controller
             $perYearTotals[$yr] = [ (int)$moaY, (int)$uploadedY, (int)$exprY, (int)$resY ];
         }
 
-        // include canonical region label so callers need not re-normalize
-        $canon = null;
-        if (!empty($region)) {
-            $canon = $this->inferRegionCodeFromRow(['region' => $region]);
-            if ($canon === null) {
-                $canon = $region;
-            }
-        }
-
-        return response()->json([
-            'region' => $canon,
+        $result = [
             'provinces' => $provinces,
             'grouped' => $grouped,
             'allRows' => $filtered,
+            'headers' => $headersArr,
             'uploadedCount' => $uploadedCount,
             'availableYears' => $availableYears,
             'perYearTotals' => $perYearTotals,
-        ]);
+        ];
+        // cache for a short duration to reduce repeated computation
+        try { \Cache::put($cacheKey, $result, now()->addMinutes(30)); } catch (\Throwable $e) {}
+        return response()->json($result);
     }
 }

@@ -137,7 +137,8 @@ class MainReportController extends Controller
     {
         // Cache heavy Excel parsing so STsReport loads faster.
         // Use file cache store for large payloads to avoid DB overhead.
-        $cacheKey = 'stsreport_parsed_' . md5($path . '|' . filemtime($path));
+        // bump version when logic changes so old cache is ignored
+        $cacheKey = 'stsreport_parsed_v4_' . md5($path . '|' . filemtime($path));
         $cacheStore = Cache::store('file');
 
         return $cacheStore->rememberForever($cacheKey, function () use ($path) {
@@ -163,21 +164,89 @@ class MainReportController extends Controller
                 if (count($rows) < 2) {
                     continue;
                 }
-                $header = $rows[0];
+                // locate header row within the first few rows (skip blanks/prefixes)
+                $headerRowIdx = null;
+                foreach (range(0, min(4, count($rows) - 1)) as $i) {
+                    $trial = array_map(function ($h) {
+                        return strtolower(trim((string)$h));
+                    }, $rows[$i]);
+                    if (
+                        array_search('title of st', $trial) !== false &&
+                        array_search('province', $trial) !== false &&
+                        array_search('name of municipality', $trial) !== false
+                    ) {
+                        $headerRowIdx = $i;
+                        break;
+                    }
+                }
+                if ($headerRowIdx === null) {
+                    continue;
+                }
+                $header = $rows[$headerRowIdx];
                 $normHeader = array_map(function ($h) {
-                    return strtolower(trim($h));
+                    return strtolower(trim((string)$h));
                 }, $header);
-                $titleIdx = array_search('title of st', $normHeader);
-                $provinceIdx = array_search('province', $normHeader);
-                $municipalityIdx = array_search('name of municipality', $normHeader);
-                $exprIdx = array_search('with expression of interest', $normHeader);
-                $moaIdx = array_search('with moa', $normHeader);
-                $resIdx = array_search('with resolution', $normHeader);
-                $yearIdx = array_search('year of moa', $normHeader);
+                // combine with next row if present for multi-line headings
+                if (isset($rows[$headerRowIdx + 1])) {
+                    $header2 = $rows[$headerRowIdx + 1];
+                    $normHeader2 = array_map(function ($h) {
+                        return strtolower(trim((string)$h));
+                    }, $header2);
+                    $combined = [];
+                    $max = max(count($normHeader), count($normHeader2));
+                    for ($i = 0; $i < $max; $i++) {
+                        $h1 = $normHeader[$i] ?? '';
+                        $h2 = $normHeader2[$i] ?? '';
+                        if ($h1 && $h2) {
+                            $combined[] = trim($h1 . ' ' . $h2);
+                        } else {
+                            $combined[] = $h1 . $h2;
+                        }
+                    }
+                    $normHeader = $combined;
+                }
+                // keep headers from the first sheet we parse
+                if (!isset($headers)) {
+                    $headers = $normHeader;
+                }
+                // locate important column indexes using substring matching
+                $titleIdx = $provinceIdx = $municipalityIdx = $exprIdx = $moaIdx = $resIdx = $yearIdx = false;
+                foreach ($normHeader as $i => $h) {
+                    if ($titleIdx === false && stripos($h, 'title') !== false) {
+                        $titleIdx = $i;
+                    }
+                    if ($provinceIdx === false && stripos($h, 'province') !== false) {
+                        $provinceIdx = $i;
+                    }
+                    if ($municipalityIdx === false && stripos($h, 'municipality') !== false) {
+                        $municipalityIdx = $i;
+                    }
+                    if ($exprIdx === false && (
+                        stripos($h, 'expression') !== false ||
+                        stripos($h, 'expr') !== false ||
+                        stripos($h, 'interest') !== false
+                    )) {
+                        $exprIdx = $i;
+                    }
+                    if ($moaIdx === false && stripos($h, 'moa') !== false) {
+                        $moaIdx = $i;
+                    }
+                    if ($resIdx === false && (
+                        stripos($h, 'resolution') !== false ||
+                        stripos($h, 'res ') !== false ||
+                        stripos($h, 'sb') !== false
+                    )) {
+                        $resIdx = $i;
+                    }
+                    if ($yearIdx === false && stripos($h, 'year') !== false) {
+                        $yearIdx = $i;
+                    }
+                }
                 if ($titleIdx === false || $provinceIdx === false || $municipalityIdx === false) {
                     continue;
                 }
-                foreach (array_slice($rows, 1) as $row) {
+                $startSlice = $headerRowIdx + 1;
+                foreach (array_slice($rows, $startSlice) as $row) {
                     // remove non-printable/control characters (vertical tab, ETX,
                     // etc) before we trim.  Excel exports sometimes contain those
                     // which break our front‑end matching and make cards appear
@@ -251,6 +320,7 @@ class MainReportController extends Controller
                 'years' => $years,
                 'data' => $data,
                 'regionMap' => $regionMap,
+                'headers' => $headers ?? [],
             ];
         });
     }
@@ -281,6 +351,11 @@ class MainReportController extends Controller
                 'regionFilteredData' => [],
                 'galleryCards' => $galleryCards,
                 'embed' => $embed,
+                'headers' => [],
+                'yearStats' => [],
+                'totalExpr' => 0,
+                'totalRes' => 0,
+                'totalMoa' => 0,
             ]);
         }
 
@@ -360,6 +435,53 @@ class MainReportController extends Controller
         // Attach current attachment information (if any) to each filtered row
         $filteredData = $this->addAttachmentInfo(array_values($filteredData));
 
+        // compute yearStats and high-level totals for use in charts
+        $yearStats = [];
+        $totalExpr = 0;
+        $totalRes = 0;
+        $totalMoa = 0;
+        $headersArr = $parsed['headers'] ?? [];
+        $idxOng = null;
+        $idxDis = null;
+        foreach ($headersArr as $i => $h) {
+            if ($idxOng === null && stripos($h, 'ongoing') !== false) {
+                $idxOng = $i;
+            }
+            if ($idxDis === null && (stripos($h, 'dissolved') !== false || stripos($h, 'inactive') !== false)) {
+                $idxDis = $i;
+            }
+        }
+        $normalizeBool = function($v) {
+            if (is_bool($v)) return $v;
+            $s = strtolower(trim((string)$v));
+            return in_array($s, ['1','true','yes','y','✓'], true);
+        };
+        foreach ($data as $r) {
+            $yr = $r['year_of_moa'] ?: 'Unknown';
+            if (!isset($yearStats[$yr])) {
+                $yearStats[$yr] = ['total'=>0,'ongoing'=>0,'dissolved'=>0];
+            }
+            $yearStats[$yr]['total']++;
+            if ($normalizeBool($r['with_expr'] ?? false)) $totalExpr++;
+            if ($normalizeBool($r['with_res'] ?? false)) $totalRes++;
+            if ($normalizeBool($r['with_moa'] ?? false)) $totalMoa++;
+            $st = '';
+            if (!empty($r['status'])) {
+                $st = strtolower($r['status']);
+            }
+            if (!$st && $idxOng !== null && isset($r['row'][$idxOng]) && $normalizeBool($r['row'][$idxOng])) {
+                $st = 'ongoing';
+            }
+            if (!$st && $idxDis !== null && isset($r['row'][$idxDis]) && $normalizeBool($r['row'][$idxDis])) {
+                $st = 'dissolved';
+            }
+            if (strpos($st,'ongoing') !== false) {
+                $yearStats[$yr]['ongoing']++;
+            } elseif (strpos($st,'dissolved') !== false || strpos($st,'inactive') !== false) {
+                $yearStats[$yr]['dissolved']++;
+            }
+        }
+
         $galleryCards = GalleryCard::with([
             'children' => function($q){ $q->whereNull('parent_child_id')->orderBy('docno','asc'); },
             'children.children' => function($q){ $q->orderBy('docno','asc'); }
@@ -377,6 +499,11 @@ class MainReportController extends Controller
             'regionFilteredData' => $regionFilteredData, // only region/province/municipality filtered for bar chart
             'galleryCards' => $galleryCards,
             'embed' => $embed,
+            'headers' => $parsed['headers'] ?? [],
+            'yearStats' => $yearStats,
+            'totalExpr' => $totalExpr,
+            'totalRes' => $totalRes,
+            'totalMoa' => $totalMoa,
         ]);
     }
 

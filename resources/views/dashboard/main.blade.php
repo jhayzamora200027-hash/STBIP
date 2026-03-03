@@ -537,31 +537,19 @@
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL EXPRESSION OF INTEREST</div>
 				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
-						$val = $row['with_expr'] ?? null;
-						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
-						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
-					})->count() }}</h1>
+					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalExpr ?? 0 }}</h1>
 				</div>
 			</div>
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL SB RESOLUTION</div>
 				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
-						$val = $row['with_res'] ?? null;
-						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
-						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
-					})->count() }}</h1>
+					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalRes ?? 0 }}</h1>
 				</div>
 			</div>
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL MEMORANDUM OF AGREEMENT</div>
 				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
-						$val = $row['with_moa'] ?? null;
-						$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
-						return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
-					})->count() }}</h1>
+					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalMoa ?? 0 }}</h1>
 				</div>
 			</div>
 			<!-- Add more mobile-friendly dashboard content as needed -->
@@ -670,7 +658,7 @@
 										bottom: 10px; 
 										padding: 10px; 
 										width: 500px;
-										height:auto;
+										height:500px;
 										left: 10px;
 										border: 2px solid #333; 
 										background-color: rgba(255,255,255,0.8);
@@ -681,13 +669,13 @@
 									;height:auto;font-size:1.1rem;line-height:1.4;">
 										Insight
 									</div>
-								<div style="flex: 0 0 460px; width: 460px; max-width: 460px; min-width: 460px; height: 480px; display: flex; align-items: center; justify-content: center; position: relative; left:500px">
+								<div style="flex: 0 0 460px; width: 460px; max-width: 460px; min-width: 460px; height: 480px; display: flex; align-items: center; justify-content: center; position: relative; left:500px"> {{-- JR --}}
 									<canvas id="stTitlesDoughnut" style="position:relative; z-index:2; width: 440px; height: 440px; max-width: 440px; min-width: 440px;"></canvas>
 									<!-- Inner doughnut for titles at or below 0.5% -->
 									<canvas id="stTitlesDoughnutLow" style="position:absolute; z-index:1; width: 220px; height: 220px; max-width: 240px; min-width: 200px; top:50%; left:50%; transform:translate(-50%, -50%);"></canvas>
 									<div id="doughnutTooltip" style="position:absolute;pointer-events:none;z-index:20;display:none;"></div>
 								</div>
-								<div id="stCategoryList" style="flex: 0 0 370px; width: 370px; max-width: 370px; min-width: 370px; height: 440px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background: #fafdff; border-radius: 12px; box-shadow: 0 2px 8px rgba(16,174,181,0.07); padding: 12px 8px; margin-left: 500px;"></div>
+								<div id="stCategoryList" style="flex: 0 0 370px; width: 370px; max-width: 370px; min-width: 370px; height: 440px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background: #fafdff; border-radius: 12px; box-shadow: 0 2px 8px rgba(16,174,181,0.07); padding: 12px 8px; margin-left: 500px;"></div> {{-- JR --}}
 								<!-- Custom tooltip for category list -->
 
 								<script>
@@ -717,6 +705,8 @@
 			</div>
 
 	<!-- Bar Chart for Year of MOA -->
+
+
 	<div class="row mt-4">
 		<div class="col-12 p-0">
 			<div class="card st-dashboard-card year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
@@ -735,12 +725,12 @@
 								<div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
 									<!-- Top My Chart -->
 									<div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-									<canvas id="myLineChart1" style="width: 300px; height: 200px;"></canvas>
+									<canvas id="onGoing" style="width: 300px; height: 200px;"></canvas>
 									</div>
 
 									 <!-- Duplicate Line Chart -->
 										<div style="width: 300px; height: 200px; display: flex; align-items: center; justify-content: center;">
-											<canvas id="myLineChart2" style="width: 300px; height: 200px;"></canvas>
+											<canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
 										</div>
 								</div>
 
@@ -976,7 +966,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%);
+			background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
 			color: #ffffff;
 		}
 		.st-region-modal-header h5 {
@@ -1027,6 +1017,7 @@
 						window.fullListingData = @json(collect($data)->filter(function($row){
 							return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 						})->values());
+					window.fullListingHeaders = @json($headers ?? []);
 						</script>
 					</div>
 				</div>
@@ -1097,8 +1088,8 @@
                 </div>
             </div>
         </div>
-
-
+		
+		
 </style>
 
 </div> <!-- end .st-dashboard-container -->
@@ -1361,6 +1352,16 @@ window.addEventListener('message', function(e) {
                 iframe.style.maxHeight = '600px';
             }
             window._streportIframeExpanded = !window._streportIframeExpanded;
+        }
+        // when the iframe collapses, clear any filters inside it so it can't
+        // later trigger a fetch for the wrong region when reopened.
+        if (!window._streportIframeExpanded) {
+            try {
+                if (iframe.contentWindow && typeof iframe.contentWindow.resetRsmFilters === 'function') {
+                    iframe.contentWindow.resetRsmFilters();
+                    console.log('parent: resetRsmFilters invoked due to collapse');
+                }
+            } catch(e) { console.warn('parent: failed to reset filters on collapse', e); }
         }
         // if we've just expanded, bring the iframe into view and focus it after the transition completes
         if (window._streportIframeExpanded) {
@@ -2880,54 +2881,79 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 }
 
 	window.onload = function() {
-    const lineData = {
-        labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-        datasets: [{
-            label: 'My Line Dataset',
-            data: [65, 59, 80, 81, 56, 55, 40],
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            fill: false,
-            tension: 0.1
-        }]
-    };
-
-    const lineConfig = {
-        type: 'line',
-        data: lineData,
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
+    // prefer server-computed counts if available
+    let yearStats = window.initialYearStats || {};
+    console.log('server yearStats', yearStats);
+    if (!yearStats || Object.keys(yearStats).length === 0) {
+        // fall back to client-side computation
+        const allData = window.fullListingData || [];
+        console.log('fullListingData sample', allData.slice(0,20));
+        const headers = window.fullListingHeaders || [];
+        const idxOngoing = headers.findIndex(h => h.includes('ongoing'));
+        const idxDissolved = headers.findIndex(h => h.includes('dissolved') || h.includes('inactive'));
+        console.log('status column indexes', idxOngoing, idxDissolved, headers);
+        yearStats = {};
+        allData.forEach(r => {
+            const yr = r.year_of_moa || 'Unknown';
+            if (!yearStats[yr]) {
+                yearStats[yr] = { total: 0, ongoing: 0, dissolved: 0 };
             }
-        }
-    };
+            yearStats[yr].total++;
+            // status determination as before
+            let st = (r.status || '').toString().toLowerCase();
+            if (!st && idxOngoing !== -1) {
+                const cell = r.row && r.row[idxOngoing];
+                if (cell !== null && cell !== undefined && String(cell).trim() !== '') {
+                    st = 'ongoing';
+                }
+            }
+            if (!st && idxDissolved !== -1) {
+                const cell = r.row && r.row[idxDissolved];
+                if (cell !== null && cell !== undefined && String(cell).trim() !== '') {
+                    st = 'dissolved';
+                }
+            }
+            if (st.includes('ongoing') || st === 'on going') {
+                yearStats[yr].ongoing++;
+            } else if (st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) {
+                yearStats[yr].dissolved++;
+            }
+        });
+        console.log('computed yearStats', yearStats);
+    }
+    const years = Object.keys(yearStats).sort();
+    const totalCounts = years.map(y => yearStats[y].total);
+    const ongoingCounts = years.map(y => yearStats[y].ongoing);
+    const dissolvedCounts = years.map(y => yearStats[y].dissolved);
 
-    // Initialize both line charts
-    new Chart(document.getElementById('myLineChart1').getContext('2d'), lineConfig);
-    new Chart(document.getElementById('myLineChart2').getContext('2d'), lineConfig);
-	new Chart(document.getElementById('myLineChart3').getContext('2d'), lineConfig);
+    // helper to create a simple line chart config
+    function makeLineConfig(label, dataArray, color) {
+        return {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: label,
+                    data: dataArray,
+                    borderColor: color,
+                    backgroundColor: color.replace('rgb', 'rgba').replace(')', ',0.2)'),
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        };
+    }
 
+    // draw charts in the two canvases provided
+    new Chart(document.getElementById('onGoing').getContext('2d'), makeLineConfig('Ongoing STs', ongoingCounts, 'rgb(75, 192, 192)'));
+    new Chart(document.getElementById('dissolved').getContext('2d'), makeLineConfig('Dissolved STs', dissolvedCounts, 'rgb(255, 99, 132)'));
+    // (if the extra canvas myLineChart3 is still needed you can also reuse totalCounts)
 
-    // Example for yearMoaBar (also line chart)
-    new Chart(document.getElementById('yearMoaBar').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-            datasets: [{
-                label: 'Year MOA Data',
-                data: [10, 20, 15, 30, 25],
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                fill: false,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+    // (optional) you can initialise other charts here if needed
 };
         
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));

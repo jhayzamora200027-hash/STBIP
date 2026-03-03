@@ -526,6 +526,10 @@
 
 <body>
     <script>
+    // disable console output globally
+    if (window.console) {
+        ['log','warn','error','debug','info','trace'].forEach(m=>{console[m]=function(){};});
+    }
     document.addEventListener('DOMContentLoaded', function () {
 
     const isMobile = window.innerWidth <= 991;

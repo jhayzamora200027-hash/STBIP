@@ -1,3 +1,5 @@
+// disable console output for this script
+if (typeof console !== 'undefined') { ['log','warn','error','debug','info','trace'].forEach(m=>{console[m]=function(){};}); }
 // available regardless of which <script> block runs first.
 function deriveRegionFromSlider(source){
     let name = '';
