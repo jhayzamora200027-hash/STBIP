@@ -210,7 +210,7 @@ class MainReportController extends Controller
                     $headers = $normHeader;
                 }
                 // locate important column indexes using substring matching
-                $titleIdx = $provinceIdx = $municipalityIdx = $exprIdx = $moaIdx = $resIdx = $yearIdx = false;
+                $titleIdx = $provinceIdx = $municipalityIdx = $exprIdx = $moaIdx = $resIdx = $yearIdx = $adoptIdx = $repIdx = false;
                 foreach ($normHeader as $i => $h) {
                     if ($titleIdx === false && stripos($h, 'title') !== false) {
                         $titleIdx = $i;
@@ -241,6 +241,14 @@ class MainReportController extends Controller
                     if ($yearIdx === false && stripos($h, 'year') !== false) {
                         $yearIdx = $i;
                     }
+                    // pick adoption column only if header mentions adopt but not replic
+                    if ($adoptIdx === false && stripos($h, 'adopt') !== false && stripos($h, 'replic') === false) {
+                        $adoptIdx = $i;
+                    }
+                    // pick replicate column only if header mentions replic but not adopt
+                    if ($repIdx === false && stripos($h, 'replic') !== false && stripos($h, 'adopt') === false) {
+                        $repIdx = $i;
+                    }
                 }
                 if ($titleIdx === false || $provinceIdx === false || $municipalityIdx === false) {
                     continue;
@@ -270,6 +278,8 @@ class MainReportController extends Controller
                     $with_expr = ($exprIdx !== false && isset($row[$exprIdx])) ? $row[$exprIdx] : null;
                     $with_moa = ($moaIdx !== false && isset($row[$moaIdx])) ? $row[$moaIdx] : null;
                     $with_res = ($resIdx !== false && isset($row[$resIdx])) ? $row[$resIdx] : null;
+                    $with_adopted = ($adoptIdx !== false && isset($row[$adoptIdx])) ? $row[$adoptIdx] : null;
+                    $with_replicated = ($repIdx !== false && isset($row[$repIdx])) ? $row[$repIdx] : null;
                     $titles[$title] = true;
                     if ($province !== '') {
                         $provinces[$province] = true;
@@ -289,6 +299,8 @@ class MainReportController extends Controller
                         'with_expr' => $with_expr,
                         'with_moa' => $with_moa,
                         'with_res' => $with_res,
+                        'with_adopted' => $with_adopted,
+                        'with_replicated' => $with_replicated,
                         'year_of_moa' => $year_of_moa,
                         'row' => $row,
                     ];
@@ -440,6 +452,8 @@ class MainReportController extends Controller
         $totalExpr = 0;
         $totalRes = 0;
         $totalMoa = 0;
+        $totalAdopted = 0;
+        $totalReplicated = 0;
         $headersArr = $parsed['headers'] ?? [];
         $idxOng = null;
         $idxDis = null;
@@ -465,6 +479,8 @@ class MainReportController extends Controller
             if ($normalizeBool($r['with_expr'] ?? false)) $totalExpr++;
             if ($normalizeBool($r['with_res'] ?? false)) $totalRes++;
             if ($normalizeBool($r['with_moa'] ?? false)) $totalMoa++;
+            if ($normalizeBool($r['with_adopted'] ?? false)) $totalAdopted++;
+            if ($normalizeBool($r['with_replicated'] ?? false)) $totalReplicated++;
             $st = '';
             if (!empty($r['status'])) {
                 $st = strtolower($r['status']);
@@ -504,8 +520,9 @@ class MainReportController extends Controller
             'totalExpr' => $totalExpr,
             'totalRes' => $totalRes,
             'totalMoa' => $totalMoa,
-        ]);
-    }
+            'totalAdopted' => $totalAdopted,
+            'totalReplicated' => $totalReplicated,
+        ]);    }
 
     // AJAX handler for Title Listing pagination
     public function titleListingAjax(Request $request)

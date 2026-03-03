@@ -710,36 +710,93 @@
 	<div class="row mt-4">
 		<div class="col-12 p-0">
 			<div class="card st-dashboard-card year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
-				<div class="card-header text-center">Filteration STs/Region</div>
+				<div class="card-header text-center">Total Social Technologies</div>
 				<div class="card-body" style="padding: 32px 16px;">
-<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; width: 100%; flex-wrap:wrap; gap:24px;">
-							<div style="display: flex; gap: 20px; align-items: center;">
-								<div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
-								
-								<!-- Year MOA Bar -->
-								<div class="year-chart-wrap" style="flex: 0 0 600px; height: 400px; display: flex; align-items: center; justify-content: center;">
-									<canvas id="yearMoaBar" style="width: 580px; height: 380px;"></canvas>
-								</div>
+<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; width: 100%; flex-wrap:nowrap; gap:24px; overflow-x:auto;">
+    <!-- left block: cards and small charts -->
+    <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: nowrap; overflow-x:auto;">
+        <div class="small-cards-grid" style="flex: 0 0 420px;">
+            <div id="card1" class="small-card">
+                <div class="card-value">0</div>
+                <div class="card-label">Ongoing STs</div>
+            </div>
+            <div id="card2" class="small-card">
+                <div class="card-value">0</div>
+                <div class="card-label">Dissolved STs</div>
+            </div>
+            <div id="card3" class="small-card">
+                <div class="card-value">0</div>
+                <div class="card-label">Replicated STs</div>
+            </div>
+            <div id="card4" class="small-card">
+                <div class="card-value">0</div>
+                <div class="card-label">Adopted STs</div>
+            </div>
+        </div>
 
-								<!-- My Chart Container -->
-								<div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
-									<!-- Top My Chart -->
-									<div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-									<canvas id="onGoing" style="width: 300px; height: 200px;"></canvas>
-									</div>
+        <!-- My Chart Container -->
+        <div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
+            <!-- Top My Chart -->
+            <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                <canvas id="onGoing" style="width: 300px; height: 200px;"></canvas>
+            </div>
 
-									 <!-- Duplicate Line Chart -->
-										<div style="width: 300px; height: 200px; display: flex; align-items: center; justify-content: center;">
-											<canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
-										</div>
-								</div>
+            <!-- Duplicate Line Chart -->
+            <div style="width: 300px; height: 200px; display: flex; align-items: center; justify-content: center;">
+                <canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
+            </div>
+        </div>
+    </div>
 
+    <!-- Year MOA Bar on right side -->
+    <div class="year-chart-wrap" style="flex: 0 0 400px; min-width:500px; height: 450px; display: flex; align-items: center; justify-content: center;">
+        <canvas id="yearMoaBar" style="width: 580px; height: 500px;"></canvas>
+    </div>
 </div>
-</div>
-							
 
+<style>
+.small-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 200px);
+    grid-template-rows: repeat(2, 200px);
+    gap: 10px;
+}
+.small-card {
+    width: 200px;
+    height: 200px;
+    background: #f8fafc;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(16,174,181,0.05);
+    transition: background 0.2s;
+}
+.small-card:hover {
+    background: #eaf4fa;
+}
+.small-card .card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #06306e;
+}
+.small-card .card-label {
+    margin-top: 6px;
+    font-size: 1rem;
+    color: #222;
+    text-align: center;
+}
+/* make dissolved count red */
+#card2 .card-value {
+    color: #ff4d4f;
+}
+
+</style>
 						<!-- Filter (moved OUTSIDE the chart wrapper) -->
-						<div class="year-filter-wrap" style="position:absolute; top:50%; transform:translateY(-50%); z-index:6; flex:0 0 320px; max-width:320px; width:320px;">
+						{{-- <div class="year-filter-wrap" style="position:absolute; top:50%; transform:translateY(-50%); z-index:6; flex:0 0 320px; max-width:320px; width:320px;">
 							<div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
 								<div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
 								<div class="card-body" style="padding:12px;">
@@ -778,7 +835,7 @@
 									</form>
 								</div>
 							</div>
-						</div>
+						</div> --}}
 					</div>
 				</div>
 			</div>
@@ -893,14 +950,13 @@
 	/* absolutely position the filter to the card's right interior edge and vertically center it */
 	.year-of-moa-card .year-filter-wrap { position: absolute !important; right: 24px; top: 50%; transform: translateY(-50%); width: 320px; z-index: 6; }
 	/* reserve room for the filter so the chart never sits underneath */
-	.year-of-moa-card .year-chart-wrap { margin-right: 384px; }
 }
 
 @media (max-width: 991px) {
 			.st-title-listing-card { max-width: 100vw; }
 			.st-title-listing-table { min-width: 520px; }
 			.year-filter-wrap { position: static !important; transform: none !important; right: auto !important; top: auto !important; flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; margin-top: 16px; order: 2; margin-left: 0; }
-			.year-chart-wrap { order: 1; width:100% !important; flex: 1 1 100% !important; min-width: 0; margin-bottom: 8px; }
+			.year-chart-wrap { order: 1; width:100% !important; flex: 1 1 100% !important; min-width: 0;}
 			.year-filter-wrap .card { min-height: auto; }
 		}
 		@media (max-width: 767px) {
@@ -1018,6 +1074,11 @@
 							return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 						})->values());
 					window.fullListingHeaders = @json($headers ?? []);
+				// server-supplied totals for adopted/replicated (used by client script)
+				window.serverTotals = {
+				    totalReplicated: {{ $totalReplicated ?? 0 }},
+				    totalAdopted: {{ $totalAdopted ?? 0 }}
+				};
 						</script>
 					</div>
 				</div>
@@ -1229,6 +1290,20 @@ window.allYears = @json($allYears ?? $years);
 			templateResult: function (data) { return data.text; },
 			templateSelection: function (data) { return data.text; },
 			escapeMarkup: function (markup) { return markup; }
+		});
+
+		// when the modal opens, ensure its selects are initialised with proper dropdown parent
+		$('#filterModal').on('shown.bs.modal', function() {
+			$(this).find('.st-select2').select2({
+				width: '100%',
+				closeOnSelect: false,
+				allowClear: true,
+				placeholder: function(){ return $(this).data('placeholder'); },
+				templateResult: function (data) { return data.text; },
+				templateSelection: function (data) { return data.text; },
+				escapeMarkup: function (markup) { return markup; },
+				dropdownParent: $('#filterModal')
+			});
 		});
 
 		// Global click handler for attachment view buttons (map + title listing)
@@ -2926,6 +3001,41 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const ongoingCounts = years.map(y => yearStats[y].ongoing);
     const dissolvedCounts = years.map(y => yearStats[y].dissolved);
 
+    // update summary cards with overall counts
+    const totalOngoing = ongoingCounts.reduce((a,b)=>a+b, 0);
+    const totalDissolved = dissolvedCounts.reduce((a,b)=>a+b, 0);
+    const card1 = document.getElementById('card1');
+    const card2 = document.getElementById('card2');
+    const card3 = document.getElementById('card3');
+    const card4 = document.getElementById('card4');
+
+    // compute replicated/adopted using available data
+    // prefer totals computed by server when available
+    const server = window.serverTotals || {};
+    const allData = window.fullListingData || [];
+    const truthy = v => (typeof v === 'boolean') ? v : (String(v||'').toLowerCase().trim() === 'true');
+    const totalReplicated = (typeof server.totalReplicated === 'number') ? server.totalReplicated :
+            allData.reduce((a,r)=> a + (truthy(r.with_replicated) ? 1 : 0), 0);
+    const totalAdopted = (typeof server.totalAdopted === 'number') ? server.totalAdopted :
+            allData.reduce((a,r)=> a + (truthy(r.with_adopted) ? 1 : 0), 0);
+
+    if(card1) {
+        const val = card1.querySelector('.card-value');
+        if(val) val.textContent = totalOngoing;
+    }
+    if(card2) {
+        const val = card2.querySelector('.card-value');
+        if(val) val.textContent = totalDissolved;
+    }
+    if(card3) {
+        const val = card3.querySelector('.card-value');
+        if(val) val.textContent = totalReplicated;
+    }
+    if(card4) {
+        const val = card4.querySelector('.card-value');
+        if(val) val.textContent = totalAdopted;
+    }
+
     // helper to create a simple line chart config
     function makeLineConfig(label, dataArray, color) {
         return {
@@ -2959,6 +3069,149 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));
 
 	</script>
+
+    <!-- floating filter button using external icon file -->
+    <button id="floatingBtn" class="btn" aria-label="Filter" style="background-color: white" data-bs-toggle="modal" data-bs-target="#filterModal">
+        <img src="/images/dattachments/filtering%20icon.png" width="24" height="24" alt="Filter" />
+        <span class="filter-label">Filter</span>
+    </button>
+
+    <!-- filter modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body d-flex justify-content-center align-items-center" id="filterModalBody" style="background:transparent;">
+            <!-- standalone filter form for modal -->
+            <div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px; width:600px !important; min-width:320px">
+                <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
+                    <!-- header could be commented out if undesired -->
+                    <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
+                    <div class="card-body" style="padding:12px;">
+                        <form method="GET" action="" class="w-100 d-flex flex-column">
+                            <label for="region-select-modal" class="st-filter-label">Region</label>
+                            <select id="region-select-modal" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
+                                @foreach($regions as $region)
+                                @if (stripos($region, 'Data CY 2020-2022') === false)
+                                <option value="{{ $region }}" {{ collect(request('region'))->contains($region) ? 'selected' : '' }}>{{ $region }}</option>
+                                @endif
+                                @endforeach
+                            </select>
+
+                            <label for="year-select-modal" class="st-filter-label">Year</label>
+                            <select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
+                                @foreach($years as $year)
+                                <option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
+                                @endforeach
+                            </select>
+
+                            <label for="province-select-modal" class="st-filter-label">Province</label>
+                            <select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
+                                @foreach($provinces as $province)
+                                <option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
+                                @endforeach
+                            </select>
+
+                            <label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
+                            <select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
+                                @foreach($municipalities as $municipality)
+                                <option value="{{ $municipality }}" {{ collect(request('municipality'))->contains($municipality) ? 'selected' : '' }}>{{ $municipality }}</option>
+                                @endforeach
+                            </select>
+
+                            <button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <style>
+        #floatingBtn {
+            position: fixed;
+            top: 80px;      /* starting offset */
+            right: 20px;    /* top-right */
+            z-index: 2000;
+            background: #fff !important;
+            border: 1.5px solid rgba(0,0,0,0.2);
+            border-radius: 6px;
+            color: inherit;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            /* longer duration and smoother curve for pleasant movement */
+            transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform;
+        }
+        #floatingBtn .filter-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        /* ensure modal itself is transparent */
+        #filterModal .modal-content {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        #filterModal .modal-dialog {
+            background: transparent !important;
+        }
+        /* when card is cloned into modal, give it its original background so it's visible */
+        #filterModalBody .card {
+            background: #fff !important;
+            box-shadow: 0 2px 12px rgba(16,174,181,0.06) !important;
+            border: 1px solid rgba(16,174,181,0.06) !important;
+        }
+    </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const btn = document.getElementById('floatingBtn');
+    if (!btn) return; // prevent errors
+
+    if (btn.dataset.initialized) return; // prevent duplicate binding
+    btn.dataset.initialized = "true";
+
+    let lastScrollTop = window.scrollY;
+    let timeout;
+
+    const maxLag = 400;      // maximum push distance
+    const scrollFactor = 0.2; // px of push per px scrolled cumulatively
+    const delayBeforeReturn = 400;
+    let cumulative = 0;
+
+    window.addEventListener('scroll', () => {
+
+        let currentScroll = window.scrollY;
+        let delta = currentScroll - lastScrollTop;
+
+        cumulative += Math.abs(delta);
+        // calculate how far to push based on total scroll since last reset
+        let lag = Math.min(cumulative * scrollFactor, maxLag);
+        if (delta > 0) {
+            btn.style.transform = `translateY(-${lag}px)`; // scrolling down pushes up
+        } else if (delta < 0) {
+            btn.style.transform = `translateY(${lag}px)`;  // scrolling up pushes down
+        }
+
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            btn.style.transform = 'translateY(0)';
+            cumulative = 0; // reset for next round
+        }, delayBeforeReturn);
+
+        lastScrollTop = currentScroll;
+    });
+
+
+
+
+
+});
+</script>
 
 	@endsection
 
