@@ -712,16 +712,17 @@
 			<div class="card st-dashboard-card year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 				<div class="card-header text-center">Total Social Technologies</div>
 				<div class="card-body" style="padding: 32px 16px;">
-<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; width: 100%; flex-wrap:nowrap; gap:24px; overflow-x:auto;">
+<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: flex-start; width: 100%; flex-wrap:nowrap; gap:24px; overflow-x:auto; overflow-y:hidden; height:450px;">
+
     <!-- left block: cards and small charts -->
-    <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: nowrap; overflow-x:auto;">
+	<div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: nowrap; overflow-x:auto; overflow-y:hidden; height: 450px;">
         <div class="small-cards-grid" style="flex: 0 0 420px;">
             <div id="card1" class="small-card">
-                <div class="card-value">0</div>
+				<div class="card-value">{{ $totalOngoingStatus ?? 0 }}</div>
                 <div class="card-label">Ongoing STs</div>
             </div>
             <div id="card2" class="small-card">
-                <div class="card-value">0</div>
+				<div class="card-value">{{ $totalDissolvedStatus ?? 0 }}</div>
                 <div class="card-label">Dissolved STs</div>
             </div>
             <div id="card3" class="small-card">
@@ -737,8 +738,8 @@
         <!-- My Chart Container -->
         <div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
             <!-- Top My Chart -->
-            <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                <canvas id="onGoing" style="width: 300px; height: 200px;"></canvas>
+            <div style="height: 430px; display: flex; align-items: center; justify-content: center;">
+                <canvas id="onGoing" style="width: 800px; height: 430px; padding-left: 50px;"></canvas>
             </div>
 
             <!-- Duplicate Line Chart -->
@@ -746,19 +747,21 @@
                 <canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
             </div>
         </div>
-    </div>
+	</div>
+</div>
 
-    <!-- Year MOA Bar on right side -->
-    <div class="year-chart-wrap" style="flex: 0 0 400px; min-width:500px; height: 450px; display: flex; align-items: center; justify-content: center;">
-        <canvas id="yearMoaBar" style="width: 580px; height: 500px;"></canvas>
-    </div>
+<!-- Second row: Year MOA bar (full width under line chart) -->
+<div class="st-second-row" style="margin-top:24px; width:100%; display:flex; justify-content:center;">
+	<div class="year-chart-wrap" style="width:100%; max-width:980px; height:360px; display:flex; align-items:entercenter; justify-content:left;">
+		<canvas id="yearMoaBar" style="width: 760px; height: 360px;"></canvas>
+	</div>
 </div>
 
 <style>
 .small-cards-grid {
     display: grid;
-    grid-template-columns: repeat(2, 200px);
-    grid-template-rows: repeat(2, 200px);
+    grid-template-columns: repeat(2, 210px);
+    grid-template-rows: repeat(2, 210px);
     gap: 10px;
 }
 .small-card {
@@ -771,7 +774,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px;
+    padding: 15px;
     box-shadow: 0 2px 8px rgba(16,174,181,0.05);
     transition: background 0.2s;
 }
@@ -941,7 +944,7 @@
 			.st-title-listing-card { max-width: 99vw; }
 			.st-title-listing-table { min-width: 700px; }
 		}
-		.year-chart-wrap { order: 1; margin-right: auto; }
+		.year-chart-wrap { order: 1; margin-right: 500px;}
 .year-filter-wrap { order: 2; margin-left: 24px; align-self: flex-start; }
 
 /* Anchor filter inside the Year-of-MOA card on wide screens */
@@ -1069,16 +1072,20 @@
                                                 </div>
                                                 <div id="title-listing-table-container"></div>
 						<script>
-						// Pass all listing data to JS
+						// Pass all listing data to JS (already filtered by any URL query
+						// parameters, but excluding the 2020-2022 summary sheet).
 						window.fullListingData = @json(collect($data)->filter(function($row){
 							return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 						})->values());
-					window.fullListingHeaders = @json($headers ?? []);
-				// server-supplied totals for adopted/replicated (used by client script)
-				window.serverTotals = {
-				    totalReplicated: {{ $totalReplicated ?? 0 }},
-				    totalAdopted: {{ $totalAdopted ?? 0 }}
-				};
+						window.fullListingHeaders = @json($headers ?? []);
+						// server-supplied totals for adopted/replicated (used by client script)
+						window.serverTotals = {
+						    totalReplicated: {{ $totalReplicated ?? 0 }},
+						    totalAdopted: {{ $totalAdopted ?? 0 }}
+						};
+						// expose per-year stats (including ongoing/dissolved) from PHP so the
+						// dashboard can reuse the same aggregation as the STsReport view.
+						window.initialYearStats = @json($yearStats ?? []);
 						</script>
 					</div>
 				</div>
@@ -1366,23 +1373,24 @@ window.allYears = @json($allYears ?? $years);
 			return null;
 		}
 
-		// helper that applies selections to any gallery/iframe on the page
-		function propagateFilters() {
-			var selRegions = $('#region-select-orig').val() || [];
-			var selYears = $('#year-select-orig').val() || [];
-			// convert any FO-style text to canonical "Region X" codes for the slider
-			selRegions = selRegions.map(function(r){
-				return inferRegionCodeFromRegionText(r) || r;
-			});
+			// helper that applies selections to any gallery/iframe on the page
+			function propagateFilters() {
+				var selRegions = $('#region-select-orig').val() || [];
+				var selYears = $('#year-select-orig').val() || [];
+				// convert any FO-style text to canonical "Region X" codes for the slider
+				selRegions = selRegions.map(function(r){
+					return inferRegionCodeFromRegionText(r) || r;
+				});
 			// notify iframe about the new selections; we intentionally do **not**
 			// reload it so the embedded report (totals, ST listing) stays fixed.
-			var iframe = document.querySelector('iframe');
+				var iframe = document.querySelector('iframe');
 			if (iframe) {
-				// tell the embedded report about the selections but indicate that
-				// this message originates from the outer filter form; the iframe
-				// should mirror slide/gallery visibility but not load new totals.
-				try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears, skipTotals: true }, '*'); } catch(e){}
-			}			// local filtering of any card-gallery containers on this page
+					// tell the embedded report about the selections but indicate that
+					// this message originates from the outer filter form; the iframe
+					// should mirror slide/gallery visibility but not load new totals.
+					try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears, skipTotals: true }, '*'); } catch(e){}
+				}
+				// local filtering of any card-gallery containers on this page
 			if (selRegions.length || selYears.length) {
 				$('.card-gallery .card').each(function(){
 					var $c = $(this);
@@ -1404,51 +1412,53 @@ if (!window._streportIframeExpanded) {
     window._streportIframeExpanded = false;
 }
 window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'streportToggleHeight') {
-        const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
-        if (!iframe) return;
-        // ensure transition is set in case iframe was recreated; always reapply so collapse animates too
-        iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
-        // make sure overflow is hidden so changing height doesn't reveal content abruptly
-        iframe.style.overflow = 'hidden';
-        if (e.data.height) {
-            iframe.style.height = e.data.height;
-            iframe.style.maxHeight = e.data.height;
-            // remember expansion state based on height (600px is our default collapsed size)
-            window._streportIframeExpanded = (e.data.height !== '600px');
-        } else {
-            // original toggle behaviour for backwards compatibility
-            // use fixed 1500px expansion rather than full viewport height
-            if (!window._streportIframeExpanded) {
-                iframe.style.height = '1500px';
-                iframe.style.maxHeight = '1500px';
-            } else {
-                iframe.style.height = '600px';
-                iframe.style.maxHeight = '600px';
-            }
-            window._streportIframeExpanded = !window._streportIframeExpanded;
-        }
-        // when the iframe collapses, clear any filters inside it so it can't
-        // later trigger a fetch for the wrong region when reopened.
-        if (!window._streportIframeExpanded) {
-            try {
-                if (iframe.contentWindow && typeof iframe.contentWindow.resetRsmFilters === 'function') {
-                    iframe.contentWindow.resetRsmFilters();
-                    console.log('parent: resetRsmFilters invoked due to collapse');
-                }
-            } catch(e) { console.warn('parent: failed to reset filters on collapse', e); }
-        }
-        // if we've just expanded, bring the iframe into view and focus it after the transition completes
-        if (window._streportIframeExpanded) {
-            // wait until the CSS transition settles (roughly 300ms)
-            setTimeout(() => {
-                try {
-                    iframe.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    iframe.focus && iframe.focus();
-                } catch(err) { console.warn('scrollIntoView failed', err); }
-            }, 350);
-        }
-    }
+	// Height/expand-collapse messages from the embedded STsReport iframe
+	if (e.data && e.data.type === 'streportToggleHeight') {
+		const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
+		if (!iframe) return;
+		// ensure transition is set in case iframe was recreated; always reapply so collapse animates too
+		iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
+		// make sure overflow is hidden so changing height doesn't reveal content abruptly
+		iframe.style.overflow = 'hidden';
+		if (e.data.height) {
+			iframe.style.height = e.data.height;
+			iframe.style.maxHeight = e.data.height;
+			// remember expansion state based on height (600px is our default collapsed size)
+			window._streportIframeExpanded = (e.data.height !== '600px');
+		} else {
+			// original toggle behaviour for backwards compatibility
+			// use fixed 1500px expansion rather than full viewport height
+			if (!window._streportIframeExpanded) {
+				iframe.style.height = '1500px';
+				iframe.style.maxHeight = '1500px';
+			} else {
+				iframe.style.height = '600px';
+				iframe.style.maxHeight = '600px';
+			}
+			window._streportIframeExpanded = !window._streportIframeExpanded;
+		}
+		// when the iframe collapses, clear any filters inside it so it can't
+		// later trigger a fetch for the wrong region when reopened.
+		if (!window._streportIframeExpanded) {
+			try {
+				if (iframe.contentWindow && typeof iframe.contentWindow.resetRsmFilters === 'function') {
+					iframe.contentWindow.resetRsmFilters();
+					console.log('parent: resetRsmFilters invoked due to collapse');
+				}
+			} catch(e) { console.warn('parent: failed to reset filters on collapse', e); }
+		}
+		// if we've just expanded, bring the iframe into view and focus it after the transition completes
+		if (window._streportIframeExpanded) {
+			// wait until the CSS transition settles (roughly 300ms)
+			setTimeout(() => {
+				try {
+					iframe.scrollIntoView({ behavior: 'smooth', block: 'start' });
+					iframe.focus && iframe.focus();
+				} catch(err) { console.warn('scrollIntoView failed', err); }
+			}, 350);
+		}
+		return;
+	}
 });
 
 $('#region-select-orig').on('change', function() {
@@ -2139,6 +2149,72 @@ $('#region-select-orig').on('change', function() {
 		})();
 		renderCategoryList(currentPage);
 
+		// Full-size copy of ST Titles outer/inner doughnuts and top categories
+		// in the "Total Social Technologies" second row (if present).
+		const copyCanvas = document.getElementById('stTitlesDoughnutCopy');
+		if (copyCanvas) {
+			window.doughnutChartCopyInstance = new Chart(copyCanvas.getContext('2d'), {
+				type: 'doughnut',
+				data: {
+					labels: mainLabels,
+					datasets: [{
+						data: mainData,
+						backgroundColor: mainColors,
+						borderWidth: 2,
+						borderColor: '#fff',
+					}]
+				},
+				options: {
+					responsive: true,
+					plugins: {
+						legend: { display: false },
+						title: { display: false }
+					},
+					cutout: '55%'
+				}
+			});
+		}
+		const copyInnerCanvas = document.getElementById('stTitlesDoughnutLowCopy');
+		if (copyInnerCanvas && lowLabels.length > 0) {
+			window.doughnutChartLowCopyInstance = new Chart(copyInnerCanvas.getContext('2d'), {
+				type: 'doughnut',
+				data: {
+					labels: lowLabels,
+					datasets: [{
+						data: lowData,
+						backgroundColor: lowColors,
+						borderWidth: 2,
+						borderColor: '#fff',
+					}]
+				},
+				options: {
+					responsive: true,
+					plugins: {
+						legend: { display: false },
+						title: { display: false },
+						tooltip: { enabled: false }
+					}
+				}
+			});
+		}
+		const copyList = document.getElementById('stCategoryListCopy');
+		if (copyList) {
+			let miniHtml = '<ul style="list-style:none;padding:0 6px 0 0;margin:0;max-height:280px;overflow-y:auto;">';
+			const maxItems = 10;
+			stTitleLabels.slice(0, maxItems).forEach((label, idx) => {
+				const color = stTitleColors[idx % stTitleColors.length];
+				const count = stTitleData[idx];
+				const percent = stTitlePercentages[idx].toFixed(1);
+				miniHtml += '<li style="display:flex;align-items:flex-start;margin-bottom:12px;font-size:0.98rem;">' +
+					`<span style="display:inline-block;width:18px;height:18px;background:${color};border-radius:4px;margin-right:10px;"></span>` +
+					`<span style="font-weight:700;color:#10aeb5;margin-right:8px;min-width:78px;">${percent}% (${count})</span>` +
+					`<span style="flex:1 1 auto;">${label}</span>` +
+				'</li>';
+			});
+			miniHtml += '</ul>';
+			copyList.innerHTML = miniHtml;
+		}
+
 		// Modal helpers for ST title details
 		function openStTitleModal(stTitle) {
 			const modal = document.getElementById('st-title-modal');
@@ -2529,7 +2605,9 @@ $('#region-select-orig').on('change', function() {
 				path.style.cursor = 'pointer';
 			});
 
-			// Build counts per region using fullListingData and generic region inference
+			// Build counts per region using fullListingData and generic region inference.
+			// At the same time, pre-compute per-region ongoing/dissolved counts so the
+			// small summary cards can show numbers for a selected region (e.g. Region X).
 			const dataForCounts = window.fullListingData || [];
 			const regionCounts = {};
 			if (Array.isArray(dataForCounts) && dataForCounts.length) {
@@ -2632,6 +2710,11 @@ $('#region-select-orig').on('change', function() {
 						const info = getRegionRepresentativeInfo(code);
 						if (info) {
 							handleRegionClick(info);
+							// clicking a region in the side list should also update
+							// the Ongoing/Dissolved summary cards for that region.
+							if (window.updateStatusSummaryCards) {
+								window.updateStatusSummaryCards([code]);
+							}
 						}
 					});
 				});
@@ -2769,6 +2852,11 @@ $('#region-select-orig').on('change', function() {
 				}
 				const displayName = (regionName && regionLabels[regionName]) || regionName || (targetInfo.path.getAttribute('title') ? ('Province: ' + targetInfo.path.getAttribute('title')) : 'Region');
 				openRegionTitlesModal(displayName, rows);
+				// also update the Ongoing/Dissolved summary cards to reflect this
+				// region selection when the user clicks on the map.
+				if (regionName && window.updateStatusSummaryCards) {
+					window.updateStatusSummaryCards([regionName]);
+				}
 			}
 
 			pathInfos.forEach(info => {
@@ -2956,56 +3044,75 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 }
 
 	window.onload = function() {
-    // prefer server-computed counts if available
-    let yearStats = window.initialYearStats || {};
-    console.log('server yearStats', yearStats);
-    if (!yearStats || Object.keys(yearStats).length === 0) {
-        // fall back to client-side computation
-        const allData = window.fullListingData || [];
-        console.log('fullListingData sample', allData.slice(0,20));
-        const headers = window.fullListingHeaders || [];
-        const idxOngoing = headers.findIndex(h => h.includes('ongoing'));
-        const idxDissolved = headers.findIndex(h => h.includes('dissolved') || h.includes('inactive'));
-        console.log('status column indexes', idxOngoing, idxDissolved, headers);
-        yearStats = {};
-        allData.forEach(r => {
-            const yr = r.year_of_moa || 'Unknown';
-            if (!yearStats[yr]) {
-                yearStats[yr] = { total: 0, ongoing: 0, dissolved: 0 };
-            }
-            yearStats[yr].total++;
-            // status determination as before
-            let st = (r.status || '').toString().toLowerCase();
-            if (!st && idxOngoing !== -1) {
-                const cell = r.row && r.row[idxOngoing];
-                if (cell !== null && cell !== undefined && String(cell).trim() !== '') {
-                    st = 'ongoing';
-                }
-            }
-            if (!st && idxDissolved !== -1) {
-                const cell = r.row && r.row[idxDissolved];
-                if (cell !== null && cell !== undefined && String(cell).trim() !== '') {
-                    st = 'dissolved';
-                }
-            }
-            if (st.includes('ongoing') || st === 'on going') {
-                yearStats[yr].ongoing++;
-            } else if (st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) {
-                yearStats[yr].dissolved++;
-            }
-        });
-        console.log('computed yearStats', yearStats);
-    }
+	// prefer server-computed counts if available
+	let yearStats = window.initialYearStats || {};
+	console.log('server yearStats', yearStats);
+	if (!yearStats || Object.keys(yearStats).length === 0) {
+		// fall back to client-side computation based on the
+		// region/year-filtered listing data coming from PHP
+		const allData = window.fullListingData || [];
+		console.log('fullListingData sample', allData.slice(0,20));
+		const headers = window.fullListingHeaders || [];
+		const lower = h => (h || '').toString().toLowerCase();
+		const idxOngoing = headers.findIndex(h => lower(h).includes('ongoing'));
+		const idxDissolved = headers.findIndex(h => {
+			const lh = lower(h);
+			return lh.includes('dissolved') || lh.includes('inactive');
+		});
+		console.log('status column indexes', idxOngoing, idxDissolved, headers);
+
+		// mirror the PHP status-mark helper for the indicator columns: treat any
+		// non-empty, non-zero cell in the "Ongoing"/"Dissolved/Inactive" columns
+		// as a mark, so we count "X" or other symbols in addition to TRUE/1.
+		const hasStatusMark = v => {
+			if (typeof v === 'boolean') return v;
+			if (v == null) return false;
+			const s = String(v).trim();
+			if (!s || s === '0') return false;
+			if (!isNaN(s)) return Number(s) !== 0;
+			return true;
+		};
+
+		yearStats = {};
+		allData.forEach(r => {
+			const yr = r.year_of_moa || 'Unknown';
+			if (!yearStats[yr]) {
+				yearStats[yr] = { total: 0, ongoing: 0, dissolved: 0 };
+			}
+			yearStats[yr].total++;
+			// infer status from explicit status column first,
+			// then from the indicator columns
+			let st = (r.status || '').toString().toLowerCase();
+			if (!st && idxOngoing !== -1) {
+				const cell = r.row && r.row[idxOngoing];
+				if (hasStatusMark(cell)) {
+					st = 'ongoing';
+				}
+			}
+			if (!st && idxDissolved !== -1) {
+				const cell = r.row && r.row[idxDissolved];
+				if (hasStatusMark(cell)) {
+					st = 'dissolved';
+				}
+			}
+			if (st.includes('ongoing') || st === 'on going') {
+				yearStats[yr].ongoing++;
+			} else if (st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) {
+				yearStats[yr].dissolved++;
+			}
+		});
+		console.log('computed yearStats', yearStats);
+	}
     const years = Object.keys(yearStats).sort();
     const totalCounts = years.map(y => yearStats[y].total);
     const ongoingCounts = years.map(y => yearStats[y].ongoing);
     const dissolvedCounts = years.map(y => yearStats[y].dissolved);
 
     // update summary cards with overall counts
-    const totalOngoing = ongoingCounts.reduce((a,b)=>a+b, 0);
-    const totalDissolved = dissolvedCounts.reduce((a,b)=>a+b, 0);
-    const card1 = document.getElementById('card1');
-    const card2 = document.getElementById('card2');
+	const totalOngoing = ongoingCounts.reduce((a,b)=>a+b, 0);
+	const totalDissolved = dissolvedCounts.reduce((a,b)=>a+b, 0);
+	const card1 = document.getElementById('card1');
+	const card2 = document.getElementById('card2');
     const card3 = document.getElementById('card3');
     const card4 = document.getElementById('card4');
 
@@ -3019,14 +3126,9 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const totalAdopted = (typeof server.totalAdopted === 'number') ? server.totalAdopted :
             allData.reduce((a,r)=> a + (truthy(r.with_adopted) ? 1 : 0), 0);
 
-    if(card1) {
-        const val = card1.querySelector('.card-value');
-        if(val) val.textContent = totalOngoing;
-    }
-    if(card2) {
-        const val = card2.querySelector('.card-value');
-        if(val) val.textContent = totalDissolved;
-    }
+	// card1 / card2 values are rendered on the server from the
+	// dedicated Ongoing / Dissolved columns; do not override them
+	// here so they always match the upload data for the current filter.
     if(card3) {
         const val = card3.querySelector('.card-value');
         if(val) val.textContent = totalReplicated;
@@ -3036,32 +3138,62 @@ if (typeof showReplicateConfirmPopover !== 'function') {
         if(val) val.textContent = totalAdopted;
     }
 
-    // helper to create a simple line chart config
-    function makeLineConfig(label, dataArray, color) {
-        return {
-            type: 'line',
-            data: {
-                labels: years,
-                datasets: [{
-                    label: label,
-                    data: dataArray,
-                    borderColor: color,
-                    backgroundColor: color.replace('rgb', 'rgba').replace(')', ',0.2)'),
-                    fill: false,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: { y: { beginAtZero: true } }
-            }
-        };
-    }
+	// helper to create a simple line chart config (kept for future use)
+	function makeLineConfig(label, dataArray, color) {
+		return {
+			type: 'line',
+			data: {
+				labels: years,
+				datasets: [{
+					label: label,
+					data: dataArray,
+					borderColor: color,
+					backgroundColor: color.replace('rgb', 'rgba').replace(')', ',0.2)'),
+					fill: false,
+					tension: 0.1
+				}]
+			},
+			options: {
+				responsive: true,
+				scales: { y: { beginAtZero: true } }
+			}
+		};
+	}
 
-    // draw charts in the two canvases provided
-    new Chart(document.getElementById('onGoing').getContext('2d'), makeLineConfig('Ongoing STs', ongoingCounts, 'rgb(75, 192, 192)'));
-    new Chart(document.getElementById('dissolved').getContext('2d'), makeLineConfig('Dissolved STs', dissolvedCounts, 'rgb(255, 99, 132)'));
-    // (if the extra canvas myLineChart3 is still needed you can also reuse totalCounts)
+	// draw a combined chart on the Ongoing canvas with both
+	// Ongoing and Dissolved STs as separate lines
+	const ongoingCtx = document.getElementById('onGoing').getContext('2d');
+	new Chart(ongoingCtx, {
+		type: 'line',
+		data: {
+			labels: years,
+			datasets: [
+				{
+					label: 'Ongoing STs',
+					data: ongoingCounts,
+					borderColor: 'rgb(75, 192, 192)',
+					backgroundColor: 'rgba(75, 192, 192, 0.2)',
+					fill: false,
+					tension: 0.1
+				},
+				{
+					label: 'Dissolved STs',
+					data: dissolvedCounts,
+					borderColor: 'rgb(255, 99, 132)',
+					backgroundColor: 'rgba(255, 99, 132, 0.2)',
+					fill: false,
+					tension: 0.1
+				}
+			]
+		},
+		options: {
+			responsive: true,
+			scales: { y: { beginAtZero: true } }
+		}
+	});
+	// the separate "dissolved" canvas is no longer used here, but
+	// remains in the markup for layout compatibility.
+	// (if the extra canvas myLineChart3 is still needed you can also reuse totalCounts)
 
     // (optional) you can initialise other charts here if needed
 };
@@ -3082,7 +3214,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
         <div class="modal-content">
           <div class="modal-body d-flex justify-content-center align-items-center" id="filterModalBody" style="background:transparent;">
             <!-- standalone filter form for modal -->
-            <div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px; width:600px !important; min-width:320px">
+            <div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px;">
                 <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
                     <!-- header could be commented out if undesired -->
                     <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>

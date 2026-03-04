@@ -138,7 +138,7 @@ class MainReportController extends Controller
         // Cache heavy Excel parsing so STsReport loads faster.
         // Use file cache store for large payloads to avoid DB overhead.
         // bump version when logic changes so old cache is ignored
-        $cacheKey = 'stsreport_parsed_v4_' . md5($path . '|' . filemtime($path));
+        $cacheKey = 'stsreport_parsed_v6_' . md5($path . '|' . filemtime($path));
         $cacheStore = Cache::store('file');
 
         return $cacheStore->rememberForever($cacheKey, function () use ($path) {
@@ -205,7 +205,7 @@ class MainReportController extends Controller
                     }
                     $normHeader = $combined;
                 }
-                // keep headers from the first sheet we parse
+                // keep headers from the first sheet we parse (global fallback)
                 if (!isset($headers)) {
                     $headers = $normHeader;
                 }
@@ -241,13 +241,23 @@ class MainReportController extends Controller
                     if ($yearIdx === false && stripos($h, 'year') !== false) {
                         $yearIdx = $i;
                     }
-                    // pick adoption column only if header mentions adopt but not replic
-                    if ($adoptIdx === false && stripos($h, 'adopt') !== false && stripos($h, 'replic') === false) {
+                    // pick adoption column: first header cell that mentions "adopt"
+                    // (some workbooks use combined labels like "Adopted/Replicated").
+                    if ($adoptIdx === false && stripos($h, 'adopt') !== false) {
                         $adoptIdx = $i;
                     }
-                    // pick replicate column only if header mentions replic but not adopt
-                    if ($repIdx === false && stripos($h, 'replic') !== false && stripos($h, 'adopt') === false) {
-                        $repIdx = $i;
+                    // pick replicate column: prefer a dedicated "Replicated" column
+                    // that is different from the Adopted column. This prevents
+                    // both Adopted and Replicated from pointing at the same
+                    // "Adopted/Replicated" header when a separate Replicated
+                    // column is present (as in FO X).
+                    if ($repIdx === false && stripos($h, 'replic') !== false) {
+                        if ($adoptIdx !== false && $i === $adoptIdx) {
+                            // skip this index so we can pick a later column
+                            // that is dedicated to Replicated only
+                        } else {
+                            $repIdx = $i;
+                        }
                     }
                 }
                 if ($titleIdx === false || $provinceIdx === false || $municipalityIdx === false) {
@@ -308,7 +318,15 @@ class MainReportController extends Controller
                         $regionMap[$sheetName] = [
                             'provinces' => [],
                             'years' => [],
+                            // store per-sheet headers so that downstream
+                            // aggregation can resolve Ongoing/Dissolved
+                            // column indexes for each region individually.
+                            'headers' => $normHeader,
                         ];
+                    } elseif (empty($regionMap[$sheetName]['headers'])) {
+                        // in case the region entry was created earlier,
+                        // ensure its headers are populated.
+                        $regionMap[$sheetName]['headers'] = $normHeader;
                     }
                     if ($province !== '' && $municipality !== '') {
                         if (!isset($regionMap[$sheetName]['provinces'][$province])) {
@@ -454,23 +472,71 @@ class MainReportController extends Controller
         $totalMoa = 0;
         $totalAdopted = 0;
         $totalReplicated = 0;
+        // explicit counts based only on the dedicated
+        // Ongoing / Dissolved columns from the upload
+        $totalOngoingStatus = 0;
+        $totalDissolvedStatus = 0;
         $headersArr = $parsed['headers'] ?? [];
-        $idxOng = null;
-        $idxDis = null;
-        foreach ($headersArr as $i => $h) {
-            if ($idxOng === null && stripos($h, 'ongoing') !== false) {
-                $idxOng = $i;
+        // pre-compute status column indexes per region so that regions whose
+        // sheets have extra/missing columns (like Region X) still map to the
+        // correct Ongoing / Dissolved cells.
+        $statusIndexByRegion = [];
+        foreach ($regionMap as $regionName => $meta) {
+            $hdrs = $meta['headers'] ?? $headersArr;
+            $locIdxO = null;
+            $locIdxD = null;
+            foreach ($hdrs as $i => $h) {
+                if ($locIdxO === null && stripos($h, 'ongoing') !== false) {
+                    $locIdxO = $i;
+                }
+                if ($locIdxD === null && (stripos($h, 'dissolved') !== false || stripos($h, 'inactive') !== false)) {
+                    $locIdxD = $i;
+                }
             }
-            if ($idxDis === null && (stripos($h, 'dissolved') !== false || stripos($h, 'inactive') !== false)) {
-                $idxDis = $i;
-            }
+            $statusIndexByRegion[$regionName] = [
+                'ongoing' => $locIdxO,
+                'dissolved' => $locIdxD,
+            ];
         }
         $normalizeBool = function($v) {
             if (is_bool($v)) return $v;
             $s = strtolower(trim((string)$v));
-            return in_array($s, ['1','true','yes','y','✓'], true);
+            return $s === 'true' || $s === '1';
         };
-        foreach ($data as $r) {
+        // Determine whether a status cell should be treated as TRUE.
+        // Per your request we now count *only* explicit TRUE values
+        // coming from the sheet (boolean true or the string "TRUE").
+        // Other markers like "YES", "X", or numeric counts are ignored
+        // for the Ongoing/Dissolved cards.
+        $statusCellIsTrue = function($v) {
+            if (is_bool($v)) {
+                return $v;
+            }
+            if ($v === null) {
+                return false;
+            }
+            $s = strtolower(trim((string) $v));
+            return $s === 'true';
+        };
+        // adopted/replicated columns may contain either boolean-like values or
+        // numeric counts.  When a number is provided we sum it, otherwise we
+        // treat any truthy/checked value as a single instance.
+        $normalizeCount = function($v) use ($normalizeBool) {
+            if (is_numeric($v)) {
+                return (int) $v;
+            }
+            if ($normalizeBool($v)) {
+                return 1;
+            }
+            $s = trim((string)$v);
+            return $s !== '' ? 1 : 0;
+        };
+        // use the fully filtered dataset (respecting region/year filters)
+        // so that dashboard totals and charts reflect the user's selection
+        foreach ($filteredData as $r) {
+            $regionName = $r['region'] ?? null;
+            $idxOng = $statusIndexByRegion[$regionName]['ongoing'] ?? null;
+            $idxDis = $statusIndexByRegion[$regionName]['dissolved'] ?? null;
             $yr = $r['year_of_moa'] ?: 'Unknown';
             if (!isset($yearStats[$yr])) {
                 $yearStats[$yr] = ['total'=>0,'ongoing'=>0,'dissolved'=>0];
@@ -479,22 +545,58 @@ class MainReportController extends Controller
             if ($normalizeBool($r['with_expr'] ?? false)) $totalExpr++;
             if ($normalizeBool($r['with_res'] ?? false)) $totalRes++;
             if ($normalizeBool($r['with_moa'] ?? false)) $totalMoa++;
-            if ($normalizeBool($r['with_adopted'] ?? false)) $totalAdopted++;
-            if ($normalizeBool($r['with_replicated'] ?? false)) $totalReplicated++;
+            $totalAdopted += $normalizeCount($r['with_adopted'] ?? null);
+            $totalReplicated += $normalizeCount($r['with_replicated'] ?? null);
             $st = '';
             if (!empty($r['status'])) {
                 $st = strtolower($r['status']);
             }
-            if (!$st && $idxOng !== null && isset($r['row'][$idxOng]) && $normalizeBool($r['row'][$idxOng])) {
-                $st = 'ongoing';
+
+            // For ongoing/dissolved totals we now rely primarily on the
+            // dedicated Ongoing / Dissolved columns.  Each TRUE/marked cell
+            // in those columns counts as 1; if the workbook supplies a
+            // numeric value we treat it as that many STs.  Only when a
+            // region sheet does not expose those columns at all do we fall
+            // back to the free‑text status field.
+
+            $ongoingCount = 0;
+            $dissolvedCount = 0;
+
+            if ($idxOng !== null || $idxDis !== null) {
+                if ($idxOng !== null && isset($r['row'][$idxOng])) {
+                    $val = $r['row'][$idxOng];
+                    if (is_numeric($val)) {
+                        $ongoingCount = max(0, (int) $val);
+                    } elseif ($statusCellIsTrue($val)) {
+                        $ongoingCount = 1;
+                    }
+                }
+
+                if ($idxDis !== null && isset($r['row'][$idxDis])) {
+                    $val = $r['row'][$idxDis];
+                    if (is_numeric($val)) {
+                        $dissolvedCount = max(0, (int) $val);
+                    } elseif ($statusCellIsTrue($val)) {
+                        $dissolvedCount = 1;
+                    }
+                }
+            } else {
+                // no dedicated columns found for this region; use status text
+                if (strpos($st,'ongoing') !== false || $st === 'on going') {
+                    $ongoingCount = 1;
+                } elseif (strpos($st,'dissolved') !== false || strpos($st,'inactive') !== false || strpos($st,'completed') !== false) {
+                    $dissolvedCount = 1;
+                }
             }
-            if (!$st && $idxDis !== null && isset($r['row'][$idxDis]) && $normalizeBool($r['row'][$idxDis])) {
-                $st = 'dissolved';
+
+            // final status-based tallies per year using the derived counts
+            if ($ongoingCount > 0) {
+                $yearStats[$yr]['ongoing'] += $ongoingCount;
+                $totalOngoingStatus += $ongoingCount;
             }
-            if (strpos($st,'ongoing') !== false) {
-                $yearStats[$yr]['ongoing']++;
-            } elseif (strpos($st,'dissolved') !== false || strpos($st,'inactive') !== false) {
-                $yearStats[$yr]['dissolved']++;
+            if ($dissolvedCount > 0) {
+                $yearStats[$yr]['dissolved'] += $dissolvedCount;
+                $totalDissolvedStatus += $dissolvedCount;
             }
         }
 
@@ -522,6 +624,8 @@ class MainReportController extends Controller
             'totalMoa' => $totalMoa,
             'totalAdopted' => $totalAdopted,
             'totalReplicated' => $totalReplicated,
+            'totalOngoingStatus' => $totalOngoingStatus,
+            'totalDissolvedStatus' => $totalDissolvedStatus,
         ]);    }
 
     // AJAX handler for Title Listing pagination

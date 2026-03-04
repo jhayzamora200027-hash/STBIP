@@ -323,15 +323,73 @@ function applyRsmFilters(){
         const totalRes = filtered.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
         const totalExpr = filtered.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
         const moaAttachments = 0;
-        // compute ongoing / dissolved counts based on status field if available
-        const ongoingCount = filtered.reduce((acc,r) => {
-            const st = (r.status || '').toString().toLowerCase();
-            return acc + ((st.includes('ongoing') || st === 'on going') ? 1 : 0);
-        }, 0);
-        const dissolvedCount = filtered.reduce((acc,r) => {
-            const st = (r.status || '').toString().toLowerCase();
-            return acc + ((st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) ? 1 : 0);
-        }, 0);
+
+        // compute ongoing / dissolved counts using the same rules as the
+        // main dashboard: use numeric values in the dedicated Ongoing /
+        // Dissolved columns when present, otherwise treat any non-empty
+        // cell or status text as a single instance.
+        let ongoingCount = 0;
+        let dissolvedCount = 0;
+
+        try {
+            const headersArr = (payload && payload.headers) ? payload.headers : [];
+            const idxO = headersArr.findIndex(h => h && h.toString().toLowerCase().includes('ongoing'));
+            const idxD = headersArr.findIndex(h => h && (h.toString().toLowerCase().includes('dissolved') || h.toString().toLowerCase().includes('inactive')));
+            const cellHasStatusMark = v => {
+                if (typeof v === 'boolean') return v;
+                if (v === null || v === undefined) return false;
+                const s = String(v).trim();
+                if (s === '' || s === '0') return false;
+                if (!isNaN(s)) return Number(s) !== 0;
+                return true;
+            };
+
+            filtered.forEach(r => {
+                let oCnt = 0; let dCnt = 0;
+
+                if (idxO !== -1 && r.row && r.row[idxO] !== undefined) {
+                    const v = r.row[idxO];
+                    const s = String(v).trim();
+                    if (!isNaN(s) && s !== '') {
+                        oCnt = Math.max(0, parseInt(s, 10) || 0);
+                    } else if (cellHasStatusMark(v)) {
+                        oCnt = 1;
+                    }
+                }
+                if (idxD !== -1 && r.row && r.row[idxD] !== undefined) {
+                    const v = r.row[idxD];
+                    const s = String(v).trim();
+                    if (!isNaN(s) && s !== '') {
+                        dCnt = Math.max(0, parseInt(s, 10) || 0);
+                    } else if (cellHasStatusMark(v)) {
+                        dCnt = 1;
+                    }
+                }
+
+                let st = (r.status || '').toString().toLowerCase();
+                if (!st && idxO !== -1 && r.row && cellHasStatusMark(r.row[idxO])) st = 'ongoing';
+                if (!st && idxD !== -1 && r.row && cellHasStatusMark(r.row[idxD])) st = 'dissolved';
+
+                if ((st.includes('ongoing') || st === 'on going') && oCnt === 0 && !cellHasStatusMark(r.row && r.row[idxO])) {
+                    oCnt = 1;
+                } else if ((st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) && dCnt === 0 && !cellHasStatusMark(r.row && r.row[idxD])) {
+                    dCnt = 1;
+                }
+
+                ongoingCount += oCnt;
+                dissolvedCount += dCnt;
+            });
+        } catch (e) {
+            console.error('[RSM] status aggregation failed; falling back to simple counts', e);
+            ongoingCount = filtered.reduce((acc,r) => {
+                const st = (r.status || '').toString().toLowerCase();
+                return acc + ((st.includes('ongoing') || st === 'on going') ? 1 : 0);
+            }, 0);
+            dissolvedCount = filtered.reduce((acc,r) => {
+                const st = (r.status || '').toString().toLowerCase();
+                return acc + ((st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) ? 1 : 0);
+            }, 0);
+        }
         console.debug('[RSM] computed counts', { total: filtered.length, ongoingCount, dissolvedCount });
         // log sample statuses for debugging
         if (filtered.length) {

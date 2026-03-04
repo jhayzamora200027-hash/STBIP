@@ -176,12 +176,6 @@ class STsReportController extends Controller
         $all = $this->getAllData();
         $region = $request->input('region_image');
 
-        // short‑term cache keyed by region|province to speed up repeated clicks
-        $cacheKey = 'region_hierarchy_' . md5(($region ?: '') . '|' . ($request->input('province') ?: ''));
-        if (\Cache::has($cacheKey)) {
-            return response()->json(\Cache::get($cacheKey));
-        }
-
         $filtered = $all['data'];
         // determine status column indexes from headers (if available)
         $headersArr = $all['headers'] ?? [];
@@ -231,22 +225,33 @@ class STsReportController extends Controller
         }));
 
         // attach computed status string to each remaining row so client code
-        // can simply look at r.status. mimic MainReportController logic.
+        // can simply look at r.status. mirror MainReportController logic so
+        // that the modal and the main dashboard stay in sync when
+        // interpreting the workbook's Ongoing / Dissolved columns.
         if (!empty($headersArr)) {
-            $truthy = function ($v) {
-                if (is_bool($v)) return $v;
-                $s = strtolower(trim((string)$v));
-                return in_array($s, ['1','true','yes','y','✓'], true);
+            // For status inference in the modal, mirror the dashboard rule:
+            // only explicit TRUE values (boolean true or the string "TRUE")
+            // mean the status column is checked.
+            $cellHasStatusMark = function ($v) {
+                if (is_bool($v)) {
+                    return $v;
+                }
+                if ($v === null) {
+                    return false;
+                }
+                $s = strtolower(trim((string) $v));
+                return $s === 'true';
             };
+
             foreach ($filtered as &$r) {
                 $st = '';
                 if (!empty($r['status'])) {
                     $st = strtolower($r['status']);
                 }
-                if (!$st && $idxOng !== null && isset($r['row'][$idxOng]) && $truthy($r['row'][$idxOng])) {
+                if (!$st && $idxOng !== null && isset($r['row'][$idxOng]) && $cellHasStatusMark($r['row'][$idxOng])) {
                     $st = 'ongoing';
                 }
-                if (!$st && $idxDis !== null && isset($r['row'][$idxDis]) && $truthy($r['row'][$idxDis])) {
+                if (!$st && $idxDis !== null && isset($r['row'][$idxDis]) && $cellHasStatusMark($r['row'][$idxDis])) {
                     $st = 'dissolved';
                 }
                 $r['status'] = $st;
@@ -274,15 +279,33 @@ class STsReportController extends Controller
 
                 $attachmentsQuery = \App\Models\StsAttachment::query();
                 $attachmentsQuery->where('action', 'added');
-                $keysList = array_keys($filteredKeys);
-                if (!empty($keysList)) {
-                    $attachmentsQuery->whereIn(
-                        \DB::raw("CONCAT(region,'|',province,'|',municipality,'|',title,'|',year_of_moa)"),
-                        $keysList
-                    );
-                }
+                $attachmentsQuery->where(function ($q) use ($filtered) {
+                    foreach ($filtered as $row) {
+                        $q->orWhere(function ($sub) use ($row) {
+                            $sub->where('region', $row['region'] ?? null)
+                                ->where('province', $row['province'] ?? null)
+                                ->where('municipality', $row['municipality'] ?? ($row['city'] ?? null))
+                                ->where('title', $row['title'] ?? null)
+                                ->where('year_of_moa', $row['year_of_moa'] ?? null);
+                        });
+                    }
+                });
                 $attachments = $attachmentsQuery->get();
-                $uploadedCount = $attachments->count();
+
+                $attachmentKeys = [];
+                foreach ($attachments as $att) {
+                    $key = implode('|', [
+                        $att->region,
+                        $att->province,
+                        $att->municipality,
+                        $att->title,
+                        $att->year_of_moa,
+                    ]);
+                    if (isset($filteredKeys[$key])) {
+                        $attachmentKeys[$key] = true;
+                    }
+                }
+                $uploadedCount = count($attachmentKeys);
             }
         } catch (\Throwable $ex) {
             $uploadedCount = 0;
@@ -317,16 +340,25 @@ class STsReportController extends Controller
                 if (!empty($filteredKeysYear)) {
                     $attachmentsQuery = \App\Models\StsAttachment::query();
                     $attachmentsQuery->where('action', 'added');
-                    $keysListYear = array_keys($filteredKeysYear);
-                    if (!empty($keysListYear)) {
-                        $attachmentsQuery->whereIn(
-                            \DB::raw("CONCAT(region,'|',province,'|',municipality,'|',title,'|',year_of_moa)"),
-                            $keysListYear
-                        );
-                    }
+                    $attachmentsQuery->where(function ($q) use ($rowsForYear) {
+                        foreach ($rowsForYear as $row) {
+                            $q->orWhere(function ($sub) use ($row) {
+                                $sub->where('region', $row['region'] ?? null)
+                                    ->where('province', $row['province'] ?? null)
+                                    ->where('municipality', $row['municipality'] ?? ($row['city'] ?? null))
+                                    ->where('title', $row['title'] ?? null)
+                                    ->where('year_of_moa', $row['year_of_moa'] ?? null);
+                            });
+                        }
+                    });
                     $attachments = $attachmentsQuery->get();
 
-                    $uploadedY = $attachments->count();
+                    $attachmentKeys = [];
+                    foreach ($attachments as $att) {
+                        $key = implode('|', [ $att->region, $att->province, $att->municipality, $att->title, $att->year_of_moa ]);
+                        if (isset($filteredKeysYear[$key])) $attachmentKeys[$key] = true;
+                    }
+                    $uploadedY = count($attachmentKeys);
                 }
             } catch (\Throwable $ex) {
                 $uploadedY = 0;
@@ -335,7 +367,7 @@ class STsReportController extends Controller
             $perYearTotals[$yr] = [ (int)$moaY, (int)$uploadedY, (int)$exprY, (int)$resY ];
         }
 
-        $result = [
+        return response()->json([
             'provinces' => $provinces,
             'grouped' => $grouped,
             'allRows' => $filtered,
@@ -343,9 +375,6 @@ class STsReportController extends Controller
             'uploadedCount' => $uploadedCount,
             'availableYears' => $availableYears,
             'perYearTotals' => $perYearTotals,
-        ];
-        // cache for a short duration to reduce repeated computation
-        try { \Cache::put($cacheKey, $result, now()->addMinutes(30)); } catch (\Throwable $e) {}
-        return response()->json($result);
+        ]);
     }
 }
