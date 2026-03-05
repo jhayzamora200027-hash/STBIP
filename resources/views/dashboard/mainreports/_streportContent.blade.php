@@ -132,29 +132,180 @@ function renderStTitlesFromRows(rows, regionParam) {
         const headerEl = rsmEl('rsm-st-listing-header');
         if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
         if (!stListEl) return;
-        if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
-        const titleMap = {};
+
+        if (!rows || !rows.length) {
+            stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+            return;
+        }
+
+        // aggregate counts per title and collect province/city locations,
+        // along with adoption/replication and status flags for each
+        // underlying row so the UI can show richer badges instead of
+        // a plain numeric count.
+        const titleCounts = {};
+        const titleLocations = {};
         rows.forEach(r => {
             const t = (r && r.title) ? String(r.title).trim() : '';
-            if (!t) return; titleMap[t] = (titleMap[t] || 0) + 1;
+            if (!t) return;
+
+            titleCounts[t] = (titleCounts[t] || 0) + 1;
+
+            const prov = (r.province || '').toString().trim();
+            const cityVal = (typeof getRowCity === 'function'
+                ? getRowCity(r)
+                : ((r && (r.municipality || r.city)) || '')
+            ).toString().trim();
+            const key = prov + '||' + cityVal;
+            if (!titleLocations[t]) titleLocations[t] = {};
+            if (!titleLocations[t][key]) {
+                titleLocations[t][key] = {
+                    province: prov,
+                    city: cityVal,
+                    count: 0,
+                    adopted: 0,
+                    replicated: 0,
+                    ongoing: 0,
+                    dissolved: 0
+                };
+            }
+
+            const locInfo = titleLocations[t][key];
+            locInfo.count += 1;
+
+            const normBool = (v) => {
+                if (typeof v === 'number') return v !== 0;
+                if (typeof v === 'boolean') return v;
+                const s = (v || '').toString().toLowerCase().trim();
+                if (s === '' || s === '0') return false;
+                return s === 'true' || s === 'yes' || s === '1' || s === 'y';
+            };
+
+            if (normBool(r.with_adopted)) locInfo.adopted += 1;
+            if (normBool(r.with_replicated)) locInfo.replicated += 1;
+
+            const stStatus = (r.status || '').toString().toLowerCase();
+            if (stStatus.includes('ongoing') || stStatus === 'on going') {
+                locInfo.ongoing += 1;
+            } else if (stStatus.includes('dissolved') || stStatus.includes('inactive') || stStatus.includes('completed')) {
+                locInfo.dissolved += 1;
+            }
         });
-        const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
-        if (!entries.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
-        const totalSts = rows.length; const uniqueTitles = entries.length;
-        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+        const entries = Object.entries(titleCounts).sort((a,b) => b[1] - a[1]);
+        if (!entries.length) {
+            stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+            return;
+        }
+
+        const totalSts = rows.length;
+        const uniqueTitles = entries.length;
+        const esc = s => (s || '').toString()
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;')
+            .replace(/'/g,'&#39;');
+
         let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#475569;font-weight:700;font-size:0.88rem;">` +
                    `<div>Unique titles: ${uniqueTitles}</div><div>Total STs: ${totalSts}</div></div>`;
+
         html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-        entries.forEach(([title, count]) => {
-            html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
+        entries.forEach(([title, count], idx) => {
+            const detailId = 'st-detail-' + idx;
+            const locMap = titleLocations[title] || {};
+            const locs = Object.values(locMap);
+            const hasDetails = locs.length > 0;
+
+            html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" data-detail-id="${detailId}" tabindex="0" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
                     `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
                     `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
+                    (hasDetails ? `<div style="font-size:0.7rem;color:#94a3b8;">&#9662;</div>` : '') +
                     `</div>`;
+
+            if (hasDetails) {
+                const sortedLocs = locs.slice().sort((a,b) => {
+                    const ap = (a.province || '').toLowerCase();
+                    const bp = (b.province || '').toLowerCase();
+                    if (ap === bp) {
+                        return (a.city || '').toLowerCase().localeCompare((b.city || '').toLowerCase());
+                    }
+                    return ap.localeCompare(bp);
+                });
+
+                html += `<div class="rsm-st-details" data-detail-id="${detailId}" style="display:none;margin:4px 0 0 56px;border-left:1px dashed rgba(148,163,184,0.5);padding-left:10px;">`;
+                sortedLocs.forEach(loc => {
+                    const labelParts = [];
+                    if (loc.province) labelParts.push(loc.province);
+                    if (loc.city) labelParts.push(loc.city);
+                    const label = labelParts.join(' — ') || 'Location unavailable';
+
+                        const statusParts = [];
+                        if (loc.adopted > 0) statusParts.push('Adopted');
+                        if (loc.replicated > 0) statusParts.push('Replicated');
+                        if (loc.ongoing > 0) statusParts.push('Ongoing');
+                        if (loc.dissolved > 0) statusParts.push('Dissolved');
+                        const statusText = statusParts.join(' · ') || '&nbsp;';
+
+                    html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:#0f172a;">` +
+                            `<span>${esc(label)}</span>` +
+                            `<span style="color:#2563eb;font-weight:500;margin-left:8px;white-space:nowrap;">${statusText}</span>` +
+                            `</div>`;
+                });
+                html += `</div>`;
+            }
         });
         html += '</div>';
+
         stListEl.innerHTML = html;
-        // wire handlers
-        stListEl.onclick = function(ev){ const row = ev.target.closest('.rsm-st-summary-row'); if (!row) return; ev.stopPropagation(); const title = row.getAttribute('data-title')||''; showReplicateConfirmPopover(row, { title: title, row: { title: title } }); };
+
+        // clicking a location row opens the replicate popover immediately.
+        // clicking a summary row first expands to show locations; clicking
+        // it again (while expanded) opens the replicate popover.
+        stListEl.onclick = function(ev){
+            const detailRow = ev.target.closest('.rsm-st-detail-row');
+            if (detailRow) {
+                ev.stopPropagation();
+                const title = detailRow.getAttribute('data-title') || '';
+                const province = detailRow.getAttribute('data-province') || '';
+                const city = detailRow.getAttribute('data-city') || '';
+                showReplicateConfirmPopover(detailRow, { title, province, city, row: { title, province, city } });
+                return;
+            }
+
+            const row = ev.target.closest('.rsm-st-summary-row');
+            if (!row) return;
+            ev.stopPropagation();
+
+            const detailId = row.getAttribute('data-detail-id');
+            const details = detailId ? stListEl.querySelector('.rsm-st-details[data-detail-id="' + detailId + '"]') : null;
+
+            if (details) {
+                const isOpen = details.style.display !== 'none';
+                if (!isOpen) {
+                    details.style.display = 'block';
+                    row.setAttribute('aria-expanded', 'true');
+                    return;
+                }
+                const title = row.getAttribute('data-title') || '';
+                showReplicateConfirmPopover(row, { title, row: { title } });
+            } else {
+                const title = row.getAttribute('data-title') || '';
+                showReplicateConfirmPopover(row, { title, row: { title } });
+            }
+        };
+
+        stListEl.onkeydown = function(e){
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const detailRow = e.target.closest('.rsm-st-detail-row');
+            const row = e.target.closest('.rsm-st-summary-row');
+            if (!detailRow && !row) return;
+            e.preventDefault();
+            if (detailRow) {
+                detailRow.click();
+            } else if (row) {
+                row.click();
+            }
+        };
     } catch(e) { console.error('renderStTitlesFromRows', e); }
 }
 
@@ -2286,76 +2437,14 @@ document.addEventListener("DOMContentLoaded", function () {
 						// ensure chart.js recalculates size if it already existed
 						try { if (modalStatsChart && typeof modalStatsChart.resize === 'function') modalStatsChart.resize(); } catch(e) {}
 
-					// load the ST listing (HTML partial) for the region
-                (function renderRegionAggregatedTitles(){
-                    try {
-                        const stListEl = rsmEl('rsm-st-list');
-                        const headerEl = rsmEl('rsm-st-listing-header');
-                        if (headerEl) {
-                            headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
-                        }
-                        if (!stListEl) return;
-                        const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
-                        // if server didn't return rows, keep the instruction shown to users
-                        if (!rows.length) {
-                            const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
-                            stListEl.innerHTML = emptyMsg;
-                            return;
-                        }
-
-                        // build frequency map of titles (trim and ignore empty titles)
-                        const titleMap = {};
-                        rows.forEach(r => {
-                            const t = (r && r.title) ? String(r.title).trim() : '';
-                            if (!t) return;
-                            titleMap[t] = (titleMap[t] || 0) + 1;
-                        });
-
-                        const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
-                        if (!entries.length) {
-                            const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
-                            stListEl.innerHTML = emptyMsg;
-                            return;
-                        }
-
-                        // header summary (unique / total)
-                        const totalSts = rows.length;
-                        const uniqueTitles = entries.length;
-                        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-                        let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#475569;font-weight:700;font-size:0.88rem;">` +
-                                   `<div>Unique titles: ${uniqueTitles}</div><div>Total STs: ${totalSts}</div></div>`;
-
-                        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-                        entries.forEach(([title, count]) => {
-                            html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
-                                    `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
-                                    `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
-                                    `</div>`;
-                        });
-                        html += '</div>';
-
-                        stListEl.innerHTML = html;
-                        // delegated handler so events persist through re-renders
-                        const applyHandlers = el => {
-                            if (!el) return;
-                            el.onclick = function(ev) {
-                                const row = ev.target.closest('.rsm-st-summary-row');
-                                if (!row) return;
-                                ev.stopPropagation();
-                                const title = row.getAttribute('data-title') || '';
-                                showReplicateConfirmPopover(row, { title: title, row: { title: title } });
-                            };
-                            el.onkeydown = function(e) {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    const row = e.target.closest('.rsm-st-summary-row');
-                                    if (row) { e.preventDefault(); row.click(); }
-                                }
-                            };
-                        };
-                        applyHandlers(stListEl);
-                    } catch(e) { console.error('renderRegionAggregatedTitles', e); }
-                })();
+                    // load the ST listing (HTML partial) for the region using the
+                    // shared renderer so behaviour stays consistent with filters
+                    (function renderRegionAggregatedTitles(){
+                        try {
+                            const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
+                            renderStTitlesFromRows(rows, regionParam || 'this region');
+                        } catch(e) { console.error('renderRegionAggregatedTitles', e); }
+                    })();
 						
 						
 				})
@@ -3425,29 +3514,173 @@ document.addEventListener('DOMContentLoaded', function(){
           const headerEl = rsmEl('rsm-st-listing-header');
           if (headerEl) headerEl.textContent = `ST Titles for ${regionParam || 'this region'}`;
           if (!stListEl) return;
-          if (!rows || !rows.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
-          const titleMap = {};
+
+          if (!rows || !rows.length) {
+              stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+              return;
+          }
+
+          const titleCounts = {};
+          const titleLocations = {};
           rows.forEach(r => {
               const t = (r && r.title) ? String(r.title).trim() : '';
-              if (!t) return; titleMap[t] = (titleMap[t] || 0) + 1;
+              if (!t) return;
+
+              titleCounts[t] = (titleCounts[t] || 0) + 1;
+
+              const prov = (r.province || '').toString().trim();
+              const cityVal = (typeof getRowCity === 'function'
+                  ? getRowCity(r)
+                  : ((r && (r.municipality || r.city)) || '')
+              ).toString().trim();
+              const key = prov + '||' + cityVal;
+              if (!titleLocations[t]) titleLocations[t] = {};
+              if (!titleLocations[t][key]) {
+                  titleLocations[t][key] = {
+                      province: prov,
+                      city: cityVal,
+                      count: 0,
+                      adopted: 0,
+                      replicated: 0,
+                      ongoing: 0,
+                      dissolved: 0
+                  };
+              }
+
+              const locInfo = titleLocations[t][key];
+              locInfo.count += 1;
+
+              const normBool = (v) => {
+                  if (typeof v === 'number') return v !== 0;
+                  if (typeof v === 'boolean') return v;
+                  const s = (v || '').toString().toLowerCase().trim();
+                  if (s === '' || s === '0') return false;
+                  return s === 'true' || s === 'yes' || s === '1' || s === 'y';
+              };
+
+              if (normBool(r.with_adopted)) locInfo.adopted += 1;
+              if (normBool(r.with_replicated)) locInfo.replicated += 1;
+
+              const stStatus = (r.status || '').toString().toLowerCase();
+              if (stStatus.includes('ongoing') || stStatus === 'on going') {
+                  locInfo.ongoing += 1;
+              } else if (stStatus.includes('dissolved') || stStatus.includes('inactive') || stStatus.includes('completed')) {
+                  locInfo.dissolved += 1;
+              }
           });
-          const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
-          if (!entries.length) { stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>'; return; }
-          const totalSts = rows.length; const uniqueTitles = entries.length;
-          const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+          const entries = Object.entries(titleCounts).sort((a,b) => b[1] - a[1]);
+          if (!entries.length) {
+              stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+              return;
+          }
+
+          const totalSts = rows.length;
+          const uniqueTitles = entries.length;
+          const esc = s => (s || '').toString()
+              .replace(/&/g,'&amp;')
+              .replace(/</g,'&lt;')
+              .replace(/>/g,'&gt;')
+              .replace(/"/g,'&quot;')
+              .replace(/'/g,'&#39;');
+
           let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#475569;font-weight:700;font-size:0.88rem;">` +
                      `<div>Unique titles: ${uniqueTitles}</div><div>Total STs: ${totalSts}</div></div>`;
+
           html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-          entries.forEach(([title, count]) => {
-              html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
+          entries.forEach(([title, count], idx) => {
+              const detailId = 'st-detail-' + idx;
+              const locMap = titleLocations[title] || {};
+              const locs = Object.values(locMap);
+              const hasDetails = locs.length > 0;
+
+              html += `<div class="rsm-st-summary-row" data-title="${esc(title)}" data-detail-id="${detailId}" tabindex="0" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,0.04);background:#fff;cursor:pointer;">` +
                       `<div style="min-width:44px;text-align:center;font-weight:800;color:#2563eb;">${count}</div>` +
                       `<div style="flex:1;color:#0b2540;font-weight:600;">${esc(title)}</div>` +
+                      (hasDetails ? `<div style="font-size:0.7rem;color:#94a3b8;">&#9662;</div>` : '') +
                       `</div>`;
+
+              if (hasDetails) {
+                  const sortedLocs = locs.slice().sort((a,b) => {
+                      const ap = (a.province || '').toLowerCase();
+                      const bp = (b.province || '').toLowerCase();
+                      if (ap === bp) {
+                          return (a.city || '').toLowerCase().localeCompare((b.city || '').toLowerCase());
+                      }
+                      return ap.localeCompare(bp);
+                  });
+
+                  html += `<div class="rsm-st-details" data-detail-id="${detailId}" style="display:none;margin:4px 0 0 56px;border-left:1px dashed rgba(148,163,184,0.5);padding-left:10px;">`;
+                  sortedLocs.forEach(loc => {
+                      const labelParts = [];
+                      if (loc.province) labelParts.push(loc.province);
+                      if (loc.city) labelParts.push(loc.city);
+                      const label = labelParts.join(' — ') || 'Location unavailable';
+
+                      const statusParts = [];
+                      if (loc.adopted > 0) statusParts.push('Adopted');
+                      if (loc.replicated > 0) statusParts.push('Replicated');
+                      if (loc.ongoing > 0) statusParts.push('Ongoing');
+                      if (loc.dissolved > 0) statusParts.push('Dissolved');
+                      const statusText = statusParts.join(' · ') || '&nbsp;';
+
+                      html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:#0f172a;">` +
+                              `<span>${esc(label)}</span>` +
+                              `<span style="color:#2563eb;font-weight:500;margin-left:8px;white-space:nowrap;">${statusText}</span>` +
+                              `</div>`;
+                  });
+                  html += `</div>`;
+              }
           });
           html += '</div>';
+
           stListEl.innerHTML = html;
-          // wire handlers
-          stListEl.onclick = function(ev){ const row = ev.target.closest('.rsm-st-summary-row'); if (!row) return; ev.stopPropagation(); const title = row.getAttribute('data-title')||''; showReplicateConfirmPopover(row, { title: title, row: { title: title } }); };
+
+          stListEl.onclick = function(ev){
+              const detailRow = ev.target.closest('.rsm-st-detail-row');
+              if (detailRow) {
+                  ev.stopPropagation();
+                  const title = detailRow.getAttribute('data-title') || '';
+                  const province = detailRow.getAttribute('data-province') || '';
+                  const city = detailRow.getAttribute('data-city') || '';
+                  showReplicateConfirmPopover(detailRow, { title, province, city, row: { title, province, city } });
+                  return;
+              }
+
+              const row = ev.target.closest('.rsm-st-summary-row');
+              if (!row) return;
+              ev.stopPropagation();
+
+              const detailId = row.getAttribute('data-detail-id');
+              const details = detailId ? stListEl.querySelector('.rsm-st-details[data-detail-id="' + detailId + '"]') : null;
+
+              if (details) {
+                  const isOpen = details.style.display !== 'none';
+                  if (!isOpen) {
+                      details.style.display = 'block';
+                      row.setAttribute('aria-expanded', 'true');
+                      return;
+                  }
+                  const title = row.getAttribute('data-title') || '';
+                  showReplicateConfirmPopover(row, { title, row: { title } });
+              } else {
+                  const title = row.getAttribute('data-title') || '';
+                  showReplicateConfirmPopover(row, { title, row: { title } });
+              }
+          };
+
+          stListEl.onkeydown = function(e){
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              const detailRow = e.target.closest('.rsm-st-detail-row');
+              const row = e.target.closest('.rsm-st-summary-row');
+              if (!detailRow && !row) return;
+              e.preventDefault();
+              if (detailRow) {
+                  detailRow.click();
+              } else if (row) {
+                  row.click();
+              }
+          };
       } catch(e) { console.error('renderStTitlesFromRows', e); }
   }
 

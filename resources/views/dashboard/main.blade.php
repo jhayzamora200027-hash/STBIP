@@ -2930,6 +2930,66 @@ $('#region-select-orig').on('change', function() {
 				});
 			}
 
+			// Shared tooltip for map + region list hover (shows region name and ST count).
+			// We reuse the global #catListTooltip so only one floating tooltip exists.
+			const mapTooltip = (function() {
+				let el = document.getElementById('catListTooltip');
+				if (!el) {
+					el = document.createElement('div');
+					el.id = 'catListTooltip';
+					el.style.position = 'fixed';
+					el.style.zIndex = '9999';
+					el.style.display = 'none';
+					el.style.pointerEvents = 'none';
+					el.style.background = 'rgba(34,34,34,0.97)';
+					el.style.color = '#fff';
+					el.style.padding = '4px 10px';
+					el.style.borderRadius = '6px';
+					el.style.fontSize = '12px';
+					el.style.boxShadow = '0 2px 8px rgba(16,174,181,0.13)';
+					el.style.whiteSpace = 'pre-line';
+					el.style.maxWidth = '260px';
+					el.style.lineHeight = '1.3';
+					document.body.appendChild(el);
+				}
+				return el;
+			})();
+
+			function formatRegionTooltip(regionCode) {
+				if (!regionCode) return '';
+				const label = regionLabels[regionCode] || regionCode;
+				const count = regionCounts[regionCode] || 0;
+				const plural = count === 1 ? 'ST' : 'STs';
+				return '<strong>' + label + '</strong><br><span style="color:#1de9b6;font-weight:600;">' + count + ' ' + plural + '</span>';
+			}
+
+			function showMapTooltip(regionCode) {
+				if (!mapTooltip || !regionCode) return;
+				const html = formatRegionTooltip(regionCode);
+				if (!html) return;
+				mapTooltip.innerHTML = html;
+				mapTooltip.style.display = 'block';
+				// Anchor tooltip to the top-center of the map so it visually
+				// aligns with the Philippines graphic instead of the sidebar.
+				const mapRect = phMapObject.getBoundingClientRect();
+				const tooltipWidth = mapTooltip.offsetWidth || 0;
+				const tooltipHeight = mapTooltip.offsetHeight || 0;
+				let left = mapRect.left + (mapRect.width - tooltipWidth) / 2;
+				let top = mapRect.top + 8; // just above the map
+				// keep fully inside viewport
+				left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
+				if (top + tooltipHeight + 8 > window.innerHeight) {
+					top = Math.max(8, window.innerHeight - tooltipHeight - 8);
+				}
+				mapTooltip.style.left = left + 'px';
+				mapTooltip.style.top = top + 'px';
+			}
+
+			function hideMapTooltip() {
+				if (!mapTooltip) return;
+				mapTooltip.style.display = 'none';
+			}
+
 			// Render region list with counts beside the map
 			const regionListEl = document.getElementById('map-region-list');
 			if (regionListEl) {
@@ -3010,6 +3070,7 @@ $('#region-select-orig').on('change', function() {
 								regionLabelEl.textContent = code;
 							}
 						}
+						showMapTooltip(code);
 						startRegionBlink(code);
 					});
 					row.addEventListener('mouseleave', function() {
@@ -3017,6 +3078,7 @@ $('#region-select-orig').on('change', function() {
 						if (regionLabelEl) {
 							regionLabelEl.textContent = 'Hover a region on the map';
 						}
+						hideMapTooltip();
 					});
 					row.addEventListener('click', function() {
 						const info = getRegionRepresentativeInfo(code);
@@ -3185,15 +3247,22 @@ $('#region-select-orig').on('change', function() {
 							regionLabelEl.textContent = 'Province: ' + (p.getAttribute('title') || '');
 						}
 					}
+					if (info.regionName) {
+						showMapTooltip(info.regionName);
+					} else {
+						hideMapTooltip();
+					}
 				});
 				p.addEventListener('mouseleave', function () {
 					highlightGroup(info, false);
 					if (regionLabelEl) {
 						regionLabelEl.textContent = 'Hover a region on the map';
 					}
+					hideMapTooltip();
 				});
 				p.addEventListener('click', function () {
 					handleRegionClick(info);
+					hideMapTooltip();
 				});
 			});
 
