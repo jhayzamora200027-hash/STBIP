@@ -209,7 +209,7 @@ class MainReportController extends Controller
                 if (!isset($headers)) {
                     $headers = $normHeader;
                 }
-                // locate important column indexes using substring matching
+                // locate important column indexes using substring matching to handle variations in header labels; we want to be flexible to
                 $titleIdx = $provinceIdx = $municipalityIdx = $exprIdx = $moaIdx = $resIdx = $yearIdx = $adoptIdx = $repIdx = false;
                 foreach ($normHeader as $i => $h) {
                     if ($titleIdx === false && stripos($h, 'title') !== false) {
