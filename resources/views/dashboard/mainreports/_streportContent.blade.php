@@ -89,6 +89,33 @@ function getRowYear(r){
     return ((r && (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of)) || '').toString().trim();
 }
 
+// shared cached fetch helper for region hierarchy JSON so multiple
+// widgets using the same region don't keep refetching from the server.
+(function(){
+    const cache = {};
+    function fetchRegionHierarchy(region){
+        if (!region) return Promise.reject(new Error('Missing region'));
+        const key = String(region);
+        if (cache[key] && cache[key].data) {
+            return Promise.resolve(cache[key].data);
+        }
+        if (cache[key] && cache[key].promise) {
+            return cache[key].promise;
+        }
+        const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(region);
+        const p = fetch(url)
+            .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
+            .then(data => {
+                cache[key] = { data: data };
+                return data;
+            })
+            .catch(err => { delete cache[key]; throw err; });
+        cache[key] = { promise: p };
+        return p;
+    }
+    try { window.fetchRegionHierarchy = fetchRegionHierarchy; } catch(e) {}
+})();
+
 // make a harmless placeholder available immediately so that code which
 // fires before the real implementation loads doesn't throw an error.
 // the real version will overwrite this when it is defined later in the
@@ -244,9 +271,10 @@ function applyRsmFilters(){
                 return;
             }
             try {
-                // perform same AJAX used elsewhere
-                const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                fetch(url).then(r=>{ if (!r.ok) throw new Error('Network'); return r.json(); }).then(p => { p.region = regionParam; window._lastRsmPayload = p; payload = p; applyRsmFilters(); }).catch(err => console.error('[RSM] fetch fallback failed', err));
+                // perform same AJAX used elsewhere, but via cached helper
+                (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
+                    .then(p => { p.region = regionParam; window._lastRsmPayload = p; payload = p; applyRsmFilters(); })
+                    .catch(err => console.error('[RSM] fetch fallback failed', err));
             } catch(e) { console.error('[RSM] fetch fallback exception', e); }
             return;
         }
@@ -440,6 +468,11 @@ function applyRsmFilters(){
         fetchEl('rsm-total-res').textContent = String(totalRes);
         fetchEl('rsm-total-expr').textContent = String(totalExpr);
         fetchEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
+        // update replicated/adopted totals
+        const totalRep = filtered.reduce((acc, r) => acc + (typeof r.with_replicated === 'number' ? r.with_replicated : ((typeof r.with_replicated === 'boolean') ? (r.with_replicated ? 1 : 0) : (String(r.with_replicated||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
+        const totalAdopt = filtered.reduce((acc, r) => acc + (typeof r.with_adopted === 'number' ? r.with_adopted : ((typeof r.with_adopted === 'boolean') ? (r.with_adopted ? 1 : 0) : (String(r.with_adopted||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
+        fetchEl('rsm-total-rep').textContent = String(totalRep);
+        fetchEl('rsm-total-adopt').textContent = String(totalAdopt);
         // update ongoing/dissolved card counts
         const ongoingEl = fetchEl('rsm-count-ongoing'); if (ongoingEl) ongoingEl.textContent = String(ongoingCount);
         const dissolvedEl = fetchEl('rsm-count-dissolved'); if (dissolvedEl) dissolvedEl.textContent = String(dissolvedCount);
@@ -492,6 +525,11 @@ function resetRsmFilters(){
                 }, 0);
                 const ongoingEl = fetchEl('rsm-count-ongoing'); if (ongoingEl) ongoingEl.textContent = String(ongoingCount);
                 const dissolvedEl = fetchEl('rsm-count-dissolved'); if (dissolvedEl) dissolvedEl.textContent = String(dissolvedCount);
+                // replicated/adopted totals for full dataset
+                const totalRep = allRows.reduce((acc, r) => acc + (typeof r.with_replicated === 'number' ? r.with_replicated : ((typeof r.with_replicated === 'boolean') ? (r.with_replicated ? 1 : 0) : (String(r.with_replicated||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
+                const totalAdopt = allRows.reduce((acc, r) => acc + (typeof r.with_adopted === 'number' ? r.with_adopted : ((typeof r.with_adopted === 'boolean') ? (r.with_adopted ? 1 : 0) : (String(r.with_adopted||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
+                fetchEl('rsm-total-rep').textContent = String(totalRep);
+                fetchEl('rsm-total-adopt').textContent = String(totalAdopt);
             } catch(_){ }
             if (typeof initOrUpdateModalStatsChart === 'function') {
                 const allRows = payload.allRows;
@@ -589,9 +627,8 @@ if (provSel) {
         if (!allRows.length) {
             // attempt to fetch payload same as applyRsmFilters does
             const regionParam = deriveCurrentRegion();
-            if (regionParam) {
-                const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam);
-                fetch(url).then(r=>{ if(!r.ok) throw new Error('Network'); return r.json(); })
+            if (regionParam && window.fetchRegionHierarchy) {
+                window.fetchRegionHierarchy(regionParam)
                   .then(p => {
                       window._lastRsmPayload = p;
                       payload = p;
@@ -745,11 +782,15 @@ document.addEventListener('DOMContentLoaded', function(){
     try { if (typeof applyRsmFilters === 'function') applyRsmFilters(); } catch(_){ }
 });
 
-// fallback: poll the province selection and rebuild lists when it changes
+// Lightweight polling watcher: keep filters and cards in sync even when
+// Select2 or parent-frame code changes values without firing our local
+// handlers. Because region payloads are now cached by
+// window.fetchRegionHierarchy, this will NOT spam the AJAX endpoint; it
+// simply calls applyRsmFilters using the existing payload.
 (function(){
-    let lastProvs = null;
-    let lastCities = null;
-    let lastYears = null;
+    let lastProvs = '';
+    let lastCities = '';
+    let lastYears = '';
     setInterval(function(){
         const provs = _getSelectedValues('rsm-filter-prov');
         const cities = _getSelectedValues('rsm-filter-city');
@@ -757,21 +798,22 @@ document.addEventListener('DOMContentLoaded', function(){
         const provsStr = provs.join('|');
         const citiesStr = cities.join('|');
         const yearsStr = years.join('|');
-        if (provsStr !== (lastProvs||'')) {
-            console.log('[RSM] polling detected province change', provs);
+        let changed = false;
+        if (provsStr !== lastProvs) {
             lastProvs = provsStr;
-            updateProvinceFilters();
-            applyRsmFilters();
+            try { if (typeof updateProvinceFilters === 'function') updateProvinceFilters(); } catch(e){}
+            changed = true;
         }
-        if (citiesStr !== (lastCities||'')) {
-            console.log('[RSM] polling detected city change', cities);
+        if (citiesStr !== lastCities) {
             lastCities = citiesStr;
-            applyRsmFilters();
+            changed = true;
         }
-        if (yearsStr !== (lastYears||'')) {
-            console.log('[RSM] polling detected year change', years);
+        if (yearsStr !== lastYears) {
             lastYears = yearsStr;
-            applyRsmFilters();
+            changed = true;
+        }
+        if (changed) {
+            try { if (typeof applyRsmFilters === 'function') applyRsmFilters(); } catch(e){}
         }
     }, 500);
 })();
@@ -1344,10 +1386,9 @@ document.addEventListener("DOMContentLoaded", function () {
 						const mappedRegion = filenameToRegion[fileName] || null;
 						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
 						bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
-						fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
-							.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-							.then(payload => renderBottomProvinceList(payload))
-							.catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
+                        (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
+                            .then(payload => renderBottomProvinceList(payload))
+                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
 					}
 				} catch(e) { console.error(e); }
 			} else {
@@ -1825,9 +1866,8 @@ document.addEventListener("DOMContentLoaded", function () {
         list.innerHTML = '<div class="province-empty">Loading…</div>';
         card.setAttribute('aria-hidden','false');
         try { const card = document.getElementById('sliderProvinceTotalCard'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); const exprCard = document.getElementById('sliderProvinceExprCard'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); const repCard = document.getElementById('sliderProvinceReplicatedCard'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); const adCard = document.getElementById('sliderProvinceAdoptedCard'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (card) card.setAttribute('aria-hidden','false'); if (stCountEl) stCountEl.textContent = '…'; if (exprCard) exprCard.setAttribute('aria-hidden','false'); if (exprCountEl) exprCountEl.textContent = '…'; if (repCard) repCard.setAttribute('aria-hidden','false'); if (repCountEl) repCountEl.textContent = '…'; if (adCard) adCard.setAttribute('aria-hidden','false'); if (adCountEl) adCountEl.textContent = '…'; positionProvinceTotalCard(); } catch(e) {}
-        // Use demo1 AJAX endpoint which returns {provinces, grouped, allRows, uploadedCount...}
-        fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionKey))
-            .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
+        // Use cached AJAX helper which returns {provinces, grouped, allRows, uploadedCount...}
+        (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionKey) : Promise.reject(new Error('fetchRegionHierarchy missing')))
             .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
 .catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
@@ -2017,9 +2057,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
 
 			// fetch aggregated JSON for the region (provinces, grouped, rows, uploads, per-year totals)
-			fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
-				.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-				.then(payload => {
+            (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
+                .then(payload => {
 					// populate provinces list
 					const provEl = rsmEl('rsm-provinces');
 					if (provEl) {
@@ -3321,9 +3360,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
       // fallback: fetch aggregated data from server endpoint
       if (region) {
-          const url = '/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(region);
-          fetch(url).then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
-            .then(payload => {
+                    (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(region) : Promise.reject(new Error('fetchRegionHierarchy missing')))
+                        .then(payload => {
                 // server returns { provinces: [...], grouped: {prov: {city:[rows]}}, availableYears }
                 const m = { provinces: {}, years: [] };
                 try {
@@ -3515,21 +3553,6 @@ document.addEventListener('DOMContentLoaded', function(){
       const provSel2 = document.getElementById('rsm-filter-prov');
       if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
   });
-
-  // fallback: poll the province selection and rebuild lists when it changes
-  (function(){
-      let lastProvs = null;
-      setInterval(function(){
-          const provs = _getSelectedValues('rsm-filter-prov');
-          const provsStr = provs.join('|');
-          if (provsStr !== (lastProvs||'')) {
-              console.log('[RSM] polling detected province change', provs);
-              lastProvs = provsStr;
-              updateProvinceFilters();
-              applyRsmFilters();
-          }
-      }, 500);
-  })();
 
   // open modal on gallery card click (delegated) — ignore clicks produced by drag/scroll
   const scroller = document.querySelector('.container-cards');

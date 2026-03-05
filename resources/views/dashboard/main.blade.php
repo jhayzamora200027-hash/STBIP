@@ -647,63 +647,29 @@
 			        <iframe id="streportFrame" src="{{ route('streport') }}?embed=1" style="width:100%; height:600px; max-height:600px; border:none; transition: height 0.3s ease;" title="STsReport"></iframe>
 			    </div>
 			</div>
-<!-- Doughnut Chart for ST Titles (inside main dashboard container, after totals/filtering) -->
-			<div class="row mt-4">
-				<div class="col-12 p-0">
-					<div class="card st-dashboard-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
-						<div class="card-header text-center">SUMMARY OF ST TITLES</div>
-						<div class="card-body" style="padding: 32px 16px;">
-							<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 32px; width: 100%;">
-								 <!-- Additional Text Box --><div id="stTitlesInsight" style="
-										bottom: 10px; 
-										padding: 10px; 
-										width: 500px;
-										height:500px;
-										left: 10px;
-										border: 2px solid #333; 
-										background-color: rgba(255,255,255,0.8);
-										border-radius: 5px;
-										font-weight: bold;
-										position:absolute;
-										
-									;height:auto;font-size:1.1rem;line-height:1.4;">
-										Insight
-									</div>
-								<div style="flex: 0 0 460px; width: 460px; max-width: 460px; min-width: 460px; height: 480px; display: flex; align-items: center; justify-content: center; position: relative; left:500px"> {{-- JR --}}
-									<canvas id="stTitlesDoughnut" style="position:relative; z-index:2; width: 440px; height: 440px; max-width: 440px; min-width: 440px;"></canvas>
-									<!-- Inner doughnut for titles at or below 0.5% -->
-									<canvas id="stTitlesDoughnutLow" style="position:absolute; z-index:1; width: 220px; height: 220px; max-width: 240px; min-width: 200px; top:50%; left:50%; transform:translate(-50%, -50%);"></canvas>
-									<div id="doughnutTooltip" style="position:absolute;pointer-events:none;z-index:20;display:none;"></div>
-								</div>
-								<div id="stCategoryList" style="flex: 0 0 370px; width: 370px; max-width: 370px; min-width: 370px; height: 440px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background: #fafdff; border-radius: 12px; box-shadow: 0 2px 8px rgba(16,174,181,0.07); padding: 12px 8px; margin-left: 500px;"></div> {{-- JR --}}
-								<!-- Custom tooltip for category list -->
-
-								<script>
-								// Ensure tooltip is appended to body for global positioning
-								if (!document.getElementById('catListTooltip')) {
-									const tooltipDiv = document.createElement('div');
-									tooltipDiv.id = 'catListTooltip';
-									tooltipDiv.style.position = 'fixed';
-									tooltipDiv.style.zIndex = '9999';
-									tooltipDiv.style.display = 'none';
-									tooltipDiv.style.pointerEvents = 'none';
-									tooltipDiv.style.background = 'rgba(34,34,34,0.97)';
-									tooltipDiv.style.color = '#fff';
-									tooltipDiv.style.padding = '4px 10px';
-									tooltipDiv.style.borderRadius = '6px';
-									tooltipDiv.style.fontSize = '12px';
-									tooltipDiv.style.boxShadow = '0 2px 8px rgba(16,174,181,0.13)';
-									tooltipDiv.style.whiteSpace = 'pre-line';
-									tooltipDiv.style.maxWidth = '260px';
-									tooltipDiv.style.lineHeight = '1.3';
-									document.body.appendChild(tooltipDiv);
-								}
-								</script>
-							</div>
-					</div>
-				</div>
-			</div>
-
+<!-- SUMMARY OF ST TITLES card (doughnut + list + insight) removed.
+     Keep only the global tooltip helper for use by the Total Social Technologies section. -->
+<script>
+// Ensure tooltip is appended to body for global positioning (used by ST title lists/charts)
+if (!document.getElementById('catListTooltip')) {
+	const tooltipDiv = document.createElement('div');
+	tooltipDiv.id = 'catListTooltip';
+	tooltipDiv.style.position = 'fixed';
+	tooltipDiv.style.zIndex = '9999';
+	tooltipDiv.style.display = 'none';
+	tooltipDiv.style.pointerEvents = 'none';
+	tooltipDiv.style.background = 'rgba(34,34,34,0.97)';
+	tooltipDiv.style.color = '#fff';
+	tooltipDiv.style.padding = '4px 10px';
+	tooltipDiv.style.borderRadius = '6px';
+	tooltipDiv.style.fontSize = '12px';
+	tooltipDiv.style.boxShadow = '0 2px 8px rgba(16,174,181,0.13)';
+	tooltipDiv.style.whiteSpace = 'pre-line';
+	tooltipDiv.style.maxWidth = '260px';
+	tooltipDiv.style.lineHeight = '1.3';
+	document.body.appendChild(tooltipDiv);
+}
+</script>
 	<!-- Bar Chart for Year of MOA -->
 
 
@@ -711,7 +677,7 @@
 		<div class="col-12 p-0">
 			<div class="card st-dashboard-card year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 				<div class="card-header text-center">Total Social Technologies</div>
-				<div class="card-body" style="padding: 32px 16px;">
+				<div class="card-body" style="padding: 32px 16px; left: 100px;">
 <div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: flex-start; width: 100%; flex-wrap:nowrap; gap:24px; overflow-x:auto; overflow-y:hidden; height:450px;">
 
     <!-- left block: cards and small charts -->
@@ -750,10 +716,97 @@
 	</div>
 </div>
 
-<!-- Second row: Year MOA bar (full width under line chart) -->
+<!-- Second row: Year MOA bar with Ongoing vs Dissolved doughnut -->
 <div class="st-second-row" style="margin-top:24px; width:100%; display:flex; justify-content:center;">
-	<div class="year-chart-wrap" style="width:100%; max-width:980px; height:360px; display:flex; align-items:entercenter; justify-content:left;">
-		<canvas id="yearMoaBar" style="width: 760px; height: 360px;"></canvas>
+	<div class="year-chart-wrap" style="width:100%; max-width:980px; min-width: 980px; height:360px; display:flex; align-items:center; justify-content:space-between; gap:24px;">
+		<!-- Left: Year of MOA bar chart -->
+		<div style="flex: 1 1 auto; min-width:760; height:100%; display:flex; align-items:center; justify-content:center;">
+			<canvas id="yearMoaBar" style="width: 760px !imporant; height: 360px;"></canvas>
+		</div>
+		<!-- Right: Ongoing/Dissolved and Replicated/Adopted doughnuts -->
+		<div style="flex: 0 0 260px; max-width:260px; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:space-between;">
+			<div style="flex:1 1 0; display:flex; align-items:center; justify-content:center;">
+				<canvas id="ongoingDoughnut" style="width: 220px; height: 220px;"></canvas>
+			</div>
+		</div>
+		<div style="flex: 0 0 260px; max-width:260px; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:space-between;">
+			<div style="flex:1 1 0; display:flex; align-items:center; justify-content:center;">
+				<canvas id="replicatedDoughnut" style="width: 220px; height: 220px;"></canvas>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Third row inside Total Social Technologies: copy of ST Titles doughnuts + new region/year line chart + ST titles list -->
+<div class="st-third-row" style="margin-top:24px; width:100%; display:flex; justify-content:flex-start;">
+	<div style="width:100%; max-width:1400px; display:flex; flex-direction:row; align-items:flex-start; justify-content:flex-end; gap:32px; margin-right: 200px;">
+		<!-- ST Titles double doughnut (copy) -->
+		<!-- Region/year multi-line chart -->
+		<div style="flex: 0 0 420px; max-width:420px; min-width:380px; height:420px; display:flex;">
+			<canvas id="regionYearLines" style="width: 400px; height: 380px;"></canvas>
+		</div>
+		<div style="flex: 0 0 420px; max-width:420px; min-width:380px; height:420px; display:flex; align-items:center; justify-content:center; position:relative;">
+			<canvas id="stTitlesDoughnutCopy" style="position:relative; z-index:2; width: 360px; height: 360px; max-width: 380px; min-width: 320px;"></canvas>
+			<canvas id="stTitlesDoughnutLowCopy" style="position:absolute; z-index:1; width: 190px; height: 190px; max-width: 210px; min-width: 170px; top:50%; left:50%; transform:translate(-50%, -50%);"></canvas>
+		</div>
+		<!-- ST Titles list synced with doughnut copy -->
+		<div style="flex: 0 0 360px; max-width:360px; min-width:320px; height:420px; display:flex; align-items:flex-start; justify-content:center;">
+			<div style="width:100%; height:100%; display:flex; flex-direction:column; border: solid 1px #ccc; border-radius: 14px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+				<div style="font-weight:600; color:#06306e; font-size:1.05rem; margin-bottom:6px;">ST Titles</div>
+				<div id="stCategoryListCopy" style="flex:1 1 auto; max-height:380px; overflow-y:auto;"></div>
+			</div>
+		</div>
+		
+		
+	</div>
+</div>
+
+<!-- Fourth row inside Total Social Technologies: Social Technologies listing -->
+<div class="st-fourth-row" style="margin-top:24px; width:100%; display:flex; justify-content:center; margin-left: -100px;">
+	<div class="row mt-4 justify-content-center" style="width:1400px;">
+		<div class="col-12">
+			<div class="card st-dashboard-card st-title-listing-card flex-fill">
+				<div class="card-header text-center">SOCIAL TECHNOLOGIES</div>
+				<div class="card-body" style="padding: 20px 4px;">
+					<div class="mb-2" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+						<div style="flex:1 1 260px; min-width:220px;">
+							<input type="text" id="title-listing-search" class="form-control" placeholder="Search ST title" />
+						</div>
+						<div style="flex:0 0 170px; min-width:150px;">
+							<select id="title-listing-status-filter" class="form-control">
+								<option value="">All statuses</option>
+								<option value="ongoing">Ongoing STs</option>
+								<option value="dissolved">Dissolved / Inactive STs</option>
+							</select>
+						</div>
+						<div style="flex:0 0 170px; min-width:150px;">
+							<select id="title-listing-adopt-filter" class="form-control">
+								<option value="">All types</option>
+								<option value="replicated">With Replicated</option>
+								<option value="adopted">With Adopted</option>
+							</select>
+						</div>
+					</div>
+					<div id="title-listing-table-container"></div>
+					<script>
+					// Pass all listing data to JS (already filtered by any URL query
+					// parameters, but excluding the 2020-2022 summary sheet).
+					window.fullListingData = @json(collect($data)->filter(function($row){
+						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
+					})->values());
+					window.fullListingHeaders = @json($headers ?? []);
+					// server-supplied totals for adopted/replicated (used by client script)
+					window.serverTotals = {
+					    totalReplicated: {{ $totalReplicated ?? 0 }},
+					    totalAdopted: {{ $totalAdopted ?? 0 }}
+					};
+					// expose per-year stats (including ongoing/dissolved) from PHP so the
+					// dashboard can reuse the same aggregation as the STsReport view.
+					window.initialYearStats = @json($yearStats ?? []);
+					</script>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -1062,35 +1115,6 @@
 			color: #64748b;
 		}
 		</style>
-		<div class="row mt-4 justify-content-center">
-			<div class="col-12">
-				<div class="card st-dashboard-card st-title-listing-card flex-fill">
-					<div class="card-header text-center">SOCIAL TECHNOLOGIES</div>
-					<div class="card-body" style="padding: 20px 4px;">
-						<div class="mb-2">
-                                                    <input type="text" id="title-listing-search" class="form-control" placeholder="Search ST title" />
-                                                </div>
-                                                <div id="title-listing-table-container"></div>
-						<script>
-						// Pass all listing data to JS (already filtered by any URL query
-						// parameters, but excluding the 2020-2022 summary sheet).
-						window.fullListingData = @json(collect($data)->filter(function($row){
-							return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
-						})->values());
-						window.fullListingHeaders = @json($headers ?? []);
-						// server-supplied totals for adopted/replicated (used by client script)
-						window.serverTotals = {
-						    totalReplicated: {{ $totalReplicated ?? 0 }},
-						    totalAdopted: {{ $totalAdopted ?? 0 }}
-						};
-						// expose per-year stats (including ongoing/dissolved) from PHP so the
-						// dashboard can reuse the same aggregation as the STsReport view.
-						window.initialYearStats = @json($yearStats ?? []);
-						</script>
-					</div>
-				</div>
-			</div>
-		</div>
 		</div> <!-- end .container-fluid -->
 
 		<!-- Region ST Titles Modal -->
@@ -1165,7 +1189,8 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/css/select2.min.css" rel="stylesheet" />
 	<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.3.0/dist/chartjs-chart-matrix.min.js"></script>
 	<script>
 	// Client-side pagination for Title Listing, with attachment icon
 	(function() {
@@ -1174,27 +1199,97 @@
 		// keep a master copy plus filtered result used for paging
 		const allData = window.fullListingData || [];
 		let data = allData.slice();
+		let currentSearchTerm = '';
+		let currentStatusFilter = '';
+		let currentAdoptFilter = '';
 
 		function escapeAttr(str) {
 			return (str || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 		}
+		function truthy(v) {
+			if (typeof v === 'boolean') return v;
+			const s = String(v || '').toLowerCase().trim();
+			if (!s) return false;
+			if (s === '0' || s === 'false' || s === 'no') return false;
+			return true;
+		}
 
-		function filterData(term) {
-			term = (term || '').trim().toLowerCase();
-			if (!term) {
-				data = allData.slice();
-			} else {
-				data = allData.filter(r => (r.title||'').toLowerCase().includes(term));
+		// derive per-row status (ongoing / dissolved / other) using the
+		// same rules as the yearStats computation
+		const headers = window.fullListingHeaders || [];
+		const lower = h => (h || '').toString().toLowerCase();
+		const idxOngoing = headers.findIndex(h => lower(h).includes('ongoing'));
+		const idxDissolved = headers.findIndex(h => {
+			const lh = lower(h);
+			return lh.includes('dissolved') || lh.includes('inactive');
+		});
+		const hasStatusMark = v => {
+			if (typeof v === 'boolean') return v;
+			if (v == null) return false;
+			const s = String(v).trim();
+			if (!s || s === '0') return false;
+			if (!isNaN(s)) return Number(s) !== 0;
+			return true;
+		};
+		function deriveStatus(row) {
+			let st = (row.status || '').toString().toLowerCase();
+			if (!st && idxOngoing !== -1) {
+				const cell = row.row && row.row[idxOngoing];
+				if (hasStatusMark(cell)) st = 'ongoing';
 			}
+			if (!st && idxDissolved !== -1) {
+				const cell = row.row && row.row[idxDissolved];
+				if (hasStatusMark(cell)) st = 'dissolved';
+			}
+			if (st.includes('ongoing') || st === 'on going') return 'ongoing';
+			if (st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) return 'dissolved';
+			return '';
+		}
+
+		function applyFilters() {
+			const term = (currentSearchTerm || '').trim().toLowerCase();
+			const status = (currentStatusFilter || '').trim().toLowerCase();
+			const adopt = (currentAdoptFilter || '').trim().toLowerCase();
+			data = allData.filter(r => {
+				const titleMatch = !term || (r.title || '').toLowerCase().includes(term);
+				if (!titleMatch) return false;
+				if (status) {
+					const rowStatus = deriveStatus(r);
+					if (status === 'ongoing' && rowStatus !== 'ongoing') return false;
+					if (status === 'dissolved' && rowStatus !== 'dissolved') return false;
+				}
+				if (adopt) {
+					if (adopt === 'replicated' && !truthy(r.with_replicated)) return false;
+					if (adopt === 'adopted' && !truthy(r.with_adopted)) return false;
+				}
+				return true;
+			});
 			currentPage = 1;
 		}
 
-		// wire up search field if present
+		// wire up search field and filters if present
 		document.addEventListener('DOMContentLoaded', () => {
 			const inp = document.getElementById('title-listing-search');
 			if (inp) {
 				inp.addEventListener('input', function() {
-					filterData(this.value);
+					currentSearchTerm = this.value;
+					applyFilters();
+					renderTable(currentPage);
+				});
+			}
+			const statusSel = document.getElementById('title-listing-status-filter');
+			if (statusSel) {
+				statusSel.addEventListener('change', function() {
+					currentStatusFilter = this.value || '';
+					applyFilters();
+					renderTable(currentPage);
+				});
+			}
+			const adoptSel = document.getElementById('title-listing-adopt-filter');
+			if (adoptSel) {
+				adoptSel.addEventListener('change', function() {
+					currentAdoptFilter = this.value || '';
+					applyFilters();
 					renderTable(currentPage);
 				});
 			}
@@ -1211,15 +1306,36 @@
 				'<th style="width:340px;max-width:340px;">Title</th>' +
 				'<th style="width:180px;max-width:180px;">Province</th>' +
 				'<th style="width:180px;max-width:180px;">City/Municipality</th>' +
+				'<th style="width:110px;max-width:110px; text-align:center;">Status</th>' +
 				'<th style="width:80px;max-width:80px; text-align:center;">Attachment</th>' +
 			'</tr></thead><tbody>';
 			if (pageData.length === 0) {
-				html += '<tr><td colspan="4" class="text-center">No data found.</td></tr>';
+				html += '<tr><td colspan="5" class="text-center">No data found.</td></tr>';
 			} else {
 				pageData.forEach(row => {
 					const title = row.title || '';
 					const province = row.province || '';
 					const municipality = row.municipality || '';
+					const stStatus = deriveStatus(row);
+					const isReplicated = truthy(row.with_replicated);
+					const isAdopted = truthy(row.with_adopted);
+					let primaryLabel = '';
+					let statusClass = 'badge bg-secondary';
+					if (stStatus === 'ongoing') {
+						primaryLabel = 'Ongoing';
+						statusClass = 'badge bg-success';
+					} else if (stStatus === 'dissolved') {
+						primaryLabel = 'Dissolved';
+						statusClass = 'badge bg-danger';
+					}
+					const extraParts = [];
+					if (isReplicated) {
+						extraParts.push('Replicated');
+					}
+					if (isAdopted) {
+						extraParts.push('Adopted');
+					}
+					const extraLabel = extraParts.join(', ');
 					const attachmentUrl = row.attachment_url || '';
 					const uploadedBy = row.attachment_uploaded_by || '';
 					let attachmentCell = '';
@@ -1233,12 +1349,13 @@
 						<td title="${escapeAttr(title)}">${title ? title.substring(0, 60) : ''}</td>
 						<td title="${escapeAttr(province)}">${province ? province.substring(0, 30) : ''}</td>
 						<td title="${escapeAttr(municipality)}">${municipality ? municipality.substring(0, 30) : ''}</td>
+						<td class="text-center">${primaryLabel ? `<span class="${statusClass}">${primaryLabel}</span>` : ''}${extraLabel ? `<span style="margin-left:4px;">${extraLabel}</span>` : ''}</td>
 						<td class="text-center">${attachmentCell}</td>
 					</tr>`;
 				});
 				// Fill remaining rows with blanks to always show 10 rows
 				for (let i = pageData.length; i < perPage; i++) {
-					html += '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>';
+					html += '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
 				}
 			}
 			html += '</tbody></table></div>';
@@ -1716,7 +1833,9 @@ $('#region-select-orig').on('change', function() {
 		'#10aeb5', '#1de9b6', '#b2ebf2', '#ffb74d', '#9575cd', '#f06292', '#4db6ac', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#64b5f6', '#a1887f', '#90a4ae', '#f8bbd0'
 	];
 
-	if (document.getElementById('stTitlesDoughnut')) {
+	// Initialize ST titles charts and lists if either the original
+	// or the Total Social Technologies copy doughnut is present.
+	if (document.getElementById('stTitlesDoughnut') || document.getElementById('stTitlesDoughnutCopy')) {
 		// Calculate percentages for the list
 		const total = stTitleData.reduce((a, b) => a + b, 0);
 		const stTitlePercentages = stTitleData.map(v => ((v / total) * 100));
@@ -1812,6 +1931,8 @@ $('#region-select-orig').on('change', function() {
 		function stopDoughnutBlink() {
 			const mainChart = window.doughnutChartInstance;
 			const lowChart = window.doughnutChartLowInstance;
+			const copyMainChart = window.doughnutChartCopyInstance;
+			const copyLowChart = window.doughnutChartLowCopyInstance;
 			if (doughnutBlinkState.timer) {
 				clearInterval(doughnutBlinkState.timer);
 				doughnutBlinkState.timer = null;
@@ -1839,14 +1960,38 @@ $('#region-select-orig').on('change', function() {
 				lowChart.setActiveElements([]);
 				lowChart.update();
 			}
+			if (copyMainChart) {
+				const metaCopyMain = copyMainChart.getDatasetMeta(0);
+				metaCopyMain.data.forEach(function(arc) {
+					if (arc) {
+						arc.options.borderWidth = 2;
+						arc.options.borderColor = '#fff';
+					}
+				});
+				copyMainChart.setActiveElements([]);
+				copyMainChart.update();
+			}
+			if (copyLowChart) {
+				const metaCopyLow = copyLowChart.getDatasetMeta(0);
+				metaCopyLow.data.forEach(function(arc) {
+					if (arc) {
+						arc.options.borderWidth = 2;
+						arc.options.borderColor = '#fff';
+					}
+				});
+				copyLowChart.setActiveElements([]);
+				copyLowChart.update();
+			}
 			doughnutBlinkState.mainIdx = null;
 			doughnutBlinkState.lowIdx = null;
 		}
 		function startDoughnutBlink(mainIdx, lowIdx) {
 			const mainChart = window.doughnutChartInstance;
 			const lowChart = window.doughnutChartLowInstance;
-			// If there is nothing to highlight, just exit
-			if (!mainChart && !lowChart) return;
+			const copyMainChart = window.doughnutChartCopyInstance;
+			const copyLowChart = window.doughnutChartLowCopyInstance;
+			// If there is nothing at all to highlight, just exit
+			if (!mainChart && !lowChart && !copyMainChart && !copyLowChart) return;
 			// Clear any existing blink first
 			stopDoughnutBlink();
 			doughnutBlinkState.mainIdx = (typeof mainIdx === 'number') ? mainIdx : null;
@@ -1868,6 +2013,21 @@ $('#region-select-orig').on('change', function() {
 					mainChart.setActiveElements([{ datasetIndex: 0, index: doughnutBlinkState.mainIdx }]);
 					mainChart.update();
 				}
+				if (copyMainChart && doughnutBlinkState.mainIdx !== null) {
+					const metaCopy = copyMainChart.getDatasetMeta(0);
+					metaCopy.data.forEach(function(arc, i) {
+						if (!arc) return;
+						if (i === doughnutBlinkState.mainIdx) {
+							arc.options.borderWidth = doughnutBlinkState.visible ? 8 : 2;
+							arc.options.borderColor = '#ffeb3b';
+						} else {
+							arc.options.borderWidth = 2;
+							arc.options.borderColor = '#fff';
+						}
+					});
+					copyMainChart.setActiveElements([{ datasetIndex: 0, index: doughnutBlinkState.mainIdx }]);
+					copyMainChart.update();
+				}
 				if (lowChart && doughnutBlinkState.lowIdx !== null) {
 					const metaLow = lowChart.getDatasetMeta(0);
 					metaLow.data.forEach(function(arc, i) {
@@ -1882,6 +2042,21 @@ $('#region-select-orig').on('change', function() {
 					});
 					lowChart.setActiveElements([{ datasetIndex: 0, index: doughnutBlinkState.lowIdx }]);
 					lowChart.update();
+				}
+				if (copyLowChart && doughnutBlinkState.lowIdx !== null) {
+					const metaCopyLow = copyLowChart.getDatasetMeta(0);
+					metaCopyLow.data.forEach(function(arc, i) {
+						if (!arc) return;
+						if (i === doughnutBlinkState.lowIdx) {
+							arc.options.borderWidth = doughnutBlinkState.visible ? 8 : 2;
+							arc.options.borderColor = '#ffeb3b';
+						} else {
+							arc.options.borderWidth = 2;
+							arc.options.borderColor = '#fff';
+						}
+					});
+					copyLowChart.setActiveElements([{ datasetIndex: 0, index: doughnutBlinkState.lowIdx }]);
+					copyLowChart.update();
 				}
 			}
 			// Apply first frame immediately, then toggle visibility on a faster interval
@@ -1916,21 +2091,58 @@ $('#region-select-orig').on('change', function() {
 				listHtml += `<button id=\"stCatNextBtn\" ${page === totalPages ? 'disabled' : ''} style=\"padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;\">Next</button>`;
 				listHtml += `</div>`;
 			}
-			document.getElementById('stCategoryList').innerHTML = listHtml;
-			// Add event listeners
+			const mainListEl = document.getElementById('stCategoryList');
+			if (mainListEl) {
+				mainListEl.innerHTML = listHtml;
+			}
+
+			// Also render a synchronized copy list (with its own Prev/Next) if present in Total Social Technologies row
+			const copyListEl = document.getElementById('stCategoryListCopy');
+			if (copyListEl) {
+				let copyHtml = '<ul id="stCategoryListUlCopy" style="list-style:none;padding:0 6px 0 0;margin:0;max-height:280px;overflow-y:auto;">';
+				stTitleLabels.slice(start, end).forEach((label, i) => {
+					const idx = start + i;
+					const color = stTitleColors[idx % stTitleColors.length];
+					const count = stTitleData[idx];
+					const percent = stTitlePercentages[idx].toFixed(1);
+					copyHtml += '<li class="st-cat-list-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;margin-bottom:12px;font-size:0.98rem;">' +
+						`<span style="display:inline-block;width:18px;height:18px;background:${color};border-radius:4px;margin-right:10px;box-shadow:0 1px 4px #b2ebf2;"></span>` +
+						`<span style="font-weight:700;color:#10aeb5;margin-right:8px;min-width:78px;">${percent}% (${count})</span>` +
+						`<span style="flex:1 1 auto;white-space:pre-line;word-break:break-word;">${label}</span>` +
+					'</li>';
+				});
+				copyHtml += '</ul>';
+				if (totalPages > 1) {
+					copyHtml += '<div style="display:flex;justify-content:center;align-items:center;margin-top:8px;gap:8px;">';
+					copyHtml += `<button id="stCatPrevBtnCopy" ${page === 1 ? 'disabled' : ''} style="padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;">Prev</button>`;
+					copyHtml += `<span style="margin:0 8px;font-weight:500;color:#10aeb5;">Page ${page} of ${totalPages}</span>`;
+					copyHtml += `<button id="stCatNextBtnCopy" ${page === totalPages ? 'disabled' : ''} style="padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;">Next</button>`;
+					copyHtml += '</div>';
+				}
+				copyListEl.innerHTML = copyHtml;
+			}
+			// Add event listeners for both main and copy lists
 			if (totalPages > 1) {
-				document.getElementById('stCatPrevBtn').onclick = function() {
+				const prevMain = document.getElementById('stCatPrevBtn');
+				const nextMain = document.getElementById('stCatNextBtn');
+				const prevCopy = document.getElementById('stCatPrevBtnCopy');
+				const nextCopy = document.getElementById('stCatNextBtnCopy');
+				const goPrev = function() {
 					if (currentPage > 1) {
 						currentPage--;
 						renderCategoryList(currentPage);
 					}
 				};
-				document.getElementById('stCatNextBtn').onclick = function() {
+				const goNext = function() {
 					if (currentPage < totalPages) {
 						currentPage++;
 						renderCategoryList(currentPage);
 					}
 				};
+				if (prevMain) prevMain.onclick = goPrev;
+				if (nextMain) nextMain.onclick = goNext;
+				if (prevCopy) prevCopy.onclick = goPrev;
+				if (nextCopy) nextCopy.onclick = goNext;
 			}
 			// Highlight doughnut segment(s) on hover
 			setTimeout(() => {
@@ -2168,12 +2380,35 @@ $('#region-select-orig').on('change', function() {
 					responsive: true,
 					plugins: {
 						legend: { display: false },
-						title: { display: false }
+						title: { display: false },
+						tooltip: {
+							callbacks: {
+								label: function(context) {
+									const total = context.dataset.data.reduce((a, b) => a + b, 0);
+									const value = context.parsed;
+									const percent = ((value / total) * 100).toFixed(1);
+									const title = context.label || '';
+									return title + ': ' + value + ' (' + percent + '%)';
+								}
+							}
+						}
 					},
-					cutout: '55%'
+					cutout: '55%',
+					// Enable clicking on the Total Social Technologies doughnut segments
+					// to open the ST title details modal, similar to the main ST Titles chart.
+					onClick: function(evt, elements) {
+						if (!elements || !elements.length) return;
+						const idx = elements[0].index;
+						const label = this.data.labels && this.data.labels[idx];
+						// Ignore aggregated "Others" slice
+						if (!label || label === 'Others') return;
+						if (window.openStTitleModal) {
+							window.openStTitleModal(label);
+						}
+					}
 				}
 			});
-		}
+			}
 		const copyInnerCanvas = document.getElementById('stTitlesDoughnutLowCopy');
 		if (copyInnerCanvas && lowLabels.length > 0) {
 			window.doughnutChartLowCopyInstance = new Chart(copyInnerCanvas.getContext('2d'), {
@@ -2193,43 +2428,120 @@ $('#region-select-orig').on('change', function() {
 						legend: { display: false },
 						title: { display: false },
 						tooltip: { enabled: false }
-					}
+					},
+					// Use the same style of custom hover tooltip as the main inner chart,
+					// so inner-copy labels appear above both doughnuts.
+					onHover: function(evt, activeEls) {
+						const tooltipDiv = document.getElementById('catListTooltip');
+						if (!tooltipDiv) return;
+						// For the copy, position relative to the copy's outer chart
+						const mainChart = window.doughnutChartCopyInstance;
+						if (activeEls && activeEls.length) {
+							const lowIdx = activeEls[0].index;
+							const globalToLow = window.stTitleGlobalToLowIndex || {};
+							let globalIdx = null;
+							Object.keys(globalToLow).forEach(function(k) {
+								if (globalToLow[k] === lowIdx) {
+									globalIdx = parseInt(k, 10);
+								}
+							});
+							if (globalIdx === null) {
+								tooltipDiv.style.display = 'none';
+								return;
+							}
+							const label = stTitleLabels[globalIdx] || '';
+							const value = stTitleData[globalIdx] || 0;
+							const percent = (stTitlePercentages[globalIdx] || 0).toFixed(1);
+							tooltipDiv.innerHTML = `<strong>${label}</strong><br><span style="color:#1de9b6;font-weight:600;">${percent}% (${value})</span>`;
+							tooltipDiv.style.display = 'block';
+							// Position tooltip centered over the corresponding outer slice ("Others").
+							const mainIdxMap = window.stTitleGlobalToMainIndex || {};
+							const mainIdx = mainIdxMap[globalIdx];
+							let placed = false;
+							if (mainChart && mainIdx !== undefined) {
+								const meta = mainChart.getDatasetMeta(0);
+								const arc = meta.data[mainIdx];
+								if (arc) {
+									const model = arc.getProps(['startAngle', 'endAngle', 'outerRadius', 'innerRadius', 'x', 'y'], true);
+									const midAngle = (model.startAngle + model.endAngle) / 2;
+									const r = (model.outerRadius + model.innerRadius) / 2;
+									const x = model.x + r * Math.cos(midAngle);
+									const y = model.y + r * Math.sin(midAngle);
+									const canvas = mainChart.canvas;
+									const rect = canvas.getBoundingClientRect();
+									tooltipDiv.style.left = (rect.left + x - tooltipDiv.offsetWidth / 2) + 'px';
+									tooltipDiv.style.top = (rect.top + y - tooltipDiv.offsetHeight / 2) + 'px';
+									placed = true;
+								}
+							}
+							// Fallback: near the mouse pointer if we can't find the outer slice
+							if (!placed) {
+								tooltipDiv.style.left = (evt.clientX + 14) + 'px';
+								tooltipDiv.style.top = (evt.clientY + 14) + 'px';
+							}
+						} else {
+							tooltipDiv.style.display = 'none';
+						}
+						},
+						// Allow clicking inner copy segments to open the same ST title modal.
+						onClick: function(evt, elements) {
+							if (!elements || !elements.length) return;
+							const idx = elements[0].index;
+							const label = this.data.labels && this.data.labels[idx];
+							if (!label) return;
+							if (window.openStTitleModal) {
+								window.openStTitleModal(label);
+							}
+						}
 				}
 			});
 		}
-		const copyList = document.getElementById('stCategoryListCopy');
-		if (copyList) {
-			let miniHtml = '<ul style="list-style:none;padding:0 6px 0 0;margin:0;max-height:280px;overflow-y:auto;">';
-			const maxItems = 10;
-			stTitleLabels.slice(0, maxItems).forEach((label, idx) => {
-				const color = stTitleColors[idx % stTitleColors.length];
-				const count = stTitleData[idx];
-				const percent = stTitlePercentages[idx].toFixed(1);
-				miniHtml += '<li style="display:flex;align-items:flex-start;margin-bottom:12px;font-size:0.98rem;">' +
-					`<span style="display:inline-block;width:18px;height:18px;background:${color};border-radius:4px;margin-right:10px;"></span>` +
-					`<span style="font-weight:700;color:#10aeb5;margin-right:8px;min-width:78px;">${percent}% (${count})</span>` +
-					`<span style="flex:1 1 auto;">${label}</span>` +
-				'</li>';
+		// Relay hover/click events from the outer copy doughnut canvas to the inner copy
+		// so both charts remain interactive even though the outer canvas sits on top.
+		(function() {
+			const outerCopyCanvas = document.getElementById('stTitlesDoughnutCopy');
+			const innerCopyCanvas = document.getElementById('stTitlesDoughnutLowCopy');
+			if (!outerCopyCanvas || !innerCopyCanvas) return;
+			['mousemove', 'click', 'mouseleave'].forEach(function(evtName) {
+				outerCopyCanvas.addEventListener(evtName, function(e) {
+					if (!window.doughnutChartLowCopyInstance) return;
+					const simulated = new MouseEvent(evtName, {
+						bubbles: true,
+						cancelable: true,
+						clientX: e.clientX,
+						clientY: e.clientY
+					});
+					innerCopyCanvas.dispatchEvent(simulated);
+				});
 			});
-			miniHtml += '</ul>';
-			copyList.innerHTML = miniHtml;
-		}
-
+		})();
 		// Modal helpers for ST title details
+		function normalizeStTitle(raw) {
+			if (!raw) return '';
+			const str = raw.toString();
+			// Decode any HTML entities like &amp; back to their characters
+			const div = document.createElement('div');
+			div.innerHTML = str;
+			const decoded = (div.textContent || div.innerText || '').trim();
+			return decoded.toLowerCase();
+		}
 		function openStTitleModal(stTitle) {
 			const modal = document.getElementById('st-title-modal');
 			if (!modal) return;
 			const titleEl = document.getElementById('st-title-modal-title');
 			const bodyEl = document.getElementById('st-title-modal-body');
 			if (titleEl) {
-				titleEl.textContent = stTitle || 'ST Title';
+				// Show a decoded, human‑readable title (fix &amp; etc.)
+				const humanTitle = normalizeStTitle(stTitle) || 'st title';
+				// Capitalization: keep original if provided, otherwise use normalized
+				titleEl.textContent = stTitle || humanTitle;
 			}
 			const data = window.fullListingData || [];
-			const target = (stTitle || '').toString().trim().toLowerCase();
+			const target = normalizeStTitle(stTitle);
 			let rows = [];
 			if (Array.isArray(data) && target) {
 				rows = data.filter(function(row) {
-					const rowTitle = (row.title || '').toString().trim().toLowerCase();
+					const rowTitle = normalizeStTitle(row.title || '');
 					return rowTitle === target;
 				});
 			}
@@ -3138,6 +3450,137 @@ if (typeof showReplicateConfirmPopover !== 'function') {
         if(val) val.textContent = totalAdopted;
     }
 
+	// Doughnut chart: Ongoing vs Dissolved STs, with center percentage of Ongoing
+	const grandTotal = totalOngoing + totalDissolved;
+	const ongoingPercent = grandTotal > 0 ? Math.round((totalOngoing / grandTotal) * 100) : 0;
+
+	// Plugin to draw text in the center of the doughnut
+	const centerTextPlugin = {
+		id: 'centerText',
+		afterDraw(chart, args, pluginOptions) {
+			const { ctx, chartArea: { left, right, top, bottom } } = chart;
+			const text = pluginOptions && pluginOptions.text ? pluginOptions.text : '';
+			if (!text) return;
+			ctx.save();
+			const x = (left + right) / 2;
+			const y = (top + bottom) / 2;
+			ctx.font = (pluginOptions.font && pluginOptions.font.size ? pluginOptions.font.size : 32) + 'px ' + (pluginOptions.font && pluginOptions.font.family ? pluginOptions.font.family : 'sans-serif');
+			ctx.fillStyle = pluginOptions.color || '#06306e';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(text, x, y);
+			ctx.restore();
+		}
+	};
+
+	if (window.Chart && Chart.register) {
+		Chart.register(centerTextPlugin);
+	}
+
+	const ongoingDoughnutCanvas = document.getElementById('ongoingDoughnut');
+	if (ongoingDoughnutCanvas && ongoingDoughnutCanvas.getContext) {
+		const doughnutCtx = ongoingDoughnutCanvas.getContext('2d');
+		new Chart(doughnutCtx, {
+			type: 'doughnut',
+			data: {
+				labels: ['Ongoing STs', 'Dissolved STs'],
+				datasets: [{
+					data: [totalOngoing, totalDissolved],
+					backgroundColor: [
+						'rgb(75, 192, 192)', // Ongoing
+						'rgb(255, 99, 132)'  // Dissolved
+					],
+					borderColor: '#ffffff',
+					borderWidth: 2
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				cutout: '70%',
+				plugins: {
+					legend: {
+						position: 'bottom',
+						labels: {
+							boxWidth: 14,
+							usePointStyle: true,
+							font: { size: 11 }
+						}
+					},
+					tooltip: {
+						callbacks: {
+							label(context) {
+								const value = context.parsed;
+								const total = grandTotal || 0;
+								const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+								return `${context.label}: ${value} (${pct}%)`;
+							}
+						}
+					},
+					centerText: {
+						text: ongoingPercent + '%',
+						color: '#06306e',
+						font: { size: 30, family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+					}
+				}
+			}
+		});
+	}
+
+	// Doughnut chart: Replicated vs Adopted STs, center text is % Replicated
+	const repTotal = totalReplicated + totalAdopted;
+	const replicatedPercent = repTotal > 0 ? Math.round((totalReplicated / repTotal) * 100) : 0;
+
+	const replicatedCanvas = document.getElementById('replicatedDoughnut');
+	if (replicatedCanvas && replicatedCanvas.getContext) {
+		const repCtx = replicatedCanvas.getContext('2d');
+		new Chart(repCtx, {
+			type: 'doughnut',
+			data: {
+				labels: ['Replicated STs', 'Adopted STs'],
+				datasets: [{
+					data: [totalReplicated, totalAdopted],
+					backgroundColor: [
+						'rgb(54, 162, 235)', // Replicated
+						'rgb(255, 205, 86)'  // Adopted
+					],
+					borderColor: '#ffffff',
+					borderWidth: 2
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				cutout: '70%',
+				plugins: {
+					legend: {
+						position: 'bottom',
+						labels: {
+							boxWidth: 14,
+							usePointStyle: true,
+							font: { size: 11 }
+						}
+					},
+					tooltip: {
+						callbacks: {
+							label(context) {
+								const value = context.parsed;
+								const total = repTotal || 0;
+								const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+								return `${context.label}: ${value} (${pct}%)`;
+							}
+						}
+					},
+					centerText: {
+						text: replicatedPercent + '%',
+						color: '#06306e',
+						font: { size: 30, family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+					}
+				}
+			}
+		});
+	}
+
 	// helper to create a simple line chart config (kept for future use)
 	function makeLineConfig(label, dataArray, color) {
 		return {
@@ -3191,12 +3634,122 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 			scales: { y: { beginAtZero: true } }
 		}
 	});
+
+	// Region-by-year total STs heatmap (x = years, y = regions, color = ST count)
+	const regionYearCanvas = document.getElementById('regionYearLines');
+	if (regionYearCanvas && regionYearCanvas.getContext) {
+		const regionYearCtx = regionYearCanvas.getContext('2d');
+		const allDataForRegions = window.fullListingData || [];
+		const regionYearMap = {};
+		allDataForRegions.forEach(function(row) {
+			const regionRaw = (row.region || '').toString().trim();
+			const year = (row.year_of_moa || '').toString().trim();
+			if (!regionRaw || !year) return;
+			if (!regionYearMap[regionRaw]) {
+				regionYearMap[regionRaw] = {};
+			}
+			if (!regionYearMap[regionRaw][year]) {
+				regionYearMap[regionRaw][year] = 0;
+			}
+			regionYearMap[regionRaw][year]++;
+		});
+		const regionNames = Object.keys(regionYearMap).sort();
+		// Build matrix cells: each cell is { x: year, y: region, v: count }
+		const matrixData = [];
+		let maxVal = 0;
+		regionNames.forEach(function(region) {
+			const yearMap = regionYearMap[region] || {};
+			years.forEach(function(y) {
+				const v = yearMap[y] || 0;
+				if (v > 0) {
+					matrixData.push({ x: y, y: region, v: v });
+					if (v > maxVal) maxVal = v;
+				}
+			});
+		});
+		if (matrixData.length && maxVal === 0) {
+			maxVal = 1;
+		}
+		new Chart(regionYearCtx, {
+			type: 'matrix',
+			data: {
+				datasets: [{
+					label: 'STs by Region and Year',
+					data: matrixData,
+					backgroundColor: function(context) {
+						const value = context.raw.v || 0;
+						if (!maxVal) {
+							return 'rgba(33, 150, 243, 0)';
+						}
+						const ratio = Math.min(1, value / maxVal);
+						const alpha = 0.15 + 0.75 * ratio;
+						return `rgba(33, 150, 243, ${alpha})`;
+					},
+					borderColor: 'rgba(255,255,255,0.8)',
+					borderWidth: 1,
+					width: function(context) {
+						const chart = context.chart;
+						const a = chart.chartArea;
+						if (!a) {
+							return 0;
+						}
+						return (a.right - a.left) / years.length - 2;
+					},
+					height: function(context) {
+						const chart = context.chart;
+						const a = chart.chartArea;
+						if (!a) {
+							return 0;
+						}
+						return (a.bottom - a.top) / Math.max(1, regionNames.length) - 2;
+					}
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: { display: false },
+					tooltip: {
+						callbacks: {
+							title: function(items) {
+								if (!items || !items.length) return '';
+								const raw = items[0].raw || {};
+								return `${raw.y} – ${raw.x}`;
+							},
+							label: function(context) {
+								const raw = context.raw || {};
+								return `${raw.v || 0} STs`;
+							}
+						}
+					}
+				},
+				scales: {
+					x: {
+						type: 'category',
+						labels: years,
+						offset: true,
+						title: { display: true, text: 'Year of MOA' },
+						grid: { display: false }
+					},
+					y: {
+						type: 'category',
+						labels: regionNames,
+						offset: true,
+						reverse: true,
+						title: { display: true, text: 'Region' }
+					}
+				}
+			}
+		});
+	}
+
 	// the separate "dissolved" canvas is no longer used here, but
 	// remains in the markup for layout compatibility.
 	// (if the extra canvas myLineChart3 is still needed you can also reuse totalCounts)
 
-    // (optional) you can initialise other charts here if needed
-};
+	    // (optional) you can initialise other charts here if needed
+	};
         
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));
 
