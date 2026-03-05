@@ -25,14 +25,6 @@ class STsReportController extends Controller
         ];
     }
 
-    public function index()
-    {
-        $all = $this->getAllData();
-
-        return view('demo1', [
-            'filteredData' => $all['data'], // show all initially
-        ]);
-    }
 
     // PHP version of region inference logic from STsReport Title Listing
     private function inferRegionCodeFromRow($row) {

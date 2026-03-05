@@ -1115,6 +1115,49 @@ if (!document.getElementById('catListTooltip')) {
 			color: #64748b;
 		}
 		</style>
+			@if(!auth()->check())
+			<div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px; padding: 10px;">
+	                <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
+	                    <!-- header could be commented out if undesired -->
+	                    <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
+	                    <div class="card-body" style="padding:12px;">
+	                        <form method="GET" action="" class="w-100 d-flex flex-column">
+	                            <label for="region-select-modal" class="st-filter-label">Region</label>
+	                            <select id="region-select-modal" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
+	                                @foreach($regions as $region)
+	                                @if (stripos($region, 'Data CY 2020-2022') === false)
+	                                <option value="{{ $region }}" {{ collect(request('region'))->contains($region) ? 'selected' : '' }}>{{ $region }}</option>
+	                                @endif
+	                                @endforeach
+	                            </select>
+
+	                            <label for="year-select-modal" class="st-filter-label">Year</label>
+	                            <select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
+	                                @foreach($years as $year)
+	                                <option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
+	                                @endforeach
+	                            </select>
+
+	                            <label for="province-select-modal" class="st-filter-label">Province</label>
+	                            <select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
+	                                @foreach($provinces as $province)
+	                                <option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
+	                                @endforeach
+	                            </select>
+
+	                            <label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
+	                            <select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
+	                                @foreach($municipalities as $municipality)
+	                                <option value="{{ $municipality }}" {{ collect(request('municipality'))->contains($municipality) ? 'selected' : '' }}>{{ $municipality }}</option>
+	                                @endforeach
+	                            </select>
+
+	                            <button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
+	                        </form>
+	                    </div>
+	                </div>
+	            </div>
+			@endif
 		</div> <!-- end .container-fluid -->
 
 		<!-- Region ST Titles Modal -->
@@ -1406,28 +1449,40 @@ window.allProvinces = Array.from(new Set(window.allProvinces)).sort();
 window.allCities = Array.from(new Set(window.allCities)).sort();
 window.allYears = @json($allYears ?? $years);
 	$(function() {
-		$('.st-select2').select2({
-			width: '100%',
-			closeOnSelect: false,
-			allowClear: true,
-			placeholder: function(){ return $(this).data('placeholder'); },
-			templateResult: function (data) { return data.text; },
-			templateSelection: function (data) { return data.text; },
-			escapeMarkup: function (markup) { return markup; }
-		});
-
-		// when the modal opens, ensure its selects are initialised with proper dropdown parent
-		$('#filterModal').on('shown.bs.modal', function() {
-			$(this).find('.st-select2').select2({
-				width: '100%',
-				closeOnSelect: false,
-				allowClear: true,
-				placeholder: function(){ return $(this).data('placeholder'); },
-				templateResult: function (data) { return data.text; },
-				templateSelection: function (data) { return data.text; },
-				escapeMarkup: function (markup) { return markup; },
-				dropdownParent: $('#filterModal')
+		// Initialise Select2 on all dashboard filters (inline + modal)
+		function initDashboardSelect2() {
+			if (!$.fn || !$.fn.select2) {
+				console && console.warn && console.warn('Select2 plugin is missing for .st-select2');
+				return;
+			}
+			$('.st-select2').each(function () {
+				var $el = $(this);
+				if ($el.data('select2')) {
+					return; // already initialised
+				}
+				var opts = {
+					width: '100%',
+					closeOnSelect: false,
+					allowClear: true,
+					placeholder: $el.data('placeholder'),
+					templateResult: function (data) { return data.text; },
+					templateSelection: function (data) { return data.text; },
+					escapeMarkup: function (markup) { return markup; }
+				};
+				// For controls inside the modal, constrain dropdown to the modal viewport
+				if ($el.closest('#filterModal').length) {
+					opts.dropdownParent = $('#filterModal');
+				}
+				$el.select2(opts);
 			});
+		}
+
+		// Run once on page load so the sidebar filter renders with Select2
+		initDashboardSelect2();
+
+		// When the modal opens, re-run in case its contents were just injected
+		$('#filterModal').on('shown.bs.modal', function() {
+			initDashboardSelect2();
 		});
 
 		// Global click handler for attachment view buttons (map + title listing)
@@ -1492,21 +1547,18 @@ window.allYears = @json($allYears ?? $years);
 
 			// helper that applies selections to any gallery/iframe on the page
 			function propagateFilters() {
-				var selRegions = $('#region-select-orig').val() || [];
-				var selYears = $('#year-select-orig').val() || [];
+					// use the modal filter controls as the single source of truth
+					var selRegions = $('#region-select-modal').val() || [];
+					var selYears = $('#year-select-modal').val() || [];
 				// convert any FO-style text to canonical "Region X" codes for the slider
 				selRegions = selRegions.map(function(r){
 					return inferRegionCodeFromRegionText(r) || r;
 				});
-			// notify iframe about the new selections; we intentionally do **not**
-			// reload it so the embedded report (totals, ST listing) stays fixed.
-				var iframe = document.querySelector('iframe');
-			if (iframe) {
-					// tell the embedded report about the selections but indicate that
-					// this message originates from the outer filter form; the iframe
-					// should mirror slide/gallery visibility but not load new totals.
-					try { iframe.contentWindow.postMessage({ type:'streportFilters', regions: selRegions, years: selYears, skipTotals: true }, '*'); } catch(e){}
-				}
+			// previously this notified the embedded STsReport iframe about
+			// filter changes via postMessage. this coupling caused the
+			// ST report content to change whenever the dashboard filter
+			// was used, which is no longer desired. we now keep the
+			// iframe independent and only filter local card galleries.
 				// local filtering of any card-gallery containers on this page
 			if (selRegions.length || selYears.length) {
 				$('.card-gallery .card').each(function(){
@@ -1578,7 +1630,7 @@ window.addEventListener('message', function(e) {
 	}
 });
 
-$('#region-select-orig').on('change', function() {
+$('#region-select-modal').on('change', function() {
 			var selectedRegions = $(this).val() || [];
 			var provinces = [];
 			var cities = [];
@@ -1587,7 +1639,7 @@ $('#region-select-orig').on('change', function() {
 			// When no region is selected, restore the full list of years,
 			// provinces, and cities so everything reverts back.
 			if (selectedRegions.length === 0) {
-				var $yearAll = $('#year-select-orig');
+				var $yearAll = $('#year-select-modal');
 				var selectedYearAll = $yearAll.val() || [];
 				$yearAll.empty();
 				(window.allYears || []).forEach(function(yr) {
@@ -1596,7 +1648,7 @@ $('#region-select-orig').on('change', function() {
 				});
 				$yearAll.trigger('change.select2');
 				// restore provinces and cities as well
-				var $provAll = $('#province-select-orig');
+				var $provAll = $('#province-select-modal');
 				var selProv = $provAll.val() || [];
 				$provAll.empty();
 				(window.allProvinces || []).forEach(function(p) {
@@ -1604,7 +1656,7 @@ $('#region-select-orig').on('change', function() {
 					$provAll.append('<option value="'+p+'" '+selected+'>'+p+'</option>');
 				});
 				$provAll.trigger('change.select2');
-				var $cityAll = $('#municipality-select-orig');
+				var $cityAll = $('#municipality-select-modal');
 				var selCity = $cityAll.val() || [];
 				$cityAll.empty();
 				(window.allCities || []).forEach(function(c) {
@@ -1632,7 +1684,7 @@ $('#region-select-orig').on('change', function() {
 			years.sort();
 
 			// Update province dropdown
-			var $province = $('#province-select-orig');
+			var $province = $('#province-select-modal');
 			var selectedProvince = $province.val() || [];
 			$province.empty();
 			provinces.forEach(function(prov) {
@@ -1642,7 +1694,7 @@ $('#region-select-orig').on('change', function() {
 			$province.trigger('change.select2');
 
 			// Update city dropdown
-			var $city = $('#municipality-select-orig');
+			var $city = $('#municipality-select-modal');
 			var selectedCity = $city.val() || [];
 			$city.empty();
 			cities.forEach(function(city) {
@@ -1652,7 +1704,7 @@ $('#region-select-orig').on('change', function() {
 			$city.trigger('change.select2');
 
 			// Update year dropdown (based on selected regions)
-			var $year = $('#year-select-orig');
+			var $year = $('#year-select-modal');
 			var selectedYear = $year.val() || [];
 			$year.empty();
 			years.forEach(function(yr) {
@@ -1664,13 +1716,13 @@ $('#region-select-orig').on('change', function() {
 		});
 
 		// province change cascades to cities
-		$('#province-select-orig').on('change', function() {
-			var selectedRegions = $('#region-select-orig').val() || [];
+		$('#province-select-modal').on('change', function() {
+			var selectedRegions = $('#region-select-modal').val() || [];
 			var selectedProvinces = $(this).val() || [];
 			var cities = [];
 			// if no filters, restore entire city list
 			if (selectedRegions.length === 0 && selectedProvinces.length === 0) {
-				var $cityAll = $('#municipality-select-orig');
+				var $cityAll = $('#municipality-select-modal');
 				var selCity = $cityAll.val() || [];
 				$cityAll.empty();
 				(window.allCities || []).forEach(function(c) {
@@ -1691,7 +1743,7 @@ $('#region-select-orig').on('change', function() {
 				}
 			});
 			cities = [...new Set(cities)];
-			var $city = $('#municipality-select-orig');
+			var $city = $('#municipality-select-modal');
 			var selectedCity = $city.val() || [];
 			$city.empty();
 			cities.forEach(function(city) {
@@ -1702,12 +1754,12 @@ $('#region-select-orig').on('change', function() {
 		});
 
 		// propagate when year selector is changed as well
-		$('#year-select-orig').on('change', propagateFilters);
+		$('#year-select-modal').on('change', propagateFilters);
 
 		// if the page loaded with preselected filters, fire change events
 		// so dependent dropdowns update immediately
-		$('#region-select-orig').trigger('change');
-		$('#province-select-orig').trigger('change');
+		$('#region-select-modal').trigger('change');
+		$('#province-select-modal').trigger('change');
 		// update iframe/gallery based on any initial filter values
 		propagateFilters();
 	});
@@ -2832,6 +2884,7 @@ $('#region-select-orig').on('change', function() {
 			const regionToProvinces = {};
 			const provinceRegionIndex = {};
 			const pathInfos = [];
+			const svgRoot = svgDoc.documentElement;
 			const regionLabels = {
 				'Region I': 'Region I – Ilocos Region',
 				'CAR': 'CAR – Cordillera Administrative Region',
@@ -2917,6 +2970,32 @@ $('#region-select-orig').on('change', function() {
 				path.style.cursor = 'pointer';
 			});
 
+			function getPathAnchorRect(path) {
+				try {
+					const bbox = path.getBBox();
+					const svgEl = path.ownerSVGElement || svgRoot;
+					const vb = svgEl && svgEl.viewBox && svgEl.viewBox.baseVal
+						? svgEl.viewBox.baseVal
+						: { x: 0, y: 0, width: svgEl.clientWidth || 1, height: svgEl.clientHeight || 1 };
+					const mapRect = phMapObject.getBoundingClientRect();
+					const scaleX = mapRect.width / (vb.width || 1);
+					const scaleY = mapRect.height / (vb.height || 1);
+					const centerX = mapRect.left + ((bbox.x + bbox.width / 2 - vb.x) * scaleX);
+					const centerY = mapRect.top + ((bbox.y + bbox.height / 2 - vb.y) * scaleY);
+					const size = 24;
+					return {
+						left: centerX - size / 2,
+						right: centerX + size / 2,
+						top: centerY - size / 2,
+						bottom: centerY + size / 2,
+						width: size,
+						height: size
+					};
+				} catch (e) {
+					return phMapObject.getBoundingClientRect();
+				}
+			}
+
 			// Build counts per region using fullListingData and generic region inference.
 			// At the same time, pre-compute per-region ongoing/dissolved counts so the
 			// small summary cards can show numbers for a selected region (e.g. Region X).
@@ -2963,19 +3042,24 @@ $('#region-select-orig').on('change', function() {
 				return '<strong>' + label + '</strong><br><span style="color:#1de9b6;font-weight:600;">' + count + ' ' + plural + '</span>';
 			}
 
-			function showMapTooltip(regionCode) {
+			function showMapTooltip(regionCode, anchorRect) {
 				if (!mapTooltip || !regionCode) return;
 				const html = formatRegionTooltip(regionCode);
 				if (!html) return;
 				mapTooltip.innerHTML = html;
 				mapTooltip.style.display = 'block';
-				// Anchor tooltip to the top-center of the map so it visually
-				// aligns with the Philippines graphic instead of the sidebar.
-				const mapRect = phMapObject.getBoundingClientRect();
+				// Anchor tooltip close to the hovered element (region path or
+				// list row). Fallback to the whole map if no anchorRect is
+				// provided.
+				const baseRect = anchorRect || phMapObject.getBoundingClientRect();
 				const tooltipWidth = mapTooltip.offsetWidth || 0;
 				const tooltipHeight = mapTooltip.offsetHeight || 0;
-				let left = mapRect.left + (mapRect.width - tooltipWidth) / 2;
-				let top = mapRect.top + 8; // just above the map
+				let left = baseRect.left + (baseRect.width - tooltipWidth) / 2;
+				let top = baseRect.top - tooltipHeight - 8; // above anchor
+				// if there isn't enough space above, place it below instead
+				if (top < 8) {
+					top = baseRect.bottom + 8;
+				}
 				// keep fully inside viewport
 				left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
 				if (top + tooltipHeight + 8 > window.innerHeight) {
@@ -3030,6 +3114,11 @@ $('#region-select-orig').on('change', function() {
 					const arr = regionToPaths[regionCode];
 					return (arr && arr.length) ? arr[0] : null;
 				}
+				function getRegionAnchorRectFromCode(regionCode) {
+					const info = getRegionRepresentativeInfo(regionCode);
+					if (!info) return phMapObject.getBoundingClientRect();
+					return getPathAnchorRect(info.path);
+				}
 				function startRegionBlink(regionCode) {
 					if (!regionCode) return;
 					const info = getRegionRepresentativeInfo(regionCode);
@@ -3070,7 +3159,7 @@ $('#region-select-orig').on('change', function() {
 								regionLabelEl.textContent = code;
 							}
 						}
-						showMapTooltip(code);
+						showMapTooltip(code, getRegionAnchorRectFromCode(code));
 						startRegionBlink(code);
 					});
 					row.addEventListener('mouseleave', function() {
@@ -3248,7 +3337,7 @@ $('#region-select-orig').on('change', function() {
 						}
 					}
 					if (info.regionName) {
-						showMapTooltip(info.regionName);
+						showMapTooltip(info.regionName, getPathAnchorRect(p));
 					} else {
 						hideMapTooltip();
 					}
@@ -3825,10 +3914,12 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	</script>
 
     <!-- floating filter button using external icon file -->
+	@if(auth()->check())
     <button id="floatingBtn" class="btn" aria-label="Filter" style="background-color: white" data-bs-toggle="modal" data-bs-target="#filterModal">
         <img src="/images/dattachments/filtering%20icon.png" width="24" height="24" alt="Filter" />
         <span class="filter-label">Filter</span>
     </button>
+	@endif
 
     <!-- filter modal -->
     <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
@@ -3967,7 +4058,8 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-	@endsection
+<script>
+@endsection
 
 
 

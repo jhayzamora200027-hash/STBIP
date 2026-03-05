@@ -232,23 +232,44 @@ function renderStTitlesFromRows(rows, regionParam) {
                     return ap.localeCompare(bp);
                 });
 
-                html += `<div class="rsm-st-details" data-detail-id="${detailId}" style="display:none;margin:4px 0 0 56px;border-left:1px dashed rgba(148,163,184,0.5);padding-left:10px;">`;
+                html += `<div class="rsm-st-details" data-detail-id="${detailId}" data-open="0" style="max-height:0;overflow:hidden;opacity:0;transition:max-height 200ms ease, opacity 200ms ease;margin:4px 0 0 56px;border-left:1px dashed rgba(148,163,184,0.5);padding-left:10px;">`;
                 sortedLocs.forEach(loc => {
                     const labelParts = [];
                     if (loc.province) labelParts.push(loc.province);
                     if (loc.city) labelParts.push(loc.city);
                     const label = labelParts.join(' — ') || 'Location unavailable';
 
+                        let lifecycleStatus = '';
+                        if (loc.dissolved > 0 && loc.ongoing === 0) {
+                            lifecycleStatus = 'Dissolved';
+                        } else if (loc.ongoing > 0 && loc.dissolved === 0) {
+                            lifecycleStatus = 'Ongoing';
+                        } else if (loc.dissolved > 0 && loc.ongoing > 0) {
+                            // if there are both ongoing and dissolved rows, treat as dissolved
+                            lifecycleStatus = 'Dissolved';
+                        }
+
+                        let adoptionStatus = '';
+                        if (loc.adopted > 0 && loc.replicated === 0) {
+                            adoptionStatus = 'Adopted';
+                        } else if (loc.replicated > 0 && loc.adopted === 0) {
+                            adoptionStatus = 'Replicated';
+                        } else if (loc.adopted > 0 && loc.replicated > 0) {
+                            adoptionStatus = 'Adopted · Replicated';
+                        }
+
                         const statusParts = [];
-                        if (loc.adopted > 0) statusParts.push('Adopted');
-                        if (loc.replicated > 0) statusParts.push('Replicated');
-                        if (loc.ongoing > 0) statusParts.push('Ongoing');
-                        if (loc.dissolved > 0) statusParts.push('Dissolved');
+                        if (lifecycleStatus) statusParts.push(lifecycleStatus);
+                        if (adoptionStatus) statusParts.push(adoptionStatus);
                         const statusText = statusParts.join(' · ') || '&nbsp;';
 
-                    html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:#0f172a;">` +
+                        const isDissolvedLoc = lifecycleStatus === 'Dissolved' || loc.dissolved > 0;
+                        const rowColor = isDissolvedLoc ? '#b91c1c' : '#0f172a';
+                        const statusColor = isDissolvedLoc ? '#b91c1c' : '#2563eb';
+
+                    html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:${rowColor};">` +
                             `<span>${esc(label)}</span>` +
-                            `<span style="color:#2563eb;font-weight:500;margin-left:8px;white-space:nowrap;">${statusText}</span>` +
+                            `<span style="color:${statusColor};font-weight:500;margin-left:8px;white-space:nowrap;">${statusText}</span>` +
                             `</div>`;
                 });
                 html += `</div>`;
@@ -280,18 +301,23 @@ function renderStTitlesFromRows(rows, regionParam) {
             const details = detailId ? stListEl.querySelector('.rsm-st-details[data-detail-id="' + detailId + '"]') : null;
 
             if (details) {
-                const isOpen = details.style.display !== 'none';
+                const isOpen = details.getAttribute('data-open') === '1';
                 if (!isOpen) {
-                    details.style.display = 'block';
+                    details.setAttribute('data-open', '1');
+                    details.style.maxHeight = details.scrollHeight + 'px';
+                    details.style.opacity = '1';
                     row.setAttribute('aria-expanded', 'true');
-                    return;
+                } else {
+                    details.setAttribute('data-open', '0');
+                    details.style.maxHeight = '0px';
+                    details.style.opacity = '0';
+                    row.setAttribute('aria-expanded', 'false');
                 }
-                const title = row.getAttribute('data-title') || '';
-                showReplicateConfirmPopover(row, { title, row: { title } });
-            } else {
-                const title = row.getAttribute('data-title') || '';
-                showReplicateConfirmPopover(row, { title, row: { title } });
+                return;
             }
+
+            const title = row.getAttribute('data-title') || '';
+            showReplicateConfirmPopover(row, { title, row: { title } });
         };
 
         stListEl.onkeydown = function(e){
@@ -969,6 +995,43 @@ document.addEventListener('DOMContentLoaded', function(){
     }, 500);
 })();
 
+// extra safety net: on some embeds the initial DOMContentLoaded
+// handler can run before the Swiper slider has established an
+// active slide, which means applyRsmFilters cannot yet infer the
+// current region and leaves the ongoing/dissolved cards at 0
+// until the user manually changes a filter.  This lightweight
+// bootstrap waits for either an active slider image or a recorded
+// __lastActiveRegion and then triggers one more filter pass so
+// the cards populate automatically on first load.
+(function ensureInitialRsmCountsAfterSlider(){
+    let tries = 0;
+    function hasActiveRegion(){
+        if (window.__lastActiveRegion) return true;
+        const img = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
+        return !!img;
+    }
+    function kick(){
+        if (tries++ > 40) return; // give up after ~10s
+        if (!hasActiveRegion()) {
+            setTimeout(kick, 250);
+            return;
+        }
+        try {
+            if (typeof applyRsmFilters === 'function') {
+                applyRsmFilters();
+            }
+        } catch(e){}
+    }
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(kick, 0);
+    } else {
+        document.addEventListener('DOMContentLoaded', function onReady(){
+            document.removeEventListener('DOMContentLoaded', onReady);
+            setTimeout(kick, 0);
+        });
+    }
+})();
+
 // global replicate popover helper (defined early so it exists even if DOMContentLoaded has passed)
 function showReplicateConfirmPopover(targetEl, stInfo = {}) {
     try {
@@ -976,6 +1039,7 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         const existing = document.body.querySelector('.replicate-popover');
         if (existing) existing.remove();
         const pop = document.createElement('div');
+        pop.className = 'replicate-popover';
         // inline styles for independency
         pop.style.position = 'fixed';
         pop.style.zIndex = '2147483647';
@@ -1072,6 +1136,19 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
 
 // ensure global reference exists immediately
 try { window.showReplicateConfirmPopover = showReplicateConfirmPopover; } catch(e) {}
+
+// close replicate popover when clicking anywhere outside it or the
+// ST rows that trigger it. this keeps only one popover visible and
+// matches typical popover behavior.
+document.addEventListener('click', function(ev){
+    try {
+        const pop = document.body.querySelector('.replicate-popover');
+        if (!pop) return;
+        if (pop.contains(ev.target)) return;
+        if (ev.target.closest('.rsm-st-summary-row') || ev.target.closest('.rsm-st-detail-row')) return;
+        pop.remove();
+    } catch(e){}
+});
 
 // helper used in multiple places to derive a canonical region text from
 // slider elements or event details. placed here at the top so it's
@@ -2054,6 +2131,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (existing) existing.remove();
 
             const pop = document.createElement('div');
+            pop.className = 'replicate-popover';
             // inline styling so no external CSS dependency
             pop.style.position = 'fixed';
             pop.style.zIndex = '2147483647';
@@ -2148,8 +2226,142 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch(e) {}
     }
 
-    // default stub — consumers may override window.replicateST with a real implementation
-    try { window.replicateST = window.replicateST || function(payload, sourceEl){ return new Promise(res => setTimeout(()=> res({ ok:true }), 600)); }; } catch(e) {}
+    // default implementation — can be overridden by consumers. Uses a
+    // configurable directory URL (stored in localStorage) and opens it
+    // when replication is confirmed.
+    try {
+        window.replicateST = window.replicateST || function(payload, sourceEl){
+            return new Promise(function(resolve, reject){
+                try {
+                    let baseUrl = '';
+                    try {
+                        if (window.localStorage) {
+                            baseUrl = localStorage.getItem('rsm_replicate_dir_url') || '';
+                        }
+                    } catch(_e) {}
+
+                    if (!baseUrl) {
+                        alert('Replication directory URL is not configured. Please ask a system administrator to set it.');
+                        reject(new Error('Missing replication URL'));
+                        return;
+                    }
+
+                    // open the configured directory/URL in a new tab
+                    window.open(baseUrl, '_blank');
+                    resolve({ ok: true, url: baseUrl });
+                } catch(err) {
+                    reject(err);
+                }
+            });
+        };
+    } catch(e) {}
+
+    // sysadmin-only helper: configure the replication directory URL
+    function openReplicateDirectoryConfig(){
+        try {
+            let existing = '';
+            try {
+                if (window.localStorage) {
+                    existing = localStorage.getItem('rsm_replicate_dir_url') || '';
+                }
+            } catch(_e) {}
+
+            // remove any existing modal instance
+            try {
+                const ex = document.getElementById('rsm-replicate-dir-modal');
+                if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
+            } catch(_e) {}
+
+            const overlay = document.createElement('div');
+            overlay.id = 'rsm-replicate-dir-modal';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.zIndex = '2147483646';
+            overlay.style.background = 'rgba(15,23,42,0.6)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+
+            const panel = document.createElement('div');
+            panel.style.minWidth = '320px';
+            panel.style.maxWidth = '480px';
+            panel.style.background = '#020617';
+            panel.style.borderRadius = '10px';
+            panel.style.boxShadow = '0 18px 50px rgba(15,23,42,0.9)';
+            panel.style.padding = '16px 18px';
+            panel.style.color = '#e5e7eb';
+            panel.style.fontSize = '0.9rem';
+
+            panel.innerHTML = '' +
+                '<div style="font-weight:600;margin-bottom:8px;">Replication directory URL</div>' +
+                '<div style="font-size:0.78rem;color:#9ca3af;margin-bottom:8px;">This URL will open when you confirm replication.</div>' +
+                '<input type="text" id="rsm-replicate-dir-input" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(148,163,184,0.6);background:#020617;color:#e5e7eb;font-size:0.82rem;margin-bottom:10px;" />' +
+                '<div style="display:flex;justify-content:flex-end;gap:8px;">' +
+                    '<button type="button" class="rsm-repdir-cancel" style="background:transparent;border:1px solid rgba(148,163,184,0.5);color:#9ca3af;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Cancel</button>' +
+                    '<button type="button" class="rsm-repdir-save" style="background:#10b981;border:none;color:#022c22;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:600;">Save</button>' +
+                '</div>';
+
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+
+            const inputEl = panel.querySelector('#rsm-replicate-dir-input');
+            if (inputEl) {
+                inputEl.value = existing || '';
+                setTimeout(function(){ try { inputEl.focus(); inputEl.select(); } catch(_e){} }, 10);
+            }
+
+            function closeModal(){
+                try {
+                    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                } catch(_e) {}
+            }
+
+            const cancelBtn = panel.querySelector('.rsm-repdir-cancel');
+            const saveBtn = panel.querySelector('.rsm-repdir-save');
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    closeModal();
+                });
+            }
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    try {
+                        const value = (inputEl && inputEl.value ? inputEl.value : '').trim();
+                        if (!window.localStorage) {
+                            alert('Unable to save URL: browser storage is not available.');
+                            closeModal();
+                            return;
+                        }
+                        if (!value) {
+                            localStorage.removeItem('rsm_replicate_dir_url');
+                        } else {
+                            localStorage.setItem('rsm_replicate_dir_url', value);
+                        }
+                        closeModal();
+                    } catch(_e) { closeModal(); }
+                });
+            }
+
+            overlay.addEventListener('click', function(e){
+                if (e.target === overlay) {
+                    e.preventDefault();
+                    closeModal();
+                }
+            });
+        } catch(_e) {}
+    }
+
+    document.addEventListener('click', function(ev){
+        try {
+            const btn = ev.target.closest('#rsm-set-replicate-url');
+            if (!btn) return;
+            ev.preventDefault();
+            openReplicateDirectoryConfig();
+        } catch(_e) {}
+    });
 
 
 
@@ -2761,7 +2973,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
 
         modalStatsChart.data.datasets.forEach((ds, idx) => { modalStatsChart._datasetAlphas[ds.label] = modalStatsChart.isDatasetVisible(idx) ? 1 : 0; });
 
-        // legend hit-zone helpers (canvas click handling) — kept from demo1
         (function(){ const canvas = el; if (!canvas) return; const hitTestScale = () => { return { scaleX: modalStatsChart.width / (canvas.clientWidth || canvas.width || 1), scaleY: modalStatsChart.height / (canvas.clientHeight || canvas.height || 1) }; };
             const isPointInBox = (x, y, box) => (x >= box.left && x <= (box.left + box.width) && y >= box.top && y <= (box.top + box.height));
             const onCanvasClickForLegend = function(evt) { if (!modalStatsChart || !modalStatsChart.legend) return; const boxes = (modalStatsChart.legend && modalStatsChart.legend.legendHitBoxes) || []; if (!boxes.length) return; const rect = canvas.getBoundingClientRect(); const { scaleX, scaleY } = hitTestScale(); const cx = (evt.clientX - rect.left) * scaleX; const cy = (evt.clientY - rect.top) * scaleY; for (let i = 0; i < boxes.length; i++) { const box = boxes[i]; if (isPointInBox(cx, cy, box)) { const item = (modalStatsChart.legend && modalStatsChart.legend.legendItems && modalStatsChart.legend.legendItems[i]) || {}; const dsIndex = (typeof item.datasetIndex !== 'undefined') ? item.datasetIndex : i; const currentlyVisible = modalStatsChart.isDatasetVisible(dsIndex); const dsLabel = modalStatsChart.data.datasets[dsIndex] && modalStatsChart.data.datasets[dsIndex].label;
@@ -4206,13 +4417,18 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
 
-          <!-- ST Titles card now right of provinces/totals -->
-          <div class="rsm-listing-wrap" style="margin-top:0;">
-            <div class="rsm-card">
-              <h4 id="rsm-st-listing-header" class="rsm-listing-title">ST Titles — select a city to view</h4>
-              <div id="rsm-st-list" class="rsm-st-list"><div class="rsm-empty">Select a city to view ST titles</div></div>
-            </div>
-          </div>
+                    <!-- ST Titles card now right of provinces/totals -->
+                    <div class="rsm-listing-wrap" style="margin-top:0;">
+                        <div class="rsm-card">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                <h4 id="rsm-st-listing-header" class="rsm-listing-title" style="margin:0;">ST Titles — select a city to view</h4>
+@if(Auth::check() && Auth::user()->usergroup === 'sysadmin')
+                                <button type="button" id="rsm-set-replicate-url" style="flex-shrink:0;font-size:0.75rem;padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,0.6);background:#f9fafb;color:#1f2937;cursor:pointer;">Set directory URL</button>
+@endif
+                            </div>
+                            <div id="rsm-st-list" class="rsm-st-list"><div class="rsm-empty">Select a city to view ST titles</div></div>
+                        </div>
+                    </div>
         </div>
       </div>
 
@@ -4405,7 +4621,6 @@ document.addEventListener('DOMContentLoaded', function(){
   .container-cards:not(.dragging):not(.is-scrolling) .card:hover { transform: none; box-shadow: 0 6px 24px rgba(2,6,23,0.08); flex-basis: 240px; }
 }
 
-/* ===== Swiper slider (copied/simplified from demo1) ===== */
 .slider-wrapper {
     position: relative;
     display: flex;
