@@ -1,4 +1,3 @@
-{{-- STs MOA Attachment table + custom pagination (AJAX-ready) --}}
 @php
     $total = $sts instanceof \Illuminate\Pagination\LengthAwarePaginator ? $sts->total() : count($sts);
 @endphp
@@ -213,7 +212,6 @@
     });
 </script>
 @if(Auth::user() && in_array(Auth::user()->usergroup, ['admin', 'sysadmin']))
-{{-- Logs modal (only shown when admin/sysadmin button is clicked) --}}
 <div class="modal fade" id="stsLogsModal" tabindex="-1" aria-labelledby="stsLogsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
@@ -222,7 +220,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="max-height:70vh; overflow-y:auto;" id="sts-logs-container">
-                {{-- AJAX-loaded logs will appear here --}}
             </div>
         </div>
     </div>
@@ -240,19 +237,16 @@
         .st-custom-pagination-btn:not(:disabled):hover { background: linear-gradient(90deg, #4da1f7 60%, #4da1f7 100%); transform: translateY(-2px) scale(1.04); box-shadow: 0 4px 16px #b2ebf2; }
         .st-custom-pagination-indicator { font-weight: 600; color: #4da1f7; font-size: 1.13em; min-width: 110px; text-align: center; letter-spacing: 0.5px; }
 
-        /* Hide Year of MOA column everywhere */
         .st-moa-table th.st-col-year,
         .st-moa-table td.st-col-year {
             display: none;
         }
 
-        /* Hide Province column everywhere (we'll rely on Region instead) */
         .st-moa-table th.st-col-province,
         .st-moa-table td.st-col-province {
             display: none;
         }
 
-        /* Responsive tweaks for table and pagination on tablets/phones */
         @media (max-width: 991.98px) {
             .st-moa-table-wrapper {
                 border-radius: 12px;
@@ -292,7 +286,6 @@
             }
         }
 
-        /* Extra-small phones: keep Region and Attachment visible */
     </style>
     <div class="st-custom-pagination">
         <button type="button" class="st-custom-pagination-btn" @if($sts->onFirstPage()) disabled @else onclick="loadUploadStsPage('{{ $sts->previousPageUrl() }}')" @endif>&#8592; Prev</button>

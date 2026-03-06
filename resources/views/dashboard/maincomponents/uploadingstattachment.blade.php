@@ -40,7 +40,6 @@
 					</div>
 				@endif
 
-				{{-- Filters: Region, Province, City, ST Title --}}
 				<form id="sts-filter-form" method="GET" action="{{ route('uploadmoasts') }}" class="row g-3 mb-3">
 					<div class="col-md-3">
 						<label for="region" class="form-label">Region</label>
@@ -86,7 +85,6 @@
 							}
 						@endphp
 						<div id="title-suggestions" class="list-group shadow-sm" style="position:absolute; top: 100%; left:0; right:0; z-index: 20; max-height: 220px; overflow-y:auto; font-size:0.8rem; display:none;">
-							{{-- suggestions injected via JS --}}
 						</div>
 						<div class="mt-2 d-flex">
 							<button type="submit" class="btn btn-primary me-2">Filter</button>
@@ -97,16 +95,13 @@
 					</div>
 				</form>
 
-				{{-- STs table with pagination (10 rows per page), AJAX-loaded --}}
 				<div id="sts-list-container">
 					@include('dashboard.maincomponents.partials.uploadingstattachment_list', ['sts' => $sts])
 				</div>
 
 				<script>
-				// Load STs logs into modal container via AJAX
 				function loadStsLogsPage(url) {
 					if (!url) return;
-					// normalize URL path
 					if (!url.match(/^https?:\/\//) && url.charAt(0) !== '/') {
 						url = '/' + url;
 					}
@@ -118,7 +113,6 @@
 						return;
 					}
 
-					// put a spinner/placeholder while content loads
 					container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div> Loading logs...</div>';
 
 					fetch(url, {
@@ -141,8 +135,6 @@
 						});
 				}
 
-				// open modal and load logs when button clicked
-				// convert the generated URL into a root-relative path
 				let stsLogsUrl = "{{ route('sts.attachments.logs') }}";
 				try {
 					stsLogsUrl = new URL(stsLogsUrl).pathname;
@@ -154,7 +146,6 @@
 					if (!btn) return;
 					var modalEl = document.getElementById('stsLogsModal');
 					if (!modalEl) return;
-					// include current filter values if form exists
 					let qs = '';
 					var form = document.getElementById('sts-logs-filter-form');
 					if (form) {
@@ -165,7 +156,6 @@
 					var modal = new bootstrap.Modal(modalEl);
 					modal.show();
 				});
-				// filter form submission should reload logs via AJAX
 				document.addEventListener('submit', function(e) {
 					if (e.target && e.target.id === 'sts-logs-filter-form') {
 						e.preventDefault();
@@ -226,7 +216,6 @@
 								titlesList = regionTitleMap[selectedRegion];
 							}
 
-							// When user has typed something, filter; otherwise show first few for quick pick
 							if (query.length > 0) {
 								titlesList = titlesList.filter(function (title) {
 									return title.toLowerCase().indexOf(query) !== -1;

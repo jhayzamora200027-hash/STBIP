@@ -1,5 +1,4 @@
         @if(session('success') === 'Base Excel file updated successfully.')
-            <!-- Success Modal for Update Base Excel -->
             <div class="modal fade" id="successUpdateModal" tabindex="-1" aria-labelledby="successUpdateModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
@@ -28,7 +27,6 @@
         @endif
 
         @if(session('success') === 'Base Excel file refreshed from Google Sheet.')
-                <!-- Success Modal for Refresh from Google Sheet -->
                 <div class="modal fade" id="successRefreshModal" tabindex="-1" aria-labelledby="successRefreshModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
@@ -70,7 +68,6 @@
                 @if(session('error'))
                     <div class="alert alert-danger">{{ session('error') }}</div>
                 @endif
-                <!-- Excel Upload Form -->
                 @if (Auth::user() && in_array(Auth::user()->usergroup, ['admin', 'sysadmin']))
                 <div class="mb-3">
                     <h2 style="font-size:1.25rem;">Social Technology Documents</h2>
@@ -100,7 +97,6 @@
                             View & Copy Link
                         </button>
                     </div>
-                    <!-- Share Google Sheet Link Modal -->
                     <div class="modal fade" id="shareSheetModal" tabindex="-1" aria-labelledby="shareSheetModalLabel" aria-hidden="true">
                         <div class="modal-dialog">
                             <div class="modal-content">
