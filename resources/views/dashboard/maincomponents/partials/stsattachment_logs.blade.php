@@ -1,5 +1,4 @@
 <div>
-    {{-- date range filter --}}
     <form id="sts-logs-filter-form" class="row g-2 mb-3">
         <div class="col-auto">
             <label class="form-label form-label-sm" for="from_date">From</label>
