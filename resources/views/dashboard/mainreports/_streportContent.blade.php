@@ -1,10 +1,6 @@
 <script>
-// silence console output for report scripts
 if (window.console) { ['log','warn','error','debug','info','trace'].forEach(m=>{console[m]=function(){};}); }
-
-// global DOM utility helpers (must be available before any other script blocks)
 function fetchEl(id) {
-    // look in parent frame first for same-origin embedding
     if (window.parent && window.parent !== window && window.parent.document) {
         const pe = window.parent.document.getElementById(id);
         if (pe) return pe;
@@ -12,12 +8,6 @@ function fetchEl(id) {
     return document.getElementById(id);
 }
 function rsmEl(id) { return fetchEl(id); }
-
-// helper that determines what region the UI is currently showing. this
-// duplicates the logic used in several places below but keeps it together
-// so we can compare cached payloads against the live region and fetch a
-// fresh payload if they ever diverge (this prevents filters from running
-// against stale data after a slider transition).
 function getCurrentRegion(){
     let region = null;
     if (window.__lastActiveRegion) {
@@ -39,7 +29,6 @@ function getCurrentRegion(){
         const modalImg = document.getElementById('rsm-modal-image');
         if (modalImg) region = modalImg.getAttribute('data-region-name');
     }
-    // normalize digits ("2" -> "Region II") to keep in step with server
     if (/^\d+$/.test(region)) {
         const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
         const num = parseInt(region,10);
@@ -47,18 +36,10 @@ function getCurrentRegion(){
     }
     return region;
 }
-
-// --- client-side filter apply/reset handlers ---------------------------------
-// utility used by several filtering routines.  use `rsmEl` so that
-// we support scenarios where the filter controls live in a parent frame
-// (eg. when the report is embedded); the original implementation blindly
-// used `document.getElementById` which meant selections were always empty
-// when the iframe context changed.  also keep the same logging as before.
 function _getSelectedValues(id) {
     const el = rsmEl ? rsmEl(id) : document.getElementById(id);
     if (!el) return [];
     try {
-        // prefer Select2 / jQuery value when available
         try { if (window.jQuery && jQuery(el).data('select2')) {
                     const v = jQuery(el).val();
                     const result = Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []);
@@ -68,29 +49,16 @@ function _getSelectedValues(id) {
             const res = Array.from(el.selectedOptions).map(o => o.value);
             return res;
         }
-        // fallback
         const res = Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
         return res;
     } catch(e) { console.error('[RSM] _getSelectedValues error', e); return []; }
 }
-
-// helpers used by filter routines. defining them here at the top of the
-// first <script> block guarantees they exist before any filtering code
-// may execute (previously they lived in a later <script> block which
-// sometimes caused `ReferenceError: getRowCity is not defined`).
 function getRowCity(r){
-    // server-side logic builds hierarchy using municipality first, so
-    // mirror that order here. many rows only set `municipality` and leave
-    // `city` blank, which was previously causing the filter to always
-    // return an empty string and thus never match.
     return ((r && (r.municipality || r.city)) || '').toString().trim();
 }
 function getRowYear(r){
     return ((r && (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of)) || '').toString().trim();
 }
-
-// shared cached fetch helper for region hierarchy JSON so multiple
-// widgets using the same region don't keep refetching from the server.
 (function(){
     const cache = {};
     function fetchRegionHierarchy(region){
@@ -115,11 +83,6 @@ function getRowYear(r){
     }
     try { window.fetchRegionHierarchy = fetchRegionHierarchy; } catch(e) {}
 })();
-
-// make a harmless placeholder available immediately so that code which
-// fires before the real implementation loads doesn't throw an error.
-// the real version will overwrite this when it is defined later in the
-// same script block, but at least callers can safely invoke it early.
 if (!window.updateProvinceFilters) {
     window.updateProvinceFilters = function(){
         console.warn('[RSM] updateProvinceFilters placeholder invoked before definition');
@@ -137,11 +100,6 @@ function renderStTitlesFromRows(rows, regionParam) {
             stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
             return;
         }
-
-        // aggregate counts per title and collect province/city locations,
-        // along with adoption/replication and status flags for each
-        // underlying row so the UI can show richer badges instead of
-        // a plain numeric count.
         const titleCounts = {};
         const titleLocations = {};
         rows.forEach(r => {
@@ -245,7 +203,6 @@ function renderStTitlesFromRows(rows, regionParam) {
                         } else if (loc.ongoing > 0 && loc.dissolved === 0) {
                             lifecycleStatus = 'Ongoing';
                         } else if (loc.dissolved > 0 && loc.ongoing > 0) {
-                            // if there are both ongoing and dissolved rows, treat as dissolved
                             lifecycleStatus = 'Dissolved';
                         }
 
@@ -278,10 +235,6 @@ function renderStTitlesFromRows(rows, regionParam) {
         html += '</div>';
 
         stListEl.innerHTML = html;
-
-        // clicking a location row opens the replicate popover immediately.
-        // clicking a summary row first expands to show locations; clicking
-        // it again (while expanded) opens the replicate popover.
         stListEl.onclick = function(ev){
             const detailRow = ev.target.closest('.rsm-st-detail-row');
             if (detailRow) {
@@ -336,25 +289,13 @@ function renderStTitlesFromRows(rows, regionParam) {
 }
 
 function applyRsmFilters(){
-    // local truthiness helper in case outer scope failed to define it
     const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
-
-    // if our cached payload belongs to a different region than the UI is
-    // currently showing then drop it so that the subsequent logic will
-    // trigger a fresh fetch. this guards against timing issues where a
-    // slider change may still be in-flight when the user clicks "Filter".
     let payload = window._lastRsmPayload || null;
     const currentRegion = getCurrentRegion();
     if (payload && payload.region && currentRegion && payload.region !== currentRegion) {
         window._lastRsmPayload = null;
         payload = null;
     }
-
-    // make sure city/year options exist before we read selections; the
-    // list is built by updateProvinceFilters which is normally invoked
-    // when the province selector changes. only refresh if the selects are
-    // empty, otherwise we risk clearing the user's choice when they try to
-    // filter by city or year alone.
     try {
         const cityElInit = document.getElementById('rsm-filter-city');
         const yearElInit = document.getElementById('rsm-filter-year');
@@ -365,9 +306,6 @@ function applyRsmFilters(){
         }
     } catch(e) { console.warn('[RSM] initial province filter update failed', e); }
     try {
-        // close any open select2 dropdowns so the underlying <select> has
-        // the correct value before we read it. this helps when user clicks
-        // the filter button while the dropdown is still open.
         try {
             if (window.jQuery) {
                 ['#rsm-filter-prov','#rsm-filter-city','#rsm-filter-year'].forEach(sel=>{
@@ -378,21 +316,12 @@ function applyRsmFilters(){
                 });
             }
         } catch(_e){}
-        // log the selection values for debugging
         const provsDbg = _getSelectedValues('rsm-filter-prov');
         const citiesDbg = _getSelectedValues('rsm-filter-city');
         const yearsDbg = _getSelectedValues('rsm-filter-year');
         const rawCityVal = (window.jQuery && jQuery('#rsm-filter-city').length) ? jQuery('#rsm-filter-city').val() : null;
         if (!payload || !Array.isArray(payload.allRows)) {
             console.warn('[RSM] _lastRsmPayload missing — attempting fetch');
-            // try to derive region param from last active region or modal image
-            // try several places to figure out which region the user is
-            // currently looking at. historically we relied solely on
-            // __lastActiveRegion or the modal image, but in some embed
-            // scenarios those values can still be null. fall back to the
-            // province selector (which stores the last region event) and
-            // finally the active slider image so filters work even if the
-            // user hasn't clicked anything yet.
             let regionParam = null;
             if (window.__lastActiveRegion) {
                 regionParam = window.__lastActiveRegion;
@@ -413,10 +342,6 @@ function applyRsmFilters(){
                 const modalImg = document.getElementById('rsm-modal-image');
                 if (modalImg) regionParam = modalImg.getAttribute('data-region-name');
             }
-            // if we still don't know the region, try to infer it from the
-            // selected province (use parent.regionMap which was populated
-            // when the iframe was loaded). this covers cases where the
-            // user just picked a province without ever clicking the slider.
             if (!regionParam) {
                 try {
                     const provSel = document.getElementById('rsm-filter-prov');
@@ -434,10 +359,6 @@ function applyRsmFilters(){
                     }
                 } catch(_){ }
             }
-            // if we got a bare number (sheet names are numeric in some
-            // spreadsheets) convert it to the canonical form the backend
-            // expects. normalizeRegionText does not handle digits, so do it
-            // manually here.
             if (/^\d+$/.test(regionParam)) {
                 const romans = ['','I','II','III','IV-A','V','VI','VII','VIII','IX','X','XI','XII','','CARAGA'];
                 const num = parseInt(regionParam,10);
@@ -448,7 +369,6 @@ function applyRsmFilters(){
                 return;
             }
             try {
-                // perform same AJAX used elsewhere, but via cached helper
                 (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                     .then(p => { p.region = regionParam; window._lastRsmPayload = p; payload = p; applyRsmFilters(); })
                     .catch(err => console.error('[RSM] fetch fallback failed', err));
@@ -456,22 +376,16 @@ function applyRsmFilters(){
             return;
         }
         const allRows = payload.allRows.slice();
-        // debug payload content
         console.debug('[RSM] payload headers', payload.headers);
         console.debug('[RSM] sample rows', allRows.slice(0,5));
         const provs = _getSelectedValues('rsm-filter-prov');
         const cities = _getSelectedValues('rsm-filter-city');
         const years = _getSelectedValues('rsm-filter-year');
-        // capture selections so we can restore them if we rebuild the
-        // city/year dropdowns further down. this prevents the UI from
-        // clearing the user's choice when applyRsmFilters runs again.
         const savedCities = cities.slice();
         const savedYears = years.slice();
         const filtered = allRows.filter(r => {
             let ok = true;
-            // normalize row values for case-insensitive comparison
             const rowProv = (r.province||'').toString().trim().toLowerCase();
-            // guard against missing helper (shouldn't happen now, but safe)
             const rowCity = (typeof getRowCity === 'function'
                 ? getRowCity(r)
                 : ((r && (r.municipality||r.city))||'').toString().trim()
@@ -480,12 +394,9 @@ function applyRsmFilters(){
                 ok = provs.some(p => rowProv === (p||'').toString().trim().toLowerCase());
             }
             if (ok && cities && cities.length) {
-                // log each comparison to see why the row is kept/dropped
                 let matchedCity = false;
                 cities.forEach(c => {
                     const normC = (c||'').toString().trim().toLowerCase();
-                    // allow substring matches so minor formatting differences
-                    // (extra words, punctuation, accents) don't defeat the filter.
                     const isMatch = rowCity.includes(normC) || normC.includes(rowCity);
                     console.debug('[RSM] compare row city', rowCity, 'with', normC, '=>', isMatch);
                     if (isMatch) matchedCity = true;
@@ -501,8 +412,6 @@ function applyRsmFilters(){
             }
             return ok;
         });
-
-        // client-side status inference using headers if needed
         try {
             const headersArr = (payload && payload.headers) ? payload.headers : [];
             const idxO = headersArr.findIndex(h => h && h.toString().toLowerCase().includes('ongoing'));
@@ -520,19 +429,11 @@ function applyRsmFilters(){
                 });
             }
         } catch(_){ }
-
-
-        // update totals
         const totalSts = filtered.length || 0;
         const totalMoa = filtered.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
         const totalRes = filtered.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
         const totalExpr = filtered.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
         const moaAttachments = 0;
-
-        // compute ongoing / dissolved counts using the same rules as the
-        // main dashboard: use numeric values in the dedicated Ongoing /
-        // Dissolved columns when present, otherwise treat any non-empty
-        // cell or status text as a single instance.
         let ongoingCount = 0;
         let dissolvedCount = 0;
 
@@ -596,14 +497,10 @@ function applyRsmFilters(){
             }, 0);
         }
         console.debug('[RSM] computed counts', { total: filtered.length, ongoingCount, dissolvedCount });
-        // log sample statuses for debugging
         if (filtered.length) {
             const statuses = Array.from(new Set(filtered.map(r=> (r.status||'').toString().toLowerCase())));
             console.debug('[RSM] unique statuses', statuses.slice(0,20));
         }
-
-        // refresh city/year selects based on filtered rows as well. keep
-        // any existing selection so the user doesn't lose their choice.
         try {
             const cityEl2 = document.getElementById('rsm-filter-city');
             const yearEl2 = document.getElementById('rsm-filter-year');
@@ -619,7 +516,6 @@ function applyRsmFilters(){
             });
             Array.from(citySet).sort().forEach(c => cityEl2 && cityEl2.appendChild(new Option(c, c)));
             Array.from(yearSet).sort().forEach(y => yearEl2 && yearEl2.appendChild(new Option(y, y)));
-            // restore previously selected values if still present
             if (cityEl2) {
                 if (window.jQuery && jQuery(cityEl2).data('select2')) {
                     const available = Array.from(cityEl2.options).map(o=>o.value);
@@ -645,23 +541,15 @@ function applyRsmFilters(){
         fetchEl('rsm-total-res').textContent = String(totalRes);
         fetchEl('rsm-total-expr').textContent = String(totalExpr);
         fetchEl('rsm-total-moa-attachments').textContent = String(moaAttachments);
-        // update replicated/adopted totals
         const totalRep = filtered.reduce((acc, r) => acc + (typeof r.with_replicated === 'number' ? r.with_replicated : ((typeof r.with_replicated === 'boolean') ? (r.with_replicated ? 1 : 0) : (String(r.with_replicated||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
         const totalAdopt = filtered.reduce((acc, r) => acc + (typeof r.with_adopted === 'number' ? r.with_adopted : ((typeof r.with_adopted === 'boolean') ? (r.with_adopted ? 1 : 0) : (String(r.with_adopted||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
         fetchEl('rsm-total-rep').textContent = String(totalRep);
         fetchEl('rsm-total-adopt').textContent = String(totalAdopt);
-        // update ongoing/dissolved card counts
         const ongoingEl = fetchEl('rsm-count-ongoing'); if (ongoingEl) ongoingEl.textContent = String(ongoingCount);
         const dissolvedEl = fetchEl('rsm-count-dissolved'); if (dissolvedEl) dissolvedEl.textContent = String(dissolvedCount);
-
-        // update chart (base values only)
         const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
         if (typeof initOrUpdateModalStatsChart === 'function') initOrUpdateModalStatsChart(baseValuesOrdered, null);
-
-        // update ST titles listing
         renderStTitlesFromRows(filtered, (payload && payload.region) || window.__lastActiveRegion || 'this region');
-
-        // update provinces list to only show provinces present in filtered rows
         try {
             const provEl = rsmEl('rsm-provinces');
             if (provEl) {
@@ -682,14 +570,11 @@ function resetRsmFilters(){
             const el = document.getElementById(id);
             if (!el) return;
             Array.from(el.options || []).forEach(o => o.selected = false);
-            // if select2 is present, trigger update
             try { if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val([]).trigger('change'); } catch(e) {}
         });
     } catch(e){}
-    // re-run rendering with full payload
     try { const payload = window._lastRsmPayload || null; if (payload && Array.isArray(payload.allRows)) {
             renderStTitlesFromRows(payload.allRows, (payload && payload.region) || window.__lastActiveRegion || 'this region');
-            // compute ongoing / dissolved counts for full dataset
             try {
                 const allRows = payload.allRows;
                 const ongoingCount = allRows.reduce((acc,r) => {
@@ -702,7 +587,6 @@ function resetRsmFilters(){
                 }, 0);
                 const ongoingEl = fetchEl('rsm-count-ongoing'); if (ongoingEl) ongoingEl.textContent = String(ongoingCount);
                 const dissolvedEl = fetchEl('rsm-count-dissolved'); if (dissolvedEl) dissolvedEl.textContent = String(dissolvedCount);
-                // replicated/adopted totals for full dataset
                 const totalRep = allRows.reduce((acc, r) => acc + (typeof r.with_replicated === 'number' ? r.with_replicated : ((typeof r.with_replicated === 'boolean') ? (r.with_replicated ? 1 : 0) : (String(r.with_replicated||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
                 const totalAdopt = allRows.reduce((acc, r) => acc + (typeof r.with_adopted === 'number' ? r.with_adopted : ((typeof r.with_adopted === 'boolean') ? (r.with_adopted ? 1 : 0) : (String(r.with_adopted||'').toLowerCase().trim() === 'true' ? 1 : 0))), 0);
                 fetchEl('rsm-total-rep').textContent = String(totalRep);
@@ -718,37 +602,9 @@ function resetRsmFilters(){
         }
     } catch(e){ console.error('resetRsmFilters', e); }
 }
-
-// expose handlers (filter buttons removed but functions may still be used elsewhere)
 try { window.applyRsmFilters = applyRsmFilters; window.resetRsmFilters = resetRsmFilters; } catch(e) { console.warn('[RSM] failed to expose filter functions', e); }
-/*
-// binding of filter buttons has been deprecated; UI no longer contains them
-try {
-    const btnA = document.getElementById('rsm-filter-apply');
-    const btnR = document.getElementById('rsm-filter-reset');
-    if (btnA) { btnA.addEventListener('click', function(ev){ ev.preventDefault(); console.log('[RSM] apply button clicked'); applyRsmFilters(); }); console.log('[RSM] bound apply button'); }
-    else console.warn('[RSM] apply button not found');
-    if (btnR) { btnR.addEventListener('click', function(ev){ ev.preventDefault(); resetRsmFilters(); }); console.log('[RSM] bound reset button'); }
-    else console.warn('[RSM] reset button not found');
-} catch(e) { console.error('[RSM] binding filter buttons failed', e); }
-*/
-
-// click delegation no longer checks for apply/reset, but left in place for other potential delegated actions
-// document.addEventListener('click', function(ev){
-//     try {
-//         const a = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-apply') : null;
-//         if (a) { ev.preventDefault(); try { applyRsmFilters(); } catch(e) { console.error('applyRsmFilters failed', e); } return; }
-//         const r = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-reset') : null;
-//         if (r) { ev.preventDefault(); try { resetRsmFilters(); } catch(e) { console.error('resetRsmFilters failed', e); } return; }
-//     } catch(e) { /* ignore delegation errors */ }
-// });
-
-
-// track whether the user is interacting with any of the filter controls
 window._rsmFilterActive = false;
 function _setFilterActive(v) { window._rsmFilterActive = !!v; }
-
-// helper to wire focus/blur on native selects and select2 events
 function _wireFilterInteraction(id) {
     const el = document.getElementById(id);
     if (el) {
@@ -763,14 +619,10 @@ function _wireFilterInteraction(id) {
         }
     }
 }
-// wire all three filters early
 ['rsm-filter-prov','rsm-filter-city','rsm-filter-year'].forEach(_wireFilterInteraction);
-
-// when province picker changes, refresh city list
 const provSel = document.getElementById('rsm-filter-prov');
 if (provSel) {
     function deriveCurrentRegion(){
-        // replicate regionParam derivation from applyRsmFilters
         let region = window.__lastActiveRegion || null;
         if (!region) {
             const provSel = document.getElementById('rsm-filter-prov');
@@ -802,7 +654,6 @@ if (provSel) {
         let allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
         console.log('[RSM] province selection, building cities from', provs, 'rows', allRows.length);
         if (!allRows.length) {
-            // attempt to fetch payload same as applyRsmFilters does
             const regionParam = deriveCurrentRegion();
             if (regionParam && window.fetchRegionHierarchy) {
                 window.fetchRegionHierarchy(regionParam)
@@ -811,16 +662,14 @@ if (provSel) {
                       payload = p;
                       allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
                       console.log('[RSM] fetched payload for province filter, rows', allRows.length);
-                      // rerun the filter logic now that we have rows
                       updateProvinceFilters();
                   }).catch(err=>{ console.error('[RSM] province payload fetch failed', err); });
-                return; // bail now; will re-enter when fetch completes
+                return;
             }
         }
 
         const citySet = new Set();
         const yearSet = new Set();
-        // log unique provinces present in allRows for debugging
         try {
             const uniqueProvs = Array.from(new Set(allRows.map(r=>(r.province||'').toString().trim()))).filter(Boolean);
             console.log('[RSM] provinces in payload', uniqueProvs);
@@ -835,18 +684,13 @@ if (provSel) {
             }
         });
         console.log('[RSM] computed cities', Array.from(citySet).sort());
-
-
-        // helper that rewrites underlying <select> and reinitializes
-        // select2 so the dropdown list is up‑to‑date even if already open
         function fillSelect(el, items) {
             if (!el) return;
-            // clear existing options
             if (window.jQuery && jQuery(el).data('select2')) {
                 const $e = jQuery(el);
                 $e.find('option').remove();
                 items.forEach(i => $e.append(new Option(i,i)));
-                $e.trigger('change'); // tell select2 to refresh
+                $e.trigger('change');
             } else {
                 el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join('');
             }
@@ -855,12 +699,9 @@ if (provSel) {
         fillSelect(cityEl2, Array.from(citySet).sort());
         fillSelect(yearEl2, Array.from(yearSet).sort());
     }
-
-    // province changes should refresh dependent selects and re-filter
     provSel.addEventListener('change', function(ev){
         setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
     });
-    // also update when city or year are selected (no need to rebuild lists)
     const citySel = rsmEl ? rsmEl('rsm-filter-city') : document.getElementById('rsm-filter-city');
     if (citySel) {
         console.log('[RSM] attaching change listener to city select');
@@ -881,9 +722,6 @@ if (provSel) {
     } else {
         console.warn('[RSM] year select not found when binding listener');
     }
-
-    // also bind for select2 events: handle all three selects so users
-    // picking values via the UI will auto‑apply filters without extra clicks.
     if (window.jQuery) {
         const $prov = jQuery(provSel);
         if ($prov.data('select2')) {
@@ -904,8 +742,6 @@ if (provSel) {
                 setTimeout(applyRsmFilters,0);
             });
         }
-
-        // delegated listeners in case select2 or other code replaces the elements
         jQuery(document).on('change', '#rsm-filter-city', function(){
             console.log('[RSM] delegated change on city');
             setTimeout(applyRsmFilters,0);
@@ -923,8 +759,6 @@ if (provSel) {
             setTimeout(applyRsmFilters,0);
         });
     }
-
-    // fallback listener on document in case select2 replaces the element
     document.addEventListener('change', function(ev){
         if (ev.target && ev.target.id === 'rsm-filter-prov') {
             setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
@@ -933,37 +767,19 @@ if (provSel) {
             setTimeout(applyRsmFilters,0);
         }
     });
-
-    // expose the province helper globally so other early code (select2 init,
-    // inline buttons, messages from parent etc.) can call it without needing
-    // to know about the local scope above.
     try { window.updateProvinceFilters = updateProvinceFilters; } catch(e) {}
 }
-
-// store last region event on province element for use in change handler
-// also reapply filters whenever the active region changes so the
-// ongoing/dissolved cards reflect the new region immediately.
 document.addEventListener('sliderActiveRegionChanged', function(e){
     const provSel2 = document.getElementById('rsm-filter-prov');
     if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
-    // refresh the data for the new region
     try {
         if (typeof updateProvinceFilters === 'function') updateProvinceFilters();
     } catch(_){ }
     try { if (typeof applyRsmFilters === 'function') applyRsmFilters(); } catch(_){ }
 });
-
-// run filters once on initial load so the cards aren't left at zero
-// when the view first appears (payload fetch will occur automatically)
 document.addEventListener('DOMContentLoaded', function(){
     try { if (typeof applyRsmFilters === 'function') applyRsmFilters(); } catch(_){ }
 });
-
-// Lightweight polling watcher: keep filters and cards in sync even when
-// Select2 or parent-frame code changes values without firing our local
-// handlers. Because region payloads are now cached by
-// window.fetchRegionHierarchy, this will NOT spam the AJAX endpoint; it
-// simply calls applyRsmFilters using the existing payload.
 (function(){
     let lastProvs = '';
     let lastCities = '';
@@ -994,15 +810,6 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     }, 500);
 })();
-
-// extra safety net: on some embeds the initial DOMContentLoaded
-// handler can run before the Swiper slider has established an
-// active slide, which means applyRsmFilters cannot yet infer the
-// current region and leaves the ongoing/dissolved cards at 0
-// until the user manually changes a filter.  This lightweight
-// bootstrap waits for either an active slider image or a recorded
-// __lastActiveRegion and then triggers one more filter pass so
-// the cards populate automatically on first load.
 (function ensureInitialRsmCountsAfterSlider(){
     let tries = 0;
     function hasActiveRegion(){
@@ -1011,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return !!img;
     }
     function kick(){
-        if (tries++ > 40) return; // give up after ~10s
+        if (tries++ > 40) return;
         if (!hasActiveRegion()) {
             setTimeout(kick, 250);
             return;
@@ -1031,16 +838,12 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
 })();
-
-// global replicate popover helper (defined early so it exists even if DOMContentLoaded has passed)
 function showReplicateConfirmPopover(targetEl, stInfo = {}) {
     try {
-        // remove any existing popover
         const existing = document.body.querySelector('.replicate-popover');
         if (existing) existing.remove();
         const pop = document.createElement('div');
         pop.className = 'replicate-popover';
-        // inline styles for independency
         pop.style.position = 'fixed';
         pop.style.zIndex = '2147483647';
         pop.style.width = '220px';
@@ -1058,8 +861,6 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         const title = (stInfo && stInfo.title) ? stInfo.title : '';
         pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
         document.body.appendChild(pop);
-
-        // style buttons
         try {
             const cb = pop.querySelector('.rp-confirm');
             const xb = pop.querySelector('.rp-cancel');
@@ -1081,8 +882,6 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
                 xb.style.cursor = 'pointer';
             }
         } catch(e) {}
-
-        // position relative to target element
         const r = targetEl.getBoundingClientRect();
         const measure = () => {
             const pw = pop.offsetWidth;
@@ -1133,13 +932,7 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         document.addEventListener('keydown', onKey);
     } catch(e) {}
 }
-
-// ensure global reference exists immediately
 try { window.showReplicateConfirmPopover = showReplicateConfirmPopover; } catch(e) {}
-
-// close replicate popover when clicking anywhere outside it or the
-// ST rows that trigger it. this keeps only one popover visible and
-// matches typical popover behavior.
 document.addEventListener('click', function(ev){
     try {
         const pop = document.body.querySelector('.replicate-popover');
@@ -1149,10 +942,6 @@ document.addEventListener('click', function(ev){
         pop.remove();
     } catch(e){}
 });
-
-// helper used in multiple places to derive a canonical region text from
-// slider elements or event details. placed here at the top so it's
-// available regardless of which <script> block runs first.
 function deriveRegionFromSlider(source){
     let name = '';
     if (source && typeof source === 'object'){
@@ -1195,24 +984,16 @@ function deriveRegionFromSlider(source){
 
 
 document.addEventListener("DOMContentLoaded", function () {
-
-	// load jquery+select2 to make filters multi-select/searchable
 	(function(){
 		function loadCss(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}        
 		function loadScript(u,cb){var s=document.createElement('script');s.onload=cb;s.src=u;document.head.appendChild(s);}        
 		function init(){
 			try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true });
-                // after select2 has replaced the <select>, attach listeners to it
                 const $prov = jQuery('#rsm-filter-prov');
                 if ($prov.length) {
                     $prov.on('change.select2 select2:select select2:unselect', function(){
                         console.log('[RSM] select2 province event fired');
                         setTimeout(()=>{
-                            // these functions are defined later in the file; guard against
-                            // the case where the user interacts before the second script
-                            // block has executed (see errors in console). if they're not
-                            // ready yet we'll simply log and wait for the normal
-                            // binding later on to take effect.
                             if (typeof updateProvinceFilters === 'function') {
                                 updateProvinceFilters();
                             } else {
@@ -1225,7 +1006,6 @@ document.addEventListener("DOMContentLoaded", function () {
                             }
                         },0);
                     });
-                    // if there is already a selection, update once now
                     setTimeout(()=>{
                         if (typeof updateProvinceFilters === 'function') {
                             updateProvinceFilters();
@@ -1244,13 +1024,9 @@ document.addEventListener("DOMContentLoaded", function () {
 			loadScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',init);
 		}else{init();}
 	})();
-
-	// strip ASCII control characters from a string (mirrors PHP cleanup)
 	function clean(s) {
 		return (s||'').toString().replace(/[\x00-\x1F\x7F]/g, '');
 	}
-
-	// helper to trim province/city keys received from server
 	function normalizeGrouping(src) {
 		const out = {};
 		Object.keys(src || {}).forEach(p => {
@@ -1284,10 +1060,6 @@ document.addEventListener("DOMContentLoaded", function () {
 			prevEl: ".swiper-button-prev",
 		},
 	});
-
-	// normalize various region strings to canonical slider labels
-	// helper used throughout to convert disparate region identifiers to the canonical keys
-	// stored in window.parent.regionMap.
 	function normalizeRegionText(r){
 		if (!r) return '';
 		var s = String(r).toLowerCase().trim();
@@ -1311,7 +1083,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!s.includes('caraga') && (s === 'car' || s.includes('cordillera') || /\bcar\b/.test(s))) {
 			return 'CAR';
 		}
-		// generic roman detection
 		var romanPatterns = [
 			{ code: 'Region XII', re: /\bxii\b/ },
 			{ code: 'Region XI', re: /\bxi\b/ },
@@ -1332,14 +1103,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 		return r;
 	}
-
-	// centre the swiper on a particular region label; uses slideToLoop when
-	// available so the correct duplicate/clone index is chosen. silence errors
-	// if swiper isn't ready yet.
 	function centerSliderOnRegion(region){
 		if (!region || !swiper) return null;
 		var matchedImg = null;
-		// suppress any height/collapse messaging triggered by the programmatic move
 		window._suppressHeightChange = true;
 		try {
 			var slides = swiper.slides || [];
@@ -1366,8 +1132,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 		return matchedImg;
 	}
-
-	// helper to hide/show slides based on a list of region names
 	function filterSliderByRegions(regions){
 		if (!regions || !regions.length) return;
 		const filenameToRegion = {
@@ -1390,14 +1154,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				slide.style.display = 'none';
 			}
 		});
-		// After toggling visibility run swiper update so it recalculates sizes.
-		// also reset position to first visible slide without an animation to avoid
-		// the “ghost extension” that was seen when filters were applied.  If the
-		// carousel is running in loop mode we also destroy/recreate the loop so the
-		// clones reflect the new subset of visible slides; failing to do this used
-		// to let a hidden duplicate peek out at the edge.
 		if (swiper && typeof swiper.update === 'function') {
-			// avoid height changes while updating and sliding
 			window._suppressHeightChange = true;
 			try {
 				swiper.update();
@@ -1405,7 +1162,6 @@ document.addEventListener("DOMContentLoaded", function () {
 					swiper.loopDestroy && swiper.loopDestroy();
 					swiper.loopCreate && swiper.loopCreate();
 				}
-				// center on first remaining slide for a sane default
 				const all = swiper.slides || [];
 				for (let i = 0; i < all.length; i++) {
 					if (all[i].style.display !== 'none') {
@@ -1418,8 +1174,6 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		}
 	}
-
-	// hide/show gallery cards based on region/year text matching
 	function filterGalleryCards(regions, years) {
 		const cards = document.querySelectorAll('.card-gallery .card');
 		cards.forEach(card => {
@@ -1434,17 +1188,13 @@ document.addEventListener("DOMContentLoaded", function () {
 			card.style.display = visible ? '' : 'none';
 		});
 	}
-
-	// when the page loads read any region[] query params and apply
 	document.addEventListener('DOMContentLoaded', function(){
 		const urlParams = new URLSearchParams(window.location.search);
 		let selected = urlParams.getAll('region[]');
 		if (!selected.length) selected = urlParams.getAll('region');
 		let yrs = urlParams.getAll('year_of_moa[]');
 		if (!yrs.length) yrs = urlParams.getAll('year_of_moa');
-		// normalize any region inputs (e.g. "FO I")
 		selected = selected.map(normalizeRegionText);
-		// if only year filters present, derive regions from parent.regionMap if available
 		if (!selected.length && yrs.length) {
 			try {
 				var map = window.parent.regionMap || {};
@@ -1457,18 +1207,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (selected.length) {
 			filterSliderByRegions(selected);
 			filterGalleryCards(selected, yrs);
-			// after filtering make sure the slider centres on the last item in the
-			// selection (typically the one the user just picked)
-			// centerSliderOnRegion(selected[selected.length-1]); // DISABLED: Only update slider on reload, not dynamically
 		}
 	});
-
-	// listen for filter updates from parent frame (executed even before DOM ready)
 	window.addEventListener('message', function(e){
 		if (e.data && e.data.type === 'streportFilters') {
 			var regs = (e.data.regions || []).map(normalizeRegionText);
 			var yrs = e.data.years || [];
-			// if only year filters provided, try to derive regions from parent.regionMap
 			if (!regs.length && yrs.length) {
 				try {
 					var map = window.parent.regionMap || {};
@@ -1478,16 +1222,9 @@ document.addEventListener("DOMContentLoaded", function () {
 					});
 				} catch(_){ }
 			}
-			// filterSliderByRegions(regs); // DISABLED: do not touch slider dynamically
 			filterGalleryCards(regs, yrs);
-			// centerSliderOnRegion(regs[regs.length-1]); // DISABLED: Only update slider on reload, not dynamically
-			// update graph for the most recently selected region. avoid triggering a
-			// click event on the image since that was causing the swipe component
-			// to “twitch” and show part of the neighbouring slide; instead move the
-			// swiper programmatically then render the stats.
 			if (false) {
 				var target = regs[regs.length-1];
-				// clear any cached payload so render runs fresh
 				window._lastRsmPayload = null;
 				var imgs = document.querySelectorAll('.slider-img');
 				for (var i = 0; i < imgs.length; i++) {
@@ -1505,12 +1242,6 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		}
 	});
-
-	// legacy: click actions were previously disabled here. behaviour is now handled
-	// further down by a dedicated listener that shows the region stats panel and
-	// also notifies parent to adjust iframe height.
-
-	// bottom preview: mirror the currently-centered slide into the bottom preview area
 	function renderBottomProvinceList(payload) {
 		try {
 			const list = document.getElementById('sliderBottomProvinceList');
@@ -1535,25 +1266,16 @@ document.addEventListener("DOMContentLoaded", function () {
 				html += `<div class="province-item"><div class="prov-name">${esc(label)}</div><div class="province-badge">${cityCount}</div></div>`;
 			});
 			list.innerHTML = html;
-			// nothing else needed here
 
 		} catch (e) { console.error('renderBottomProvinceList error', e); }
 	}
 
 	function updateSliderBottomPreview() {
-		// when the slider center image moves (or user drags) we want the
-		// parent STsReport iframe to collapse if it was expanded. the parent
-		// listens for a `streportToggleHeight` message with an explicit
-		// height of 600px, so post that here. repeated messages harmless.
 		try {
 			if (window.parent && window.parent !== window && window.parent.postMessage) {
 				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 			}
-		} catch(_e) { /* ignore */ }
-		// (filters are reset by the parent when it collapses; avoid clearing
-		// here during normal slide movement because it interferes with users
-		// opening the dropdowns)
-		// close any open gallery popover when the active region changes
+		} catch(_e) {  }
 		try { closePopover(); } catch(e) {}
 		try {
 			const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
@@ -1569,10 +1291,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				preview.setAttribute('data-region-name', regionName);
 				preview.setAttribute('data-region-number', regionNumber);
 				if (label) label.textContent = regionName || ('Region ' + regionNumber);
-				// emit custom event so graphing code can react
 				document.dispatchEvent(new CustomEvent('sliderActiveRegionChanged', { detail: { src, regionName, regionNumber } }));
-
-                // also log years right away for debugging (bypass listener timing issues)
                 try {
                     if (!regionName) {
                         regionName = deriveRegionFromSlider({src, regionName, regionNumber});
@@ -1593,20 +1312,16 @@ document.addEventListener("DOMContentLoaded", function () {
                         console.log('[RSM] immediate years for slider region', regionName, yrs);
                     }
                 } catch(e) { console.warn('[RSM] year log error', e); }
-
-				// fetch provinces for the active region and render into the bottom preview
 				try {
 					const fileName = (src || '').split('/').pop();
 					const bottomList = document.getElementById('sliderBottomProvinceList');
 					if (fileName && bottomList) {
-						// map slider image filename -> region code expected by ajaxRegionHierarchy
 						const filenameToRegion = {
 							'1.png': 'Region I','2.png': 'Region II','3.png': 'Region III',
 							'4_a.png': 'Region IV-A','4_b.png': 'Region IV-B','5.png': 'Region V',
 							'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
 							'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
 							'12.png': 'Region XII',
-					// map image for Region 13 to CARAGA (backend expects this key)
 					'13.png': 'CARAGA',
 					'barmm.png': 'BARMM',
 							'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
@@ -1626,12 +1341,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		} catch (e) { console.error(e); }
 	}
-
-	// helper to tell parent iframe to collapse
 	function collapseStreportIframe(){
-		// bail out if the user is currently interacting with a filter
 		if (window._rsmFilterActive) return;
-		// previous focus-based guard for safety (rare cases)
 		try {
 			const active = document.activeElement;
 			if (active) {
@@ -1643,34 +1354,20 @@ document.addEventListener("DOMContentLoaded", function () {
 					return;
 				}
 			}
-		} catch(e) { /* ignore focus detection errors */ }
+		} catch(e) {  }
 		try {
 			if (window.parent && window.parent !== window && window.parent.postMessage) {
 				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 			}
 		} catch(_e) { }
-		// filters will be cleared by the parent once collapse completes
 	}
-
-	// initial sync + attach to Swiper events
 	updateSliderBottomPreview();
 	if (swiper && typeof swiper.on === 'function') {
 		swiper.on('slideChangeTransitionEnd', updateSliderBottomPreview);
 		swiper.on('init', updateSliderBottomPreview);
-		// collapse immediately when a new slide starts moving (drag or arrow)
 		swiper.on('slideChangeTransitionStart', collapseStreportIframe);
-		// sometimes fast/forceful drags bypass transition events; the
-		// `slideChange` callback fires whenever the active index changes.
 		swiper.on('slideChange', collapseStreportIframe);
 	}
-
-	// helper that looks for an element first in the current document and
-	// then in the parent frame (if same‑origin). this allows the modal
-	// markup to live outside the iframe while the script continues to run
-	// inside it.
-	// NOTE: global fetchEl is already defined at the top of the file,
-	// so we just refer to that rather than redeclare.
-	// variant that accepts a CSS selector and queries both parent and local documents
 	function fetchQS(selector) {
 		if (window.parent && window.parent !== window && window.parent.document) {
 			const pe = window.parent.document.querySelector(selector);
@@ -1684,21 +1381,10 @@ document.addEventListener("DOMContentLoaded", function () {
 	const modalContent = fetchEl("sliderModalContent");
 	const modalViewport = fetchEl('sliderModalViewport');
 	const modalImg = fetchEl("sliderModalImg");
-	const closeBtn = null; // close button removed — keep variable falsey so existing checks remain safe
+	const closeBtn = null;
 	const modalTitle = fetchEl("sliderModalTitle");
-	
-	// helper for region stats elements (also looked up in parent)
-	// public API used in numerous handlers outside the DOMContentLoaded
-	// callback, so define it at top level rather than inside the ready
-	// listener. (global rsmEl already exists)
-	
-
-
-	// shared truthiness helper for parsed Excel fields (boolean or textual 'true')
 	const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
 	let _titleTypingTimer = null;
-
-	// baseline capture so we can neutralize browser zoom changes
 	const _modalBaseDPR = window.devicePixelRatio || 1;
 	const computeNominalDesktopWidth = w => Math.min(Math.round(w * 0.55 + 250), Math.max(w - 64, 520));
 	const _modalBaseWidth = computeNominalDesktopWidth(window.innerWidth);
@@ -1707,9 +1393,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!modal || !modalContent) return;
 		const viewport = modalViewport || modalContent.querySelector('.slider-modal-viewport');
 		const curDPR = window.devicePixelRatio || 1;
-		const scaleFix = (_modalBaseDPR || 1) / curDPR; // inverse scale to neutralize browser zoom
-
-		// set modalContent width to the baseline (clamped to viewport) so visual size is stable
+		const scaleFix = (_modalBaseDPR || 1) / curDPR;
 		let width = _modalBaseWidth || computeNominalDesktopWidth(window.innerWidth);
 		const maxAllowed = Math.max(window.innerWidth - 64, 520);
 		width = Math.min(width, maxAllowed);
@@ -1720,37 +1404,26 @@ document.addEventListener("DOMContentLoaded", function () {
 			viewport.style.transformOrigin = 'center center';
 		}
 	}
-
-	// position the external Total-STs card so it visually sits to the right of the Provinces card
 	function positionProvinceTotalCard() {
 		try {
 			const provCard = document.getElementById('sliderProvinceListCard');
 			const totalCard = document.getElementById('sliderProvinceTotalCard');
 			const modalRect = modalContent && modalContent.getBoundingClientRect ? modalContent.getBoundingClientRect() : { left:0, top:0, width: window.innerWidth };
 			if (!provCard || !totalCard) return;
-
-			// compute coordinates relative to modalContent — remove gap so the Total card sits nearly flush
 			const pRect = provCard.getBoundingClientRect();
 			const headerEl = provCard.querySelector('.province-card-title');
 			const headerRect = headerEl && headerEl.getBoundingClientRect ? headerEl.getBoundingClientRect() : pRect;
-			const gap = 0; // px — minimal spacing
+			const gap = 0;
 			const unclampedLeft = (pRect.right - modalRect.left) + gap;
-			// allow a very small clamp so the card never goes off-screen but otherwise sit flush
 			const left = Math.min(Math.max(2, unclampedLeft), Math.max(2, modalRect.width - totalCard.offsetWidth - 2));
-
-			// align Total card tightly with the province header
 			const top = Math.max(2, headerRect.top - modalRect.top + 2);
 			totalCard.style.left = left + 'px';
 			totalCard.style.top = top + 'px';
-		} catch (e) { /* ignore positioning errors */ }
+		} catch (e) {  }
 	}
-
-	// keep our position helper responsive
 	window.addEventListener('resize', () => {
 		try { positionProvinceTotalCard(); } catch(e){}
 	});
-
-	// human-friendly region lookup (used when image filename is numeric)
 	const REGION_LOOKUP = {
 		'1': 'Ilocos Region',
 		'2': 'Cagayan Valley',
@@ -1781,15 +1454,8 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 		return res;
 	}
-
-	// modal title typing removed (function intentionally deleted)
-
-
-	// track last opened image and its bounding rect so we can animate back on close
 	let _lastActiveImgEl = null;
 	let _lastActiveImgRect = null;
-
-	// image‑preview modal helper using sliderModal elements
 	function openImageModal(target) {
 		if (!modal) return;
 		const url = (target && (target.dataset.img || target.src)) || '';
@@ -1797,14 +1463,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		modalImg.src = url;
 		modal.style.display = 'block';
 		modal.classList.add('expanded');
-		// explicitly expand content in case CSS gets overridden
 		if (modalContent) {
 			modalContent.style.width = '90vw';
 			modalContent.style.height = '90vh';
 		}
 		overlay.style.display = 'block';
 		document.body.style.overflow = 'hidden';
-		// tell parent to bump iframe height for the slider preview
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
 			window.parent.postMessage({ type:'streportToggleHeight', height:'2000px' }, '*');
 		}
@@ -1812,7 +1476,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function closeImageModal() {
 		if (!modal) return;
-		// notify parent that slider preview went away and iframe can shrink
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
 			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 		}
@@ -1829,7 +1492,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function closeImageModal() {
 		if (!modal) return;
-		// notify parent that slider preview went away and iframe can shrink
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
 			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 		}
@@ -1839,15 +1501,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		modalImg.src = '';
 		document.body.style.overflow = '';
 	}
-
-	// wire overlay and escape key
 	overlay && overlay.addEventListener('click', closeImageModal);
 	document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeImageModal(); } });
 
 
 	(function enableModalPinchAndZoom(){
 
-    /* --- Province-list helper (AJAX) ---------------------------------- */
     function renderProvinceCard(payload) {
         const card = document.getElementById('sliderProvinceListCard');
         const list = document.getElementById('sliderProvinceList');
@@ -1866,19 +1525,13 @@ document.addEventListener("DOMContentLoaded", function () {
             const cities = Object.keys(grouped[prov] || {});
             const cityCount = cities.length || 0;
             const displayProv = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
-            // render province as a button with caret — supports inline accordion expansion
             html += `<div class="province-item" role="button" tabindex="0" data-prov="${esc(prov)}"><div class="prov-name">${esc(displayProv)}</div><div class="province-badge">${cityCount}</div></div>`;
         });
-        
         list.innerHTML = html;
-        // keep main province list tall regardless of item count
         list.style.height = 'calc(40px * 8 + 16px)';
-        // also lock card height in case CSS is overridden
         if(card) card.style.height = 'calc(40px * 8 + 16px + 40px)';
         card.setAttribute('aria-hidden','false');
-        try { positionProvinceTotalCard(); } catch(e) { /* ignore */ }
-
-        // update external Total-STs card + Expression-of-Interest
+        try { positionProvinceTotalCard(); } catch(e) {  }
         try {
             const card = document.getElementById('sliderProvinceTotalCard');
             const stCountEl = document.getElementById('sliderProvinceTotalCardCount');
@@ -1893,15 +1546,12 @@ document.addEventListener("DOMContentLoaded", function () {
             if (payload && Array.isArray(payload.allRows)) total = payload.allRows.length;
             else if (payload && typeof payload.uploadedCount === 'number') total = payload.uploadedCount;
             else {
-                // fallback: sum grouped counts
                 total = provinces.reduce((acc, p) => {
                     const citiesForProv = grouped[p] || {};
                     for (const k in citiesForProv) acc += (citiesForProv[k] || []).length;
                     return acc;
                 }, 0);
             }
-
-            // Expression-of-Interest count (only available when server returns allRows)
             let exprTotal = 0;
             if (payload && Array.isArray(payload.allRows)) {
                 exprTotal = payload.allRows.reduce((acc, r) => {
@@ -1910,8 +1560,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     return acc + (flag ? 1 : 0);
                 }, 0);
             }
-
-            // new totals are dummy, always show zero
             const replicatedTotal = 0;
             const adoptedTotal = 0;
 
@@ -1928,9 +1576,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (adCard) adCard.setAttribute('aria-hidden', 'false');
 
             try { positionProvinceTotalCard(); } catch(e) {}
-        } catch(e) { /* ignore */ }
-
-        // attach click + keyboard handler to expand/collapse province (inline accordion)
+        } catch(e) {  }
         Array.from(list.querySelectorAll('.province-item')).forEach(el => {
             function _toggleProv(ev){
                 ev.stopPropagation();
@@ -1943,14 +1589,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function showCitiesInProvince(provEl, prov, citiesObj) {
-        // New behavior: selecting a province hides *all other provinces* and shows
-        // its city list inline (single-focused dropdown). Cities behave the same.
         const card = document.getElementById('sliderProvinceListCard');
         const list = document.getElementById('sliderProvinceList');
         if (!card || !list || !provEl) return;
         const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-        // helper: animate collapse + remove a sublist node
         function collapseAndRemove(node) {
             return new Promise(resolve => {
                 try {
@@ -1967,14 +1609,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 } catch(e) { resolve(); }
             });
         }
-
-        // toggle: if already expanded, collapse and restore all provinces
         if (provEl.classList.contains('expanded')) {
             provEl.classList.remove('expanded');
             provEl.setAttribute('aria-expanded','false');
             const next = provEl.nextElementSibling;
             if (next && next.classList.contains('province-sublist')) {
-                // animate collapse then restore siblings
                 collapseAndRemove(next).then(() => {
                     Array.from(list.querySelectorAll('.province-item.hidden')).forEach(x => { x.classList.remove('hidden'); x.style.display = ''; });
                     provEl.focus();
@@ -1985,21 +1624,14 @@ document.addEventListener("DOMContentLoaded", function () {
             provEl.focus();
             return;
         }
-
-        // hide all other provinces (single-focus mode) — add inline style as a defensive fallback
         Array.from(list.querySelectorAll('.province-item')).forEach(pi => {
             if (pi !== provEl) { pi.classList.add('hidden'); pi.style.display = 'none'; }
             else { pi.classList.remove('hidden'); pi.style.display = ''; }
         });
-
-        // remove any existing sublists (animate collapse)
         Array.from(list.querySelectorAll('.province-sublist')).forEach(s => { try { collapseAndRemove(s); } catch(e) { try { s.remove(); } catch(e){} } });
-
-        // build focused sublist (header shows province — back-to-all removed per UI change)
         const cities = Object.keys(citiesObj || {});
         const sub = document.createElement('div');
         sub.className = 'province-sublist';
-        // header center uses .sublist-title — show a static prompt instead of the province/city name
         let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div></div><div class="sublist-title" style="font-weight:700;color:#0f1724;">Choose City</div><div></div></div>`;
 
         if (!cities.length) {
@@ -2020,12 +1652,8 @@ document.addEventListener("DOMContentLoaded", function () {
         html += '</div>';
         html += '<div class="st-list" style="margin-top:8px;"></div>';
         sub.innerHTML = html;
-
-        // insert and mark expanded
         provEl.parentNode.insertBefore(sub, provEl.nextSibling);
         provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
-
-        // animate expand (slide + fade)
         try {
             sub.style.overflow = 'hidden';
             sub.style.maxHeight = '0px';
@@ -2037,23 +1665,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 sub.style.maxHeight = Math.max(64, full) + 'px';
                 sub.style.opacity = '1';
                 sub.style.transform = 'translateY(0)';
-                // stagger reveal of city items
                 Array.from(sub.querySelectorAll('.city-item')).forEach((it, i) => { it.style.transitionDelay = (i * 34) + 'ms'; });
-                // clear max-height after transition so content can grow naturally
                 const tidy = (ev) => { if (ev.propertyName === 'max-height') { sub.style.maxHeight = ''; sub.removeEventListener('transitionend', tidy); } };
                 sub.addEventListener('transitionend', tidy);
                 sub.classList.add('open');
             });
         } catch(e){}
-
-        /* "All provinces" back-control removed per request; collapse the province element to return to province list */
-
-        // city click handlers — selecting a city will hide other cities (dropdown behavior)
         const cityItems = Array.from(sub.querySelectorAll('.city-item'));
         cityItems.forEach(ci => {
             const renderSTs = () => {
-                // IMPORTANT: do NOT populate or modify ST Titles from province/city interactions.
-                // ST Titles are managed in their dedicated panel and must remain unchanged.
                 const stContainer = sub.querySelector('.st-list');
                 if (!stContainer) return;
                 stContainer.innerHTML = '<div class="province-empty">ST Titles are managed in the ST Titles panel and are not affected by province selection.</div>';
@@ -2061,18 +1681,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
             ci.addEventListener('click', ev => {
                 ev.stopPropagation();
-                // toggle selection: if already selected, behave as city-back
                 if (ci.classList.contains('selected')) {
                     cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
                     const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
-                    // remove the inline ST header
                     try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
-                    // restore header back to 'Choose City' and make it visible again when deselecting a city
                     try { const stitle = sub.querySelector('.sublist-title'); if (stitle) { stitle.textContent = 'Choose City'; stitle.style.display = ''; } } catch(e){}
                     return;
                 }
-
-                // hide sibling cities (dropdown) and mark selected
                 cityItems.forEach(x => {
                     if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); }
                     else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); }
@@ -2082,8 +1697,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             ci.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); ci.click(); }});
         });
-
-        // focus first city for keyboard users
         const firstCity = sub.querySelector('.city-item'); if (firstCity) firstCity.focus();
     }
 
@@ -2094,16 +1707,11 @@ document.addEventListener("DOMContentLoaded", function () {
         list.innerHTML = '<div class="province-empty">Loading…</div>';
         card.setAttribute('aria-hidden','false');
         try { const card = document.getElementById('sliderProvinceTotalCard'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); const exprCard = document.getElementById('sliderProvinceExprCard'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); const repCard = document.getElementById('sliderProvinceReplicatedCard'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); const adCard = document.getElementById('sliderProvinceAdoptedCard'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (card) card.setAttribute('aria-hidden','false'); if (stCountEl) stCountEl.textContent = '…'; if (exprCard) exprCard.setAttribute('aria-hidden','false'); if (exprCountEl) exprCountEl.textContent = '…'; if (repCard) repCard.setAttribute('aria-hidden','false'); if (repCountEl) repCountEl.textContent = '…'; if (adCard) adCard.setAttribute('aria-hidden','false'); if (adCountEl) adCountEl.textContent = '…'; positionProvinceTotalCard(); } catch(e) {}
-        // Use cached AJAX helper which returns {provinces, grouped, allRows, uploadedCount...}
         (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionKey) : Promise.reject(new Error('fetchRegionHierarchy missing')))
             .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
 .catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
-
-    // expose helper globally so openImageModal (outer scope) can call it
     try { window.fetchModalProvinces = fetchModalProvinces; window.renderProvinceCard = renderProvinceCard; } catch(e) {}
-
-    // transient popover used for ST click feedback (non-navigating)
     function showTransientPopover(targetEl, text, opts = {}) {
         try {
             const existing = document.querySelector('.slider-province-card .transient-popover');
@@ -2122,17 +1730,13 @@ document.addEventListener("DOMContentLoaded", function () {
             setTimeout(()=> { pop.classList.remove('show'); setTimeout(()=> pop.remove(), 240); }, opts.duration || 1500);
         } catch(e){}
     }
-
-    // confirm / cancel popover for replicating an ST
     function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         try {
-            // remove any existing popover first
             const existing = document.body.querySelector('.replicate-popover');
             if (existing) existing.remove();
 
             const pop = document.createElement('div');
             pop.className = 'replicate-popover';
-            // inline styling so no external CSS dependency
             pop.style.position = 'fixed';
             pop.style.zIndex = '2147483647';
             pop.style.width = '220px';
@@ -2150,8 +1754,6 @@ document.addEventListener("DOMContentLoaded", function () {
             const title = (stInfo && stInfo.title) ? stInfo.title : '';
             pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
             document.body.appendChild(pop);
-
-            // style action buttons
             try {
                 const cb = pop.querySelector('.rp-confirm');
                 const xb = pop.querySelector('.rp-cancel');
@@ -2173,15 +1775,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     xb.style.cursor = 'pointer';
                 }
             } catch(e) {}
-
-            // positioning
             const r = targetEl.getBoundingClientRect();
             const measure = () => {
                 const pw = pop.offsetWidth;
                 const ph = pop.offsetHeight;
                 let left = r.left + (r.width/2) - (pw/2);
-                let top = r.top - ph - 8; // prefer above
-                if (top < 8) top = r.bottom + 8; // fallback below
+                let top = r.top - ph - 8;
+                if (top < 8) top = r.bottom + 8;
                 left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
                 pop.style.left = left + 'px';
                 pop.style.top = top + 'px';
@@ -2225,10 +1825,6 @@ document.addEventListener("DOMContentLoaded", function () {
             document.addEventListener('keydown', onKey);
         } catch(e) {}
     }
-
-    // default implementation — can be overridden by consumers. Uses a
-    // configurable directory URL (stored in localStorage) and opens it
-    // when replication is confirmed.
     try {
         window.replicateST = window.replicateST || function(payload, sourceEl){
             return new Promise(function(resolve, reject){
@@ -2245,8 +1841,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         reject(new Error('Missing replication URL'));
                         return;
                     }
-
-                    // open the configured directory/URL in a new tab
                     window.open(baseUrl, '_blank');
                     resolve({ ok: true, url: baseUrl });
                 } catch(err) {
@@ -2255,8 +1849,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         };
     } catch(e) {}
-
-    // sysadmin-only helper: configure the replication directory URL
     function openReplicateDirectoryConfig(){
         try {
             let existing = '';
@@ -2265,8 +1857,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     existing = localStorage.getItem('rsm_replicate_dir_url') || '';
                 }
             } catch(_e) {}
-
-            // remove any existing modal instance
             try {
                 const ex = document.getElementById('rsm-replicate-dir-modal');
                 if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
@@ -2362,21 +1952,12 @@ document.addEventListener("DOMContentLoaded", function () {
             openReplicateDirectoryConfig();
         } catch(_e) {}
     });
-
-
-
-// modal image gesture/zoom handlers removed — province helpers preserved
-	// keep a harmless stub so code that checks for modal.resetZoom won't fail
 	try { modal.resetZoom = function(){}; } catch(e) {}
 	})();
 
 
 
-	/* global modal zoom removed — no-op stub retained */
 	try { modal.resetGlobalZoom = function(){}; } catch(e) {}
-
-
-	// click handlers: open only for the active slide; clicking non-active slide will navigate to it
 	function renderRegionStatsForImg(img){
 		try {
 			if (!img) return;
@@ -2388,22 +1969,17 @@ document.addEventListener("DOMContentLoaded", function () {
 				'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
 				'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
 				'12.png': 'Region XII',
-						// region XIII stored as CARAGA in dataset
 						'13.png': 'CARAGA','barmm.png': 'BARMM',
 				'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 			};
 			const mappedRegion = filenameToRegion[fileName] || null;
 			const regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
-
-			// no modal wrappers – simply update image and data
 			const titleEl = rsmEl('rsm-modal-image');
 			if (titleEl) {
 				const srcFull = src || img.src || '';
 				titleEl.src = srcFull;
 				titleEl.style.visibility = 'visible';
 			}
-
-// show modal image immediately (animation removed)
             try {
                 const modalImgEl = rsmEl('rsm-modal-image');
                 const srcFull = src || img.src || '';
@@ -2412,17 +1988,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     modalImgEl.style.visibility = 'visible';
                 }
             } catch(e) { console.error('rsm animation removed', e); try { const ri = rsmEl('rsm-modal-image'); if (ri) { ri.src = src || ''; ri.style.visibility = 'visible'; } } catch(e){} }
-
-
-			// show loader, hide content while fetching
 			rsmEl('rsm-loading').style.display = ''; 
 			document.getElementById('rsm-cards').style.display = 'none';
 			rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
-
-			// fetch aggregated JSON for the region (provinces, grouped, rows, uploads, per-year totals)
             (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                 .then(payload => {
-					// populate provinces list
 					const provEl = rsmEl('rsm-provinces');
 					if (provEl) {
 					const provincesArr = Array.isArray(payload.provinces) ? payload.provinces : [];
@@ -2438,11 +2008,7 @@ document.addEventListener("DOMContentLoaded", function () {
 							return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div>`;
 						}).join('');
 						provEl.setAttribute('aria-hidden','false');
-
-						// store last payload for quick lookup when interacting with provinces/cities
 						window._lastRsmPayload = payload;
-
-						// capture-phase handler: ensure city clicks always render inline STs (runs before bubble handlers that may stopPropagation)
 						try {
 							if (!provEl.dataset.cityCaptureBound) {
 								provEl.addEventListener('click', function(ev){
@@ -2464,14 +2030,12 @@ document.addEventListener("DOMContentLoaded", function () {
 									}
 
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
-									// toggle off (restore)
 									if (ci.classList.contains('selected')) {
 										cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
 										const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
 										try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
 										return;
 									}
-									// single-focus: hide siblings and mark selected
 									cityItems.forEach(x => { if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); } else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); } });
 									const stContainer = sub.querySelector('.st-list');
 									if (!stContainer) return;
@@ -2487,8 +2051,6 @@ document.addEventListener("DOMContentLoaded", function () {
 								provEl.dataset.cityCaptureBound = '1';
 							}
 						} catch(e) {}
-
-						// delegated city click handler for the Provinces card — expand city row and render STs inline (provinces card only)
 						if (!provEl.dataset.cityDelegateBound) {
 							provEl.addEventListener('click', function(ev) {
 								const ci = ev.target.closest('.city-item');
@@ -2508,14 +2070,12 @@ document.addEventListener("DOMContentLoaded", function () {
 								}
 
 								const cityItems = Array.from(sub.querySelectorAll('.city-item'));
-								// toggle off (restore)
 								if (ci.classList.contains('selected')) {
 									cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
 									const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
 									try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
 									return;
 								}
-								// single-focus: hide siblings and mark selected
 						cityItems.forEach(x => {
 							if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); }
 							else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); }
@@ -2535,30 +2095,22 @@ document.addEventListener("DOMContentLoaded", function () {
 							});
 							provEl.dataset.cityDelegateBound = '1';
 						}
-
-						// attach expand/click handlers: provinces -> cities -> STs
 						Array.from(provEl.querySelectorAll('.province-item')).forEach(pi => {
 							pi.addEventListener('click', function(ev){
 								ev.stopPropagation();
 								const prov = this.getAttribute('data-prov');
-								// collapse if already expanded
 								const next = this.nextElementSibling;
 								if (next && next.classList && next.classList.contains('province-sublist')) {
-									// remove sublist and restore all provinces + clear ST listing
 									next.remove();
 									this.classList.remove('expanded');
 									this.setAttribute('aria-expanded','false');
 									Array.from(provEl.querySelectorAll('.province-item')).forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
-									
 									return;
 								}
-								// remove other sublists and mark this expanded
 								Array.from(provEl.querySelectorAll('.province-sublist')).forEach(s => s.remove());
 								Array.from(provEl.querySelectorAll('.province-item.expanded')).forEach(x => { x.classList.remove('expanded'); x.setAttribute('aria-expanded','false'); });
 								this.classList.add('expanded');
 								this.setAttribute('aria-expanded','true');
-
-								// hide all other provinces (single-focus mode)
 								Array.from(provEl.querySelectorAll('.province-item')).forEach(pi2 => {
 									if (pi2 !== this) { pi2.classList.add('hidden'); pi2.style.display = 'none'; }
 									else { pi2.classList.remove('hidden'); pi2.style.display = ''; pi2.classList.add('selected'); }
@@ -2566,28 +2118,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 								const citiesObj = grouped[prov] || {};
 								const cityNames = Object.keys(citiesObj);
-					// include an inline ST container so city clicks expand in-place (provinces card only)
 					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => { const key=(cn||'').toString().trim(); const displayCity = (cn === 'UNKNOWN') ? '(no city specified)' : cn; return `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="city-name">${esc(displayCity)}</div><div class="province-badge">${(citiesObj[key]||[]).length}</div></div>` }).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
-					// insert the sublist so city items are visible when a province is expanded
 					this.insertAdjacentHTML('afterend', subHtml);
-								// attach city handlers (render STs into right-side listing) — hide other cities when one selected
 								const sub = this.nextElementSibling;
 								if (sub) {
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
 									cityItems.forEach(ci => {
 										const renderSTs = () => {
-								// NO-OP: do not update the global ST Titles panel from province/city interactions.
-								// ST Titles must remain unchanged.
 								return;
 							};
 											ci.addEventListener('click', ev2 => {
 
 											if (ci.classList.contains('selected')) {
 												cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
-												
 												return;
 											}
-											// hide sibling cities and mark selected
 											cityItems.forEach(x => {
 									if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); }
 									else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); }
@@ -2596,35 +2141,27 @@ document.addEventListener("DOMContentLoaded", function () {
 										});
 										ci.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); ci.click(); } });
 									});
-									// focus first city for keyboard users
 									const firstCity = sub.querySelector('.city-item'); if (firstCity) firstCity.focus();
 								}
 							});
 							pi.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); pi.click(); } });
 						});
 					}}
-
-					// totals
 					const allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
 					rsmEl('rsm-total-sts').textContent = String(allRows.length || 0);
 				try { const modalTotal = document.getElementById('modalStatsTotal'); if (modalTotal) modalTotal.textContent = `Total STs: ${allRows.length || 0}`; } catch(e) {}
 					rsmEl('rsm-total-moa').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0));
 					rsmEl('rsm-total-res').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0));
 				rsmEl('rsm-total-expr').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0));
-					// Total MOA Attachment — sum uploaded counts across perYearTotals (attachments for MOA years)
 					let moaAttachments = 0;
 					if (payload.perYearTotals) {
 						Object.values(payload.perYearTotals).forEach(arr => { moaAttachments += Number((arr && arr[1]) || 0); });
 					} else moaAttachments = Number(payload.uploadedCount || 0);
 					rsmEl('rsm-total-moa-attachments').textContent = String(moaAttachments || 0);
-
-				// --- build chart values (X order requested: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest)
-					// prepare a container outside the try so it's always in scope
 					let _chartData = { base: [], perYear: null };
 					try {
 						const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
 						const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
-					// keep the standalone SB-resolution stat card up to date too
 					rsmEl('rsm-total-res').textContent = String(totalRes);
 						const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
 						const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
@@ -2632,11 +2169,10 @@ document.addEventListener("DOMContentLoaded", function () {
 						if (payload.perYearTotals) {
 							perYearTransformed = {};
 							Object.keys(payload.perYearTotals).forEach(y => {
-								const arr = payload.perYearTotals[y] || [0,0,0,0]; // [moaY, uploadedY, exprY, resY]
+								const arr = payload.perYearTotals[y] || [0,0,0,0];
 								perYearTransformed[y] = [ Number(arr[1]||0), Number(arr[0]||0), Number(arr[3]||0), Number(arr[2]||0) ];
 							});
 						}
-						// postpone chart rendering until after metrics cards are visible
 						_chartData = {base: baseValuesOrdered, perYear: perYearTransformed};
 					} catch(e) { console.error('modal chart error', e); }
 
@@ -2646,19 +2182,13 @@ document.addEventListener("DOMContentLoaded", function () {
 						if (typeof initOrUpdateModalStatsChart === 'function') {
 							initOrUpdateModalStatsChart(_chartData.base, _chartData.perYear);
 						}
-						// ensure chart.js recalculates size if it already existed
 						try { if (modalStatsChart && typeof modalStatsChart.resize === 'function') modalStatsChart.resize(); } catch(e) {}
-
-                    // load the ST listing (HTML partial) for the region using the
-                    // shared renderer so behaviour stays consistent with filters
                     (function renderRegionAggregatedTitles(){
                         try {
                             const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
                             renderStTitlesFromRows(rows, regionParam || 'this region');
                         } catch(e) { console.error('renderRegionAggregatedTitles', e); }
                     })();
-						
-						
 				})
 				.catch(err => {
 					document.getElementById('rsm-loading').style.display = 'none';
@@ -2669,20 +2199,13 @@ document.addEventListener("DOMContentLoaded", function () {
 				});
 		} catch(e){ console.error('renderRegionStatsForImg', e); }
 	}
-
-	// slider click interactions: render region stats and ask parent to extend iframe.
-	// we still want the height animation but the image/totals/ST listing should appear
-	// immediately rather than waiting for the toggling to finish.
 	(function(){
 		document.addEventListener('click', function(ev){
 			const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : null;
 			if (!img) return;
-			// only react when the image is inside the active (center) slide
 			const slide = img.closest('.swiper-slide');
 			if (!slide || !slide.classList.contains('swiper-slide-active')) return;
-			// immediately log years for the clicked image's region
 			try {
-				// regionName attribute is empty for numeric slides; derive from img if needed
 				let regionName = img.getAttribute('data-region-name') || '';
 				if (!regionName) {
 					regionName = deriveRegionFromSlider(img) || '';
@@ -2735,7 +2258,6 @@ document.addEventListener("DOMContentLoaded", function () {
 							}
 						}
 					} catch(e){ console.warn('[iframe] update selects failed', e); }
-					// inform parent so filtering fields can be updated (optional)
 					try {
 						window.parent.postMessage({ type:'sliderRegionData', region: regionName, years: yrs, provinces: provs, cities: cities }, '*');
 					} catch(e) { console.warn('[iframe] post sliderRegionData failed', e); }
@@ -2747,32 +2269,19 @@ document.addEventListener("DOMContentLoaded", function () {
 			} catch(err) { console.error('postMessage failed', err); }
 		});
 	})();
-
-
-	// modal close interactions removed (close button / overlay / Escape) for the slider image modal (kept as no-op)
-	// previously: closeBtn.click, overlay.click, Escape key would close the modal — disabled.
-
-
-
-// Chart instance for Region Stats modal (lazy-initialized)
 let modalStatsChart = null;
 function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
-    // helper for checkbox controls (hoisted so update branch can call it)
     function refreshControls(){
         const ctrl = fetchEl('modalStatsChartControls');
         if (!ctrl || !modalStatsChart) return;
-        // intentionally left blank; no user controls
         ctrl.innerHTML = '';
     }
-    // prefer local canvas; fetchEl may return parent element which can be null in embed context
     let el = document.getElementById('modalStatsChart');
     if (!el) el = fetchEl('modalStatsChart');
     if (!el) { console.warn('[STsReport] modalStatsChart element not found'); return; }
-    // allow Chart.js from parent if embed context doesn’t have it
     let ChartCtor = (typeof Chart !== 'undefined') ? Chart : (window.parent && window.parent.Chart);
     if (!ChartCtor) {
         console.warn('[STsReport] Chart.js not available anywhere; attempting to load dynamically');
-        // dynamically inject Chart.js and retry once loaded
         const existing = document.querySelector('script[src*="chart.js"]');
         if (!existing) {
             const s = document.createElement('script');
@@ -2783,12 +2292,10 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             s.onerror = () => console.error('[STsReport] failed to load Chart.js dynamically');
             document.head.appendChild(s);
         } else {
-            // if script tag exists but library still not ready, wait briefly and retry
             setTimeout(() => initOrUpdateModalStatsChart(values, perYearTotals), 200);
         }
         return;
     }
-    // X order requested by user: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest
     const labels = ['Uploaded MOA','Total MOA','SB Resolution','Expression of Interest'];
     const ctx = el.getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, el.height || 120);
@@ -2797,7 +2304,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
 
     function buildDatasets(baseValues, perYear) {
         const datasets = [];
-        // primary "All" series: thin blue line with light gradient fill
         datasets.push({
             label: 'All',
             data: baseValues,
@@ -2806,7 +2312,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             fill: true,
             cubicInterpolationMode: 'monotone',
             tension: 0.3,
-            pointRadius: 0,                // hide individual points for minimalist look
+            pointRadius: 0,
             pointHoverRadius: 6,
             borderWidth: 2
         });
@@ -2878,7 +2384,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                     x: { grid: { display: false }, ticks: { color: '#374151', maxRotation: 0, autoSkip: true, font: { size: 11, weight: '600' }, padding: 8,
                         callback: function(val) {
                             const lbl = this.getLabelForValue(val) || '';
-                            // explicit mapping for each metric
                             switch(lbl) {
                                 case 'Uploaded MOA': return 'Upload MOA';
                                 case 'Total MOA': return 'Total MOA';
@@ -2891,7 +2396,6 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                     y: { beginAtZero: true, suggestedMax: _suggestedMax, ticks: { precision: 0, stepSize: _step, color: '#374151', font: { size: 14, weight: '600' } }, grid: { color: 'rgba(15,23,42,0.08)' }, title: { display: true, text: 'Number of STs', color: '#6b7280', font: { size: 13, weight: '700' }, padding: { bottom: 6 } } }
                 }
             },
-            // minimalist chart – plugins for value indicators
             plugins: [
                 {
                     id: 'simpleValues',
@@ -2941,15 +2445,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             ]
         });
         try { createChartHitZones(modalStatsChart); } catch(e) {}
-
-        // build and render show/hide controls.  We already defined a
-        // checkbox-friendly version earlier in the outer scope, so just
-        // call that helper here instead of redefining it.  This ensures the
-        // multi‑select dropdown used throughout the modal always has checkboxes
-        // (and avoids accidentally overriding the function).
         refreshControls();
-
-        // attach alpha animators + init alpha state
         modalStatsChart._labelAlphas = {}; modalStatsChart._labelFadeHandles = {};
         modalStatsChart._setLabelAlpha = function(label, v) { this._labelAlphas[label] = v; };
         modalStatsChart._getLabelAlpha = function(label) { return (this._labelAlphas && typeof this._labelAlphas[label] !== 'undefined') ? this._labelAlphas[label] : 1; };
@@ -3046,11 +2542,9 @@ function createChartHitZones(chart) {
             zone.addEventListener('click', function(ev) { ev.stopPropagation(); try { const idx = Number(zone.dataset.idx || 0); chart.setActiveElements([{ datasetIndex: 0, index: idx }]); chart.tooltip.setActiveElements([{ datasetIndex: 0, index: idx }], { x: p.x, y: p.y }); chart.update(); } catch (err) {} });
             zonesContainer.appendChild(zone);
         });
-    } catch (e) { /* ignore */ }
+    } catch (e) {  }
 }
-
-	// Unified replicate popover — single component for All ST Titles and ST Titles panel
-	(function initUnifiedReplicatePopover() { return; /* modal popover removed */
+	(function initUnifiedReplicatePopover() { return; 
 		if (window.__unifiedReplicatePopoverBound) return;
 		window.__unifiedReplicatePopoverBound = true;
 		const pop = document.getElementById('stReplicatePopover');
@@ -3065,7 +2559,6 @@ function createChartHitZones(chart) {
     <div class="container-cards" style="pointer-events:auto;">
         @foreach($galleryCards as $card)
             @php
-                // include all top-level children (show inactive children as muted in the popover)
                 $__cardChildren = $card->children
                     ->filter(function($c){ return is_null($c->parent_child_id); })
                     ->map(function($c){
@@ -3103,7 +2596,7 @@ function createChartHitZones(chart) {
 
 
 
-<!-- Gallery children modal (opens on gallery card click) -->
+
 <div id="galleryChildrenModal" class="gallery-children-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="galleryChildrenModalTitle" style="display:none;">
   <div class="gcm-backdrop" data-action="close" style="position:fixed; inset:0; background:rgba(0,0,0,0.45);"></div>
   <div class="gcm-panel" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(820px,calc(100% - 48px)); max-height:80vh; overflow:auto; background:#fff; border-radius:12px; padding:18px; box-shadow:0 18px 60px rgba(2,6,23,0.12); z-index:100000;">
@@ -3117,7 +2610,7 @@ function createChartHitZones(chart) {
   </div>
 </div>
 
-<!-- Popover: shown anchored to the clicked card (used instead of the centered modal) -->
+
 <div id="galleryPopover" class="gallery-popover" role="dialog" aria-hidden="true"
      style="position:absolute; display:none; z-index:100250; min-width:260px; max-width:420px; width:fit-content; background:#fff; border-radius:12px; padding:12px; box-shadow:0 18px 60px rgba(2,6,23,0.12);">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
@@ -3139,11 +2632,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function escapeHtml(s){ return (s||'').toString().replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
   function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
-
-  // helper: returns true when gallery popover is currently visible
   function isPopoverOpen(){
     try {
-      if (window.__galleryPopoverActive) return true; // defensive global
+      if (window.__galleryPopoverActive) return true;
       const p = document.getElementById('galleryPopover');
       return p && p.getAttribute('aria-hidden') === 'false';
     } catch(e){ return !!window.__galleryPopoverActive; }
@@ -3153,20 +2644,15 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!items || !items.length) return '<div class="gcm-empty" style="color:#6b7280;">No items</div>';
     let html = '<div class="gcm-list" style="display:flex;flex-direction:column;gap:10px;">';
     items.forEach((m,mi) => {
-      // default: render all mother rows expanded so child + sub-child lists are visible
-      // render the mother title as a clickable link (if a URL exists) and keep a separate toggle button
       html += `<div class="gcm-mother" style="display:flex;flex-direction:column;gap:6px;">`;
       if (m.url) {
         html += `<div style="display:flex;align-items:center;gap:8px;"><a class="gcm-mother-link" href="${escapeAttr(m.url||'#')}" target="_blank" rel="noopener noreferrer" style="display:block;width:100%;text-align:left;font-weight:700;font-size:1rem;color:#0369a1;text-decoration:none;padding:4px 0;cursor:pointer;">${escapeHtml(m.title)}</a><button class="gcm-mother-toggle" aria-expanded="true" data-index="${mi}" style="background:transparent;border:none;cursor:pointer;color:#0369a1;font-size:0.95rem;padding:4px 6px;"></button></div>`;
       } else {
-        // no URL: render the mother title as a toggle but keep it visually blue
       html += `<button class="gcm-mother-toggle" aria-expanded="true" data-index="${mi}" style="text-align:left;background:transparent;border:none;font-weight:700;font-size:1rem;cursor:pointer;color:#0369a1;">${escapeHtml(m.title)}</button>`;
       }
       if (m.children && m.children.length) {
-        // show child list by default
         html += '<ul class="gcm-child-list" style="display:block;margin:4px 0 0 12px;padding-left:0;list-style:none;">';
         m.children.forEach(c => {
-          // render active children as links, inactive as muted/plain text
           if (c.active === 1 || c.active === '1' || c.active === true) {
             html += `<li style="margin-bottom:6px;"><a href="${escapeAttr(c.url||'#')}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(c.title)}</a>`;
           } else {
@@ -3174,7 +2660,6 @@ document.addEventListener('DOMContentLoaded', function(){
           }
 
           if (c.children && c.children.length) {
-            // render sub-children; inactive sub-children are muted
             html += '<ul class="gcm-subchild-list" style="margin-top:6px;margin-left:12px;list-style:none;padding-left:0;">';
             c.children.forEach(sc => {
               if (sc.active === 1 || sc.active === '1' || sc.active === true) {
@@ -3194,22 +2679,14 @@ document.addEventListener('DOMContentLoaded', function(){
     html += '</div>';
     return html;
   }
-
-  // open a small popover anchored to the clicked card (preferred over the centered modal)
   function openModalForCard(card){
-    // when popover is opening we want to lock the scrolling/wrapping logic so the track
-    // doesn't jump (especially for cards near the duplicated boundary). resume after close.
     wrapSuspended = true;
-
-    // defensive: ensure any previously-open popover is fully cleaned up before opening a new one
     try { closePopover(); } catch(e){}
 
     const title = card.dataset.title || card.getAttribute('aria-label') || '';
     const href = card.dataset.href || card.getAttribute('href') || '#';
     let items = [];
     try { items = card.dataset.children ? JSON.parse(card.dataset.children) : []; } catch(e){ console.error('[STsReport] failed to parse card.dataset.children', card && card.dataset && card.dataset.children, e); items = []; }
-
-    // fallback for duplicated/cloned cards that may not carry data-children:
     if ((!items || !items.length) && card && card.dataset && (card.dataset.title || card.dataset.href)) {
         try {
             const keyTitle = card.dataset.title || '';
@@ -3219,27 +2696,19 @@ document.addEventListener('DOMContentLoaded', function(){
             if (source && source.dataset && source.dataset.children) {
                 try { items = JSON.parse(source.dataset.children || '[]'); } catch(e) { items = items || []; }
             }
-        } catch(e) { /* ignore fallback errors */ }
+        } catch(e) {  }
     }
-
-    // populate popover
     const pop = document.getElementById('galleryPopover');
     const popBody = document.getElementById('galleryPopoverBody');
     const popTitle = document.getElementById('galleryPopoverTitle');
 
     popTitle.textContent = title;
     try { popTitle.href = href || '#'; popTitle.setAttribute('aria-label', title); } catch(e) {}
-    // Render popover with two status panes ("On going" / "Completed"). Mothers remain top-level headers in both views.
     function renderChildrenByStatus(list, status){
       if (!Array.isArray(list)) return '<div class="gcm-empty" style="color:#6b7280;">No items</div>';
       let sections = '';
-
-      // Include mother when ANY descendant (child OR sub-child) matches the status.
       list.forEach((m) => {
         const children = Array.isArray(m.children) ? m.children : [];
-
-        // For each top-level child determine if it should be shown:
-        // - show if child.status matches OR any of its sub-children match
         const childrenToShow = children.map(c => {
           const subs = Array.isArray(c.children) ? c.children : [];
           const matchingSubs = subs.filter(sc => (sc.status||'On going') === status);
@@ -3247,28 +2716,19 @@ document.addEventListener('DOMContentLoaded', function(){
           if (childMatches || matchingSubs.length) return { child: c, matchingSubs };
           return null;
         }).filter(Boolean);
-
-        // if this `m` is a grouped mother (has nested children) we only show it when
-        // some descendant matches; otherwise, if m itself is a standalone item (no nested children)
-        // show it when its own status matches the selected status.
         if (children.length > 0) {
           if (!childrenToShow.length) return;
         } else {
-          // standalone entry: treat `m` itself as an item (show only when m.status matches)
           if ((m.status || 'On going') !== status) return;
         }
 
         let motherHtml = '<div class="gcm-mother" style="display:flex;flex-direction:column;gap:6px;">';
-        // only render a header when this entry is a grouped mother (has nested children)
         if (children.length > 0) {
           if (m.url) motherHtml += `<div style="display:flex;align-items:center;gap:8px;"><a href="${escapeAttr(m.url||'#')}" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#0369a1;text-decoration:none;">${escapeHtml(m.title)}</a></div>`;
           else motherHtml += `<div style="font-weight:700;color:#0369a1;">${escapeHtml(m.title)}</div>`;
         }
 
         motherHtml += '<ul style="margin:4px 0 0 12px;padding-left:0;list-style:none;">';
-
-        // if this `m` has no nested children but `m` itself matches the status,
-        // render `m` as a standalone list item so top-level entries (like SWPDOP) appear
         if (children.length === 0 && (m.status || 'On going') === status) {
           if (m.url && m.url.trim()) {
             motherHtml += `<li style="margin-bottom:6px;"><a href="${escapeAttr(m.url)}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(m.title)}</a></li>`;
@@ -3280,15 +2740,11 @@ document.addEventListener('DOMContentLoaded', function(){
         childrenToShow.forEach(entry => {
           const c = entry.child;
           const matchingSubs = entry.matchingSubs;
-
-          // Render child — clickable if it has a URL, otherwise plain text.
           if (c.url && c.url.trim()) {
             motherHtml += `<li style="margin-bottom:6px;"><a href="${escapeAttr(c.url)}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(c.title)}</a>`;
           } else {
             motherHtml += `<li style="margin-bottom:6px;"><span style="color:#475569;">${escapeHtml(c.title)}</span>`;
           }
-
-          // If the child itself matches the requested status, show its matching sub-children as well (if any)
           if (matchingSubs && matchingSubs.length) {
             motherHtml += '<ul style="margin-top:6px;margin-left:12px;list-style:none;padding-left:0;">';
             matchingSubs.forEach(sc => {
@@ -3313,8 +2769,6 @@ document.addEventListener('DOMContentLoaded', function(){
       if (!sections) return '<div class="gcm-empty" style="color:#6b7280;">No items in this status</div>';
       return `<div class="gcm-list" style="display:flex;flex-direction:column;gap:10px;">${sections}</div>`;
     }
-
-    // build the tabbed status popover (hover over tabs switches view)
     const tabHtml = `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
         <button class="gcm-status-btn active" data-status="Completed" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:linear-gradient(180deg,#ffffff,#f8fafc);cursor:pointer;font-weight:600;color:#0b2540;">Completed</button>
@@ -3327,8 +2781,6 @@ document.addEventListener('DOMContentLoaded', function(){
     `;
 
     popBody.innerHTML = tabHtml;
-
-    // wire hover / click behavior for the status buttons
     try {
       const tabs = popBody.querySelectorAll('.gcm-status-btn');
       const views = popBody.querySelectorAll('.gcm-status-view');
@@ -3342,20 +2794,12 @@ document.addEventListener('DOMContentLoaded', function(){
         t.addEventListener('click', (ev) => { ev.preventDefault(); showFor(t.getAttribute('data-status')); });
       });
     } catch(e){ console.error('status tabs wiring failed', e); }
-
-    // also ensure the centered modal title (fallback) has the href available
     try { if (modalTitle) { modalTitle.textContent = title; modalTitle.href = href || '#'; modalTitle.setAttribute('aria-label', title); } } catch(e) {}
-
-    // show & position popover
     pop.setAttribute('aria-hidden','false');
     pop.style.display = 'block';
-
-    // mark popover anchor and pause gallery autoscroll while popover is open
     try { window.__galleryPopoverActive = true; } catch(e){}
     try { pop._anchor = card; } catch(e){}
     try { pop._anchorKey = (card && (card.dataset && (card.dataset.title || card.dataset.href))) || ''; } catch(e){}
-
-    // add lifted class to all matching (duplicated) cards so the extension remains visible while popover is open
     try {
         const key = pop._anchorKey || '';
         if (key) {
@@ -3367,58 +2811,32 @@ document.addEventListener('DOMContentLoaded', function(){
 
     try { _clearAutoResume(); } catch(e){}
     try { running = false; scroller.classList.add('autoscroll-paused'); } catch(e){}
-    // pause CSS animation (if present) and freeze transform-track offset when in transform-mode
     try { const track = document.querySelector('.marquee-track'); if (track) { track.style.animationPlayState = 'paused'; track.dataset.frozen = '1'; } } catch(e){}
-    // cancel any hover-snap so the popover holds the gallery steady
     try { cancelHoverSnap(card); } catch(e){}
-
-    // Prefer to anchor the popover to the card's right edge ("extension edge").
-    // If insufficient horizontal space, flip to the left; otherwise center as a fallback.
     const rect = card.getBoundingClientRect();
-    // ensure pop is rendered to compute size
     const popRect = pop.getBoundingClientRect();
     const margin = 8;
-
-    // primary placement: to the RIGHT of the card (aligned vertically center)
     let left = Math.round(rect.right + margin);
     let top = Math.round(rect.top + (rect.height - popRect.height) / 2);
-
-    // if right-side placement would overflow, try left-side placement
     if (left + popRect.width > window.innerWidth - margin) {
       const leftAlt = Math.round(rect.left - popRect.width - margin);
       if (leftAlt >= margin) {
         left = leftAlt;
       } else {
-        // final fallback: horizontally center near the card (clamped)
         left = Math.round(rect.left + (rect.width / 2) - (popRect.width / 2));
         left = Math.max(margin, Math.min(left, window.innerWidth - popRect.width - margin));
       }
     }
-
-    // clamp vertical position so popover remains visible
     top = Math.max(margin, Math.min(top, window.innerHeight - popRect.height - margin));
-
-    // account for document scroll
     pop.style.left = (left + window.pageXOffset) + 'px';
     pop.style.top = (top + window.pageYOffset) + 'px';
-
-    // focus first interactive element inside popover and ensure the
-    // extension itself is scrolled into view (use card for anchor if pop
-    // is absolutely positioned offscreen). doing this after a timeout
-    // lets layout settle.
     setTimeout(() => {
       try {
-        // simple attempt first; keeps horizontal centering
         pop.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
       } catch(e) {}
       try {
-        // ensure the underlying card is visible as well
         card && card.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
       } catch(e) {}
-      // additionally make sure the *entire* popover rectangle is within
-      // the viewport. if the element is taller than the viewport we can't fit
-      // it fully, so instead aim to center the popover's midpoint in the
-      // window (this brings the middle body area into view).
       try {
         const r = pop.getBoundingClientRect();
         const margin = 12;
@@ -3429,37 +2847,26 @@ document.addEventListener('DOMContentLoaded', function(){
             window.scrollBy({ top: r.bottom - window.innerHeight + margin, behavior:'smooth' });
           }
         } else {
-          // popover taller than viewport: center its midpoint
           const popCenter = r.top + r.height/2;
           const goal = window.innerHeight/2;
           window.scrollBy({ top: popCenter - goal, behavior:'smooth' });
         }
-        // finally, if there is an rsm-header within the popover, ensure its
-        // own midpoint is centered (this targets the header specifically).
-        // because you want to see more of the header's body, we add an extra
-        // downward offset equal to half the header height; this pushes the
-        // midpoint further down the screen so the middle of the header is
-        // clearly visible rather than being right at the top edge.
         const hdr = pop.querySelector('.rsm-header');
         if (hdr) {
           const hr = hdr.getBoundingClientRect();
           const hdrCenter = hr.top + hr.height/2;
           const winCenter = window.innerHeight/2;
-          const extra = hr.height/2; // additional scroll amount
+          const extra = hr.height/2;
           window.scrollBy({ top: hdrCenter - winCenter + extra, behavior:'smooth' });
         }
-        // finally, nudge the whole popover midpoint down a bit more so the
-        // true centre of the extension is visible rather than the very top
         try {
           const pr = pop.getBoundingClientRect();
           const popMid = pr.top + pr.height/2;
           const winMid = window.innerHeight/2;
-          const extra2 = pr.height/4; // push the midpoint further down
+          const extra2 = pr.height/4;
           window.scrollBy({ top: popMid - winMid + extra2, behavior:'smooth' });
         } catch(_e) {}
       } catch(_e) {}
-      // ensure the popover container itself can receive focus for overall
-      // keyboard interactions; this makes the whole extension 'active'.
       try {
         pop.tabIndex = -1;
         pop.focus();
@@ -3467,8 +2874,6 @@ document.addEventListener('DOMContentLoaded', function(){
       const first = pop.querySelector('a,button,[tabindex]');
       if (first) first.focus();
     }, 0);
-
-    // attach one-time handlers to close popover on outside click / Escape / resize / scroll
     function _docClick(ev){ if (!pop.contains(ev.target) && !card.contains(ev.target)) closePopover(); }
     function _onKey(ev){ if (ev.key === 'Escape') closePopover(); }
     function _onScroll(){ closePopover(); }
@@ -3477,17 +2882,12 @@ document.addEventListener('DOMContentLoaded', function(){
     document.addEventListener('keydown', _onKey);
     window.addEventListener('resize', _onScroll);
     (document.querySelector('.container-cards') || window).addEventListener('scroll', _onScroll, { passive:true });
-
-    // wire close button
     const popCloseBtn = document.getElementById('galleryPopoverClose');
     if (popCloseBtn) popCloseBtn.onclick = closePopover;
-
-    // store cleanup references so closePopover can remove them
     pop._cleanup = { _docClick, _onKey, _onScroll };
   }
 
   function closeModal(){
-    // keep the centered modal available as fallback — hide both
     try { closePopover(); } catch(e){}
     modal.setAttribute('aria-hidden','true');
     modal.style.display = 'none';
@@ -3498,7 +2898,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!pop || pop.getAttribute('aria-hidden') === 'true') return;
     pop.setAttribute('aria-hidden','true');
     pop.style.display = 'none';
-    // remove attached handlers
     try {
       const c = pop._cleanup || {};
       if (c._docClick) document.removeEventListener('click', c._docClick);
@@ -3508,11 +2907,8 @@ document.addEventListener('DOMContentLoaded', function(){
       sc.removeEventListener('scroll', c._onScroll);
     } catch(e){}
     pop._cleanup = null;
-
-    // defensive cleanup: remove any leftover lifted state that could block interaction
     try { document.querySelectorAll('.card-link.card-lifted').forEach(el => el.classList.remove('card-lifted')); } catch(e){}
     try {
-        // remove 'card-lifted' from any duplicated cards that matched the popover anchor key
         const anchorKey = pop && pop._anchorKey ? pop._anchorKey : null;
         if (anchorKey) {
             document.querySelectorAll('.card-link').forEach(function(el){
@@ -3523,31 +2919,21 @@ document.addEventListener('DOMContentLoaded', function(){
 
     try { pop._anchor = null; pop._anchorKey = null; } catch(e){}
     try { window.__galleryPopoverActive = false; } catch(e){}
-    // allow wrapping again once the popover fully closes
     wrapSuspended = false;
-    // restore CSS animation / thaw transform-track
     try { const track = document.querySelector('.marquee-track'); if (track) { track.dataset.frozen = '0'; track.style.animationPlayState = ''; } } catch(e){}
-    // allow auto-resume (but only if no extension/popover remains open) — schedule rather than immediate
     try { _scheduleAutoResume(); } catch(e){}
   }
-
-  // automatically close any open gallery extension when the slider's active region changes
   document.addEventListener('sliderActiveRegionChanged', function(e){
       try { closePopover(); } catch(e){}
       let region = e && e.detail && e.detail.regionName ? e.detail.regionName : null;
       if (!region && e && e.detail) {
-          // try to derive a name from the detail object
           region = deriveRegionFromSlider(e.detail) || null;
       }
-      // remember last active region for other components (e.g. card click logging)
       window.__lastActiveRegion = region;
-
-      // log available years, provinces, and cities for the new region
       if (region && window.parent && window.parent.regionMap) {
           const norm = normalizeRegionText(region);
           let map = window.parent.regionMap[norm];
           if (!map) {
-              // fallback to any matching key
               Object.keys(window.parent.regionMap || {}).some(k => {
                   if (normalizeRegionText(k) === norm) {
                       map = window.parent.regionMap[k];
@@ -3565,13 +2951,8 @@ document.addEventListener('DOMContentLoaded', function(){
           const cities = Array.from(allCities).sort();
           console.log('[RSM] available region data', region, { years: yrs, provinces: provs, cities: cities });
       }
-      // update filter dropdowns when region changes
       populateRegionFilters(region);
   });
-
-
-  // helper to derive a canonical region name from slider data or image
-  // (duplicate from top, kept for safety but likely unused since global)
   function deriveRegionFromSlider(source){
       let name = '';
       if (source && typeof source === 'object'){
@@ -3611,20 +2992,13 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       return name;
   }
-
-  // helper to populate province/city/year selects based on regionMap
   function populateRegionFilters(region) {
       const provEl = document.getElementById('rsm-filter-prov');
       const cityEl = document.getElementById('rsm-filter-city');
       const yearEl = document.getElementById('rsm-filter-year');
-      // reset
       if (provEl) provEl.innerHTML = '';
       if (cityEl) cityEl.innerHTML = '';
       if (yearEl) yearEl.innerHTML = '';
-      // Prefer client-provided regionMap (populated by parent). If missing
-      // or empty, fetch the aggregated JSON from the server endpoint so
-      // selects can be populated even when embedded or when regionMap
-      // hasn't been preloaded.
       const norm = region ? normalizeRegionText(region) : '';
       const keys = Object.keys((window.parent && window.parent.regionMap) ? window.parent.regionMap : {});
       let map = (window.parent && window.parent.regionMap) ? window.parent.regionMap[norm] : null;
@@ -3633,13 +3007,11 @@ document.addEventListener('DOMContentLoaded', function(){
           m = m || {};
           const provs = Object.keys(m.provinces || {}).sort();
           provs.forEach(p => { if (provEl) provEl.appendChild(new Option(p, p)); });
-          // gather all cities across provinces for full-region list
           const allCities = new Set();
           provs.forEach(p => { (m.provinces[p] || []).forEach(c => allCities.add(c)); });
           Array.from(allCities).sort().forEach(c => { if (cityEl) cityEl.appendChild(new Option(c, c)); });
           const yrs = (m.years || []).slice().sort();
           yrs.forEach(y => { if (yearEl) yearEl.appendChild(new Option(y, y)); });
-          // refresh select2 widgets if present
           try { if (provEl && window.jQuery && jQuery(provEl).data('select2')) jQuery(provEl).trigger('change.select2'); } catch(e){}
           try { if (cityEl && window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).trigger('change.select2'); } catch(e){}
           try { if (yearEl && window.jQuery && jQuery(yearEl).data('select2')) jQuery(yearEl).trigger('change.select2'); } catch(e){}
@@ -3649,20 +3021,15 @@ document.addEventListener('DOMContentLoaded', function(){
           fillFromMap(map);
           return;
       }
-
-      // attempt to find a matching key in parent.regionMap (normalized match)
       if (!map && keys.length) {
           for (const k of keys) {
               if (normalizeRegionText(k) === norm) { map = window.parent.regionMap[k]; break; }
           }
       }
       if (map && Object.keys(map.provinces || {}).length) { fillFromMap(map); return; }
-
-      // fallback: fetch aggregated data from server endpoint
       if (region) {
                     (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(region) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                         .then(payload => {
-                // server returns { provinces: [...], grouped: {prov: {city:[rows]}}, availableYears }
                 const m = { provinces: {}, years: [] };
                 try {
                     if (Array.isArray(payload.provinces)) {
@@ -3671,24 +3038,16 @@ document.addEventListener('DOMContentLoaded', function(){
                     if (Array.isArray(payload.availableYears)) m.years = payload.availableYears.slice();
                 } catch(e) { console.error('populateRegionFilters: payload parse', e); }
                 fillFromMap(m);
-                // also cache last payload for other code paths
                 try { window._lastRsmPayload = payload; } catch(e){}
             }).catch(err => {
                 console.error('populateRegionFilters fetch failed', err);
             });
       }
   }
-
-  // --- client-side filter apply/reset handlers ---------------------------------
-  // helper used throughout the filtering logic – introduced here again for
-  // the later script block.  the implementation is identical to the one
-  // declared earlier but updated to use `rsmEl` so it works inside iframe
-  // embeddings.
   function _getSelectedValues(id) {
       const el = rsmEl ? rsmEl(id) : document.getElementById(id);
       if (!el) return [];
       try {
-          // prefer Select2 / jQuery value when available
           try { if (window.jQuery && jQuery(el).data('select2')) {
                       const v = jQuery(el).val();
                       const result = Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []);
@@ -3699,25 +3058,11 @@ document.addEventListener('DOMContentLoaded', function(){
               console.log('[RSM] _getSelectedValues (native) for', id, res);
               return res;
           }
-          // fallback
           const res = Array.from(el.querySelectorAll('option:checked')).map(o => o.value);
           console.log('[RSM] _getSelectedValues (fallback) for', id, res);
           return res;
       } catch(e) { console.error('[RSM] _getSelectedValues error', e); return []; }
   }
-
-  // the city/year helpers were originally defined earlier in the
-// first <script> block so that filtering logic can run as soon as the
-// page loads.  keep these comments here in case this block is moved
-// independently, but do not redeclare the functions to avoid
-// confusion; they already exist on the global scope.
-//
-// function getRowCity(r){
-//     return ((r.city||r.municipality)||'').toString().trim();
-// }
-// function getRowYear(r){
-//     return (r.year_of_moa || r.moa_year || r.moa_year_of || r.moa_year_of_moa || r.moa_year_of || '').toString().trim();
-// }
 
   function renderStTitlesFromRows(rows, regionParam) {
       try {
@@ -3894,10 +3239,6 @@ document.addEventListener('DOMContentLoaded', function(){
           };
       } catch(e) { console.error('renderStTitlesFromRows', e); }
   }
-
-  // if early stub handlers ran before the real functions were ready we
-  // mark a flag; once the above real implementation exists, replay any
-  // pending filter request so that user actions aren’t lost.
   try {
       if (window._rsmFilterRequested) {
           console.log('[RSM] replaying pending filters after initialization');
@@ -3914,16 +3255,12 @@ document.addEventListener('DOMContentLoaded', function(){
               const el = document.getElementById(id);
               if (!el) return;
               Array.from(el.options || []).forEach(o => o.selected = false);
-              // if select2 is present, trigger update
               try { if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val([]).trigger('change'); } catch(e) {}
           });
       } catch(e){}
-      // re-run rendering with full payload
       try { const payload = window._lastRsmPayload || null; if (payload && Array.isArray(payload.allRows)) { renderStTitlesFromRows(payload.allRows, (payload && payload.region) || window.__lastActiveRegion || 'this region'); if (typeof initOrUpdateModalStatsChart === 'function') { const allRows = payload.allRows; const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0); const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0); const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0); initOrUpdateModalStatsChart([0, totalMoa, totalRes, totalExpr], payload.perYearTotals || null); } }
       } catch(e){ console.error('resetRsmFilters', e); }
   }
-
-  // expose handlers and bind buttons; include delegated fallback
   try { window.applyRsmFilters = applyRsmFilters; window.resetRsmFilters = resetRsmFilters; } catch(e) { console.warn('[RSM] failed to expose filter functions', e); }
   try {
       const btnA = document.getElementById('rsm-filter-apply');
@@ -3933,23 +3270,17 @@ document.addEventListener('DOMContentLoaded', function(){
       if (btnR) { btnR.addEventListener('click', function(ev){ ev.preventDefault(); resetRsmFilters(); }); console.log('[RSM] bound reset button'); }
       else console.warn('[RSM] reset button not found');
   } catch(e) { console.error('[RSM] binding filter buttons failed', e); }
-
-  // Delegated click handler as a fallback in case buttons are added later or replaced
   document.addEventListener('click', function(ev){
       try {
           const a = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-apply') : null;
           if (a) { ev.preventDefault(); try { applyRsmFilters(); } catch(e) { console.error('applyRsmFilters failed', e); } return; }
           const r = ev.target && ev.target.closest ? ev.target.closest('#rsm-filter-reset') : null;
           if (r) { ev.preventDefault(); try { resetRsmFilters(); } catch(e) { console.error('resetRsmFilters failed', e); } return; }
-      } catch(e) { /* ignore delegation errors */ }
+      } catch(e) {  }
   });
-
-
-  // when province picker changes, refresh city list
   const provSel = document.getElementById('rsm-filter-prov');
   if (provSel) {
       function deriveCurrentRegion(){
-          // replicate regionParam derivation from applyRsmFilters
           let region = window.__lastActiveRegion || null;
           if (!region) {
               const provSel = document.getElementById('rsm-filter-prov');
@@ -3971,19 +3302,14 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       provSel.addEventListener('change', function(ev){
-          // delay until value has been updated by select2
           setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
       });
-      // also bind for select2 events: both the namespaced change and the
-      // more granular select/unselect events which fire when choices are
-      // added/removed via the UI.
       if (window.jQuery && jQuery(provSel).data('select2')) {
           const $prov = jQuery(provSel);
           $prov.on('change.select2 select2:select select2:unselect', function(ev){
               setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
           });
       }
-      // fallback listener on document in case select2 replaces the element
       document.addEventListener('change', function(ev){
           if (ev.target && ev.target.id === 'rsm-filter-prov') {
               setTimeout(()=>{ updateProvinceFilters(); applyRsmFilters(); },0);
@@ -3991,14 +3317,10 @@ document.addEventListener('DOMContentLoaded', function(){
       });
 
   }
-
-  // store last region event on province element for use in change handler
   document.addEventListener('sliderActiveRegionChanged', function(e){
       const provSel2 = document.getElementById('rsm-filter-prov');
       if (provSel2 && e && e.detail) provSel2._lastRegionEvent = e.detail;
   });
-
-  // open modal on gallery card click (delegated) — ignore clicks produced by drag/scroll
   const scroller = document.querySelector('.container-cards');
   if (scroller) {
     let isPointerDown = false;
@@ -4006,7 +3328,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let pointerStartX = 0;
     let pointerStartY = 0;
     let pointerStartScroll = 0;
-    const DRAG_THRESHOLD = 10; // px - movement larger than this is considered a drag
+    const DRAG_THRESHOLD = 10;
 
     const onPointerDown = (ev) => {
       isPointerDown = true;
@@ -4027,11 +3349,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const onPointerUp = () => {
       isPointerDown = false;
-      // keep `isDragging` truthy for the next click event; clear on the next tick
       setTimeout(() => { isDragging = false; }, 0);
     };
-
-    // pointer events + fallbacks for older environments
     scroller.addEventListener('pointerdown', onPointerDown, { passive: true });
     scroller.addEventListener('pointermove', onPointerMove, { passive: true });
     scroller.addEventListener('pointerup', onPointerUp);
@@ -4049,11 +3368,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
       const card = ev.target && ev.target.closest ? ev.target.closest('.card-link') : null;
       if (!card) return;
-      // debug: log what prevented the click (if anything)
       const scrollerDragged = (scroller.dataset && scroller.dataset.pointerDragging === '1');
       const scrolledSinceDown = Math.abs((scroller.scrollLeft||0) - (pointerStartScroll||0)) > 4;
-
-      // also print available years for the currently active region (if known)
       try {
           const region = window.__lastActiveRegion || null;
           if (region && window.parent && window.parent.regionMap) {
@@ -4072,8 +3388,6 @@ document.addEventListener('DOMContentLoaded', function(){
               console.log('[STsReport] active region on card click', region, 'years', yrs);
           }
       } catch(e){ console.warn('error logging region years', e); }
-
-      // ignore clicks that are the result of dragging/scrolling
       if (isDragging || scrollerDragged || scrolledSinceDown) {
         ev.stopPropagation();
         ev.preventDefault();
@@ -4089,14 +3403,10 @@ document.addEventListener('DOMContentLoaded', function(){
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); openModalForCard(trigger); }
     });
   }
-
-  // document-level fallback: handle clicks on cloned/duplicated cards that may exist outside the main scroller
   document.addEventListener('click', function(ev){
     const card = ev.target && ev.target.closest ? ev.target.closest('.card-link') : null;
     if (!card) return;
-    // if this card is inside the main scroller, let the scroller's click handler handle it (avoid double-open)
     if (card.closest && card.closest('.container-cards')) return;
-    // avoid reopening when modal already visible
     if (modal && modal.getAttribute && modal.getAttribute('aria-hidden') === 'false') return;
     const scrollerMain = document.querySelector('.container-cards');
     const scrollerDragged = scrollerMain && scrollerMain.dataset && scrollerMain.dataset.pointerDragging === '1';
@@ -4104,24 +3414,17 @@ document.addEventListener('DOMContentLoaded', function(){
     ev.preventDefault();
     openModalForCard(card);
   });
-
-  // expose a helper so you can manually open the modal from the browser console for debugging
   try { window.openSTsModal = function(el){ if (!el) el = document.querySelector('.card-link'); return el ? openModalForCard(el) : null; }; } catch(e){}
 
   modalClose.addEventListener('click', closeModal);
   modal.querySelector('.gcm-backdrop').addEventListener('click', closeModal);
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape'){
-      // close popover first if visible, else the centered modal
       const pop = document.getElementById('galleryPopover');
       if (pop && pop.getAttribute('aria-hidden') === 'false') return closePopover();
       if (modal && modal.getAttribute && modal.getAttribute('aria-hidden') === 'false') return closeModal();
     }
   });
-
-  // delegated handler for modal body:
-  // - open child/sub-child anchors in a new tab
-  // - toggle mother rows
   modalBody.addEventListener('click', function(e){
     const a = e.target && e.target.closest ? e.target.closest('a') : null;
     if (a) {
@@ -4141,24 +3444,17 @@ document.addEventListener('DOMContentLoaded', function(){
     const list = mother && mother.querySelector('.gcm-child-list');
     if (list) list.style.display = expanded ? 'none' : 'block';
   });
-
-  // delegated toggle for mother rows inside popover (same behavior)
   const popBodyEl = document.getElementById('galleryPopoverBody');
   if (popBodyEl) popBodyEl.addEventListener('click', function(e){
-    // If an anchor inside the popover body was clicked, open it in a new tab (fallback)
     const a = e.target && e.target.closest ? e.target.closest('a') : null;
     if (a) {
       const href = a.getAttribute('href') || '#';
-      // ignore placeholder hashes
       if (href && href !== '#') {
-        // prefer native target if present; fallback to window.open to ensure new tab
         try { window.open(href, '_blank', 'noopener,noreferrer'); } catch(err) { a.target = '_blank'; }
       }
       e.preventDefault();
       return;
     }
-
-    // delegated toggle for mother rows inside popover (same behavior as modal)
     const btn = e.target && e.target.closest ? e.target.closest('.gcm-mother-toggle') : null;
     if (!btn) return;
     const expanded = btn.getAttribute('aria-expanded') === 'true';
@@ -4172,7 +3468,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
 @else
-<!-- fallback: original static gallery -->
+
 <section class="card-gallery" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
 	<div class="container-cards" style="pointer-events:auto;">
 		<a class="card card-link" href="#" data-href="/category/older-person" data-title="Older Person" aria-label="Older Person">
@@ -4248,7 +3544,7 @@ document.addEventListener('DOMContentLoaded', function(){
 </section>
 @endif
 
-<!-- Slider (Swiper) -->
+
 <div class="slider-wrapper">
     <div class="swiper mySwiper">
 
@@ -4260,7 +3556,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     '11.png','12.png','13.png',
                     'barmm.png','car.png','ncr.png','nir.png'
                 ];
-                // mapping used both here and by JS filter functions later
                 $sliderRegionMap = [
                     '1' => 'Region I',    '2' => 'Region II',   '3' => 'Region III',
                     '4_a' => 'Region IV-A','4_b' => 'Region IV-B','5' => 'Region V',
@@ -4274,14 +3569,7 @@ document.addEventListener('DOMContentLoaded', function(){
             @foreach ($sliderImages as $img)
                 @php
                     $base = pathinfo($img, PATHINFO_FILENAME);
-                    // always compute a human-friendly region name so we can
-                    // rely on it when the numeric position gets skewed by
-                    // non‑numeric entries (e.g. 4_a/4_b) which previously
-                    // caused the "Region V" slide to report number 6.
                     $regionNameAttr = $sliderRegionMap[$base] ?? ucwords(str_replace(['_','-'], ' ', $base));
-                    // only supply a numeric region-number when the base is a
-                    // plain integer; this keeps older code that expects a
-                    // number working without depending on the loop index.
                     $regionNumberAttr = '';
                     if (preg_match('/^(\d+)$/', $base, $m)) {
                         $regionNumberAttr = $m[1];
@@ -4300,17 +3588,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
     </div>
 
-<!-- slider modal markup has been moved to main layout for global display -->
+
             </div>
         </div>
     </div>
-    <!-- external Total-STs card (commented out) -->
-        <!--
-        <div id="sliderProvinceTotalCard" class="slider-province-total-card" aria-hidden="true" role="status" aria-label="Region total STs">
-            <div class="region-st-title">Total STs</div>
-            <div id="sliderProvinceTotalCardCount" class="region-st-count">0</div>
-        </div>
-        -->
 </div>
 
   <div id="regionStatsPanel" class="rsm-panel" role="document">
@@ -4318,7 +3599,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <div class="rsm-header-left" style="display:flex;align-items:flex-start;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;flex-direction:column;">
           <img id="rsm-modal-image" src="" alt="Region image" class="rsm-modal-image" style="visibility:hidden;width:480px;height:480px;border-radius:12px;object-fit:contain; background:transparent; border:none; box-shadow:none;" />
-          <!-- moved metrics under image -->
           <div id="modalStatsChartWrap" class="rsm-metrics rsm-card" style="position:relative; display:block; width:500px !important; min-width:500px !important; max-width:500px !important; height:312px !important; overflow:hidden; box-sizing:border-box; margin-top:12px;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
                   <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Region Metrics</div>
@@ -4331,11 +3611,9 @@ document.addEventListener('DOMContentLoaded', function(){
               <div id="modalStatsChartZones" style="position:absolute; inset:0; pointer-events:none; z-index:12; visibility:hidden;"></div>
           </div>
         </div>
-        <!-- provinces/totals plus ST titles grouped together -->
         <div class="rsm-prov-total-st" style="display:flex;gap:24px;">
           <div class="rsm-provinces-and-totals" style="display:flex;flex-direction:column;gap:12px;">
             <div class="rsm-card rsm-prov-card">
-              <!-- filter fields for provinces and cities (UI only) -->
               <div class="rsm-filter-fields" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
                 <div class="rsm-filter-group" style="width:100%;">
                     <div class="rsm-filter-group" style="width:100%;">
@@ -4367,7 +3645,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     @endif
                   </select>
                                 </div>
-                                <!-- ongoing/dissolved counts card replaces filter buttons -->
                                 <div id="rsm-filter-status-card" style="display:flex;gap:16px;margin-top:8px;align-items:center;">
                                     <div class="rsm-stat" style="flex:1; height:145px; background:#f5fef5; border-radius:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
                                         <div class="rsm-stat-label" style="font-size:1rem; color:#065f46;">Ongoing</div>
@@ -4378,8 +3655,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                         <div id="rsm-count-dissolved" class="rsm-stat-value" style="font-size:1.1rem;font-weight:700; color:#ef4444;">0</div>
                                     </div>
                                 </div>
-                
-                
               </div>
             </div>
             <div class="rsm-card">
@@ -4404,7 +3679,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     <div class="rsm-stat-label">MOA Attachments</div>
                     <div id="rsm-total-moa-attachments" class="rsm-stat-value">0</div>
                   </div>
-                  <!-- replicate/adopt placeholders (always 0) -->
                   <div class="rsm-stat">
                     <div class="rsm-stat-label">Total Replicated</div>
                     <div id="rsm-total-rep" class="rsm-stat-value">0</div>
@@ -4417,7 +3691,6 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
           </div>
 
-                    <!-- ST Titles card now right of provinces/totals -->
                     <div class="rsm-listing-wrap" style="margin-top:0;">
                         <div class="rsm-card">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -4437,13 +3710,11 @@ document.addEventListener('DOMContentLoaded', function(){
 					<div id="rsm-loading" class="rsm-loading" style="display:none;">Loading…</div> 
 				</div>
         <div id="rsm-cards" class="rsm-cards" style="display:none;">
-          <!-- metrics moved into header; this section intentionally left empty -->
         </div>
       </div>
 
     </div>
     <div class="rsm-body">
-	
     </div>
   </div>
 
@@ -4451,60 +3722,56 @@ document.addEventListener('DOMContentLoaded', function(){
 <style>
     .imgContainer {
         background: transparent !important;
-        /* If there's a background-color, override it */
         background-color: transparent !important;
-        
-        
     }
-/* Scoped card styles — do NOT override global page styles */
-.card-gallery { display:flex; justify-content:center; align-items:center; padding:28px 12px; position:relative; z-index:60; pointer-events:auto; width: 120vw; margin-left: 0; overflow-x: auto; -ms-overflow-style: none; /* IE/Edge */ scrollbar-width: none; /* Firefox */ }
-.card-gallery::-webkit-scrollbar { display: none; /* WebKit */ }
+
+.card-gallery { display:flex; justify-content:center; align-items:center; padding:28px 12px; position:relative; z-index:60; pointer-events:auto; width: 120vw; margin-left: 0; overflow-x: auto; -ms-overflow-style: none;  scrollbar-width: none;  }
+.card-gallery::-webkit-scrollbar { display: none;  }
 
 .card-gallery * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
 .card-gallery .container-cards, .card-gallery .container-cards .card, .card-gallery .container-cards .imgContainer { pointer-events: auto; }
-/* visual pause indicator while debugging hover */
+
 .card-gallery .container-cards.autoscroll-paused { opacity:0.94; }
 .card-gallery .container-cards.autoscroll-paused::after { content: 'Paused'; position:absolute; right:20px; top:10px; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; padding:6px 8px; border-radius:999px; z-index:9999; pointer-events:none; }
 
-/* marquee fallback when content is not wider than viewport */
+
 .marquee-force { overflow:hidden; }
-/* default CSS marquee (used only for the pure CSS fallback) */
+
 .marquee-track { display:flex; gap:18px; align-items:center; animation: marquee 30s linear infinite; will-change: transform; }
-/* when we use JS transform-mode, disable the CSS animation so JS controls the motion */
+
 .marquee-track.js-transform { animation: none !important; }
-/* also pause any remaining CSS animation when user hovers */
+
 .container-cards.autoscroll-paused .marquee-track { animation-play-state: paused !important; }
 @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-/* single-row scroller */
+
 .container-cards { display:flex; gap:30px; flex-wrap:nowrap; justify-content:flex-start; align-items:flex-start; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; padding:12px 8px; }
 .container-cards::-webkit-scrollbar{ height:10px; }
 .container-cards::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.08); border-radius:6px; }
-/* collapsed card (single-row) — left badge initially centered above */
+
 .container-cards { display:flex; gap:20px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; }
 .container-cards::-webkit-scrollbar{ display:none; }
-/* allow drag-to-scroll affordance */
+
 .container-cards { cursor: grab; -webkit-user-select: none; user-select: none; }
 .container-cards.dragging { cursor: grabbing; }
 
-/* when autoscroll is paused we disable drag affordance */
+
 .container-cards.autoscroll-paused { cursor: default; }
 .container-cards img { -webkit-user-drag: none; user-drag: none; }
 .container-cards .card { background:var(--card-bg); flex:0 0 180px; height:170px; margin:6px 6px; padding:10px; border-radius:12px; box-shadow: 0 6px 24px rgba(2,6,23,0.08); transition: flex-basis 360ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease; overflow:visible; position:relative; display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; cursor:pointer; }
-/* expand width to the right only */
-/* only allow hover expansion when the scroller is NOT actively scrolling or being drag-scrolled */
+
+
 .container-cards:not(.dragging):not(.is-scrolling) .card:hover { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
 
-/* Programmatic "lifted" state should visually match :hover so the extension remains visible
-   when JS sets/keeps the card lifted (eg. popover is open). */
+
 .container-cards:not(.dragging):not(.is-scrolling) .card.card-lifted { flex:0 0 844px; transform: translateY(-6px); box-shadow: 0 18px 60px rgba(2,6,23,0.12); }
 
-/* image starts centered then animates to left on expand */
+
 .container-cards .card .imgContainer { position:absolute; top:8px; left:50%; transform:translate(-50%, 0); width:140px; height:140px; z-index:3; overflow:visible; background: transparent; display:flex; align-items:center; justify-content:center; transition: left 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1), top 420ms ease; }
 .container-cards .card .imgContainer img { width:100%; height:100%; object-fit:contain; display:block; }
 .logo-badge { width:96px; height:96px; border-radius:999px; background: transparent; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 28px rgba(2,6,23,0.08); overflow:hidden; }
 .logo-badge img { width:72%; height:72%; object-fit:contain; display:block; }
 
-/* collapsed-title: show card title when not expanded */
+
 .container-cards .card[data-title]::after {
     content: attr(data-title);
     position: absolute;
@@ -4512,19 +3779,17 @@ document.addEventListener('DOMContentLoaded', function(){
     bottom: 18px;
     transform: translateX(-50%);
     font-size: 0.70rem;
-    color: #374151; /* gray-700 */
+    color: #374151; 
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
     pointer-events: none;
     opacity: 1;
-    z-index: 5; /* ensure title is above the image badge */
+    z-index: 5; 
     transition: opacity 220ms ease, transform 220ms ease;
 }
 
-/* hide collapsed label while card expands / types / focused (image-hover or keyboard focus)
-   also hide when the card is hovered/ lifted to show the content panel
-   NOTE: do NOT hide when the card merely has `.title-typed` (keeps collapsed label visible after typing completes) */
+
 .container-cards .card.image-hover::after,
 .container-cards .card.typing-active::after,
 .container-cards .card:focus-visible::after,
@@ -4534,25 +3799,25 @@ document.addEventListener('DOMContentLoaded', function(){
     transform: translateX(-50%) translateY(-6px);
 } 
 
-/* content panel (hidden when collapsed) — revealed to the right and shifted to avoid overlap */
+
 .container-cards .card .content { width:0; opacity:0; visibility:hidden; overflow:hidden; transition: width 360ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease, margin-left 360ms cubic-bezier(.2,.9,.2,1); display:flex; flex-direction:column; justify-content:center; padding:0; margin-left:0; z-index:1; }
 .container-cards .card .content h2 { font-size:0.95rem; margin:0 0 6px 0; text-align:left; }
 .container-cards .card .content p { color:#505050; font-size:0.92rem; line-height:1.35; margin:0; text-align:left; max-width:520px; opacity:0; transition: opacity 200ms ease; }
-/* paragraph visible only after the title has finished typing (class `title-typed`) */
+
 .container-cards .card.title-typed .content p { opacity:1; }
-/* when expanded, move the content to the right so the badge doesn't cover text */
+
 .container-cards:not(.dragging):not(.is-scrolling) .card:hover .content,
 .container-cards .card:focus-visible .content,
 .container-cards .card.typing-active .content,
 .container-cards .card.card-lifted .content {
-    margin-left:180px; /* shift past the badge */
+    margin-left:180px; 
     width: calc(100% - 220px);
     opacity:1;
     visibility:visible;
     padding-left:20px;
 }
 
-/* animate image to left when expanded or during typing */
+
 .container-cards:not(.dragging):not(.is-scrolling) .card:hover .imgContainer,
 .container-cards .card:focus-visible .imgContainer,
 .container-cards .card.typing-active .imgContainer,
@@ -4564,7 +3829,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 .card-link:focus-visible { outline: 3px solid rgba(16,174,181,0.18); outline-offset:4px; border-radius:12px; }
 
-/* typing cursor */
+
 .content p.typing::after, .content h2.typing::after { content: '\007C'; margin-left:6px; display:inline-block; opacity:1; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .card-link:focus-visible { outline: 3px solid rgba(16,174,181,0.25); outline-offset:4px; border-radius:10px; }
@@ -4573,7 +3838,6 @@ document.addEventListener('DOMContentLoaded', function(){
 @media (max-width: 1200px) { .container-cards { gap:12px; } .logo-badge { width:92px; height:92px; } .container-cards .card { flex:0 0 240px; } }
 @media (max-width: 820px) { .container-cards .card { flex:0 0 220px; } .container-cards .card .imgContainer { width:180px; height:180px; left:12px; } .logo-badge { width:76px; height:76px; } }
 @media (max-width: 900px) {
-  /* Stack cards vertically on narrow screens for better tap targets */
   .container-cards { flex-direction: column; align-items: center; gap:24px; padding:12px; }
   .container-cards .card { flex: 0 0 92%; max-width:920px; width: 92%; margin:12px 0; height: auto; min-height: auto; padding:18px;}
   .container-cards .card .imgContainer { position: relative; left: 50%; transform: translateX(-50%); top: 0; width:180px; height:180px; margin-bottom:14px; }
@@ -4581,25 +3845,25 @@ document.addEventListener('DOMContentLoaded', function(){
   .container-cards .card .content { width:100%; margin-left:0; padding-left:0; opacity:1; visibility:visible; }
   .container-cards .card .content h2 { font-size:1rem; }
   .container-cards .card .content p { font-size:0.95rem; line-height:1.5; }
-  .container-cards .card::after { display:none; } /* hide collapsed label on small screens */
+  .container-cards .card::after { display:none; } 
 }
 @media (max-width: 420px) { .container-cards { gap:14px; } .container-cards .card { width:94%; max-width:360px; margin:10px 0; padding:14px; } .container-cards .card .imgContainer { width:140px; height:140px; left:calc(50% - 70px); } .logo-badge { width:72px; height:72px; } }
 
-/* Improved dropdown (right-edge, accessible, animated) */
+
 .card-dropdown { position:absolute; right:12px; top:50%; transform:translateY(-50%) scale(0.98); background: #fff; border-radius:10px; padding:10px; box-shadow: 0 14px 40px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); width: 300px; max-height:360px; overflow:auto; font-size:0.92rem; color:#111827; opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s cubic-bezier(.2,.9,.2,1); z-index:30; }
-/* hide inline per-card dropdowns by default (but show on hover) */
+
 .container-cards .card .card-dropdown { display: none !important; pointer-events: none !important; }
-/* show inline dropdown when hovering/focusing the card (override the above) */
+
 .container-cards .card:hover .card-dropdown,
 .container-cards .card:focus-within .card-dropdown {
-  display: block !important; /* show on hover */
+  display: block !important; 
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateY(-50%) scale(1) !important;
 }
-/* keep demo-visible rule removed */
 
-/* Floating dropdown (used on hover/focus of a card) */
+
+
 .card-dropdown.card-dropdown-floating { position: absolute; right: auto; top: auto; transform: none !important; opacity:1 !important; pointer-events:auto !important; display: none; width: 320px; max-height: 420px; z-index: 999999; box-shadow: 0 18px 60px rgba(2,6,23,0.12); border-radius:10px; }
 
 
@@ -4616,7 +3880,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .card-dropdown-empty { color:#9ca3af; font-size:0.9rem; }
 @media (max-width:920px) { .card-dropdown { display:none !important; } }
 
-/* Disable desktop hover expansion for touch devices */
+
 @media (hover: none) {
   .container-cards:not(.dragging):not(.is-scrolling) .card:hover { transform: none; box-shadow: 0 6px 24px rgba(2,6,23,0.08); flex-basis: 240px; }
 }
@@ -4626,58 +3890,53 @@ document.addEventListener('DOMContentLoaded', function(){
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* break out of any parent container so the carousel spans the
-       full viewport width */
     width: 100vw;
     left: 50%;
     right: 50%;
     margin-left: -50vw;
     margin-right: -50vw;
     overflow: hidden;
-    /* keep top margin; remove auto horizontal centering since we're
-       full‑width now */
     margin-top: 2rem;
 }
 
 
-/* ensure gallery above slider when necessary */
+
 .gallery, .container-cards { position: relative; z-index: 10; }
-/* slider sizing and centering: flexible container that caps at 1700px */
+
 .swiper {
-    /* allow the carousel to shrink when few slides remain */
     width: auto !important;
     max-width: 1700px !important;
-    height: 300px; /* reasonable fixed height */
+    height: 300px; 
     max-height: 300px;
-    margin: 0 auto; /* center within wrapper */
+    margin: 0 auto; 
     transform: none;
     transition: transform 320ms cubic-bezier(.2,.9,.2,1);
-    overflow: hidden; /* hide any overflowing slides/clones when filtering */
+    overflow: hidden; 
 }
-.swiper-slide { width: 500px; /* fixed size to fit container */ height: 240px; border-radius: 20px; overflow: hidden; transition: 0.4s ease; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.swiper-slide { width: 500px;  height: 240px; border-radius: 20px; overflow: hidden; transition: 0.4s ease; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 .swiper-slide img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px; }
-/* even smaller zoom so layout stays tight */
+
 .swiper-slide-active { transform: scale(1.08); }
 .swiper-button-next, .swiper-button-prev { color: #0d47a1; }
-/* removed left offset; full-width slider should fill available space */
-@media (max-width:1200px) { .swiper { transform: none; /* was translateX(-100px) */ } }
-/* ensure slides scale down slightly on small viewports */
+
+@media (max-width:1200px) { .swiper { transform: none;  } }
+
 @media (max-width:800px) { .swiper-slide { width: 180px; height: 200px; } }
 @media (max-width:900px) { .swiper { transform: none; width: 100%; } }
 
-/* hide source image while modal clone is animating so it looks "taken" */
-/* non-centered slides should not be clickable */
+
+
 .swiper-slide:not(.swiper-slide-active) .slider-img {
     pointer-events: none;
 }
 .slider-img.modal-hidden { opacity: 0; transition: opacity 180ms ease; pointer-events: none; }
 
-/* slider styles moved to main */
 
-/* preview placed below the slider and left-aligned so it reserves its own space */
+
+
 .slider-bottom-preview { position: relative; align-self: flex-start; margin: 18px 0 36px 18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; z-index:20; pointer-events: none; background: rgba(255,255,255,0.96); padding:12px; border-radius:12px; box-shadow: 0 20px 60px rgba(2,6,23,0.12); border: 1px solid rgba(2,6,23,0.04); width: 380px; max-width: calc(100% - 36px); }
 
-/* Region Stats Modal (slider center click) */
+
 
 .rsm-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; width:100%; flex-wrap:wrap; background:#fff; border:1px solid rgba(0,0,0,0.1); box-shadow:0 2px 4px rgba(0,0,0,0.08); padding:12px 16px; border-radius:8px; }
 .rsm-header-left { display:flex; align-items:flex-start; gap:24px; }
@@ -4687,65 +3946,60 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-body { display:flex; flex-direction:column; gap:12px; }
 .rsm-cards {
     display: grid;
-    /* simple single-column layout now metrics only */
     grid-template-columns: auto;
     grid-template-rows: auto;
-    gap: 12px; /* spacing around the metrics card */
+    gap: 12px; 
 }
-/* ensure ST titles column doesn't collapse and push into totals */
-/* this selector targets stale elements (grid-column:3) and has no effect on our fourth-column panel */
-/* keep it in case other templates use it, but it won't shrink our region modal listing */
+
+
+
 .rsm-listing-wrap[style*="grid-column: 3"] { min-width: 100px; max-width: 100px; width: 100px; margin-left: 40px;}
-#modalStatsChartWrap { margin-top: 0; } /* align with image */
+#modalStatsChartWrap { margin-top: 0; } 
 #modalStatsChartWrap {
-    /* margin-top handled earlier to create space */
-    padding: 30px; /* add card padding instead of graph padding */
-    /* enforce fixed width so layout doesn’t jump around */
+    padding: 30px; 
     width: 500px !important;
     min-width: 500px !important;
     max-width: 500px;
-    height: 312px !important; /* total outer height including padding */
-    /* limit flex-basis to match the desired height rather than the previous 500px which forced a tall box */
+    height: 312px !important; 
     flex: 0 0 312px !important;
-    box-sizing: border-box; /* include padding in width */
+    box-sizing: border-box; 
 }
-/* ensure the internal chart does not exceed the wrapper width */
+
 #modalStatsChart,
 #modalStatsChartWrap > canvas {
     width: 100% !important;
     max-width: 500px !important;
     min-width: 500px !important;
-    height: 270px !important; /* match wrapper content height */
+    height: 270px !important; 
     box-sizing: border-box;
-    padding-right: 30px; /* account for wrapper padding */
+    padding-right: 30px; 
 }
 .slider-province-card {
-    padding: 30px; /* provide consistent padding inside provinces card */
+    padding: 30px; 
 }
-.rsm-metrics { /* keep fallback */
+.rsm-metrics { 
     flex:1 0 100%;
 }
 .rsm-container { display:flex; gap:28px; align-items:flex-start; width:900px; max-width:100%; }
-.rsm-right { flex: 0 0 140px; /* expand totals panel width */ }
-/* ensure totals card itself matches column width */
-.rsm-right > .rsm-card { /* flexible totals card */ width:100%; max-width:none; height:auto !important; max-height:none !important; box-sizing:border-box; overflow:visible; }
-/* same constraints for modal totals card which isn't under .rsm-right */
-.rsm-provinces-and-totals > .rsm-card { /* flexible province card container */ width:100%; max-width:none; height:auto !important; max-height:none !important; box-sizing:border-box; overflow:visible; }
-/* totals now lives inside the grid so ordering and negative offsets aren’t needed */
+.rsm-right { flex: 0 0 140px;  }
+
+.rsm-right > .rsm-card {  width:100%; max-width:none; height:auto !important; max-height:none !important; box-sizing:border-box; overflow:visible; }
+
+.rsm-provinces-and-totals > .rsm-card {  width:100%; max-width:none; height:auto !important; max-height:none !important; box-sizing:border-box; overflow:visible; }
+
 .rsm-right { order: 1; }
 .rsm-right > .rsm-card { margin-left: 20px; }
 .rsm-listing-wrap { order: 2; }
-/* ensure ST Titles panel has reasonable width but let grid dictate spacing */
+
 .rsm-listing-wrap,
 .rsm-listing-wrap .rsm-card {
-    /* match the fourth column size defined in .rsm-cards grid-template-columns */
     width: 500px !important;
     min-width: 500px !important;
     max-width: 500px !important;
     margin-left: 0 !important;
     margin-top: 0 !important;
 }
-/* force listing card height to 810px to prevent overlap/overflow */
+
 .rsm-listing-wrap .rsm-card {
     height: 818px !important;
 }
@@ -4754,41 +4008,39 @@ document.addEventListener('DOMContentLoaded', function(){
     flex: 0 0 clamp(460px, 36vw, 840px);
     max-width: clamp(360px, 36vw, 840px);
 }
-/* when showing the modal with region metrics, allow the cards wrapper to expand/scroll */
+
 #sliderModalContent .rsm-container .rsm-cards {
     min-width: 500px !important;
     max-width: none !important;
     overflow-x: auto !important;
 }
-/* override the previous min-width clamp for listing-wrap which would otherwise force 260px */
+
 .rsm-container .rsm-listing-wrap { flex: 1 1 auto; min-width: 100px !important; }
 @media (max-width:900px) { .rsm-container { flex-direction:column; } .rsm-container .rsm-cards, .rsm-container .rsm-listing-wrap { width:100%; max-width:none; } }
 .rsm-left { flex: 0 0 460px; max-width: 460px; }
 .rsm-right { flex:0 0 100px; }
 .rsm-card { background:#fff; border-radius:10px; padding:12px; border:1px solid rgba(2,6,23,0.04); box-shadow: 0 8px 20px rgba(2,6,23,0.04); }
-/* make sure provinces panel and the totals card both use only 12px
-   padding (the global rule already covers it, but this reinforces the intent
-   and resets any inner list spacing) */
+
 .rsm-prov-card,
 .rsm-right > .rsm-card {
     padding: 12px;
 }
 .rsm-prov-card .rsm-provinces-list { padding-top:12px; }
 
-/* ensure province card in RSM has fixed height */
-.rsm-prov-card { /* allow variable height, but keep a reasonable minimum */ min-height:405px; height:auto; }
+
+.rsm-prov-card {  min-height:405px; height:auto; }
 .rsm-prov-card .rsm-provinces-list { height:100%; }
-/* allow full height for provinces list, remove restrictive max-height */
+
 .rsm-prov-card .rsm-provinces-list { max-height: none; height: 100%; width: 420px; min-width: 360px; overflow:auto; display:flex; flex-direction:column; gap:6px; padding-top:6px; -webkit-overflow-scrolling: touch; }
-/* filter fields styling to stretch across available width */
+
 .rsm-prov-card .rsm-filter-fields { width:100%; }
 .rsm-prov-card .rsm-filter-fields .rsm-filter-group { width:100%; }
 .rsm-prov-card .rsm-filter-fields select { width:100%; box-sizing:border-box; padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:0.95rem; }
 .rsm-prov-card .rsm-filter-fields label { font-weight:600; color:#333; }
 .rsm-prov-item { padding:8px 10px; border-radius:8px; background:linear-gradient(180deg,#fff,#fafafa); box-shadow: inset 0 -1px 0 rgba(2,6,23,0.02); font-size:0.95rem; }
-/* ensure province name and badge are side-by-side in RSM card */
+
 .rsm-prov-item.province-item { display:flex; justify-content:space-between; align-items:center; width:330px !important; max-width:330px !important; overflow:hidden !important; }
-/* blunt override for city and ST entries too */
+
 .rsm-provinces-list .province-sublist .city-item,
 .slider-province-card .province-sublist .city-item,
 .slider-province-card .city-item,
@@ -4801,28 +4053,27 @@ document.addEventListener('DOMContentLoaded', function(){
 .rsm-prov-item .province-badge { flex-shrink:0; }
 .rsm-stats-grid {
     display: grid;
-    /* flow in columns, four rows per column; extras wrap into another column */
     grid-auto-flow: column;
     grid-template-rows: repeat(4, auto);
     column-gap: 10px;
     row-gap: 10px;
-    max-width: none; /* allow horizontal expansion for additional columns */
+    max-width: none; 
 }
 
 .rsm-stat { background:linear-gradient(180deg,#fff,#fbfdff); padding:10px; border-radius:8px; text-align:center; border:1px solid rgba(2,6,23,0.04); }
-/* make sure any other card-like container also has a defined border */
+
 .rsm-prov-card, .rsm-right > .rsm-card, .rsm-card { border:1px solid rgba(2,6,23,0.04); }
 .rsm-stat-label { font-size:0.82rem; color:#64748b; }
 .rsm-stat-value { font-weight:700; font-size:1.25rem; margin-top:6px; color:#0f1724; }
 .rsm-listing-wrap { margin-top:6px; }
 .rsm-listing-title { margin:0 0 8px 0; font-size:1rem; }
 .rsm-modal-image { width:72px; height:72px; border-radius:12px; object-fit:contain; display:block; transition: none; }
-.rsm-st-list, .rsm-sts-region-list { max-height: 745px; min-height: 745px; /* limit height to 900px as requested */
+.rsm-st-list, .rsm-sts-region-list { max-height: 745px; min-height: 745px; 
     overflow:auto; border-radius:8px; border:1px solid rgba(2,6,23,0.04); padding:8px; background:#fff; -webkit-overflow-scrolling: touch; }
 .rsm-empty { color:#94a3b8; padding:8px; }
 @media (max-width:900px) { .rsm-header { flex-direction:column; align-items:center; gap:12px; } .rsm-header .rsm-modal-image { width: min(80vw, 360px); height: auto; max-height: 40vh; } .rsm-cards { display:flex; flex-direction:column; } .rsm-right { width:100%; } .rsm-left { width:100%; } .rsm-panel { width: calc(100% - 24px); } .rsm-prov-card .rsm-provinces-list, .rsm-st-list { max-height: 40vh; } .rsm-container { flex-direction: column; gap: 12px; } }
 
-/* preview must not intercept slider pointer events */
+
 .slider-bottom-preview img, .slider-bottom-preview .slider-bottom-label { pointer-events: none; }
 
 .slider-bottom-preview img { width:360px; height:360px; object-fit:contain; border-radius:12px; box-shadow: 0 12px 34px rgba(2,6,23,0.12); background: linear-gradient(180deg,#fff,#f8fafc); border: 1px solid rgba(2,6,23,0.04); transition: transform 220ms ease; }
@@ -4832,10 +4083,10 @@ document.addEventListener('DOMContentLoaded', function(){
 @media (max-width:1200px) { .slider-bottom-preview img { width:300px; height:300px; } .slider-bottom-preview { width:320px; margin-left:12px; } }
 @media (max-width:900px) { .slider-bottom-preview { align-self:center; margin:12px auto 24px; width:160px; } .slider-bottom-preview img { width:160px; height:160px; } }
 
-/* bottom preview province-list specific styles */
+
 .slider-bottom-province-card { width:100%; margin-top:14px; background:transparent; padding:6px; box-shadow:none; border-radius:8px; height: calc(40px * 8 + 16px + 40px) !important; min-height: calc(40px * 8 + 16px + 40px) !important; max-height: calc(40px * 8 + 16px + 40px) !important; }
 .slider-bottom-province-card .province-list { height: calc(40px * 8 + 16px) !important; min-height: calc(40px * 8 + 16px) !important; max-height: calc(40px * 8 + 16px) !important; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:6px 4px; }
-/* rows inside bottom province card should also be fixed height */
+
 .slider-bottom-province-card .province-list .province-item {
     height: 40px !important;
     line-height: 40px !important;
@@ -4846,11 +4097,11 @@ document.addEventListener('DOMContentLoaded', function(){
 .slider-bottom-province-card .province-item .prov-name { font-weight:700; }
 .slider-bottom-province-card .province-empty { color:#6b7280; padding:8px 6px; }
 
-/* Popover tree — unified connectors, spacing, and arrows */
+
 .gcm-list { --gcm-line-left: 12px; --gcm-indent: 22px; --gcm-gap-y: 8px; font-size:0.95rem; color:#0f1724; }
 .gcm-mother { position:relative; padding-left: calc(var(--gcm-line-left) + 6px); margin-bottom: var(--gcm-gap-y); display:flex; flex-direction:column; gap:6px; }
 .gcm-mother .gcm-mother-link { display:block; color:#0369a1; font-weight:700; text-decoration:none; padding:4px 0; cursor:pointer; }
-.gcm-mother::before { /* short horizontal connector from vertical guide to mother */ content:''; position:absolute; left:calc(var(--gcm-line-left)); top:12px; width:12px; height:2px; background:#e6edf3; border-radius:2px; }
+.gcm-mother::before {  content:''; position:absolute; left:calc(var(--gcm-line-left)); top:12px; width:12px; height:2px; background:#e6edf3; border-radius:2px; }
 
 .gcm-child-list, .gcm-subchild-list { position:relative; margin:6px 0 0 0; padding-left: calc(var(--gcm-indent)); }
 .gcm-child-list::before, .gcm-subchild-list::before { content:''; position:absolute; left: calc(var(--gcm-line-left)); top:0; bottom:0; width:1px; background:#e6edf3; border-radius:1px; }
@@ -4858,7 +4109,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .gcm-child-list li, .gcm-subchild-list li { position:relative; margin-bottom: var(--gcm-gap-y); padding-left: 12px; display:flex; align-items:center; gap:8px; }
 .gcm-child-list li::before, .gcm-subchild-list li::before { content:''; position:absolute; left: calc(var(--gcm-line-left)); top: 50%; transform: translateY(-50%); width: 14px; height:1px; background:#e6edf3; border-radius:1px; }
 
-/* unified arrow + text styling */
+
 .gcm-child-list li > a, .gcm-subchild-list li > a { color:#0369a1; text-decoration:none; font-size:0.95rem; }
 .gcm-child-list li > span, .gcm-subchild-list li > span { color:#9ca3af; font-size:0.95rem; }
 .gcm-child-list li > a::before, .gcm-subchild-list li > a::before,
@@ -4873,11 +4124,10 @@ document.addEventListener('DOMContentLoaded', function(){
 </style>
 
 <script>
-// Continuous slow auto-scroll (seamless loop) — waits for images and ensures content is wide enough
 (function(){
     const scroller = document.querySelector('.container-cards');
     if (!scroller) return;
-    scroller.tabIndex = 0; // focusable for keyboard pause/navigation
+    scroller.tabIndex = 0;
 
     function waitForImages(container){
         const imgs = Array.from(container.querySelectorAll('img'));
@@ -4887,8 +4137,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function initLoop(){
         try {
-
-            // if scroller isn't visible yet, retry a few times
             if (!scroller.clientWidth) {
                 let tries = 0;
                 const retry = () => {
@@ -4898,8 +4146,6 @@ document.addEventListener('DOMContentLoaded', function(){
                 };
                 return retry();
             }
-
-            // ensure duplicated content so we can loop seamlessly
             if (!scroller.dataset.looped) {
                 scroller.dataset.looped = '1';
                 const html = scroller.innerHTML;
@@ -4907,20 +4153,16 @@ document.addEventListener('DOMContentLoaded', function(){
             }
 
             waitForImages(scroller).then(()=>{
-                // ensure scroller content is wider than viewport; duplicate more aggressively before falling back
                 let originalWidth = scroller.scrollWidth / 2;
                 const baseHtml = scroller.innerHTML.slice(0, Math.floor(scroller.innerHTML.length/2));
                 let copies = 0;
-                const MAX_COPIES = 20; // try many copies so JS loop can run reliably
+                const MAX_COPIES = 20;
 
                 while (originalWidth <= scroller.clientWidth && copies < MAX_COPIES) {
-                    scroller.innerHTML += baseHtml; // append another copy
+                    scroller.innerHTML += baseHtml;
                     originalWidth = scroller.scrollWidth / 2;
                     copies++;
                 }
-
-
-                // if not wider after duplication, add spacers as a last attempt
                 let spacerAttempts = 0;
                 while (originalWidth <= scroller.clientWidth && spacerAttempts < 6) {
                     const spacer = document.createElement('div');
@@ -4932,25 +4174,19 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
 
                 if (originalWidth <= scroller.clientWidth) {
-
-                    // create a JS-transform track (keeps autoscroll JS-driven even when element isn't scrollable)
                     const childrenHtml = scroller.innerHTML;
                     scroller.innerHTML = '';
                     const track = document.createElement('div');
                     track.className = 'marquee-track js-transform';
-                    track.innerHTML = childrenHtml + childrenHtml; // duplicate
+                    track.innerHTML = childrenHtml + childrenHtml;
                     scroller.appendChild(track);
                     scroller.classList.add('js-transform-mode');
-
-                    // transform-based loop (uses same SPEED_PX_PER_SEC)
                     track.dataset.offset = '0';
                     let _last = null;
                     function transformStep(ts){
                         if (!_last) _last = ts;
                         const dt = ts - _last;
                         _last = ts;
-
-                        // if hover-snap active, move track toward target
                         if (hoverSnap.active) {
                             let cur = parseFloat(track.dataset.offset) || 0;
                             const delta = hoverSnap.target - cur;
@@ -4961,7 +4197,6 @@ document.addEventListener('DOMContentLoaded', function(){
                             track.style.transform = `translateX(${-cur}px)`;
 
                             if (Math.abs(hoverSnap.target - cur) <= 2) {
-                                // verify visual centering before completing (handles copy/wrap issues)
                                 const snappedCard = hoverSnap.card;
                                 const scrollerRect = scroller.getBoundingClientRect();
                                 const cardRectNow = snappedCard.getBoundingClientRect();
@@ -4970,14 +4205,10 @@ document.addEventListener('DOMContentLoaded', function(){
                                 const expectedWidth = Math.max(snappedCard.offsetWidth, expandedGuess);
                                 const desiredLeftForExpanded = Math.round((scroller.clientWidth - expectedWidth) / 2);
                                 if (Math.abs(visualLeftNow - desiredLeftForExpanded) > 10) {
-                                    // not visually centered for expanded card yet — adjust target to compensate and continue
                                     const adjust = desiredLeftForExpanded - visualLeftNow;
                                     hoverSnap.target = hoverSnap.target + adjust;
-                                    // keep active; let next frame move it
-                                    // reduce speed for fine adjustment
                                     currentSpeed = Math.max(MIN_HOVER_SPEED, Math.round(currentSpeed / 2));
                                 } else {
-                                    // snap to the exact target (handle rounding/wrap)
                                     const finalPos = Math.round(hoverSnap.target);
                                     track.dataset.offset = finalPos;
                                     track.style.transform = `translateX(${-finalPos}px)`;
@@ -4991,38 +4222,28 @@ document.addEventListener('DOMContentLoaded', function(){
                             }
                         } else if (typeof running !== 'undefined' && running) {
                             let cur = parseFloat(track.dataset.offset) || 0;
-                            cur += (currentSpeed * dt) / 1000; // px/sec
+                            cur += (currentSpeed * dt) / 1000;
                             if (cur >= originalWidth) cur -= originalWidth;
                             track.dataset.offset = cur;
                             track.style.transform = `translateX(${-cur}px)`;
                         }
                         requestAnimationFrame(transformStep);
                     }
-
-                    // pause/resume on hover/focus (scroller listeners already toggle `running`)
                     requestAnimationFrame(transformStep);
-
-                    /* debug badge removed */
-
-                    // mark we are using transform fallback so the scrollLeft loop will no-op
                     useTransformFallback = true;
                     return;
                 }
-
-                // JS-driven scroll (preferred)
-                const baseSpeed = 18; // normal px/sec
-                let currentSpeed = baseSpeed; // can be raised temporarily when snapping to hovered card
+                const baseSpeed = 18;
+                let currentSpeed = baseSpeed;
                 let running = true;
                 let lastTs = null;
-                let useTransformFallback = false; // set to true when we switch to transform-mode (so scrollLeft loop becomes a no-op)
-                let wrapSuspended = false; // when true, we stop wrapping scrollLeft; used while popover open
-
-                // hover-snap state: when user hovers a partially-visible card, speed up until that card is fully visible, then pause
+                let useTransformFallback = false;
+                let wrapSuspended = false;
                 let hoverSnap = { active:false, card:null, target:0 };
-                const HOVER_SNAP_DURATION_MS = 1000; // aim to finish snap within ~1 second
-                const MIN_HOVER_SPEED = 60; // px/sec minimum for snapping (lower for smooth small adjustments)
-                const MAX_HOVER_SPEED = 2000; // px/sec cap to avoid extreme jumps
-                const AUTO_RESUME_MS = 2500; // resume autoscroll automatically after this many ms
+                const HOVER_SNAP_DURATION_MS = 1000;
+                const MIN_HOVER_SPEED = 60;
+                const MAX_HOVER_SPEED = 2000;
+                const AUTO_RESUME_MS = 2500;
                 let _autoResumeTimer = null;
 
                 function _clearAutoResume(){ if (_autoResumeTimer) { clearTimeout(_autoResumeTimer); _autoResumeTimer = null; } }
@@ -5031,18 +4252,12 @@ document.addEventListener('DOMContentLoaded', function(){
                 function startHoverSnap(card){
                     _clearAutoResume();
                     if (!card) return;
-                    // if already snapping to this card, do nothing
                     if (hoverSnap.active && hoverSnap.card === card) return;
-                    // compute target offset using the card element's content position so we center it reliably
                     const cardWidth = card.offsetWidth;
                     const visibleW = scroller.clientWidth || scroller.getBoundingClientRect().width;
                     const cur = useTransformFallback ? (parseFloat((document.querySelector('.marquee-track')||{}).dataset.offset) || 0) : scroller.scrollLeft;
-
-                    // card.offsetLeft is the position *within the scroller content* for this specific DOM element (handles duplicates)
                     const cardContentLeft = card.offsetLeft;
                     let desiredScrollLeft = Math.max(0, Math.min(originalWidth - visibleW, Math.round(cardContentLeft - (visibleW - cardWidth)/2)));
-
-                    // ensure expanded card will be fully visible after centering
                     try {
                         const EXPAND_MARGIN = 24;
                         const expandedGuess = Math.max(760, Math.round(cardWidth * 1.6));
@@ -5056,15 +4271,12 @@ document.addEventListener('DOMContentLoaded', function(){
                             desiredScrollLeft = Math.max(0, desiredScrollLeft - (EXPAND_MARGIN - expandedLeft));
                         }
                         desiredScrollLeft = Math.max(0, Math.min(originalWidth - visibleW, Math.round(desiredScrollLeft)));
-                    } catch(e) { /* ignore */ }
-
-                    // if already visually centered enough (use bounding rect to avoid duplicate/wrap mismatches), pause and type
+                    } catch(e) {  }
                     const scrollerRectEarly = scroller.getBoundingClientRect();
                     const cardRectEarly = card.getBoundingClientRect();
                     const cardCenterVis = Math.round((cardRectEarly.left - scrollerRectEarly.left) + (cardWidth / 2));
-                    const CENTER_THRESHOLD = 8; // px tolerance for being 'centered'
+                    const CENTER_THRESHOLD = 8;
                     if (Math.abs(cardCenterVis - (visibleW / 2)) <= CENTER_THRESHOLD) {
-                        // ensure scrollLeft is normalized to the nearest duplicated copy so visual and logical positions match
                         try {
                             const visualOffset = Math.round(cardContentLeft - (visibleW - cardWidth) / 2);
                             const delta2 = visualOffset - cur;
@@ -5072,7 +4284,7 @@ document.addEventListener('DOMContentLoaded', function(){
                             const raw2 = (delta2 + n2/2) - Math.floor((delta2 + n2/2) / n2) * n2 - n2/2;
                             const normalized = Math.round(cur + raw2);
                             if (!useTransformFallback) scroller.scrollLeft = normalized; else (document.querySelector('.marquee-track')||{}).dataset.offset = normalized;
-                        } catch(e) { /* ignore normalization errors */ }
+                        } catch(e) {  }
 
                         running = false;
                         scroller.classList.add('autoscroll-paused');
@@ -5080,22 +4292,16 @@ document.addEventListener('DOMContentLoaded', function(){
                         _scheduleAutoResume();
                         return;
                     }
-
-                    // normalize desiredScrollLeft to the nearest duplicated copy (handles wrap)
                     const delta = desiredScrollLeft - cur;
                     const n = originalWidth;
                     const raw = (delta + n/2) - Math.floor((delta + n/2) / n) * n - n/2;
                     const adjustedTarget = Math.round(cur + raw);
-
-                    // use adjustedTarget from here on to animate/center
                     hoverSnap = { active:true, card:card, target:adjustedTarget };
-                    _lastHoverCard = card; // remember current hovered card
+                    _lastHoverCard = card;
                     const distance = Math.abs(adjustedTarget - cur);
-                    const durationSec = Math.max(0.2, HOVER_SNAP_DURATION_MS / 1000); // avoid zero/too-small durations
+                    const durationSec = Math.max(0.2, HOVER_SNAP_DURATION_MS / 1000);
                     const desiredSpeed = distance / durationSec;
                     currentSpeed = Math.max(MIN_HOVER_SPEED, Math.min(MAX_HOVER_SPEED, Math.round(desiredSpeed)));
-
-                    // ensure loop runs only when no popover/extension is open
                     try {
                         if (!isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); }
                         else { running = false; scroller.classList.add('autoscroll-paused'); }
@@ -5104,17 +4310,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 function cancelHoverSnap(card){
                     _clearAutoResume();
-                    // cancel any pending lift
                     cancelLift(card);
                     if (hoverSnap && hoverSnap.active) {
-                        // only cancel if it's the same card or if card is null
                         if (!card || hoverSnap.card === card) hoverSnap.active = false;
                     }
-                    // fully reset hoverSnap so subsequent hovers always retrigger
                     hoverSnap = { active:false, card:null, target:0 };
                     currentSpeed = baseSpeed;
-
-                    // only resume autoscroll when no popover is open and nothing is expanded
                     try {
                         if (!isPopoverOpen() && !_isGalleryExpanded()) {
                             running = true;
@@ -5125,22 +4326,13 @@ document.addEventListener('DOMContentLoaded', function(){
                         }
                     } catch(e){ running = true; scroller.classList.remove('autoscroll-paused'); }
                 }
-
-                // expose for other scripts that may call it externally (defensive)
                 try { window.cancelHoverSnap = cancelHoverSnap; } catch(e){}
-
-                // show badge when JS-run (and update it with live metrics)
-                /* debug badge removed */
-
-                // LIFT helpers — float-up visual before centering
-                const LIFT_DURATION_MS = 420; // ms for float-up
+                const LIFT_DURATION_MS = 420;
                 const _liftTimers = new WeakMap();
 
                 function liftThenCenter(card){
                     _clearAutoResume();
                     if (!card) return;
-
-                    // apply gallery + card lift and suppress immediate width expansion
                     scroller.classList.add('lift-in-progress','gallery-lifted');
                     card.classList.add('card-lifted');
 
@@ -5149,7 +4341,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
                     const t = setTimeout(()=>{
                         _liftTimers.delete(card);
-                        // trigger the regular hover-snap centering after lift completes
                         startHoverSnap(card);
                     }, LIFT_DURATION_MS);
 
@@ -5157,21 +4348,19 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
 
                 function cancelLift(card){
-                    // If the popover is open and anchored to this card (or matches by key), keep that card lifted (don't collapse the extension).
                     try {
                         const pop = document.getElementById('galleryPopover');
                         const popOpen = pop && pop.getAttribute && pop.getAttribute('aria-hidden') === 'false';
                         const popAnchor = pop && pop._anchor ? pop._anchor : null;
                         const anchorKey = pop && pop._anchorKey ? pop._anchorKey : null;
                         const cardKey = card && card.dataset ? (card.dataset.title || card.dataset.href) : null;
-                        if (popOpen && card && (popAnchor === card || (anchorKey && cardKey && anchorKey === cardKey))) return; // keep this card lifted while popover open
+                        if (popOpen && card && (popAnchor === card || (anchorKey && cardKey && anchorKey === cardKey))) return;
                     } catch(e){}
 
                     const prev = card ? _liftTimers.get(card) : null;
                     if (prev) { clearTimeout(prev); if (card) _liftTimers.delete(card); }
                     if (card) card.classList.remove('card-lifted');
                     scroller.classList.remove('lift-in-progress');
-                    // keep gallery-lifted while hoverSnap is active (keeps floated look while paused)
                     if (!hoverSnap.active) {
                         try {
                             const pop = document.getElementById('galleryPopover');
@@ -5180,20 +4369,15 @@ document.addEventListener('DOMContentLoaded', function(){
                         } catch(e){ scroller.classList.remove('gallery-lifted'); }
                     }
                 }
-                // expose to global so inline/other handlers won't throw when invoked from elsewhere
                 try { window.cancelLift = cancelLift; } catch(e){}
-
-                // detect if scrollLeft actually moves — if not, fallback to CSS marquee
                 let lastSeen = scroller.scrollLeft;
                 let stableCounter = 0;
-                const stabilityLimit = 6; // checks (approx 800ms)
+                const stabilityLimit = 6;
                 const badgeUpdater = setInterval(()=>{
                     const L = Math.round(scroller.scrollLeft);
                     const W = Math.round(scroller.scrollWidth/2);
-                    /* metrics (no badge) */
                     if (L === lastSeen) stableCounter++; else stableCounter = 0;
                     lastSeen = L;
-                    // if we've tried but scrollLeft isn't changing, switch to transform-driven track instead of CSS fallback
                     if (stableCounter >= stabilityLimit) {
                         clearInterval(badgeUpdater);
                         const childrenHtml = scroller.innerHTML;
@@ -5203,19 +4387,14 @@ document.addEventListener('DOMContentLoaded', function(){
                         track.innerHTML = childrenHtml + childrenHtml;
                         scroller.appendChild(track);
                         scroller.classList.add('js-transform-mode');
-
-                        // transform-based loop
                         track.dataset.offset = '0';
                         let trLast = null;
                         function trackStep(ts){
-                            // suspend transform-mode movement while popover is open OR track explicitly frozen
                             try { const track = document.querySelector('.marquee-track'); if (track && track.dataset && track.dataset.frozen === '1') { trLast = ts; requestAnimationFrame(trackStep); return; } } catch(e){}
                             try { if (isPopoverOpen()) { trLast = ts; requestAnimationFrame(trackStep); return; } } catch(e){}
                             if (!trLast) trLast = ts;
                             const dt = ts - trLast;
                             trLast = ts;
-
-                            // if hover-snap active and we're using transform-mode, move the track toward the hover target
                             if (hoverSnap.active) {
                                 let cur = parseFloat(track.dataset.offset) || 0;
                                 const delta = hoverSnap.target - cur;
@@ -5230,10 +4409,8 @@ document.addEventListener('DOMContentLoaded', function(){
                                     hoverSnap.active = false;
                                     running = false;
                                     scroller.classList.add('autoscroll-paused');
-                                    // allow card to expand now that centering finished
                                     scroller.classList.remove('lift-in-progress');
                                     try {
-                                        // do NOT collapse the snapped card if the popover is anchored to it (duplicate-safe check)
                                         const pop = document.getElementById('galleryPopover');
                                         const anchorKey = pop && pop._anchorKey ? pop._anchorKey : null;
                                         const snappedKey = (snappedCard && snappedCard.dataset) ? (snappedCard.dataset.title || snappedCard.dataset.href) : null;
@@ -5243,7 +4420,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                     } catch(e){}
                                     currentSpeed = baseSpeed;
                                     try { startTypingSequence(snappedCard); } catch(e){}
-                                    // schedule auto-resume so repeated hovers still work
                                     try { _scheduleAutoResume(); } catch(e){}
                                 }
                             } else if (running) {
@@ -5258,22 +4434,16 @@ document.addEventListener('DOMContentLoaded', function(){
                         }
                         requestAnimationFrame(trackStep);
                         useTransformFallback = true;
-                        /* transform fallback active (no badge) */
                     }
                 }, 140);
 
                 function step(ts){
-                    // if we're using transform fallback, keep the RAF alive but don't modify scrollLeft (transformStep handles movement)
                     if (useTransformFallback) { requestAnimationFrame(step); return; }
-
-                    // if popover is open, suspend any movement (including hover-snap and auto-scroll)
                     try { if (isPopoverOpen()) { lastTs = ts; requestAnimationFrame(step); return; } } catch(e){}
 
                     if (!lastTs) lastTs = ts;
                     const dt = ts - lastTs;
                     lastTs = ts;
-
-                    // if hover-snap active, move toward the hovered card target (scrollLeft mode)
                     if (hoverSnap.active) {
                         const cur = scroller.scrollLeft;
                         const delta = hoverSnap.target - cur;
@@ -5281,7 +4451,6 @@ document.addEventListener('DOMContentLoaded', function(){
                         scroller.scrollLeft = cur + move;
                         if (Math.abs(hoverSnap.target - scroller.scrollLeft) <= 2) {
                             const snappedCard = hoverSnap.card;
-                            // verify visual centering before completing
                             const scrollerRect = scroller.getBoundingClientRect();
                             const cardRectNow = snappedCard.getBoundingClientRect();
                             const visualLeftNow = Math.round(cardRectNow.left - scrollerRect.left);
@@ -5293,7 +4462,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                 hoverSnap.target = hoverSnap.target + adjust;
                                 currentSpeed = Math.max(MIN_HOVER_SPEED, Math.round(currentSpeed / 2));
                             } else {
-                                // snap to the exact target (handle rounding/wrap)
                                 const finalPos = Math.round(hoverSnap.target);
                                 scroller.scrollLeft = finalPos;
                                 hoverSnap.active = false;
@@ -5301,13 +4469,12 @@ document.addEventListener('DOMContentLoaded', function(){
                                 scroller.classList.add('autoscroll-paused');
                                 currentSpeed = baseSpeed;
                                 try { startTypingSequence(snappedCard); } catch(e){}
-                                // schedule auto-resume so repeated hovers still work
                                 try { _scheduleAutoResume(); } catch(e){}
                             }
                         }
                     } else if (running) {
                         scroller.scrollLeft += (currentSpeed * dt) / 1000;
-                        if (scroller.scrollLeft >= originalWidth) scroller.scrollLeft -= originalWidth; // loop
+                        if (scroller.scrollLeft >= originalWidth) scroller.scrollLeft -= originalWidth;
                     }
 
                     requestAnimationFrame(step);
@@ -5317,46 +4484,28 @@ document.addEventListener('DOMContentLoaded', function(){
                 scroller.addEventListener('mouseleave', ()=> { cancelLift(); try { if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ if (!hoverSnap.active) { running = true; scroller.classList.remove('autoscroll-paused'); } } lastTs = null; });
                 scroller.addEventListener('focusin', ()=> { if (!hoverSnap.active) running = false; });
                 scroller.addEventListener('focusout', ()=> { cancelHoverSnap(); try { if (!isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ running = true; scroller.classList.remove('autoscroll-paused'); } lastTs = null; });
-
-                // Auto-open popover when a gallery card finishes its expand transition ✅
                 (function bindAutoOpenOnExpand(){
                     if (window.__galleryAutoOpenBound) return; window.__galleryAutoOpenBound = true;
                     const _autoOpenTimestamps = new WeakMap();
-
-                    // listen for the "flex-basis" transition which indicates the card finished expanding
                     scroller.addEventListener('transitionend', (ev) => {
                         try {
                             const el = ev.target;
                             if (!el || !el.classList) return;
-                            if (!el.classList.contains('card')) return; // only care about card elements
-                            if (ev.propertyName !== 'flex-basis') return; // expansion finished
-
-                            // only open if this card is expanded and no popover is already visible
+                            if (!el.classList.contains('card')) return;
+                            if (ev.propertyName !== 'flex-basis') return;
                             if (!el.classList.contains('card-lifted')) return;
                             if (isPopoverOpen()) return;
-
-                            // debounce per-element to avoid duplicate openings from clones/transitions
                             const now = Date.now();
                             const last = _autoOpenTimestamps.get(el) || 0;
                             if (now - last < 600) return;
                             _autoOpenTimestamps.set(el, now);
-
-                            // find the clickable anchor (.card-link) inside the card (or use the card itself)
                             const anchor = el.matches('.card-link') ? el : (el.querySelector ? el.querySelector('.card-link') : null) || el;
-
-                            // final guard: only open for visible/interactive anchors
                             if (!anchor || !(anchor.offsetParent !== null)) return;
-
-                            // open the popover on the next frame (ensures layout is stable)
                             requestAnimationFrame(() => { try { if (!isPopoverOpen()) openModalForCard(anchor); } catch(e){} });
-                        } catch(e) { /* defensive - ignore */ }
+                        } catch(e) {  }
                     }, true);
                 })();
-
-                // delegated pointer/touch handlers — works even if cards are replaced (transform fallback)
-                // pause/resume via pointerover/out + capture-phase pointerenter/pointerleave (robust across DOM replacements)
                 scroller.addEventListener('pointerover', (ev) => {
-                    // pause autoscroll on hover (do NOT auto-center)
                     const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                     if (card && scroller.contains(card)) {
                         running = false;
@@ -5367,7 +4516,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     const leftCard = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                     const to = ev.relatedTarget;
                     if (!leftCard) return;
-                    // if moving into another card, keep paused state; otherwise cancel
                     if (to && scroller.contains(to) && to.closest('.card')) return;
                     cancelLift(leftCard);
                     cancelHoverSnap(leftCard);
@@ -5376,21 +4524,15 @@ document.addEventListener('DOMContentLoaded', function(){
                         else { running = false; scroller.classList.add('autoscroll-paused'); }
                     } catch(e){ if (!hoverSnap.active) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } }
                 });
-                // touch fallback — pause on touch
                 scroller.addEventListener('touchstart', ()=> { running = false; scroller.classList.add('autoscroll-paused'); });
                 scroller.addEventListener('touchend', ()=> { try { if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ if (!hoverSnap.active) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } } });
-
-                // Drag-to-scroll (pointer) — enables slide/drag scrolling with mouse & touchpad
                 let _isPointerDragging = false;
                 let _pointerDragStartX = 0;
                 let _pointerDragStartScroll = 0;
-                let _scrollTimer = null; // debounce timer used to mark active scrolling (prevents hover-expand)
-                const _DRAG_THRESHOLD = 6; // px
-
-                // helper: returns true when any card is currently expanded (hover or keyboard focus)
+                let _scrollTimer = null;
+                const _DRAG_THRESHOLD = 6;
                 function _isGalleryExpanded() {
                     try {
-                        // consider hovered/focused cards *and* programmatically lifted cards
                         if (scroller.querySelector('.card:hover, .card:focus-within')) return true;
                         if (scroller.querySelector('.card-lifted')) return true;
                         if (scroller.classList.contains('gallery-lifted')) return true;
@@ -5399,25 +4541,17 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
 
                 scroller.addEventListener('pointerdown', (ev) => {
-                    // only primary button
                     if (ev.button && ev.button !== 0) return;
-
-                    // Do not start drag-to-scroll when the gallery is in an "expanded" state
-                    // (user is interacting with the expanded card) or when autoscroll is paused.
                     if (scroller.classList.contains('autoscroll-paused') || _isGalleryExpanded()) {
-                        // allow normal click/interaction inside the expanded card — do not set pointer dragging
                         return;
                     }
 
                     _isPointerDragging = true;
                     _pointerDragStartX = ev.clientX;
-                    // start from the appropriate offset depending on transform fallback
                     _pointerDragStartScroll = useTransformFallback ? (parseFloat((document.querySelector('.marquee-track')||{}).dataset.offset) || 0) : scroller.scrollLeft;
                     scroller.classList.add('dragging');
                     scroller.dataset.pointerDragging = '0';
                     try { scroller.setPointerCapture(ev.pointerId); } catch(e){}
-
-                    // pause autoscroll while dragging
                     running = false;
                     scroller.classList.add('autoscroll-paused');
                 });
@@ -5426,8 +4560,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     if (!_isPointerDragging) return;
                     const dx = ev.clientX - _pointerDragStartX;
                     if (Math.abs(dx) > _DRAG_THRESHOLD) scroller.dataset.pointerDragging = '1';
-
-                    // compute desired logical offset then normalize into [0, originalWidth)
                     const desired = Math.round(_pointerDragStartScroll - dx);
                     const wrap = (v) => {
                         if (!originalWidth || !isFinite(originalWidth)) return Math.max(0, v);
@@ -5451,8 +4583,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     _isPointerDragging = false;
                     scroller.classList.remove('dragging');
                     try { scroller.releasePointerCapture && scroller.releasePointerCapture(ev && ev.pointerId); } catch(e){}
-
-                    // normalize current scroll position for seamless loop (in case user stopped in duplicated region)
                     try {
                         if (!useTransformFallback) {
                             while (scroller.scrollLeft >= originalWidth) scroller.scrollLeft -= originalWidth;
@@ -5466,49 +4596,31 @@ document.addEventListener('DOMContentLoaded', function(){
                                 track.style.transform = `translateX(${-off}px)`;
                             }
                         }
-                    } catch(e) { /* ignore */ }
-
-                    // resume autoscroll after short delay so user can see the final position
+                    } catch(e) {  }
                     _scheduleAutoResume();
-                    // clear temporary flag shortly after so click handlers can rely on it
                     setTimeout(()=> { try { scroller.dataset.pointerDragging = '0'; } catch(e){} }, 40);
                 }
 
                 scroller.addEventListener('pointerup', _endPointerDrag);
                 scroller.addEventListener('pointercancel', _endPointerDrag);
-
-                // normalize scroll when user scrolls by wheel or other means so loop is seamless
                 scroller.addEventListener('scroll', () => {
-                    // mark scrolling to temporarily disable hover expansion
                     scroller.classList.add('is-scrolling');
                     clearTimeout(_scrollTimer);
                     _scrollTimer = setTimeout(()=> { scroller.classList.remove('is-scrolling'); }, 180);
                 });
         if (useTransformFallback || _isPointerDragging || wrapSuspended) return;
                 scroller.addEventListener('wheel', (ev) => {
-                    // only when the pointer is inside the scroller
                     if (!scroller.contains(ev.target)) return;
-                    // allow native horizontal wheel gestures to pass through (if user is already scrolling horizontally)
                     if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return;
-
-                    // prevent page from scrolling vertically while interacting with the gallery
                     ev.preventDefault();
-
-                    // normalize deltaMode (0=pixel, 1=line, 2=page)
                     let dy = ev.deltaY;
                     if (ev.deltaMode === 1) dy *= 24;
                     else if (ev.deltaMode === 2) dy *= window.innerHeight || 800;
-
-                    // small sensitivity factor — adjust if too slow/fast
                     const WHEEL_SPEED = 1.0;
                     const delta = dy * WHEEL_SPEED;
-
-                    // pause automatic looping while user scrolls manually
                     running = false;
                     scroller.classList.add('autoscroll-paused');
                     _clearAutoResume();
-
-                    // compute desired logical offset and wrap so loop stays seamless
                     const wrap = (v) => {
                         if (!originalWidth || !isFinite(originalWidth)) return Math.max(0, v);
                         return ((Math.round(v) % originalWidth) + originalWidth) % originalWidth;
@@ -5526,17 +4638,10 @@ document.addEventListener('DOMContentLoaded', function(){
                         const desired = wrap(cur + delta);
                         scroller.scrollLeft = desired;
                     }
-
-                    // schedule auto-resume after interaction ends
                     _scheduleAutoResume();
                 }, { passive: false });
-
-                // prevent accidental native image drag from fighting our pointer-drag behaviour
                 scroller.addEventListener('dragstart', (ev) => ev.preventDefault());
-
-                // capture-phase document handlers catch pointerenter/pointerleave even when propagation is stopped by children
                 document.addEventListener('pointerenter', (ev) => {
-                    // pointerenter no longer triggers lift/center — user action (click/focus) required
                 }, true);
                 document.addEventListener('pointerleave', (ev) => {
                     const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
@@ -5544,8 +4649,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     cancelLift(card);
                     cancelHoverSnap(card);
                 }, true);
-
-                // fallback: also watch mouseover/mouseout at document level (very robust)
                 function docOverHandler(ev){
                     const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                     if (card && scroller.contains(card)) {
@@ -5556,7 +4659,6 @@ document.addEventListener('DOMContentLoaded', function(){
                 function docOutHandler(ev){
                     const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                     if (card && scroller.contains(card)) {
-                        // if moving into another card, keep snap/paused state
                         const to = ev.relatedTarget;
                         if (to && scroller.contains(to) && to.closest('.card')) return;
                     }
@@ -5569,15 +4671,11 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
                 document.addEventListener('mouseover', docOverHandler, true);
                 document.addEventListener('mouseout', docOutHandler, true);
-
-                // fallback: document-level mousemove using bounding-box check (works even when events are intercepted)
                 let _lastHoverCard = null;
                 let _lastMousePos = { x: 0, y: 0 };
                 let _mouseRaf = null;
-
-                // ensure expanded content remains visible without centering the card
                 function smoothScrollLeftTo(target, duration = 260){
-                    if (useTransformFallback) return; // skip for transform-mode
+                    if (useTransformFallback) return;
                     target = Math.max(0, Math.min(originalWidth - scroller.clientWidth, Math.round(target)));
                     const start = scroller.scrollLeft;
                     const delta = target - start;
@@ -5585,7 +4683,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     const startTs = performance.now();
                     function step(ts){
                         const t = Math.min(1, (ts - startTs) / duration);
-                        // easeInOutQuad
                         const eased = t < 0.5 ? 2*t*t : -1 + (4 - 2*t) * t;
                         scroller.scrollLeft = Math.round(start + delta * eased);
                         if (t < 1) requestAnimationFrame(step);
@@ -5610,22 +4707,21 @@ document.addEventListener('DOMContentLoaded', function(){
                         if (expandedRight > (visibleW - EXPAND_MARGIN)) {
                             shift = expandedRight - (visibleW - EXPAND_MARGIN);
                         } else if (expandedLeft < EXPAND_MARGIN) {
-                            shift = expandedLeft - EXPAND_MARGIN; // negative
+                            shift = expandedLeft - EXPAND_MARGIN;
                         }
 
                         if (shift !== 0) {
                             const newScroll = scroller.scrollLeft + shift;
                             smoothScrollLeftTo(newScroll, 260);
                         }
-                    } catch(e) { /* ignore */ }
+                    } catch(e) {  }
                 }
 
                 document.addEventListener('mousemove', (ev) => {
-                    if (_mouseRaf) return; // throttle
+                    if (_mouseRaf) return;
                     _mouseRaf = requestAnimationFrame(() => {
                         _mouseRaf = null;
                         try {
-                            // suppress hover-derived behavior while the scroller is actively moving (auto-scroll or user scroll/drag)
                             if (scroller.classList.contains('is-scrolling') || scroller.dataset.pointerDragging === '1') {
                                 if (_lastHoverCard) { try { stopTypingSequence(_lastHoverCard); } catch(e){} _lastHoverCard = null; }
                                 return;
@@ -5643,8 +4739,6 @@ document.addEventListener('DOMContentLoaded', function(){
                             if (cardUnder !== _lastHoverCard) {
                                 const prev = _lastHoverCard;
                                 _lastHoverCard = cardUnder;
-
-                                // start/stop typing on hover change
                                 if (prev) { try { stopTypingSequence(prev); } catch(e){} }
                                 if (_lastHoverCard) { try { startTypingSequence(_lastHoverCard); } catch(e){} ensureExpandedVisible(_lastHoverCard); }
 
@@ -5654,10 +4748,9 @@ document.addEventListener('DOMContentLoaded', function(){
                                     if (!running) lastTs = null;
                                 }
                             }
-                        } catch (e) { /* ignore */ }
+                        } catch (e) {  }
                     });
                 });
-                // keyboard left/right to jump a card; pauses while interacting
                 scroller.addEventListener('keydown', (e)=>{
                     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                         e.preventDefault();
@@ -5670,13 +4763,11 @@ document.addEventListener('DOMContentLoaded', function(){
                         idx += (e.key === 'ArrowRight') ? 1 : -1;
                         idx = ((idx % (cards.length/2)) + (cards.length/2)) % (cards.length/2);
                         const targetCard = cards[idx];
-                        // lift then center (keyboard) — preserves the float-then-center UX
                         liftThenCenter(targetCard);
                     }
                 });
 
                 requestAnimationFrame(step);
-                // kick-start painting: small nudges so browsers render scrollLeft changes without requiring user interaction
                 setTimeout(()=>{ try { scroller.scrollLeft = Math.min(1, Math.max(0, scroller.scrollLeft + 1)); } catch(e){} }, 60);
                 setTimeout(()=>{ try { scroller.scrollBy(1,0); scroller.scrollBy(-1,0); } catch(e){} }, 120);
             }).catch(err => console.error('card-gallery: waitForImages failed', err));
@@ -5687,15 +4778,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if (document.readyState === 'complete') initLoop(); else window.addEventListener('load', initLoop);
 })();
 
-/* Typing effect for card title + description: types when card is hovered or focused */
+
 (function(){
-    const TYPING_SPEED = 12; // ms per char (faster)
+    const TYPING_SPEED = 12;
 
     function typeChars(el, text) {
         return new Promise(resolve => {
             if (!el) return resolve();
-            // debug: indicate typing start
-            // clear any existing interval
             clearInterval(el._typingInterval);
             el.classList.add('typing');
             el.textContent = '';
@@ -5723,93 +4812,58 @@ document.addEventListener('DOMContentLoaded', function(){
 
     async function startTypingSequence(card){
         if (!card) return;
-        // prevent re-entrant / repeated typing when the card is already typing or title already completed
         if (card.classList.contains('typing-active') || card.classList.contains('title-typed')) return;
         const h = card.querySelector('.content h2');
         const p = card.querySelector('.content p');
         if (h && !h.dataset.fulltext) h.dataset.fulltext = h.textContent.trim();
         if (p && !p.dataset.fulltext) p.dataset.fulltext = p.textContent.trim();
-
-        // ensure content area is visible even if :hover/focus selectors fail
         card.classList.add('typing-active');
-
-        // mark title as not yet completed and ensure paragraph hidden
         card.classList.remove('title-typed');
         if (p) { p.textContent = ''; }
-
-        // stop any currently running typing on these elements
         stopTypingEl(h); stopTypingEl(p);
-
-        // debug & fallback: ensure we always reveal something if typing never starts
-
-        // title fallback timer (if title typing doesn't render quickly, reveal full title)
         if (card._typingFallbackTimer) { clearTimeout(card._typingFallbackTimer); card._typingFallbackTimer = null; }
         card._typingFallbackTimer = setTimeout(()=>{
             try {
                 if (h && (!h.classList.contains('typing') && (!h.textContent || h.textContent.trim()===''))) h.textContent = h.dataset.fulltext || '';
             } catch(e){}
         }, 160);
-
-        // paragraph fallback will be set after the title typing completes (moved to paragraph typing block)
-
-        // type title first, then reveal + type description
         if (h && h.dataset.fulltext) await typeChars(h, h.dataset.fulltext);
-        // mark title done so CSS reveals paragraph and JS will type it
         card.classList.add('title-typed');
         if (card._typingFallbackTimer) { clearTimeout(card._typingFallbackTimer); card._typingFallbackTimer = null; }
-
-        // start paragraph typing after title finishes (character-by-character)
         if (p && p.dataset.fulltext) {
-            // paragraph fallback timer (in case typing stalls) — started here so it won't preempt title typing
             if (card._pTypingFallbackTimer) { clearTimeout(card._pTypingFallbackTimer); card._pTypingFallbackTimer = null; }
             card._pTypingFallbackTimer = setTimeout(()=>{
                 try {
                     if (p && (!p.classList.contains('typing') && (!p.textContent || p.textContent.trim()===''))) p.textContent = p.dataset.fulltext || '';
                 } catch(e){}
             }, 1500);
-
-            // type paragraph with the same helper (shows typing cursor via .typing)
             await typeChars(p, p.dataset.fulltext);
-
-            // typing finished — clear fallback and log
             if (card._pTypingFallbackTimer) { clearTimeout(card._pTypingFallbackTimer); card._pTypingFallbackTimer = null; }
         }
-
-        // typing finished — leave typing-active so user still sees content until mouseout
     }
 
     function stopTypingSequence(card){
         if (!card) return;
-        // clear fallback timers if set
         try { if (card._typingFallbackTimer) { clearTimeout(card._typingFallbackTimer); card._typingFallbackTimer = null; } } catch(e){}
         try { if (card._pTypingFallbackTimer) { clearTimeout(card._pTypingFallbackTimer); card._pTypingFallbackTimer = null; } } catch(e){}
         const h = card.querySelector('.content h2');
         const p = card.querySelector('.content p');
-        // if title had completed, show full paragraph; otherwise keep paragraph hidden
         const titleDone = card.classList.contains('title-typed');
         stopTypingEl(h);
         if (titleDone) stopTypingEl(p); else {
-            // cancel paragraph typing and keep it hidden
             clearInterval(p?._typingInterval);
             if (p) { p._typingInterval = null; p.textContent = ''; p.classList.remove('typing'); }
             card.classList.remove('title-typed');
         }
-        // remove typing-active so hover rules resume control
         card.classList.remove('typing-active');
     }
 
     (function initCardTypingBindings(){
-        // initialize bindings immediately if DOM already available, otherwise attach on DOMContentLoaded
         function setup(){
-            // track last input modality so pointer-clicks don't trigger keyboard-focus behavior
             const __cardLastInteraction = { type: 'pointer', ts: Date.now() };
             document.addEventListener('pointerdown', ()=> { __cardLastInteraction.type = 'pointer'; __cardLastInteraction.ts = Date.now(); }, true);
             document.addEventListener('keydown', ()=> { __cardLastInteraction.type = 'keyboard'; __cardLastInteraction.ts = Date.now(); }, true);
-
-            // Use delegated handlers on the stable scroller element so listeners survive DOM duplication
             const scrollerEl = document.querySelector('.container-cards');
-
-            // lazy-initialize fulltext for cards that may be created/replaced later
             function ensureCardFulltext(card){
                 if (!card) return;
                 const h = card.querySelector('.content h2');
@@ -5823,11 +4877,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 if (!card || !scrollerEl.contains(card)) return;
                 ensureCardFulltext(card);
                 try { running = false; scrollerEl.classList.add('autoscroll-paused'); } catch(e){}
-
-                // do not retrigger typing if it's already running or if the title has completed
                 try {
                     if (card.classList.contains('typing-active') || card.classList.contains('title-typed')) return;
-                    // if popover is open and anchored to this card, avoid restarting typing
                     const pop = document.getElementById('galleryPopover');
                     if (pop && pop.getAttribute && pop.getAttribute('aria-hidden') === 'false') {
                         const anchorKey = pop._anchorKey || null;
@@ -5842,8 +4893,6 @@ document.addEventListener('DOMContentLoaded', function(){
             scrollerEl.addEventListener('pointerout', (ev) => {
                 const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                 if (!card || !scrollerEl.contains(card)) return;
-
-                // if the popover is open and anchored to this card, do not stop typing / collapse the extension
                 try {
                     const pop = document.getElementById('galleryPopover');
                     if (pop && pop.getAttribute && pop.getAttribute('aria-hidden') === 'false') {
@@ -5859,7 +4908,6 @@ document.addEventListener('DOMContentLoaded', function(){
             });
 
             scrollerEl.addEventListener('click', (ev) => {
-                // ignore clicks that immediately follow a drag
                 if (scrollerEl.dataset && scrollerEl.dataset.pointerDragging === '1') { ev.preventDefault(); ev.stopPropagation(); return; }
                 const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                 if (!card || !scrollerEl.contains(card)) return;
