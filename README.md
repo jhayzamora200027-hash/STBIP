@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
@@ -92,6 +93,8 @@ MAIL_PASSWORD=rhqvpbikcawdotmx
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS="stb-portal@dswd.gov.ph"
 MAIL_FROM_NAME="STB Portal"
+=======
+>>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 # STBIP
 
 
@@ -104,12 +107,20 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ## Add your files
 
+<<<<<<< HEAD
 * [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
+=======
+* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
+>>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 * [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
 
 ```
 cd existing_repo
+<<<<<<< HEAD
 git remote add origin https://git.dswd.gov.ph/jpzamora/stbip.git
+=======
+git remote add origin https://git.dswd.gov.ph/social-technology-bureau/stbip.git
+>>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 git branch -M main
 git push -uf origin main
 ```
@@ -124,17 +135,33 @@ git push -uf origin main
 * [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
 * [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
 * [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
+* [Set up project integrations](https://git.dswd.gov.ph/social-technology-bureau/stbip/-/settings/integrations)
+
+## Collaborate with your team
+
+* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
+* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
+* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
+* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
 * [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
 
 ## Test and Deploy
 
 Use the built-in continuous integration in GitLab.
 
+<<<<<<< HEAD
 * [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
 * [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
 * [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
 * [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
 * [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+=======
+* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
+* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
+* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
+* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
+* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+>>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 
 ***
 
