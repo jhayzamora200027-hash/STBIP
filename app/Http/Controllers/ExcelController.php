@@ -14,7 +14,6 @@ use App\Http\Controllers\Controller;
 class ExcelController extends Controller
 {
 
-        // Set the base Excel file for dashboard charts
     public function setBase(Request $request)
     {
         $storedFilename = $request->input('base_excel');
@@ -22,7 +21,6 @@ class ExcelController extends Controller
             if (!$storedFilename) {
                 return redirect()->back()->with('error', 'No Excel file selected.');
             }
-            // Double-check the file exists in storage before logging
             $excelDir = storage_path('app/excels');
             $full = $excelDir . '/' . $storedFilename;
             if (!file_exists($full)) {
@@ -31,7 +29,6 @@ class ExcelController extends Controller
             session(['base_excel' => $storedFilename]);
             $userId = Auth::check() ? Auth::user()->user_id ?? Auth::user()->id : null;
 
-            // look up the document number associated with the chosen file (if any)
             $docno = \App\Models\Uploadlog::where('excelname', $storedFilename)
                         ->orderBy('created_at', 'desc')
                         ->value('docno');
@@ -52,14 +49,10 @@ class ExcelController extends Controller
             return redirect()->back()->with('error', 'Error updating base Excel: ' . $e->getMessage());
         }
     }
-    // List all uploaded excels
     public function uploadLogs(Request $request)
     {
         $excelDir = storage_path('app/excels');
 
-        // Load all logs and filter to only those that actually have
-        // a corresponding Excel file on disk so pagination doesn't
-        // create extra empty pages.
         $allLogs = Uploadlog::orderBy('created_at', 'desc')->get();
 
         $filtered = $allLogs->filter(function ($log) use ($excelDir) {
@@ -96,11 +89,8 @@ class ExcelController extends Controller
             ]
         );
 
-        // Try to determine the current base Excel file and, if it came
-        // from a Google Sheet upload, reconstruct a viewable sheet URL.
         $currentSheetUrl = null;
         $baseExcel = null;
-        // build query for selection history, applying optional date range filter
         $selectQuery = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc');
         if ($request->filled('from_date')) {
             $selectQuery->whereDate('updated_at', '>=', $request->input('from_date'));
@@ -123,18 +113,12 @@ class ExcelController extends Controller
             $spreadsheetId = $matches[1];
             $currentSheetUrl = 'https://docs.google.com/spreadsheets/d/' . $spreadsheetId . '/edit';
         }
-        // Get latest selection log for display of last updated by and action
         $latestSelection = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc')->first();
         $latestUpdatedBy = $latestSelection ? $latestSelection->createdby : null;
         $latestActionLog = $latestSelection ? $latestSelection->actionlogs : null;
-        // we will need the full latest model when rendering doc number on the page
 
-        // also keep the whole history in case the view wants to render it
         $selectLogs = $selectLog;
 
-        // Ensure the currently used base Excel (from latest selection log)
-        // is reflected in the session so the corresponding radio button
-        // appears selected even after a page refresh or new login.
         if (!session()->has('base_excel') && $baseExcel) {
             session(['base_excel' => $baseExcel]);
         }
@@ -147,10 +131,8 @@ class ExcelController extends Controller
         return view('dashboard.maincomponents.uploadingdocument', compact('logs', 'currentSheetUrl', 'latestUpdatedBy', 'latestActionLog', 'latestSelection', 'selectLogs'));
     }
 
-    // Show the STs MOA Attachment upload page with region filter + pagination
     public function uploadmoasts(Request $request)
     {
-        // Reuse the most recently selected/available Excel file
         $excelDir = storage_path('app/excels');
 
         $baseExcel = null;
@@ -246,7 +228,6 @@ class ExcelController extends Controller
             $rows = $cached['rows'] ?? [];
         }
 
-        // Build list of all unique titles and mapping of region -> titles
         $allTitles = [];
         $regionTitleMap = [];
         foreach ($rows as $entry) {
@@ -270,7 +251,6 @@ class ExcelController extends Controller
             $regionTitleMap[$region] = $list;
         }
 
-        // Filter by a single region (one region per listing)
         $selectedRegion = $request->input('region');
         if ($selectedRegion) {
             $filtered = array_values(array_filter($rows, function ($row) use ($selectedRegion) {
@@ -280,7 +260,6 @@ class ExcelController extends Controller
             $filtered = $rows;
         }
 
-        // Optional Title of ST filter (exact match from dropdown, applied within selected region)
         $searchTitle = trim((string) $request->input('title', ''));
         if ($searchTitle !== '') {
             $filtered = array_values(array_filter($filtered, function ($row) use ($searchTitle) {
@@ -288,7 +267,6 @@ class ExcelController extends Controller
             }));
         }
 
-        // Paginate results (10 rows per page)
         $perPage = 10;
         $currentPage = max(1, (int) $request->input('page', 1));
         $total = count($filtered);
@@ -306,7 +284,6 @@ class ExcelController extends Controller
             ]
         );
 
-        // For AJAX requests, return only the table + pagination HTML
         if ($request->ajax()) {
             $html = view('dashboard.maincomponents.partials.uploadingstattachment_list', [
                 'sts' => $sts,
@@ -315,7 +292,6 @@ class ExcelController extends Controller
             return response()->json(['html' => $html]);
         }
 
-        // Full-page load
         return view('dashboard.maincomponents.STsManager', [
             'regions' => $regions,
             'selectedRegion' => $selectedRegion,
@@ -325,16 +301,13 @@ class ExcelController extends Controller
             'sts' => $sts,
         ]);
     }
-    // Handle Excel file upload
     public function upload(Request $request)
     {
-        // Allow either a local Excel file upload or a Google Sheets link.
         $request->validate([
             'excelFile' => 'nullable|file|mimes:xlsx,xls|required_without:googleSheetUrl',
             'googleSheetUrl' => 'nullable|url|required_without:excelFile',
         ]);
 
-        // Ensure the directory exists
         $excelDir = storage_path('app/excels');
         if (!is_dir($excelDir)) {
             mkdir($excelDir, 0775, true);
@@ -343,14 +316,11 @@ class ExcelController extends Controller
         $storedFilename = null;
         $path = null;
         $fullPath = null;
-        // Generate next document number (docno) for this upload
         $lastDocno = Uploadlog::max('docno');
         $nextNumber = $lastDocno ? ((int) $lastDocno) + 1 : 1;
-        // Format as 5 leading zeros (total 7 digits, e.g., 0000012)
         $nextDocno = str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
 
         if ($request->filled('googleSheetUrl')) {
-            // Download the Google Sheet as an Excel file and store it locally
             $googleUrl = $request->input('googleSheetUrl');
 
             if (!preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleUrl, $matches)) {
@@ -385,14 +355,12 @@ class ExcelController extends Controller
 
             $path = 'excels/' . $storedFilename;
         } else {
-            // Store the uploaded file in storage/app/excels
             $file = $request->file('excelFile');
-            $path = $file->store('excels', 'local'); // force store in storage/app/excels
-            $storedFilename = basename($path); // This is the actual filename in storage/app/excels
+            $path = $file->store('excels', 'local'); 
+            $storedFilename = basename($path); 
             $fullPath = storage_path('app/' . $path);
         }
 
-        // Log upload to uploadlogs table (store the stored filename, not the original name)
         $userId = Auth::check() ? Auth::user()->user_id ?? Auth::user()->id : null;
         Uploadlog::create([
             'createdby' => $userId,
@@ -401,15 +369,12 @@ class ExcelController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        // Save the path in session
         session(['recent_excel' => $path]);
 
-        // Check if file exists and is readable before loading
         if (!$fullPath || !file_exists($fullPath) || !is_readable($fullPath)) {
             return redirect()->back()->with('error', 'Excel file not found or not readable.');
         }
 
-        // Load spreadsheet from stored file
         $spreadsheet = IOFactory::load($fullPath);
         $sheetCounts = [];
         foreach ($spreadsheet->getSheetNames() as $sheetName) {
@@ -434,16 +399,13 @@ class ExcelController extends Controller
             }
             $sheetCounts[$sheetName] = $count;
         }
-        // Instead of redirect, return the path for AJAX
         if ($request->ajax()) {
             return response()->json(['recent_excel' => $path]);
         }
 
-        // Pass counts to view (for now, just redirect back with data)
         return redirect()->back()->with('sheetCounts', $sheetCounts);
     }
 
-    // Add this method to provide chart data from the most recent Excel upload
 
 public function chartData(Request $request)
 {
@@ -452,8 +414,6 @@ public function chartData(Request $request)
         return response()->json(['sheetCounts' => [], 'error' => 'Excel directory does not exist.']);
     }
 
-    // Use latest selectdocslogs entry as global base Excel file
-    // Find the most recent valid base selection (non-empty, valid file)
     $baseExcel = null;
     $selectLog = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc')->get();
     foreach ($selectLog as $log) {
@@ -469,7 +429,6 @@ public function chartData(Request $request)
     if ($baseExcel) {
         $path = 'excels/' . $baseExcel;
     }
-    // Fallback to latest upload if no valid selectdocslogs entry
     if (!$path) {
         $xlsxFiles = glob($excelDir . '/*.xlsx') ?: [];
         $xlsFiles = glob($excelDir . '/*.xls') ?: [];
@@ -489,8 +448,6 @@ public function chartData(Request $request)
     if (!file_exists($fullPath) || !is_readable($fullPath)) {
         return response()->json(['sheetCounts' => [], 'error' => 'Excel file not found or not readable.']);
     }
-    // Cache key based on file path and modification time so that
-    // heavy Excel parsing runs only when the underlying file changes.
     $cacheKey = 'chartData_' . md5($fullPath . '|' . filemtime($fullPath));
 
     $sheetCounts = Cache::remember($cacheKey, 3600, function () use ($fullPath) {
@@ -526,7 +483,6 @@ public function chartData(Request $request)
     return response()->json(['sheetCounts' => $sheetCounts, 'path' => $path]);
 }
 
-// New endpoint: Get category counts per Title of ST for charting
     public function chartCategoriesByTitle(Request $request)
     {
         try {
@@ -535,9 +491,6 @@ public function chartData(Request $request)
                 Log::error('Excel directory does not exist: ' . $excelDir);
                 return response()->json(['categories' => [], 'error' => 'Excel directory does not exist.']);
             }
-
-            // Use latest selectdocslogs entry as global base Excel file
-            // Find the most recent valid base selection (non-empty, valid file)
             $baseExcel = null;
             $selectLog = \App\Models\Selectdocslogs::orderBy('updated_at', 'desc')->get();
             foreach ($selectLog as $log) {
@@ -553,7 +506,6 @@ public function chartData(Request $request)
             if ($baseExcel) {
                 $path = 'excels/' . $baseExcel;
             }
-            // Fallback to latest upload if no valid selectdocslogs entry
             if (!$path) {
                 $xlsxFiles = glob($excelDir . '/*.xlsx') ?: [];
                 $xlsFiles = glob($excelDir . '/*.xls') ?: [];
@@ -581,7 +533,6 @@ public function chartData(Request $request)
             $selectedTabs = $request->input('tabs', []);
             $selectedTabs = array_map('strval', $selectedTabs);
             foreach ($spreadsheet->getSheetNames() as $sheetName) {
-                // Exclude Data CY 2020-2022 sheet and filter by selected tabs
                 if (stripos($sheetName, 'Data CY 2020-2022') !== false) continue;
                 if (!empty($selectedTabs) && !in_array($sheetName, $selectedTabs, true)) continue;
                 $sheet = $spreadsheet->getSheetByName($sheetName);
@@ -615,7 +566,6 @@ public function chartData(Request $request)
         }
     }
 
-    // Refresh the base Excel file by re-downloading from the current Google Sheet
     public function refreshFromGoogleSheet(Request $request)
     {
         $excelDir = storage_path('app/excels');
@@ -671,13 +621,10 @@ public function chartData(Request $request)
 
         $path = 'excels/' . $storedFilename;
 
-        // Generate next document number (docno) for this refreshed upload
         $lastDocno = Uploadlog::max('docno');
         $nextNumber = $lastDocno ? ((int) $lastDocno) + 1 : 1;
-        // Format as 5 leading zeros (total 7 digits, e.g., 0000012)
         $nextDocno = str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
 
-        // Log upload to uploadlogs
         $userId = Auth::check() ? Auth::user()->user_id ?? Auth::user()->id : null;
         Uploadlog::create([
             'createdby' => $userId,
@@ -687,7 +634,6 @@ public function chartData(Request $request)
             'updated_at' => now(),
         ]);
 
-        // Update base Excel selection log
         session(['base_excel' => $storedFilename]);
         \App\Models\Selectdocslogs::create([
             'createdby' => $userId,

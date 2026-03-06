@@ -10,17 +10,13 @@ use Illuminate\Support\Facades\Log;
 
 class UserApprovalController extends Controller
 {
-    /**
-     * Display the list of users pending approval
-     */
+
     public function index()
     {
-        // Check if user is admin or sysadmin
         if (!in_array(Auth::user()->usergroup, ['admin', 'sysadmin'])) {
             return redirect()->route('main')->with('error', 'You do not have permission to access this page.');
         }
 
-        // Get users with blank/null approval status
         $pendingUsers = User::whereNull('approvalstatus')
             ->orWhere('approvalstatus', '')
             ->orderBy('created_at', 'desc')
@@ -29,12 +25,8 @@ class UserApprovalController extends Controller
         return view('admin.approvals', compact('pendingUsers'));
     }
 
-    /**
-     * Update the approval status for a user
-     */
     public function updateApproval(Request $request, $id)
     {
-        // Check if user is admin or sysadmin
         if (!in_array(Auth::user()->usergroup, ['admin', 'sysadmin'])) {
             return response()->json([
                 'success' => false,
@@ -46,11 +38,9 @@ class UserApprovalController extends Controller
         $rules = [
             'approval_status' => 'required|in:A,R'
         ];
-        // If rejecting, require approvalcomment
         if ($request->approval_status === 'R') {
             $rules['approvalcomment'] = 'required|string|min:3';
         }
-        // If approving, require a valid usergroup selection
         if ($request->approval_status === 'A') {
             $rules['usergroup'] = 'required|in:admin,user,sysadmin';
         }
@@ -66,7 +56,6 @@ class UserApprovalController extends Controller
         }
 
 
-        // Update approval status, comment, approver, and user group (on approval)
         $user->approvalstatus = $request->approval_status;
         if ($request->approval_status === 'A' && $request->has('usergroup')) {
             $user->usergroup = $request->usergroup;
@@ -83,10 +72,8 @@ class UserApprovalController extends Controller
         $statusText = $request->approval_status === 'A' ? 'approved' : 'rejected';
         $rejectionReason = $request->approvalcomment ?? null;
         
-        // Send email notification
         try {
             if ($request->approval_status === 'A') {
-                // Send approval email
                 Mail::raw(
                     "Dear {$user->name},\n\n" .
                     "Good news! Your registration has been approved by the administrator.\n\n" .
@@ -102,7 +89,6 @@ class UserApprovalController extends Controller
                     }
                 );
             } else {
-                // Send rejection email with reason
                 $reasonText = $rejectionReason ? "Reason for rejection: {$rejectionReason}\n\n" : "";
                 Mail::raw(
                     "Dear {$user->name},\n\n" .
@@ -119,7 +105,6 @@ class UserApprovalController extends Controller
                 );
             }
         } catch (\Exception $e) {
-            // Log email error but don't fail the approval
             Log::error('Failed to send approval email: ' . $e->getMessage());
         }
         

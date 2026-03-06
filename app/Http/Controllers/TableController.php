@@ -59,7 +59,6 @@ class TableController extends Controller
             )";
             DB::statement($sql);
 
-            // Generate migration file
             $writer = new MigrationWriter();
             $up = "Schema::create('$table', function (Blueprint $table) {\n    \$table->bigIncrements('id');\n    \$table->timestamps();\n});";
             $down = "Schema::dropIfExists('$table');";
@@ -77,12 +76,10 @@ class TableController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
     }
-    // Route handler for deleting a table
     public function delete(Request $request)
     {
         return $this->deleteTableWithMigration($request);
     }
-    // Delete an entire table and generate migration
     public function deleteTableWithMigration(Request $request)
     {
         try {
@@ -90,7 +87,6 @@ class TableController extends Controller
             $sql = "DROP TABLE {$table}";
             DB::statement($sql);
 
-            // Generate migration file
             $writer = new MigrationWriter();
             $up = "Schema::dropIfExists('$table');";
             $down = "// Table deletion cannot be reversed automatically.";
@@ -108,7 +104,6 @@ class TableController extends Controller
         }
     }
     
-    // Add a new column and generate migration
     public function addColumnWithMigration(Request $request)
     {
         try {
@@ -116,21 +111,18 @@ class TableController extends Controller
             $column = $request->input('column');
             $type = $request->input('type');
             $nullableInput = $request->input('nullable');
-            // Map frontend value to SQL
             $nullable = '';
             if ($nullableInput === 'Nullable') {
                 $nullable = 'NULL';
             } elseif ($nullableInput === 'Not Nullable') {
                 $nullable = 'NOT NULL';
             } else {
-                $nullable = $nullableInput; // fallback for direct SQL values
+                $nullable = $nullableInput; 
             }
             $sql = "ALTER TABLE {$table} ADD COLUMN {$column} {$type} {$nullable}";
             DB::statement($sql);
 
-            // Generate migration file
             $writer = new MigrationWriter();
-            // Map SQL type to Laravel migration type
             $laravelType = $this->mapSqlTypeToLaravel($type);
             $nullableFlag = ($nullable === 'NULL') ? '->nullable()' : '';
             $up = "Schema::table('$table', function (Blueprint $table) {\n    \$table->{$laravelType}('$column'){$nullableFlag};\n});";
@@ -149,7 +141,6 @@ class TableController extends Controller
         }
     }
 
-    // Helper to map SQL type to Laravel migration type
     private function mapSqlTypeToLaravel($type)
     {
         $type = strtoupper($type);
@@ -161,27 +152,23 @@ class TableController extends Controller
         if ($type === 'DATE') return 'date';
         if ($type === 'DATETIME') return 'dateTime';
         if (strpos($type, 'DECIMAL') !== false) return 'decimal';
-        return 'string'; // default
+        return 'string'; 
     }
 
-    // Delete a column and generate migration
     public function deleteColumnWithMigration(Request $request)
     {
         try {
             $table = $request->input('table');
             $column = $request->input('column');
 
-            // Check if column exists
             $columns = DB::getSchemaBuilder()->getColumnListing($table);
             if (!in_array($column, $columns)) {
                 return response()->json(['success' => false, 'message' => "Column '$column' does not exist in table '$table'."]);
             }
 
-            // Escape table and column names with backticks
             $sql = "ALTER TABLE `{$table}` DROP COLUMN `{$column}`";
             DB::statement($sql);
 
-            // Generate migration file
             $writer = new MigrationWriter();
             $up = "Schema::table('$table', function (Blueprint $table) {\n    \$table->dropColumn('$column');\n});";
             $down = "// Column deletion cannot be reversed automatically.";
@@ -195,7 +182,6 @@ class TableController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Column deleted and migration generated']);
         } catch (\Exception $e) {
-            // Add more detailed error reporting
             Log::error('Error deleting column', [
                 'table' => $table ?? null,
                 'column' => $column ?? null,

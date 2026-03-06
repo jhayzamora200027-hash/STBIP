@@ -137,9 +137,6 @@ class GalleryCardController extends Controller
         }
     }
 
-    /**
-     * Return HTML for a single gallery card row (two table rows) – used by AJAX updates.
-     */
     public function rowPartial(GalleryCard $galleryCard)
     {
         $card = GalleryCard::with([

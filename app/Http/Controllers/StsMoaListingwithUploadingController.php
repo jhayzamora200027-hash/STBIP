@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 use App\Models\StsAttachment;
 use App\Models\User;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -14,7 +13,6 @@ class StsMoaListingwithUploadingController extends Controller
 {
     public function index(Request $request)
     {
-        // Reuse the most recently selected/available Excel file
         $excelDir = storage_path('app/excels');
 
         $baseExcel = null;
@@ -110,7 +108,6 @@ class StsMoaListingwithUploadingController extends Controller
                             continue;
                         }
 
-                        // If a With MOA column is present, also require it to be truthy
                         if ($withMoaIdx !== null) {
                             $raw = $row[$withMoaIdx] ?? null;
                             $val = is_bool($raw) ? $raw : strtolower(trim((string) $raw));
@@ -145,11 +142,9 @@ class StsMoaListingwithUploadingController extends Controller
             $rows = $cached['rows'] ?? [];
         }
 
-        // Build list of all unique titles and mapping of region -> titles from filtered rows
         $allTitles = [];
         $regionTitleMap = [];
 
-        // Build lists for province and city filters
         $provinceOptions = [];
         $cityOptions = [];
 
@@ -167,7 +162,6 @@ class StsMoaListingwithUploadingController extends Controller
                 $regionTitleMap[$region][$title] = true;
             }
 
-            // Province and city options are computed later once selected filters are known
         }
 
         $titles = array_keys($allTitles);
@@ -178,12 +172,10 @@ class StsMoaListingwithUploadingController extends Controller
             $regionTitleMap[$region] = $list;
         }
 
-        // Selected filters
         $selectedRegion = $request->input('region');
         $selectedProvince = trim((string) $request->input('province', ''));
         $selectedCity = trim((string) $request->input('city', ''));
 
-        // Build province and city option lists based on current region/province filters
         foreach ($rows as $entry) {
             $region = $entry['region'] ?? '';
             $province = trim($entry['province'] ?? '');
@@ -212,7 +204,6 @@ class StsMoaListingwithUploadingController extends Controller
         $cityOptions = array_keys($cityOptions);
         sort($cityOptions, SORT_NATURAL | SORT_FLAG_CASE);
 
-        // Apply filters in order: region, province, city
         $filtered = array_values(array_filter($rows, function ($row) use ($selectedRegion, $selectedProvince, $selectedCity) {
             if ($selectedRegion && ($row['region'] ?? '') !== $selectedRegion) {
                 return false;
@@ -226,7 +217,6 @@ class StsMoaListingwithUploadingController extends Controller
             return true;
         }));
 
-        // Optional Title of ST filter (case-insensitive contains match, from searchable input)
         $searchTitle = trim((string) $request->input('title', ''));
         if ($searchTitle !== '') {
             $needle = strtolower($searchTitle);
@@ -239,16 +229,13 @@ class StsMoaListingwithUploadingController extends Controller
             }));
         }
 
-        // Paginate results (10 rows per page)
         $perPage = 10;
         $currentPage = max(1, (int) $request->input('page', 1));
         $total = count($filtered);
         $offset = ($currentPage - 1) * $perPage;
         $itemsForPage = array_slice($filtered, $offset, $perPage);
 
-        // Attach info about existing uploaded PDFs for the rows on this page
         if (!empty($itemsForPage)) {
-            // Fetch all attachment records (added and deleted) matching the rows on this page
             $attachmentsQuery = StsAttachment::query();
 
             $attachmentsQuery->where(function ($q) use ($itemsForPage) {
@@ -265,7 +252,6 @@ class StsMoaListingwithUploadingController extends Controller
 
             $attachments = $attachmentsQuery->get();
 
-            // Resolve created_by (user_id) to user name once per unique id
             $userNames = [];
             $userIds = $attachments->pluck('created_by')->filter()->unique()->values();
             if ($userIds->isNotEmpty()) {
@@ -282,17 +268,14 @@ class StsMoaListingwithUploadingController extends Controller
                     $attachment->year_of_moa,
                 ]);
 
-                // For each ST, keep the latest attachment record (added or deleted)
                 if (!isset($attachmentMap[$key]) || $attachment->id > $attachmentMap[$key]['id']) {
                     $entry = [
                         'id' => $attachment->id,
                         'action' => $attachment->action,
                         'url' => null,
-                        // Display name for uploading STs listing: prefer User.name, fall back to raw user_id
                         'uploaded_by' => $userNames[$attachment->created_by] ?? $attachment->created_by,
                     ];
                     if ($attachment->action === 'added') {
-                        // Use named route to serve the PDF through Laravel for active attachments
                         $entry['url'] = route('sts.attachments.show', $attachment->id);
                     }
                     $attachmentMap[$key] = $entry;
@@ -330,7 +313,6 @@ class StsMoaListingwithUploadingController extends Controller
             ]
         );
 
-        // For AJAX requests, return only the table + pagination HTML
         if ($request->ajax()) {
             $html = view('dashboard.maincomponents.partials.uploadingstattachment_list', [
                 'sts' => $sts,

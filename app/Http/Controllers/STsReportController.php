@@ -17,7 +17,6 @@ class STsReportController extends Controller
 
         $parsed = $stsReportController->getParsedData($path);
 
-        // return headers too – callers that don't need them can ignore it
         return [
             'data' => $parsed['data'] ?? [],
             'regions' => $parsed['regions'] ?? [],
@@ -26,7 +25,6 @@ class STsReportController extends Controller
     }
 
 
-    // PHP version of region inference logic from STsReport Title Listing
     private function inferRegionCodeFromRow($row) {
         if (!$row) return null;
         $regionTextRaw = trim($row['region'] ?? '');
@@ -36,9 +34,6 @@ class STsReportController extends Controller
         if ($regionText === '') {
             return null;
         }
-
-        // if the sheet simply uses a number ("5"), map to the canonical
-        // Region roman form so filtering works as expected
         if (ctype_digit($regionText)) {
             $num = (int)$regionText;
             $map = [
@@ -53,7 +48,6 @@ class STsReportController extends Controller
             }
         }
 
-        // Named-region aliases (case-insensitive)
         if (strpos($regionText, 'national capital') !== false || strpos($regionText, ' ncr') !== false || strpos($regionText, 'ncr') === 0) return 'NCR';
         if (strpos($regionText, 'ilocos') !== false) return 'Region I';
         if (strpos($regionText, 'cagayan valley') !== false) return 'Region II';
@@ -72,7 +66,6 @@ class STsReportController extends Controller
         if ((strpos($regionText, 'bangsamoro') !== false || preg_match('/\bbarmm\b/', $regionText))) return 'BARMM';
         if (!strpos($regionText, 'caraga') && ($regionText === 'car' || strpos($regionText, 'cordillera') !== false || preg_match('/\bcar\b/', $regionText))) return 'CAR';
 
-        // Roman numeral fallback (match anywhere in the string)
         $romanPatterns = [
             'Region XII' => '/\bxii\b/',
             'Region XI' => '/\bxi\b/',
@@ -94,9 +87,6 @@ class STsReportController extends Controller
             }
         }
 
-        // as a last resort, return the original region string trimmed so that
-        // exact-text filters still match.  this handles cases where the
-        // spreadsheet uses an unusual variation not covered above.
         return $regionTextRaw !== '' ? $regionTextRaw : null;
     }
 
@@ -111,7 +101,7 @@ class STsReportController extends Controller
             $filteredData = array_filter($all['data'], function ($row) use ($region) {
                 $title = trim($row['title'] ?? '');
                 if ($title === '') {
-                    return false; // discard whitespace-only titles early
+                    return false; 
                 }
                 $code = $this->inferRegionCodeFromRow($row);
                 if ($code !== null && $code === $region) {
@@ -127,17 +117,6 @@ class STsReportController extends Controller
         ]);
     }
 
-    /**
-     * Return hierarchical JSON for modal dropdowns: provinces -> cities -> ST rows
-     */
-    /**
-     * Build a province/city/ST hierarchy from a set of ST rows.
-     *
-     * Each row must contain at least `province` and `municipality` keys; empty
-     * values are normalised to the string "UNKNOWN" so callers can detect them.
-     * The returned structure mirrors the JSON returned by the former
-     * `ajaxRegionHierarchy` endpoint, but is also useful for any future API.
-     */
     protected function buildHierarchy(array $rows): array
     {
         $grouped = [];
@@ -169,7 +148,6 @@ class STsReportController extends Controller
         $region = $request->input('region_image');
 
         $filtered = $all['data'];
-        // determine status column indexes from headers (if available)
         $headersArr = $all['headers'] ?? [];
         $idxOng = null;
         $idxDis = null;
@@ -184,7 +162,6 @@ class STsReportController extends Controller
         $province = $request->input('province');
         if (!empty($region)) {
             $filtered = array_filter($filtered, function ($row) use ($region) {
-                // sanitize title/municipality for trimming tests as well
                 $clean = function($s) { return preg_replace('/[\x00-\x1F\x7F]+/u','', (string)$s); };
                 $row['title'] = trim($clean($row['title'] ?? ''));
                 $code = $this->inferRegionCodeFromRow($row);
@@ -201,12 +178,7 @@ class STsReportController extends Controller
             });
         }
 
-        // remove rows that don't contain any useful information.  we also
-        // drop any record whose title is blank after trimming – the spreadsheet
-        // sometimes contains rows filled with spaces which should not show up
-        // as "(no title)" entries in the UI.
         $filtered = array_values(array_filter($filtered, function($r) {
-            // strip control characters before examining the title
             $clean = function($s) { return preg_replace('/[\x00-\x1F\x7F]+/u','', (string)$s); };
             $title = trim($clean($r['title'] ?? ''));
             if ($title === '') {
@@ -216,14 +188,7 @@ class STsReportController extends Controller
                 || trim($clean($r['municipality'] ?? $r['city'] ?? '')) !== '';
         }));
 
-        // attach computed status string to each remaining row so client code
-        // can simply look at r.status. mirror MainReportController logic so
-        // that the modal and the main dashboard stay in sync when
-        // interpreting the workbook's Ongoing / Dissolved columns.
         if (!empty($headersArr)) {
-            // For status inference in the modal, mirror the dashboard rule:
-            // only explicit TRUE values (boolean true or the string "TRUE")
-            // mean the status column is checked.
             $cellHasStatusMark = function ($v) {
                 if (is_bool($v)) {
                     return $v;
@@ -253,7 +218,6 @@ class STsReportController extends Controller
 
         list($provinces, $grouped) = $this->buildHierarchy($filtered);
 
-        // compute attachment/year summaries (unchanged from previous logic)
         $uploadedCount = 0;
         try {
             if (!empty($region)) {

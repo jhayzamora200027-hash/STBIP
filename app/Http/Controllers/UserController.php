@@ -14,7 +14,6 @@ class UserController extends Controller
     
     public function addUser(Request $request)
     {
-        // Generate user_id from the email prefix (before '@')
         $emailForUserId = $request->email;
         $generatedUserId = null;
         if ($emailForUserId && strpos($emailForUserId, '@') !== false) {
@@ -32,7 +31,6 @@ class UserController extends Controller
                     'string',
                     'email',
                     'max:255',
-                    // Only block emails that belong to non-rejected users
                     Rule::unique('users', 'email')->where(function ($query) {
                         $query->where(function ($q) {
                             $q->whereNull('approvalstatus')
@@ -65,12 +63,10 @@ class UserController extends Controller
         try {
             $fields = $validator->validated();
 
-            // Check if this email belongs to a previously rejected user
             $existingRejectedUser = User::where('email', $fields['email'])
                 ->where('approvalstatus', 'R')
                 ->first();
 
-            // Ensure generated user_id is unique (ignoring the rejected record if we are reusing it)
             if ($generatedUserId) {
                 $userIdQuery = User::where('user_id', $generatedUserId);
                 if ($existingRejectedUser) {
@@ -94,7 +90,6 @@ class UserController extends Controller
             $fields['user_id'] = $generatedUserId ?? ($existingRejectedUser->user_id ?? '');
             $fields['active'] = 1;
             $fields['approvalstatus'] = 'A';
-            // Add 'name' field for compatibility
             $fields['name'] = trim($fields['firstname'] . ' ' . ($fields['middlename'] ?? '') . ' ' . $fields['lastname']);
             $fields['name'] = preg_replace('/\s+/', ' ', $fields['name']);
 
@@ -136,14 +131,12 @@ class UserController extends Controller
     }
     public function register(Request $request)
     {
-        // Generate user_id from the email prefix (before '@')
         $emailForUserId = $request->email;
         $generatedUserId = null;
         if ($emailForUserId && strpos($emailForUserId, '@') !== false) {
             $generatedUserId = strstr($emailForUserId, '@', true);
         }
 
-        // Check if email or user_id exists with approved status
         $approvedEmailExists = User::where('email', $request->email)
             ->where('approvalstatus', 'A')
             ->exists();
@@ -180,7 +173,6 @@ class UserController extends Controller
                 ->withInput();
         }
         
-        // Check if there's a pending registration with same email or user_id (do not block rejected)
         $pendingEmail = User::where('email', $request->email)
             ->where(function($query) {
                 $query->whereNull('approvalstatus')
@@ -258,27 +250,22 @@ class UserController extends Controller
         try {
             $IncomingFields = $validator->validated();
             $IncomingFields['password'] = bcrypt($IncomingFields['password']);
-            $IncomingFields['active'] = 1; // Set account as active by default
-            // Add 'name' field for compatibility with users table
+            $IncomingFields['active'] = 1; 
             $IncomingFields['name'] = trim($IncomingFields['firstname'] . ' ' . ($IncomingFields['middlename'] ?? '') . ' ' . $IncomingFields['lastname']);
             $IncomingFields['name'] = preg_replace('/\s+/', ' ', $IncomingFields['name']); // Clean up extra spaces
-            // Set generated user_id from email prefix
             if (!$generatedUserId && isset($IncomingFields['email']) && strpos($IncomingFields['email'], '@') !== false) {
                 $generatedUserId = strstr($IncomingFields['email'], '@', true);
             }
             $IncomingFields['user_id'] = $generatedUserId ?? '';
-            // Don't set approvalstatus - leave it null/blank for pending approval
 
-            // Check for existing rejected user by email or user_id
             $existingRejectedUser = User::where(function($query) use ($request, $generatedUserId) {
                 $query->where('email', $request->email)
                       ->orWhere('user_id', $generatedUserId);
             })->where('approvalstatus', 'R')->first();
 
             if ($existingRejectedUser) {
-                // Update the rejected user record with new registration data
                 $existingRejectedUser->fill($IncomingFields);
-                $existingRejectedUser->approvalstatus = null; // Set back to pending
+                $existingRejectedUser->approvalstatus = null; 
                 $existingRejectedUser->approvalcomment = null;
                 $existingRejectedUser->approvedby = null;
                 $existingRejectedUser->save();
@@ -322,10 +309,8 @@ class UserController extends Controller
             throw $e;
         }
 
-        // Check if user exists
         $user = User::where('email', $IncomingFields['email'])->first();
 
-        // Helper for AJAX error response
         $ajaxError = function($field, $msg) use ($request) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -339,31 +324,25 @@ class UserController extends Controller
         };
 
         if (!$user) {
-            // Email doesn't exist
             return $ajaxError('email', 'No account found with this email address.');
         }
 
-        // Check if user account is active
         if ($user->active == 0) {
             return $ajaxError('email', 'Your account is not active. Please contact support.');
         }
 
-        // Check if user registration is pending approval
         if (empty($user->approvalstatus) || is_null($user->approvalstatus)) {
             return $ajaxError('email', 'Your registration is pending admin approval. Please wait for approval.');
         }
 
-        // Check if user registration was rejected
         if ($user->approvalstatus === 'R') {
             return $ajaxError('email', 'Your registration has been rejected. Please contact support.');
         }
 
-        // Check if user is approved
         if ($user->approvalstatus !== 'A') {
             return $ajaxError('email', 'Your account access is restricted. Please contact support.');
         }
 
-        // User exists, now check password
         if (Auth::attempt($IncomingFields)) {
             $request->session()->regenerate();
             if ($request->expectsJson()) {
@@ -371,7 +350,6 @@ class UserController extends Controller
             }
             return redirect()->intended('main');
         } else {
-            // Email is correct but password is wrong
             return $ajaxError('password', 'The password is incorrect.');
         }
     }
@@ -393,7 +371,6 @@ class UserController extends Controller
     {
         $user = User::find(Auth::id());
         
-        // Validate the request
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email,' . $user->id,
             'usergroup' => 'required|in:admin,user,sysadmin',
@@ -410,7 +387,6 @@ class UserController extends Controller
                 ->withInput();
         }
 
-        // Verify current password
         if (!password_verify($request->current_password, $user->password)) {
             return redirect()->back()
                 ->with('error', 'Current password is incorrect.')
@@ -418,7 +394,6 @@ class UserController extends Controller
         }
 
         try {
-            // Prepare update data
             $updateData = [
                 'email' => $request->email,
                 'usergroup' => $request->usergroup,
@@ -427,7 +402,6 @@ class UserController extends Controller
                 'address' => $request->address,
             ];
 
-            // Add password to update data if provided
             if ($request->filled('new_password')) {
                 $updateData['password'] = bcrypt($request->new_password);
             }
@@ -483,7 +457,6 @@ class UserController extends Controller
                 'active' => $request->active,
             ];
 
-            // Add password to update data if provided
             if ($request->filled('password')) {
                 $updateData['password'] = bcrypt($request->password);
             }
