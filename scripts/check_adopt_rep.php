@@ -11,7 +11,7 @@ $app = require __DIR__ . '/../bootstrap/app.php';
 Container::setInstance($app);
 Facade::setFacadeApplication($app);
 
-/** @var ConsoleKernel $kernel */
+
 $kernel = $app->make(ConsoleKernel::class);
 $kernel->bootstrap();
 
@@ -54,7 +54,7 @@ foreach ($regionsInData as $regionName) {
         }
         if ($repIdx === false && strpos($h, 'replic') !== false) {
             if ($adoptIdx !== false && $i === $adoptIdx) {
-                // skip combined adopted/replicated column when looking for dedicated replicated
+                
             } else {
                 $repIdx = $i;
             }

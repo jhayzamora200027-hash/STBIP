@@ -11,9 +11,9 @@ $app = require __DIR__ . '/../bootstrap/app.php';
 Container::setInstance($app);
 Facade::setFacadeApplication($app);
 
-// fully bootstrap Laravel so Eloquent models (Selectdocslogs, etc.)
-// can resolve their database connection.
-/** @var ConsoleKernel $kernel */
+
+
+
 $kernel = $app->make(ConsoleKernel::class);
 $kernel->bootstrap();
 
@@ -31,9 +31,9 @@ $data = $parsed['data'] ?? [];
 $headers = $parsed['headers'] ?? [];
 $regionMap = $parsed['regionMap'] ?? [];
 
-// if a region name is provided, limit to that; otherwise iterate over all
-// regions and print their totals so we can see which one matches the
-// dashboard output (useful when sheet names contain extra text/spacing).
+
+
+
 $regionArg = $argv[1] ?? null;
 
 $regionsInData = array_values(array_unique(array_map(function($r){ return $r['region'] ?? '(none)'; }, $data)));
@@ -58,7 +58,7 @@ foreach ($regionsInData as $regionName) {
 	echo "Region: {$regionName}\n";
 	echo "Rows: " . count($rows) . "\n";
 
-	// locate ongoing/dissolved columns using this region's own headers
+	
 	$hdrs = $regionMap[$regionName]['headers'] ?? $headers;
 	$idxOng = null;
 	$idxDis = null;
@@ -79,8 +79,8 @@ foreach ($regionsInData as $regionName) {
 		}
 	}
 
-// mirror MainReportController's strict TRUE-only rule: only explicit TRUE
-// values (boolean true or the text "TRUE") are counted as checked.
+
+
 $statusCellIsTrue = function ($v) {
 	if (is_bool($v)) return $v;
 	if ($v === null) return false;
@@ -117,8 +117,8 @@ $statusCellIsTrue = function ($v) {
 		}
 	}
 
-	// no fallback from free-text status: we want the debug output
-	// to match the card rule "count only the true" in the sheet.
+	
+	
 
 	$sumOng += $ongoCnt;
 	$sumDis += $disCnt;

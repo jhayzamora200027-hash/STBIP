@@ -9,6 +9,12 @@
         @if(!empty($selectedRegion))
             in <span class="badge bg-light text-primary border">{{ $selectedRegion }}</span>
         @endif
+        @if(!empty($selectedProvince))
+            <span class="badge bg-light text-info border ms-1">{{ $selectedProvince }}</span>
+        @endif
+        @if(!empty($selectedCity))
+            <span class="badge bg-light text-secondary border ms-1">{{ $selectedCity }}</span>
+        @endif
         @if(!empty($searchTitle))
             matching
             <span class="badge bg-primary-subtle text-primary" style="background:#e0ecff;color:#1d4ed8;">"{{ $searchTitle }}"</span>
@@ -19,31 +25,31 @@
     </div>
 </div>
 
-<div class="table-responsive" style="border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(15,23,42,0.06);">
-    <table class="table mb-0" style="table-layout: fixed; width: 100%; font-size: 0.82rem;">
+<div class="table-responsive st-moa-table-wrapper" style="border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(15,23,42,0.06);">
+    <table class="table mb-0 st-moa-table" style="table-layout: fixed; width: 100%; font-size: 0.82rem;">
         <thead style="background: linear-gradient(90deg,#0f766e 0%,#0ea5e9 60%,#38bdf8 100%); color:#fff;">
             <tr style="font-size:0.9rem;">
-                <th style="width: 9%; min-width:9%; max-width: 27%; max-height: 2px;">Region</th>
-                <th style="width: 18%; min-width:18%; max-width: 36%; max-height: 2px;">Province</th>
-                <th style="width: 18%; min-width:18%; max-width: 36%; max-height: 2px;">City/Municipality</th>
-                <th style="width: 36%; min-width:36%; max-width: 72%; max-height: 2px;">Title of ST</th>
-                <th class="text-center" style="width: 8%; min-width:8%; max-width: 24%; max-height: 2px;">Year of MOA</th>
-                <th class="text-center" style="width: 11%; min-width:11%; max-width: 33%; max-height: 2px;">Attachment</th>
+                <th class="st-col-region" style="width: 9%; min-width:9%; max-width: 27%; max-height: 2px;">Region</th>
+                <th class="st-col-province" style="width: 18%; min-width:18%; max-width: 36%; max-height: 2px;">Province</th>
+                <th class="st-col-city" style="width: 18%; min-width:18%; max-width: 36%; max-height: 2px;">City/Municipality</th>
+                <th class="st-col-title" style="width: 36%; min-width:36%; max-width: 72%; max-height: 2px;">Title of ST</th>
+                <th class="text-center st-col-year" style="width: 8%; min-width:8%; max-width: 24%; max-height: 2px;">Year of MOA</th>
+                <th class="text-center st-col-attachment" style="width: 11%; min-width:11%; max-width: 33%; max-height: 2px;">Attachment</th>
             </tr>
         </thead>
         <tbody style="background:#ffffff;">
             @forelse($sts as $row)
                 <tr style="height: 44px;">
-                    <td class="fw-semibold text-primary">{{ $row['region'] }}</td>
-                    <td>{{ $row['province'] }}</td>
-                    <td>{{ $row['municipality'] }}</td>
-                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $row['title'] }}</td>
-                    <td class="text-center">
+                    <td class="fw-semibold text-primary st-col-region">{{ $row['region'] }}</td>
+                    <td class="st-col-province">{{ $row['province'] }}</td>
+                    <td class="st-col-city">{{ $row['municipality'] }}</td>
+                    <td class="st-col-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $row['title'] }}</td>
+                    <td class="text-center st-col-year">
                         @if(!empty($row['year_of_moa']))
                             <span class="badge rounded-pill" style="background:#eff6ff;color:#1d4ed8;min-width:56px;">{{ $row['year_of_moa'] }}</span>
                         @endif
                     </td>
-                    <td class="text-center">
+                    <td class="text-center st-col-attachment">
                         <div class="d-inline-flex align-items-center gap-1">
                             @if(!empty($row['attachment_url'] ?? null) && !empty($row['attachment_id'] ?? null))
                                 <button
@@ -86,7 +92,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted">No ST records found for the selected region.</td>
+                    <td colspan="6" class="text-center text-muted">No ST records found for the selected filters.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -233,6 +239,60 @@
         .st-custom-pagination-btn:disabled { background: #e0f7fa; color: #b0b0b0; box-shadow: none; cursor: not-allowed; }
         .st-custom-pagination-btn:not(:disabled):hover { background: linear-gradient(90deg, #4da1f7 60%, #4da1f7 100%); transform: translateY(-2px) scale(1.04); box-shadow: 0 4px 16px #b2ebf2; }
         .st-custom-pagination-indicator { font-weight: 600; color: #4da1f7; font-size: 1.13em; min-width: 110px; text-align: center; letter-spacing: 0.5px; }
+
+        /* Hide Year of MOA column everywhere */
+        .st-moa-table th.st-col-year,
+        .st-moa-table td.st-col-year {
+            display: none;
+        }
+
+        /* Hide Province column everywhere (we'll rely on Region instead) */
+        .st-moa-table th.st-col-province,
+        .st-moa-table td.st-col-province {
+            display: none;
+        }
+
+        /* Responsive tweaks for table and pagination on tablets/phones */
+        @media (max-width: 991.98px) {
+            .st-moa-table-wrapper {
+                border-radius: 12px;
+            }
+            .st-moa-table th,
+            .st-moa-table td {
+                padding: 0.4rem 0.55rem;
+                font-size: 0.78rem;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .st-moa-table {
+                table-layout: auto;
+                min-width: 100%;
+                font-size: 0.76rem;
+            }
+            .st-moa-table-wrapper {
+                overflow-x: visible;
+                border-radius: 10px;
+            }
+            .st-moa-table thead tr {
+                font-size: 0.78rem;
+            }
+            .st-custom-pagination {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px 8px 6px 8px;
+            }
+            .st-custom-pagination-btn {
+                padding: 6px 18px;
+                font-size: 0.95em;
+            }
+            .st-custom-pagination-indicator {
+                font-size: 0.98em;
+                min-width: auto;
+            }
+        }
+
+        /* Extra-small phones: keep Region and Attachment visible */
     </style>
     <div class="st-custom-pagination">
         <button type="button" class="st-custom-pagination-btn" @if($sts->onFirstPage()) disabled @else onclick="loadUploadStsPage('{{ $sts->previousPageUrl() }}')" @endif>&#8592; Prev</button>

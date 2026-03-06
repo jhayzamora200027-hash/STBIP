@@ -44,24 +44,24 @@ class GalleryCardController extends Controller
             if ($request->hasFile('image')) {
                 $file = $request->file('image');
                 $name = time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
-                // store on the public disk so files are available under /storage via storage:link
+                
                 $path = $file->storeAs('images/gallerysector', $name, 'public');
-                $data['image'] = $path; // e.g. images/gallerysector/...
+                $data['image'] = $path; 
             }
 
             $data['is_active'] = !empty($data['is_active']) ? 1 : 0;
         $data['status'] = $data['status'] ?? 'On going';
 
-        // auto-generate unique docno (numeric increment)
+        
         $max = (int) (GalleryCard::max('docno') ?? 0);
         $data['docno'] = $max + 1;
-            // set created_by to current logged-in user's user_id (fallback to Auth::id())
+            
             $data['created_by'] = Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null;
 
             GalleryCard::create($data);
 
             if ($request->ajax()) {
-                // simply signal success; client can reload page fragment if needed
+                
                 return response()->json(['success' => true]);
             }
             return redirect()->route('admin.stsreportsectors')->with('success', 'Gallery card added.');
@@ -87,7 +87,7 @@ class GalleryCardController extends Controller
 
         try {
             if ($request->hasFile('image')) {
-                // delete previous file from the public disk (if present)
+                
                 if ($galleryCard->image && Storage::disk('public')->exists($galleryCard->image)) {
                     Storage::disk('public')->delete($galleryCard->image);
                 }
@@ -100,7 +100,7 @@ class GalleryCardController extends Controller
 
             $data['is_active'] = !empty($data['is_active']) ? 1 : 0;
 
-        // Do not overwrite created_by or docno on update
+        
         unset($data['created_by']);
         unset($data['docno']);
             $galleryCard->update($data);

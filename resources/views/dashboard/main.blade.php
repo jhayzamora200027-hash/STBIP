@@ -1116,7 +1116,7 @@ if (!document.getElementById('catListTooltip')) {
 		}
 		</style>
 			@if(!auth()->check())
-			<div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px; padding: 10px;">
+			<div id="guestFloatingFilter" class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px; padding: 10px;">
 	                <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
 	                    <!-- header could be commented out if undesired -->
 	                    <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
@@ -1385,7 +1385,15 @@ if (!document.getElementById('catListTooltip')) {
 					if (attachmentUrl) {
 						const safeTitle = escapeAttr(title);
 						const safeUploader = escapeAttr(uploadedBy);
-						attachmentCell = `<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="${attachmentUrl}" data-title="${safeTitle}" data-uploader="${safeUploader}" title="View attachment"><i class="bi bi-filetype-pdf"></i></button>`;
+						attachmentCell = `
+							<div class="btn-group" role="group">
+								<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="${attachmentUrl}" data-title="${safeTitle}" data-uploader="${safeUploader}" title="View attachment">
+									<i class="bi bi-eye"></i>
+								</button>
+								<a href="${attachmentUrl}" class="btn btn-sm btn-outline-primary" title="Download attachment" target="_blank" download>
+									<i class="bi bi-download"></i>
+								</a>
+							</div>`;
 					}
 
 					html += `<tr>
@@ -2615,7 +2623,15 @@ $('#region-select-modal').on('change', function() {
 					if (attachmentUrl) {
 						const safeTitle = (stTitle || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 						const safeUploader = (uploadedBy || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-						attachmentCell = '<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="' + attachmentUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment"><i class="bi bi-filetype-pdf"></i></button>';
+						attachmentCell = '' +
+							'<div class="btn-group" role="group">' +
+								'<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="' + attachmentUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment">' +
+									'<i class="bi bi-eye"></i>' +
+								'</button>' +
+								'<a href="' + attachmentUrl + '" class="btn btn-sm btn-outline-primary" title="Download attachment" target="_blank" download>' +
+									'<i class="bi bi-download"></i>' +
+								'</a>' +
+							'</div>';
 					}
 					html += '<tr>' +
 						'<td>' + region + '</td>' +
@@ -2725,7 +2741,15 @@ $('#region-select-modal').on('change', function() {
 						if (attachmentUrl) {
 							const safeTitle = (title || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 							const safeUploader = (uploadedBy || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-							html += '<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="' + attachmentUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment"><i class="bi bi-filetype-pdf"></i></button>';
+									html += '' +
+										'<div class="btn-group" role="group">' +
+											'<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="' + attachmentUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment">' +
+												'<i class="bi bi-eye"></i>' +
+											'</button>' +
+											'<a href="' + attachmentUrl + '" class="btn btn-sm btn-outline-primary" title="Download attachment" target="_blank" download>' +
+												'<i class="bi bi-download"></i>' +
+											'</a>' +
+										'</div>';
 						}
 						html += '</div>';
 						html += '</div>';
@@ -3915,14 +3939,15 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 
     <!-- floating filter button using external icon file -->
 	@if(auth()->check())
-    <button id="floatingBtn" class="btn" aria-label="Filter" style="background-color: white" data-bs-toggle="modal" data-bs-target="#filterModal">
+    <button id="floatingBtn" class="btn" aria-label="Filter" style="background-color: white; width: 80px; height:50px;" data-bs-toggle="modal" data-bs-target="#filterModal">
         <img src="/images/dattachments/filtering%20icon.png" width="24" height="24" alt="Filter" />
         <span class="filter-label">Filter</span>
     </button>
 	@endif
 
-    <!-- filter modal -->
-    <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+	<!-- filter modal (for authenticated users only) -->
+	@auth
+	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-body d-flex justify-content-center align-items-center" id="filterModalBody" style="background:transparent;">
@@ -3965,8 +3990,9 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 
                             <button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
                         </form>
-                    </div>
-                </div>
+					  </div>
+					</div>
+					@endauth
             </div>
           </div>
         </div>
@@ -3977,7 +4003,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
             position: fixed;
             top: 80px;      /* starting offset */
             right: 20px;    /* top-right */
-            z-index: 2000;
+			z-index: 900; /* keep below Bootstrap modal (1050) */
             background: #fff !important;
             border: 1.5px solid rgba(0,0,0,0.2);
             border-radius: 6px;
@@ -3994,6 +4020,22 @@ if (typeof showReplicateConfirmPopover !== 'function') {
             font-size: 0.9rem;
             font-weight: 500;
         }
+		/* guest floating filter card: same scroll-lag feel as floatingBtn */
+		#guestFloatingFilter {
+			position: fixed;
+			top: 80px;
+			right: -240px;
+			z-index: 890; /* keep aligned just under floatingBtn */
+			max-width: 360px;
+			width: 320px;
+			transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+			will-change: transform;
+		}
+		/* hide floating filter button visually & from clicks when any modal is open */
+		body.modal-open #floatingBtn {
+			opacity: 0;
+			pointer-events: none;
+		}
         /* ensure modal itself is transparent */
         #filterModal .modal-content {
             background: transparent !important;
@@ -4014,16 +4056,24 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    const btn = document.getElementById('floatingBtn');
-    if (!btn) return; // prevent errors
+	const movers = [];
+	const btn = document.getElementById('floatingBtn');
+	if (btn && !btn.dataset.initialized) {
+		btn.dataset.initialized = "true";
+		movers.push(btn);
+	}
+	const guestCard = document.getElementById('guestFloatingFilter');
+	if (guestCard && !guestCard.dataset.initialized) {
+		guestCard.dataset.initialized = "true";
+		movers.push(guestCard);
+	}
 
-    if (btn.dataset.initialized) return; // prevent duplicate binding
-    btn.dataset.initialized = "true";
+	if (!movers.length) return; // nothing to animate
 
     let lastScrollTop = window.scrollY;
     let timeout;
 
-    const maxLag = 400;      // maximum push distance
+    const maxLag = 1000;      // maximum push distance
     const scrollFactor = 0.2; // px of push per px scrolled cumulatively
     const delayBeforeReturn = 400;
     let cumulative = 0;
@@ -4036,17 +4086,21 @@ document.addEventListener('DOMContentLoaded', function () {
         cumulative += Math.abs(delta);
         // calculate how far to push based on total scroll since last reset
         let lag = Math.min(cumulative * scrollFactor, maxLag);
-        if (delta > 0) {
-            btn.style.transform = `translateY(-${lag}px)`; // scrolling down pushes up
-        } else if (delta < 0) {
-            btn.style.transform = `translateY(${lag}px)`;  // scrolling up pushes down
-        }
+		movers.forEach(function(el) {
+			if (delta > 0) {
+				el.style.transform = `translateY(-${lag}px)`; // scrolling down pushes up
+			} else if (delta < 0) {
+				el.style.transform = `translateY(${lag}px)`;  // scrolling up pushes down
+			}
+		});
 
         clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            btn.style.transform = 'translateY(0)';
-            cumulative = 0; // reset for next round
-        }, delayBeforeReturn);
+		timeout = setTimeout(() => {
+			movers.forEach(function(el) {
+				el.style.transform = 'translateY(0)';
+			});
+			cumulative = 0; // reset for next round
+		}, delayBeforeReturn);
 
         lastScrollTop = currentScroll;
     });

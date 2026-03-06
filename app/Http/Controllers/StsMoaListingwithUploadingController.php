@@ -148,17 +148,26 @@ class StsMoaListingwithUploadingController extends Controller
         // Build list of all unique titles and mapping of region -> titles from filtered rows
         $allTitles = [];
         $regionTitleMap = [];
+
+        // Build lists for province and city filters
+        $provinceOptions = [];
+        $cityOptions = [];
+
         foreach ($rows as $entry) {
             $title = $entry['title'] ?? '';
             $region = $entry['region'] ?? '';
-            if ($title === '' || $region === '') {
-                continue;
+            $province = trim($entry['province'] ?? '');
+            $city = trim($entry['municipality'] ?? '');
+
+            if ($title !== '' && $region !== '') {
+                $allTitles[$title] = true;
+                if (!isset($regionTitleMap[$region])) {
+                    $regionTitleMap[$region] = [];
+                }
+                $regionTitleMap[$region][$title] = true;
             }
-            $allTitles[$title] = true;
-            if (!isset($regionTitleMap[$region])) {
-                $regionTitleMap[$region] = [];
-            }
-            $regionTitleMap[$region][$title] = true;
+
+            // Province and city options are computed later once selected filters are known
         }
 
         $titles = array_keys($allTitles);
@@ -169,15 +178,53 @@ class StsMoaListingwithUploadingController extends Controller
             $regionTitleMap[$region] = $list;
         }
 
-        // Filter by a single region (one region per listing)
+        // Selected filters
         $selectedRegion = $request->input('region');
-        if ($selectedRegion) {
-            $filtered = array_values(array_filter($rows, function ($row) use ($selectedRegion) {
-                return $row['region'] === $selectedRegion;
-            }));
-        } else {
-            $filtered = $rows;
+        $selectedProvince = trim((string) $request->input('province', ''));
+        $selectedCity = trim((string) $request->input('city', ''));
+
+        // Build province and city option lists based on current region/province filters
+        foreach ($rows as $entry) {
+            $region = $entry['region'] ?? '';
+            $province = trim($entry['province'] ?? '');
+            $city = trim($entry['municipality'] ?? '');
+
+            if ($selectedRegion && $region !== $selectedRegion) {
+                continue;
+            }
+
+            if ($province !== '') {
+                $provinceOptions[$province] = true;
+            }
+
+            if ($selectedProvince && strcasecmp($province, $selectedProvince) !== 0) {
+                continue;
+            }
+
+            if ($city !== '') {
+                $cityOptions[$city] = true;
+            }
         }
+
+        $provinceOptions = array_keys($provinceOptions);
+        sort($provinceOptions, SORT_NATURAL | SORT_FLAG_CASE);
+
+        $cityOptions = array_keys($cityOptions);
+        sort($cityOptions, SORT_NATURAL | SORT_FLAG_CASE);
+
+        // Apply filters in order: region, province, city
+        $filtered = array_values(array_filter($rows, function ($row) use ($selectedRegion, $selectedProvince, $selectedCity) {
+            if ($selectedRegion && ($row['region'] ?? '') !== $selectedRegion) {
+                return false;
+            }
+            if ($selectedProvince && strcasecmp(trim($row['province'] ?? ''), $selectedProvince) !== 0) {
+                return false;
+            }
+            if ($selectedCity && strcasecmp(trim($row['municipality'] ?? ''), $selectedCity) !== 0) {
+                return false;
+            }
+            return true;
+        }));
 
         // Optional Title of ST filter (case-insensitive contains match, from searchable input)
         $searchTitle = trim((string) $request->input('title', ''));
@@ -288,6 +335,8 @@ class StsMoaListingwithUploadingController extends Controller
             $html = view('dashboard.maincomponents.partials.uploadingstattachment_list', [
                 'sts' => $sts,
                 'selectedRegion' => $selectedRegion,
+                'selectedProvince' => $selectedProvince,
+                'selectedCity' => $selectedCity,
                 'searchTitle' => $searchTitle,
             ])->render();
 
@@ -298,9 +347,13 @@ class StsMoaListingwithUploadingController extends Controller
         return view('dashboard.maincomponents.uploadingstattachment', [
             'regions' => $regions,
             'selectedRegion' => $selectedRegion,
+            'selectedProvince' => $selectedProvince,
+            'selectedCity' => $selectedCity,
             'searchTitle' => $searchTitle,
             'titles' => $titles,
             'regionTitleMap' => $regionTitleMap,
+            'provinceOptions' => $provinceOptions,
+            'cityOptions' => $cityOptions,
             'sts' => $sts,
         ]);
     }

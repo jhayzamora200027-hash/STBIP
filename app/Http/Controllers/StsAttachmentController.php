@@ -17,7 +17,7 @@ class StsAttachmentController extends Controller
             'municipality' => 'nullable|string|max:255',
             'title' => 'required|string|max:1024',
             'year_of_moa' => 'nullable|string|max:50',
-            'attachment' => 'required|file|mimes:pdf|max:10240', // PDF only, 10MB max
+            'attachment' => 'required|file|mimes:pdf|max:10240', 
         ]);
 
         $file = $request->file('attachment');
@@ -42,7 +42,7 @@ class StsAttachmentController extends Controller
 
     public function show(StsAttachment $attachment)
     {
-        // Only allow viewing active attachments that still have a file
+        
         if ($attachment->action !== 'added') {
             abort(404);
         }
@@ -51,7 +51,7 @@ class StsAttachmentController extends Controller
             abort(404);
         }
 
-        // Stream the PDF from the public disk through Laravel, avoiding direct filesystem issues
+        
         $absolutePath = Storage::disk('public')->path($attachment->file_path);
 
         return response()->file($absolutePath, [
@@ -62,13 +62,13 @@ class StsAttachmentController extends Controller
 
     public function destroy(StsAttachment $attachment)
     {
-        // Remove the physical file if it still exists
+        
         if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
             Storage::disk('public')->delete($attachment->file_path);
         }
 
-        // Do not update the original record's action.
-        // Instead, log a new row representing the delete action.
+        
+        
         StsAttachment::create([
             'region' => $attachment->region,
             'province' => $attachment->province,
@@ -86,27 +86,29 @@ class StsAttachmentController extends Controller
         return redirect()->back()->with('success', 'Attachment deleted successfully.');
     }
 
-    /**
-     * Return paginated log entries for STs attachments.
-     * Accessible only to admins/sysadmins. The output is suitable
-     * for AJAX insertion (returns JSON with html when ajax).
-     */
     public function logs(Request $request)
     {
-        // debug entry: log current auth state
+        
         \Illuminate\Support\Facades\Log::debug('STsAttachmentController@logs called', [
             'auth_check' => Auth::check(),
-            'user' => Auth::user() ? Auth::user()->only(['id','user_id','usergroup','name']) : null,
+            'user' => Auth::user()
+                    ? [
+                        'id' => Auth::user()->id ?? null,
+                        'user_id' => Auth::user()->user_id ?? null,
+                        'usergroup' => Auth::user()->usergroup ?? null,
+                        'name' => Auth::user()->name ?? null,
+                    ]
+                : null,
             'session_id' => session()->getId(),
             'cookies' => $request->cookies->all(),
         ]);
 
-        // temporarily allow unauthenticated access for debugging
-        // if (!Auth::check() || !in_array(Auth::user()->usergroup, ['admin', 'sysadmin'])) {
-        //     abort(403);
-        // }
+        
+        
+        
+        
 
-        // date range filtering
+        
         $query = StsAttachment::orderBy('created_at', 'desc');
         $from = $request->input('from_date');
         $to = $request->input('to_date');
@@ -117,7 +119,7 @@ class StsAttachmentController extends Controller
             $query->whereDate('created_at', '<=', $to);
         }
 
-        // paginate with 15 rows per page (original limit)
+        
         $logs = $query->paginate(15);
 
         if ($request->ajax()) {
@@ -125,7 +127,7 @@ class StsAttachmentController extends Controller
             return response()->json(['html' => $html]);
         }
 
-        // Fallback: return a simple view in case someone navigates directly.
+        
         return view('dashboard.maincomponents.stsattachment_logs', compact('logs'));
     }
 }

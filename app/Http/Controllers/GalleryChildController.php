@@ -31,7 +31,7 @@ class GalleryChildController extends Controller
             $data['parent_child_id'] = $data['parent_child_id'] ?? null;
             $data['created_by'] = Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null;
 
-            // auto-generate child/sub-child docno
+            
             if (empty($data['docno'])) {
                 if (!empty($data['parent_child_id'])) {
                     $parentChild = GalleryChild::find($data['parent_child_id']);
@@ -39,7 +39,7 @@ class GalleryChildController extends Controller
                     $seq = GalleryChild::where('parent_child_id', $data['parent_child_id'])->count() + 1;
                 } else {
                     $motherDocno = $galleryCard->docno ?? (int) (GalleryCard::max('docno') ?? 0);
-                    // sequence among top-level children (parent_child_id IS NULL)
+                    
                     $seq = GalleryChild::where('gallery_card_id', $galleryCard->id)->whereNull('parent_child_id')->count() + 1;
                 }
                 $data['docno'] = $motherDocno . '.' . $seq;
@@ -47,7 +47,7 @@ class GalleryChildController extends Controller
 
             $child = GalleryChild::create($data);
 
-            // record docno history
+            
             ChildDocnoHistory::create([
                 'gallery_child_id' => $child->id,
                 'gallery_card_id' => $galleryCard->id,
@@ -57,7 +57,7 @@ class GalleryChildController extends Controller
             ]);
 
             if ($request->ajax()) {
-                // reload card with children and subchildren for updated HTML
+                
                 $card = GalleryCard::with([
                     'creator',
                     'updater',
@@ -100,7 +100,7 @@ class GalleryChildController extends Controller
         $data['is_mother'] = !empty($data['is_mother']) ? 1 : 0;
         $data['updated_by'] = Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null;
 
-        // if docno changed, create history record
+        
         try {
             if (array_key_exists('docno', $data) && $data['docno'] !== $galleryChild->docno) {
                 ChildDocnoHistory::create([
@@ -147,7 +147,7 @@ class GalleryChildController extends Controller
             $galleryChild->delete();
 
             if ($request->ajax()) {
-                // after deletion return fresh row for parent card
+                
                 $card = GalleryCard::with([
                     'creator',
                     'updater',

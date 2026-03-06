@@ -11,9 +11,6 @@ use App\Models\GalleryCard;
 
 class MainReportController extends Controller
 {
-    /**
-     * Attach latest attachment info (if any) to each ST row.
-     */
     protected function addAttachmentInfo(array $rows): array
     {
         if (empty($rows)) {
@@ -36,7 +33,7 @@ class MainReportController extends Controller
 
         $attachments = $attachmentsQuery->get();
 
-        // Resolve created_by (user_id) to user name once per unique id
+        
         $userNames = [];
         $userIds = $attachments->pluck('created_by')->filter()->unique()->values();
         if ($userIds->isNotEmpty()) {
@@ -58,7 +55,7 @@ class MainReportController extends Controller
                     'id' => $attachment->id,
                     'action' => $attachment->action,
                     'url' => null,
-                    // Display name for Title Listing/map: prefer User.name, fall back to raw user_id
+        
                     'uploaded_by' => $userNames[$attachment->created_by] ?? $attachment->created_by,
                 ];
 
@@ -135,9 +132,6 @@ class MainReportController extends Controller
      */
     public function getParsedData(string $path): array
     {
-        // Cache heavy Excel parsing so STsReport loads faster.
-        // Use file cache store for large payloads to avoid DB overhead.
-        // bump version when logic changes so old cache is ignored
         $cacheKey = 'stsreport_parsed_v6_' . md5($path . '|' . filemtime($path));
         $cacheStore = Cache::store('file');
 
@@ -164,7 +158,7 @@ class MainReportController extends Controller
                 if (count($rows) < 2) {
                     continue;
                 }
-                // locate header row within the first few rows (skip blanks/prefixes)
+                
                 $headerRowIdx = null;
                 foreach (range(0, min(4, count($rows) - 1)) as $i) {
                     $trial = array_map(function ($h) {
@@ -186,7 +180,7 @@ class MainReportController extends Controller
                 $normHeader = array_map(function ($h) {
                     return strtolower(trim((string)$h));
                 }, $header);
-                // combine with next row if present for multi-line headings
+                
                 if (isset($rows[$headerRowIdx + 1])) {
                     $header2 = $rows[$headerRowIdx + 1];
                     $normHeader2 = array_map(function ($h) {
@@ -205,11 +199,11 @@ class MainReportController extends Controller
                     }
                     $normHeader = $combined;
                 }
-                // keep headers from the first sheet we parse (global fallback)
+                
                 if (!isset($headers)) {
                     $headers = $normHeader;
                 }
-                // locate important column indexes using substring matching to handle variations in header labels; we want to be flexible to
+                
                 $titleIdx = $provinceIdx = $municipalityIdx = $exprIdx = $moaIdx = $resIdx = $yearIdx = $adoptIdx = $repIdx = false;
                 foreach ($normHeader as $i => $h) {
                     if ($titleIdx === false && stripos($h, 'title') !== false) {
@@ -241,20 +235,14 @@ class MainReportController extends Controller
                     if ($yearIdx === false && stripos($h, 'year') !== false) {
                         $yearIdx = $i;
                     }
-                    // pick adoption column: first header cell that mentions "adopt"
-                    // (some workbooks use combined labels like "Adopted/Replicated").
+                    
                     if ($adoptIdx === false && stripos($h, 'adopt') !== false) {
                         $adoptIdx = $i;
                     }
-                    // pick replicate column: prefer a dedicated "Replicated" column
-                    // that is different from the Adopted column. This prevents
-                    // both Adopted and Replicated from pointing at the same
-                    // "Adopted/Replicated" header when a separate Replicated
-                    // column is present (as in FO X).
+                    
                     if ($repIdx === false && stripos($h, 'replic') !== false) {
                         if ($adoptIdx !== false && $i === $adoptIdx) {
-                            // skip this index so we can pick a later column
-                            // that is dedicated to Replicated only
+                            
                         } else {
                             $repIdx = $i;
                         }
@@ -265,10 +253,7 @@ class MainReportController extends Controller
                 }
                 $startSlice = $headerRowIdx + 1;
                 foreach (array_slice($rows, $startSlice) as $row) {
-                    // remove non-printable/control characters (vertical tab, ETX,
-                    // etc) before we trim.  Excel exports sometimes contain those
-                    // which break our front‑end matching and make cards appear
-                    // empty even though the count badge is correct.
+                
                     $clean = function($s) {
                         if (!is_string($s)) return '';
                         // strip ASCII control characters (0x00-0x1F,0x7F)
@@ -277,11 +262,7 @@ class MainReportController extends Controller
                     $title = trim($clean($row[$titleIdx] ?? ''));
                     $province = trim($clean($row[$provinceIdx] ?? ''));
                     $municipality = trim($clean($row[$municipalityIdx] ?? ''));
-                    // skip rows that have no meaningful title after trimming; these
-                    // would otherwise show up as blank/"(no title)" entries in the
-                    // UI and confuse users.  downstream filtering and JS also
-                    // remove blanks, but pre-filtering here avoids keeping them in
-                    // the master dataset at all.
+                    
                     if ($title === '') {
                         continue;
                     }
@@ -318,14 +299,11 @@ class MainReportController extends Controller
                         $regionMap[$sheetName] = [
                             'provinces' => [],
                             'years' => [],
-                            // store per-sheet headers so that downstream
-                            // aggregation can resolve Ongoing/Dissolved
-                            // column indexes for each region individually.
+                            
                             'headers' => $normHeader,
                         ];
                     } elseif (empty($regionMap[$sheetName]['headers'])) {
-                        // in case the region entry was created earlier,
-                        // ensure its headers are populated.
+                        
                         $regionMap[$sheetName]['headers'] = $normHeader;
                     }
                     if ($province !== '' && $municipality !== '') {
@@ -357,7 +335,7 @@ class MainReportController extends Controller
 
     public function index(Request $request)
     {
-        // determine if the view is being embedded (e.g. via iframe)
+        
         $embed = $request->query('embed');
         $path = $this->findLatestExcelPath();
         if (!$path) {
@@ -366,9 +344,7 @@ class MainReportController extends Controller
                 'children.children' => function($q){ $q->orderBy('docno','asc'); }
             ])->where('is_active', 1)->orderBy('docno','asc')->get();
 
-            // Provide the same view variables (with safe defaults) so other views that
-            // reuse this controller's View data (e.g. `dashboard.main`) never see
-            // undefined variables like `$years` when no Excel is available.
+            
             return view('dashboard.mainreports.STsreport', [
                 'regions' => [],
                 'titles' => [],
@@ -399,13 +375,9 @@ class MainReportController extends Controller
         $data = $parsed['data'];
         $regionMap = $parsed['regionMap'];
 
-        // Apply filters from request
+        
 
-        // when the report is being shown inside the iframe the parent page
-        // already manages filtering for the slider/gallery via postMessage; the
-        // totals graphs and title listing should remain at the unfiltered global
-        // level. detect the `embed` flag and clear any location/year selections
-        // so the subsequent `$data` arrays are left untouched.
+        
         $selectedRegions = $request->input('region', []);
         $selectedProvinces = $request->input('province', []);
         $selectedMunicipalities = $request->input('municipality', []);
@@ -417,9 +389,9 @@ class MainReportController extends Controller
             $selectedYears = [];
         }
 
-        // First, filter by region/province/municipality only (for bar chart)
+        
         $regionFilteredData = $data;
-        // propagate embed flag to view data
+        
         $viewData['embed'] = $embed;
 
         if (!empty($selectedRegions)) {
@@ -438,9 +410,7 @@ class MainReportController extends Controller
             });
         }
 
-        // Dynamically determine available years based on the filtered
-        // region/province/municipality data so the Year dropdown only
-        // shows years that actually exist for the selected locations.
+        
         $availableYearsMap = [];
         foreach ($regionFilteredData as $row) {
             if (!empty($row['year_of_moa'])) {
@@ -448,13 +418,11 @@ class MainReportController extends Controller
             }
         }
 
-        // If no region-level filters are applied (or no years were
-        // found in the filtered set), fall back to all years found
-        // in the workbook so the initial load still shows everything.
+        
         $allYears = array_keys($years);
         $availableYears = !empty($availableYearsMap) ? array_keys($availableYearsMap) : $allYears;
 
-        // Now, filter by year as well (for all other charts/totals)
+        
         $filteredData = $regionFilteredData;
         if (!empty($selectedYears)) {
             $filteredData = array_filter($filteredData, function($row) use ($selectedYears) {
@@ -462,24 +430,21 @@ class MainReportController extends Controller
             });
         }
 
-        // Attach current attachment information (if any) to each filtered row
+        
         $filteredData = $this->addAttachmentInfo(array_values($filteredData));
 
-        // compute yearStats and high-level totals for use in charts
+        
         $yearStats = [];
         $totalExpr = 0;
         $totalRes = 0;
         $totalMoa = 0;
         $totalAdopted = 0;
         $totalReplicated = 0;
-        // explicit counts based only on the dedicated
-        // Ongoing / Dissolved columns from the upload
+        
         $totalOngoingStatus = 0;
         $totalDissolvedStatus = 0;
         $headersArr = $parsed['headers'] ?? [];
-        // pre-compute status column indexes per region so that regions whose
-        // sheets have extra/missing columns (like Region X) still map to the
-        // correct Ongoing / Dissolved cells.
+        
         $statusIndexByRegion = [];
         foreach ($regionMap as $regionName => $meta) {
             $hdrs = $meta['headers'] ?? $headersArr;
@@ -503,11 +468,7 @@ class MainReportController extends Controller
             $s = strtolower(trim((string)$v));
             return $s === 'true' || $s === '1';
         };
-        // Determine whether a status cell should be treated as TRUE.
-        // Per your request we now count *only* explicit TRUE values
-        // coming from the sheet (boolean true or the string "TRUE").
-        // Other markers like "YES", "X", or numeric counts are ignored
-        // for the Ongoing/Dissolved cards.
+        
         $statusCellIsTrue = function($v) {
             if (is_bool($v)) {
                 return $v;
@@ -518,9 +479,7 @@ class MainReportController extends Controller
             $s = strtolower(trim((string) $v));
             return $s === 'true';
         };
-        // adopted/replicated columns may contain either boolean-like values or
-        // numeric counts.  When a number is provided we sum it, otherwise we
-        // treat any truthy/checked value as a single instance.
+        
         $normalizeCount = function($v) use ($normalizeBool) {
             if (is_numeric($v)) {
                 return (int) $v;
@@ -531,8 +490,7 @@ class MainReportController extends Controller
             $s = trim((string)$v);
             return $s !== '' ? 1 : 0;
         };
-        // use the fully filtered dataset (respecting region/year filters)
-        // so that dashboard totals and charts reflect the user's selection
+        
         foreach ($filteredData as $r) {
             $regionName = $r['region'] ?? null;
             $idxOng = $statusIndexByRegion[$regionName]['ongoing'] ?? null;
@@ -552,12 +510,7 @@ class MainReportController extends Controller
                 $st = strtolower($r['status']);
             }
 
-            // For ongoing/dissolved totals we now rely primarily on the
-            // dedicated Ongoing / Dissolved columns.  Each TRUE/marked cell
-            // in those columns counts as 1; if the workbook supplies a
-            // numeric value we treat it as that many STs.  Only when a
-            // region sheet does not expose those columns at all do we fall
-            // back to the free‑text status field.
+            
 
             $ongoingCount = 0;
             $dissolvedCount = 0;
@@ -589,7 +542,7 @@ class MainReportController extends Controller
                 }
             }
 
-            // final status-based tallies per year using the derived counts
+            
             if ($ongoingCount > 0) {
                 $yearStats[$yr]['ongoing'] += $ongoingCount;
                 $totalOngoingStatus += $ongoingCount;
@@ -628,7 +581,7 @@ class MainReportController extends Controller
             'totalDissolvedStatus' => $totalDissolvedStatus,
         ]);    }
 
-    // AJAX handler for Title Listing pagination
+        
     public function titleListingAjax(Request $request)
     {
         $path = $this->findLatestExcelPath();
@@ -646,9 +599,7 @@ class MainReportController extends Controller
         $selectedMunicipalities = $request->input('municipality', []);
         $selectedYears = (array) $request->input('year_of_moa', []);
         if ($request->query('embed')) {
-            // ignore outer filters when embedded so the listing always shows
-            // the full dataset; parent page already applies visual hints via
-            // postMessage if needed.
+            
             $selectedRegions = [];
             $selectedProvinces = [];
             $selectedMunicipalities = [];
@@ -679,15 +630,13 @@ class MainReportController extends Controller
 
         $filteredData = $this->addAttachmentInfo(array_values($filteredData));
 
-        // Return only the partial Blade for AJAX
+        
         return response()->view('dashboard.mainreports.partials.title_listing_ajax', [
             'data' => $filteredData,
         ]);
     }
 
-    /**
-     * Lightweight endpoint to warm the STsReport cache in the background.
-     */
+    
     public function prewarm(Request $request)
     {
         $path = $this->findLatestExcelPath();

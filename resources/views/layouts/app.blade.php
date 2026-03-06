@@ -962,7 +962,7 @@
         </style>
     </div>
 @endauth
-    <div class="container py-5 stb-main-content" style="margin-top: 70px; @guest margin-left:auto !important; margin-right:auto !important; @endguest">
+    <div class="container py-5 stb-main-content" style="margin-top: 70px;">
         @yield('content')
     </div>
     <footer style="width:100%; background:linear-gradient(90deg,#e0e7ff 60%,#f8fafc 100%); color:#2c3e50; text-align:center; padding: 0.5rem 0 0.4rem 0; font-size:0.92rem; margin-top:1.2rem; box-shadow:0 -2px 12px rgba(44,62,80,0.05);">

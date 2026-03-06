@@ -40,9 +40,9 @@
 					</div>
 				@endif
 
-				{{-- Region filter (single selection) --}}
+				{{-- Filters: Region, Province, City, ST Title --}}
 				<form id="sts-filter-form" method="GET" action="{{ route('uploadmoasts') }}" class="row g-3 mb-3">
-					<div class="col-md-4">
+					<div class="col-md-3">
 						<label for="region" class="form-label">Region</label>
 						<select name="region" id="region" class="form-select">
 							<option value="">All Regions</option>
@@ -51,7 +51,25 @@
 							@endforeach
 						</select>
 					</div>
-					<div class="col-md-4 position-relative">
+					<div class="col-md-3">
+						<label for="province" class="form-label">Province</label>
+						<select name="province" id="province" class="form-select">
+							<option value="">All Provinces</option>
+							@foreach($provinceOptions ?? [] as $province)
+								<option value="{{ $province }}" {{ ($selectedProvince ?? '') === $province ? 'selected' : '' }}>{{ $province }}</option>
+							@endforeach
+						</select>
+					</div>
+					<div class="col-md-3">
+						<label for="city" class="form-label">City/Municipality</label>
+						<select name="city" id="city" class="form-select">
+							<option value="">All Cities/Municipalities</option>
+							@foreach($cityOptions ?? [] as $city)
+								<option value="{{ $city }}" {{ ($selectedCity ?? '') === $city ? 'selected' : '' }}>{{ $city }}</option>
+							@endforeach
+						</select>
+					</div>
+					<div class="col-md-3 position-relative">
 						<label for="title" class="form-label">ST Title</label>
 						<input
 							type="text"
@@ -70,12 +88,12 @@
 						<div id="title-suggestions" class="list-group shadow-sm" style="position:absolute; top: 100%; left:0; right:0; z-index: 20; max-height: 220px; overflow-y:auto; font-size:0.8rem; display:none;">
 							{{-- suggestions injected via JS --}}
 						</div>
-					</div>
-					<div class="col-md-4 d-flex align-items-end">
-						<button type="submit" class="btn btn-primary me-2">Filter</button>
-						@if($selectedRegion || ($searchTitle ?? '') !== '')
-							<a href="{{ route('uploadmoasts') }}" class="btn btn-outline-secondary">Clear</a>
-						@endif
+						<div class="mt-2 d-flex">
+							<button type="submit" class="btn btn-primary me-2">Filter</button>
+							@if($selectedRegion || ($selectedProvince ?? '') !== '' || ($selectedCity ?? '') !== '' || ($searchTitle ?? '') !== '')
+								<a href="{{ route('uploadmoasts') }}" class="btn btn-outline-secondary">Clear</a>
+							@endif
+						</div>
 					</div>
 				</form>
 
