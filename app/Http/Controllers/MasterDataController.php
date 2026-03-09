@@ -402,6 +402,23 @@ class MasterDataController extends Controller
             ->map(fn (Collection $items) => $items->count())
             ->sortKeys();
 
+        $adoptionCounts = [
+            'Adopted' => $regionItems->where('with_adopted', true)->count(),
+            'Replicated' => $regionItems->where('with_replicated', true)->count(),
+        ];
+
+        $resolutionCountsByRegion = $regions
+            ->map(function (Region $region) use ($regionItems) {
+                return [
+                    'label' => $region->name,
+                    'count' => $regionItems
+                        ->where('region_id', $region->id)
+                        ->where('with_res', true)
+                        ->count(),
+                ];
+            })
+            ->values();
+
         $updatedByCounts = $regionItems
             ->filter(fn (RegionItem $item) => filled($item->updatedby))
             ->groupBy('updatedby')
@@ -427,6 +444,11 @@ class MasterDataController extends Controller
             'year_counts' => [
                 'labels' => $yearCounts->keys()->values()->all(),
                 'values' => $yearCounts->values()->all(),
+            ],
+            'adoption_counts' => $adoptionCounts,
+            'resolution_counts_by_region' => [
+                'labels' => $resolutionCountsByRegion->pluck('label')->all(),
+                'values' => $resolutionCountsByRegion->pluck('count')->all(),
             ],
             'updated_by_counts' => [
                 'labels' => $updatedByCounts->keys()->values()->all(),

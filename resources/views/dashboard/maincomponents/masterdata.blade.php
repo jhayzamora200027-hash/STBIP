@@ -171,6 +171,9 @@
 		align-items: start;
 		margin-bottom: 22px;
 	}
+	.masterdata-grid.masterdata-grid-single {
+		grid-template-columns: minmax(0, 1fr);
+	}
 	.masterdata-card-header {
 		padding: 18px 22px;
 		background: linear-gradient(135deg, #eff6fb, #f8fbfe);
@@ -235,8 +238,8 @@
 	.masterdata-check {
 		position: relative;
 		display: grid;
-		grid-template-columns: 42px minmax(0, 1fr);
-		align-items: center;
+		grid-template-columns: 30px minmax(0, 1fr);
+		align-items: start;
 		gap: 12px;
 		border: 1px solid #dbe4f0;
 		background: linear-gradient(180deg, #f8fbff 0%, #f2f8fd 100%);
@@ -252,20 +255,36 @@
 		box-shadow: 0 10px 22px rgba(23, 93, 143, 0.08);
 		transform: translateY(-1px);
 	}
+	.masterdata-check-control {
+		position: relative;
+		width: 30px;
+		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
 	.masterdata-check input[type="checkbox"] {
-		appearance: none;
-		-webkit-appearance: none;
-		width: 22px;
-		height: 22px;
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
 		margin: 0;
+		opacity: 0;
+		cursor: pointer;
+		z-index: 2;
+	}
+	.masterdata-check-indicator {
+		width: 24px;
+		height: 24px;
 		border-radius: 8px;
 		border: 1.6px solid #9eb8d1;
 		background: #fff;
 		display: inline-grid;
 		place-items: center;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 		transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 	}
-	.masterdata-check input[type="checkbox"]::after {
+	.masterdata-check-indicator::after {
 		content: '';
 		width: 10px;
 		height: 6px;
@@ -276,17 +295,19 @@
 		transition: transform 0.18s ease, opacity 0.18s ease;
 		margin-top: -1px;
 	}
-	.masterdata-check input[type="checkbox"]:checked {
+	.masterdata-check input[type="checkbox"]:checked + .masterdata-check-indicator {
 		background: linear-gradient(135deg, #0b2540, #175d8f);
 		border-color: #175d8f;
 		box-shadow: 0 0 0 4px rgba(23, 93, 143, 0.14);
 	}
-	.masterdata-check input[type="checkbox"]:checked::after {
+	.masterdata-check input[type="checkbox"]:checked + .masterdata-check-indicator::after {
 		opacity: 1;
 		transform: rotate(-45deg) scale(1);
 	}
 	.masterdata-check input[type="checkbox"]:focus-visible {
 		outline: none;
+	}
+	.masterdata-check input[type="checkbox"]:focus-visible + .masterdata-check-indicator {
 		box-shadow: 0 0 0 4px rgba(23, 93, 143, 0.16);
 	}
 	.masterdata-check-text {
@@ -650,7 +671,6 @@
 <div class="masterdata-shell">
 	<div class="masterdata-hero">
 		<h1>Master Data Administration</h1>
-		<p>The Overview tab provides a consolidated view of fixed regional offices, current upload sources, update history, and operational charts. The Region Items tab is the controlled workspace for maintaining Social Technology records under each regional office. Regional offices are standardized and can no longer be added or removed manually.</p>
 	</div>
 
 	@if(session('status'))
@@ -696,26 +716,23 @@
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">Regional Offices</div>
 				<div class="masterdata-stat-value">{{ $overview['total_regions'] }}</div>
-				<div class="masterdata-stat-note">Fixed default offices including FO BARMM and FO NIR.</div>
 			</div>
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">Total Region Items</div>
 				<div class="masterdata-stat-value">{{ $overview['total_items'] }}</div>
-				<div class="masterdata-stat-note">Current dashboard data rows stored in the database.</div>
 			</div>
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">With MOA</div>
 				<div class="masterdata-stat-value">{{ $overview['with_moa'] }}</div>
-				<div class="masterdata-stat-note">Rows marked with MOA in the current master data.</div>
 			</div>
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">With Resolution</div>
 				<div class="masterdata-stat-value">{{ $overview['with_resolution'] }}</div>
-				<div class="masterdata-stat-note">Last updated: {{ $overview['last_updated_at'] ? $overview['last_updated_at']->format('M d, Y h:i A') : 'No updates yet' }}</div>
 			</div>
 		</div>
 
-		<div class="masterdata-grid">
+		@php($isSysadmin = auth()->check() && auth()->user()->usergroup === 'sysadmin')
+		<div class="masterdata-grid {{ $isSysadmin ? '' : 'masterdata-grid-single' }}">
 			<section class="masterdata-card">
 				<div class="masterdata-card-header">
 					<h2>Regional Office Overview</h2>
@@ -733,34 +750,36 @@
 				</div>
 			</section>
 
-			<section class="masterdata-card">
-				<div class="masterdata-card-header">
-					<h2>Upload and Import</h2>
-					<p>The upload source remains available here and imports into the fixed office structure.</p>
-				</div>
-				<div class="masterdata-card-body">
-					<form method="POST" action="{{ route('masterdata.import-google-sheet') }}">
-						@csrf
-						<div class="masterdata-form-grid">
-							<div class="masterdata-field full">
-								<label for="google-sheet-url">Google Sheet URL</label>
-								<input id="google-sheet-url" type="url" name="google_sheet_url" value="{{ old('google_sheet_url', $currentGoogleSheetUrl ?? '') }}" placeholder="https://docs.google.com/spreadsheets/d/...">
+			@if($isSysadmin)
+				<section class="masterdata-card">
+					<div class="masterdata-card-header">
+						<h2>Upload and Import</h2>
+						<p>The upload source remains available here and imports into the fixed office structure.</p>
+					</div>
+					<div class="masterdata-card-body">
+						<form method="POST" action="{{ route('masterdata.import-google-sheet') }}">
+							@csrf
+							<div class="masterdata-form-grid">
+								<div class="masterdata-field full">
+									<label for="google-sheet-url">Google Sheet URL</label>
+									<input id="google-sheet-url" type="url" name="google_sheet_url" value="{{ old('google_sheet_url', $currentGoogleSheetUrl ?? '') }}" placeholder="https://docs.google.com/spreadsheets/d/...">
+								</div>
+								<div class="masterdata-field full">
+									<label>Current Stored Google Sheet File</label>
+									<input type="text" value="{{ $currentGoogleSheetFile ?: 'No stored Google Sheet detected' }}" readonly>
+									@if(!empty($currentGoogleSheetFile))
+										<input type="hidden" name="stored_excel" value="{{ $currentGoogleSheetFile }}">
+									@endif
+								</div>
 							</div>
-							<div class="masterdata-field full">
-								<label>Current Stored Google Sheet File</label>
-								<input type="text" value="{{ $currentGoogleSheetFile ?: 'No stored Google Sheet detected' }}" readonly>
-								@if(!empty($currentGoogleSheetFile))
-									<input type="hidden" name="stored_excel" value="{{ $currentGoogleSheetFile }}">
-								@endif
+							<div class="masterdata-item-actions" style="justify-content:flex-start; margin-top: 18px;">
+								<button type="submit" class="masterdata-btn masterdata-btn-primary">Import Sheet to Master Data</button>
+								<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('upload') }}">Open Uploading Document</a>
 							</div>
-						</div>
-						<div class="masterdata-item-actions" style="justify-content:flex-start; margin-top: 18px;">
-							<button type="submit" class="masterdata-btn masterdata-btn-primary">Import Sheet to Master Data</button>
-							<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('upload') }}">Open Uploading Document</a>
-						</div>
-					</form>
-				</div>
-			</section>
+						</form>
+					</div>
+				</section>
+			@endif
 		</div>
 
 		<div class="masterdata-charts">
@@ -786,6 +805,16 @@
 
 			<section class="masterdata-card masterdata-chart-card">
 				<div class="masterdata-card-header">
+					<h3>Replicated vs Adopted</h3>
+					<p>Comparison of master data items tagged as adopted or replicated.</p>
+				</div>
+				<div class="masterdata-card-body">
+					<canvas id="masterdataAdoptionChart"></canvas>
+				</div>
+			</section>
+
+			<section class="masterdata-card masterdata-chart-card">
+				<div class="masterdata-card-header">
 					<h3>Year of MOA</h3>
 					<p>How many items are recorded per MOA year.</p>
 				</div>
@@ -801,6 +830,16 @@
 				</div>
 				<div class="masterdata-card-body">
 					<canvas id="masterdataUpdatedByChart"></canvas>
+				</div>
+			</section>
+
+			<section class="masterdata-card masterdata-chart-card">
+				<div class="masterdata-card-header">
+					<h3>Number of SB Resolution</h3>
+					<p>Count of items with recorded resolutions per regional office.</p>
+				</div>
+				<div class="masterdata-card-body">
+					<canvas id="masterdataResolutionRegionChart"></canvas>
 				</div>
 			</section>
 		</div>
@@ -897,6 +936,8 @@
 		const regionData = @json($overview['region_counts']);
 		const statusData = @json($overview['status_counts']);
 		const yearData = @json($overview['year_counts']);
+		const adoptionData = @json($overview['adoption_counts']);
+		const resolutionRegionData = @json($overview['resolution_counts_by_region']);
 		const updatedByData = @json($overview['updated_by_counts']);
 
 		if (typeof Chart === 'undefined') {
@@ -970,6 +1011,26 @@
 			});
 		}
 
+		const adoptionCanvas = document.getElementById('masterdataAdoptionChart');
+		if (adoptionCanvas) {
+			new Chart(adoptionCanvas.getContext('2d'), {
+				type: 'doughnut',
+				data: {
+					labels: Object.keys(adoptionData),
+					datasets: [{
+						data: Object.values(adoptionData),
+						backgroundColor: ['#175d8f', '#38bdf8'],
+						borderWidth: 0,
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: { legend: { position: 'bottom' } }
+				}
+			});
+		}
+
 		const updatedByCanvas = document.getElementById('masterdataUpdatedByChart');
 		if (updatedByCanvas) {
 			new Chart(updatedByCanvas.getContext('2d'), {
@@ -989,6 +1050,31 @@
 					maintainAspectRatio: false,
 					plugins: { legend: { display: false } },
 					scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+				}
+			});
+		}
+
+		const resolutionRegionCanvas = document.getElementById('masterdataResolutionRegionChart');
+		if (resolutionRegionCanvas) {
+			new Chart(resolutionRegionCanvas.getContext('2d'), {
+				type: 'bar',
+				data: {
+					labels: resolutionRegionData.labels,
+					datasets: [{
+						label: 'SB Resolution Items',
+						data: resolutionRegionData.values,
+						backgroundColor: '#0f766e',
+						borderRadius: 10,
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: { legend: { display: false } },
+					scales: {
+						x: { ticks: { maxRotation: 60, minRotation: 35 } },
+						y: { beginAtZero: true, ticks: { precision: 0 } }
+					}
 				}
 			});
 		}
@@ -1182,10 +1268,10 @@
 						'Accept': 'application/json'
 					}
 				});
+				const responseType = response.headers.get('content-type') || '';
 
 				if (!response.ok) {
 					let errorMessage = 'Unable to save item changes.';
-					const responseType = response.headers.get('content-type') || '';
 					if (responseType.includes('application/json')) {
 						const errorPayload = await response.json();
 						if (errorPayload.message) {
@@ -1199,6 +1285,10 @@
 						}
 					}
 					throw new Error(errorMessage);
+				}
+
+				if (!responseType.includes('application/json')) {
+					throw new Error('You do not have permission to modify master data.');
 				}
 
 				const payload = await response.json();

@@ -1,3 +1,5 @@
+@php($isSysadmin = auth()->check() && auth()->user()->usergroup === 'sysadmin')
+
 <div class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-body">
 		<div class="masterdata-toolbar">
@@ -20,6 +22,13 @@
 	</div>
 </div>
 
+@unless($isSysadmin)
+	<div class="masterdata-fixed-note" style="margin-bottom: 22px;">
+		You currently have read-only access to Region Item Management. Only sysadmin accounts can add, update, import, or delete master data items.
+	</div>
+@endunless
+
+@if($isSysadmin)
 <section class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-header">
 		<h2>Add New Item to {{ $selectedRegionName }}</h2>
@@ -64,10 +73,10 @@
 				<div class="masterdata-field full">
 					<label>Indicators</label>
 					<div class="masterdata-checks">
-						<label class="masterdata-check"><input type="hidden" name="with_expr" value="0"><input type="checkbox" name="with_expr" value="1" @checked(old('with_expr'))><span class="masterdata-check-text"><span class="masterdata-check-title">With Expression of Interest</span><span class="masterdata-check-note">Mark items with a recorded expression of interest.</span></span></label>
-						<label class="masterdata-check"><input type="hidden" name="with_moa" value="0"><input type="checkbox" id="new-with-moa" name="with_moa" value="1" data-toggle-target="new-year-of-moa-field" @checked(old('with_moa'))><span class="masterdata-check-text"><span class="masterdata-check-title">With MOA</span><span class="masterdata-check-note">Enable when a memorandum of agreement exists.</span></span></label>
-						<label class="masterdata-check"><input type="hidden" name="with_res" value="0"><input type="checkbox" id="new-with-res" name="with_res" value="1" data-toggle-target="new-year-of-resolution-field" @checked(old('with_res'))><span class="masterdata-check-text"><span class="masterdata-check-title">With Resolution</span><span class="masterdata-check-note">Enable when a formal resolution has been issued.</span></span></label>
-						<label class="masterdata-check"><input type="hidden" name="included_aip" value="0"><input type="checkbox" name="included_aip" value="1" @checked(old('included_aip'))><span class="masterdata-check-text"><span class="masterdata-check-title">Included AIP</span><span class="masterdata-check-note">Use when the item is included in the AIP.</span></span></label>
+						<label class="masterdata-check"><input type="hidden" name="with_expr" value="0"><span class="masterdata-check-control"><input type="checkbox" name="with_expr" value="1" @checked(old('with_expr'))><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Expression of Interest</span></span></label>
+						<label class="masterdata-check"><input type="hidden" name="with_moa" value="0"><span class="masterdata-check-control"><input type="checkbox" id="new-with-moa" name="with_moa" value="1" data-toggle-target="new-year-of-moa-field" @checked(old('with_moa'))><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With MOA</span></span></label>
+						<label class="masterdata-check"><input type="hidden" name="with_res" value="0"><span class="masterdata-check-control"><input type="checkbox" id="new-with-res" name="with_res" value="1" data-toggle-target="new-year-of-resolution-field" @checked(old('with_res'))><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Resolution</span></span></label>
+						<label class="masterdata-check"><input type="hidden" name="included_aip" value="0"><span class="masterdata-check-control"><input type="checkbox" name="included_aip" value="1" @checked(old('included_aip'))><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">Included AIP</span></span></label>
 					</div>
 				</div>
 				<div class="masterdata-field is-hidden" id="new-year-of-moa-field">
@@ -85,6 +94,7 @@
 		</form>
 	</div>
 </section>
+@endif
 
 <section class="masterdata-card">
 	<div class="masterdata-card-header">
@@ -128,22 +138,19 @@
 		</div>
 
 		<div class="masterdata-item-stack">
-			@forelse($regionItems as $item)
-				@php
-					$adoptionStatus = $item->with_adopted ? 'adopted' : ($item->with_replicated ? 'replicated' : 'none');
-				@endphp
-				@if($loop->first)
-					<div class="masterdata-item-list">
-						<div class="masterdata-item-list-head">
-							<div>ST Title</div>
-							<div>Province</div>
-							<div>City / Municipality</div>
-							<div>Status</div>
-							<div>Updated By</div>
-							<div>Updated At</div>
-							<div></div>
-						</div>
-				@endif
+			@if($regionItems->count() > 0)
+				<div class="masterdata-item-list">
+					<div class="masterdata-item-list-head">
+						<div>ST Title</div>
+						<div>Province</div>
+						<div>City / Municipality</div>
+						<div>Status</div>
+						<div>Updated By</div>
+						<div>Updated At</div>
+						<div></div>
+					</div>
+					@foreach($regionItems as $item)
+							@php($adoptionStatus = $item->with_adopted ? 'adopted' : ($item->with_replicated ? 'replicated' : 'none'))
 				<div class="masterdata-item-entry">
 					<div class="masterdata-item-row" data-masterdata-item-toggle="item-{{ $item->id }}" role="button" tabindex="0" aria-expanded="false">
 						<div>
@@ -177,6 +184,7 @@
 							</div>
 						</div>
 
+						@if($isSysadmin)
 						<form method="POST" action="{{ route('masterdata.region-items.update', $item) }}" data-masterdata-updates-form="update">
 							@csrf
 							@method('PATCH')
@@ -220,10 +228,10 @@
 								<div class="masterdata-field full">
 									<label>Indicators</label>
 									<div class="masterdata-checks">
-										<label class="masterdata-check"><input type="hidden" name="with_expr" value="0"><input type="checkbox" name="with_expr" value="1" @checked($item->with_expr)><span class="masterdata-check-text"><span class="masterdata-check-title">With Expression of Interest</span><span class="masterdata-check-note">Mark items with a recorded expression of interest.</span></span></label>
-										<label class="masterdata-check"><input type="hidden" name="with_moa" value="0"><input type="checkbox" name="with_moa" value="1" data-toggle-target="item-{{ $item->id }}-year-of-moa-field" @checked($item->with_moa)><span class="masterdata-check-text"><span class="masterdata-check-title">With MOA</span><span class="masterdata-check-note">Enable when a memorandum of agreement exists.</span></span></label>
-										<label class="masterdata-check"><input type="hidden" name="with_res" value="0"><input type="checkbox" name="with_res" value="1" data-toggle-target="item-{{ $item->id }}-year-of-resolution-field" @checked($item->with_res)><span class="masterdata-check-text"><span class="masterdata-check-title">With Resolution</span><span class="masterdata-check-note">Enable when a formal resolution has been issued.</span></span></label>
-										<label class="masterdata-check"><input type="hidden" name="included_aip" value="0"><input type="checkbox" name="included_aip" value="1" @checked($item->included_aip)><span class="masterdata-check-text"><span class="masterdata-check-title">Included AIP</span><span class="masterdata-check-note">Use when the item is included in the AIP.</span></span></label>
+										<label class="masterdata-check"><input type="hidden" name="with_expr" value="0"><span class="masterdata-check-control"><input type="checkbox" name="with_expr" value="1" @checked($item->with_expr)><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Expression of Interest</span><span class="masterdata-check-note">Mark items with a recorded expression of interest.</span></span></label>
+										<label class="masterdata-check"><input type="hidden" name="with_moa" value="0"><span class="masterdata-check-control"><input type="checkbox" name="with_moa" value="1" data-toggle-target="item-{{ $item->id }}-year-of-moa-field" @checked($item->with_moa)><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With MOA</span><span class="masterdata-check-note">Enable when a memorandum of agreement exists.</span></span></label>
+										<label class="masterdata-check"><input type="hidden" name="with_res" value="0"><span class="masterdata-check-control"><input type="checkbox" name="with_res" value="1" data-toggle-target="item-{{ $item->id }}-year-of-resolution-field" @checked($item->with_res)><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Resolution</span><span class="masterdata-check-note">Enable when a formal resolution has been issued.</span></span></label>
+										<label class="masterdata-check"><input type="hidden" name="included_aip" value="0"><span class="masterdata-check-control"><input type="checkbox" name="included_aip" value="1" @checked($item->included_aip)><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">Included AIP</span><span class="masterdata-check-note">Use when the item is included in the AIP.</span></span></label>
 									</div>
 								</div>
 								<div class="masterdata-field {{ $item->with_moa ? '' : 'is-hidden' }}" id="item-{{ $item->id }}-year-of-moa-field">
@@ -248,14 +256,62 @@
 							<input type="hidden" name="return_page" value="{{ $regionItems->currentPage() }}">
 							<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete Item</button>
 						</form>
+						@else
+						<div class="masterdata-form-grid">
+							<div class="masterdata-field">
+								<label>Regional Office</label>
+								<input type="text" value="{{ $item->region?->name ?: $selectedRegionName }}" readonly>
+							</div>
+							<div class="masterdata-field">
+								<label>Status</label>
+								<input type="text" value="{{ $item->status ? ucfirst($item->status) : 'Unspecified' }}" readonly>
+							</div>
+							<div class="masterdata-field full">
+								<label>Social Technology Title</label>
+								<input type="text" value="{{ $item->title }}" readonly>
+							</div>
+							<div class="masterdata-field">
+								<label>Province</label>
+								<input type="text" value="{{ $item->province ?: '-' }}" readonly>
+							</div>
+							<div class="masterdata-field">
+								<label>Municipality</label>
+								<input type="text" value="{{ $item->municipality ?: '-' }}" readonly>
+							</div>
+							<div class="masterdata-field">
+								<label>Adopted / Replicated</label>
+								<input type="text" value="{{ ucfirst($adoptionStatus) }}" readonly>
+							</div>
+							<div class="masterdata-field full">
+								<label>Indicators</label>
+								<div class="masterdata-item-meta">
+									<span>Expression of Interest: {{ $item->with_expr ? 'Yes' : 'No' }}</span>
+									<span>With MOA: {{ $item->with_moa ? 'Yes' : 'No' }}</span>
+									<span>With Resolution: {{ $item->with_res ? 'Yes' : 'No' }}</span>
+									<span>Included AIP: {{ $item->included_aip ? 'Yes' : 'No' }}</span>
+								</div>
+							</div>
+							@if($item->with_moa)
+								<div class="masterdata-field">
+									<label>Year of MOA</label>
+									<input type="text" value="{{ $item->year_of_moa ?: '-' }}" readonly>
+								</div>
+							@endif
+							@if($item->with_res)
+								<div class="masterdata-field">
+									<label>Year of Resolution</label>
+									<input type="text" value="{{ $item->year_of_resolution ?: '-' }}" readonly>
+								</div>
+							@endif
+						</div>
+						@endif
 					</div>
 				</div>
-				@if($loop->last)
-					</div>
-				@endif
-			@empty
-				<div class="masterdata-empty">No region items found for {{ $selectedRegionName }} yet. Add the first one using the form above.</div>
-			@endforelse
+					@endforeach
+				</div>
+			@else
+				<div class="masterdata-empty">No region items found for {{ $selectedRegionName }} yet. {{ $isSysadmin ? 'Add the first one using the form above.' : '' }}</div>
+			@endif
 		</div>
 
 		@if($regionItems->hasPages())

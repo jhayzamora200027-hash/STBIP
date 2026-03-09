@@ -104,11 +104,9 @@ Route::middleware(['auth'])->group(function () {
     // Uploading page (with logs)
     Route::get('/upload', [ExcelController::class, 'uploadLogs'])->name('upload');
     Route::get('/masterdata', [MasterDataController::class, 'index'])
-        ->name('masterdata.index')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->name('masterdata.index');
     Route::get('/masterdata/updates-panel', [MasterDataController::class, 'updatesPanel'])
-        ->name('masterdata.updates-panel')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->name('masterdata.updates-panel');
     Route::post('/masterdata/regions', [MasterDataController::class, 'storeRegion'])
         ->name('masterdata.regions.store')
         ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);

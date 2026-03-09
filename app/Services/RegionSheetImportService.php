@@ -69,6 +69,7 @@ class RegionSheetImportService
                 $province = $this->cleanString($row[$indexes['province']] ?? '');
                 $municipality = $this->cleanString($row[$indexes['municipality']] ?? '');
                 $status = $this->resolveStatus($row, $indexes);
+                $adoptionFlags = $this->resolveAdoptionFlags($row, $indexes);
 
                 $rowsToInsert[] = [
                     'region_name' => $normalizedRegionName,
@@ -81,8 +82,8 @@ class RegionSheetImportService
                     'with_res' => $this->toBool($row[$indexes['with_res']] ?? null),
                     'year_of_resolution' => $this->normalizeYear($row[$indexes['year_of_resolution']] ?? null),
                     'included_aip' => $this->toBool($row[$indexes['included_aip']] ?? null),
-                    'with_adopted' => $this->toBool($row[$indexes['with_adopted']] ?? null),
-                    'with_replicated' => $this->toBool($row[$indexes['with_replicated']] ?? null),
+                    'with_adopted' => $adoptionFlags['with_adopted'],
+                    'with_replicated' => $adoptionFlags['with_replicated'],
                     'status' => $status,
                 ];
             }
@@ -210,6 +211,7 @@ class RegionSheetImportService
             'included_aip' => null,
             'with_adopted' => null,
             'with_replicated' => null,
+            'adoption_status' => null,
             'status' => null,
             'ongoing' => null,
             'dissolved' => null,
@@ -243,10 +245,13 @@ class RegionSheetImportService
             if ($indexes['included_aip'] === null && stripos($header, 'aip') !== false) {
                 $indexes['included_aip'] = $index;
             }
+            if ($indexes['adoption_status'] === null && stripos($header, 'adopt') !== false && stripos($header, 'replic') !== false) {
+                $indexes['adoption_status'] = $index;
+            }
             if ($indexes['with_adopted'] === null && stripos($header, 'adopt') !== false) {
                 $indexes['with_adopted'] = $index;
             }
-            if ($indexes['with_replicated'] === null && stripos($header, 'replic') !== false) {
+            if ($indexes['with_replicated'] === null && stripos($header, 'replic') !== false && stripos($header, 'adopt') === false) {
                 $indexes['with_replicated'] = $index;
             }
             if ($indexes['status'] === null && stripos($header, 'status') !== false) {
@@ -260,7 +265,38 @@ class RegionSheetImportService
             }
         }
 
+        if ($indexes['with_replicated'] === null) {
+            $indexes['with_replicated'] = $indexes['adoption_status'];
+        }
+
         return $indexes;
+    }
+
+    private function resolveAdoptionFlags(array $row, array $indexes): array
+    {
+        $adoptedIndex = $indexes['with_adopted'] ?? null;
+        $replicatedIndex = $indexes['with_replicated'] ?? null;
+        $adoptionStatusIndex = $indexes['adoption_status'] ?? null;
+
+        $adopted = $adoptedIndex !== null ? $this->toBool($row[$adoptedIndex] ?? null) : false;
+        $replicated = $replicatedIndex !== null ? $this->toBool($row[$replicatedIndex] ?? null) : false;
+
+        if ($adoptionStatusIndex !== null && ($adoptedIndex === null || $replicatedIndex === null || $adoptedIndex === $replicatedIndex)) {
+            $rawStatus = strtolower($this->cleanString($row[$adoptionStatusIndex] ?? ''));
+
+            if (str_contains($rawStatus, 'adopt')) {
+                return ['with_adopted' => true, 'with_replicated' => false];
+            }
+
+            if (str_contains($rawStatus, 'replic')) {
+                return ['with_adopted' => false, 'with_replicated' => true];
+            }
+        }
+
+        return [
+            'with_adopted' => $adopted,
+            'with_replicated' => $replicated,
+        ];
     }
 
     private function resolveStatus(array $row, array $indexes): ?string
