@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
         <style>
-            /* Responsive navbar title placement */
             .stb-navbar-title {
                 transition: all 0.2s;
             }
@@ -10,7 +9,7 @@
                 .stb-navbar-title {
                     font-size: 1.05rem !important;
                     padding-right: 0.2rem !important;
-                    max-width: 55%;               /* give some room for the user name */
+                    max-width: 55%;
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
@@ -23,7 +22,6 @@
                     transform: scale(0.8);
                     margin-left: 0.2rem;
                 }
-                /* make sure right‑hand container never wraps its contents */
                 .navbar .container-fluid.d-flex {
                     flex-wrap: nowrap !important;
                 }
@@ -46,12 +44,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>STB Inventory Portal</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Swiper CSS (required by STsReport slider) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <!-- Select2 styles for multi-select filters -->
     <link href="/css/select2.min.css" rel="stylesheet" />
     <style>
-    /* Beautify Select2 dropdowns (shared across app) */
     .select2-container--default .select2-selection--multiple {
         background: #f8fafc;
         border: 2px solid #06306e;
@@ -91,11 +86,9 @@
         font-size: 1.07rem;
         border-radius: 6px;
     }
-    /* extra left padding for checkbox variants */
     .select2-results__option input[type=checkbox] {
         margin-right: 6px;
     }
-    /* when using dropdownCssClass we may already have extra left padding via .year-select-dropdown rules injected */
     .select2-results__option--highlighted {
         background: #e0f2f1;
     }
@@ -107,7 +100,6 @@
     .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
         color: #8492a6;
     }
-    /* Dashboard card style used by filter */
     .st-dashboard-card {
         background: #f8fafc;
         border-radius: 14px;
@@ -146,7 +138,6 @@
         padding: 28px 0 16px 0;
     }
     </style>
-    {{-- Bootstrap JS loaded before Vite to ensure global availability --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     <style>
@@ -165,14 +156,12 @@
             flex-shrink: 0;
         }
 
-        /* when the view is embedded (via ?embed=1 or $embed passed), hide chrome */
         @if(request()->query('embed') || (isset($embed) && $embed))
         nav.navbar,
         .stb-sidebar,
         footer {
             display: none !important;
         }
-        /* remove space reserved by navbar/sidebar so embedded content sits flush and prevent scrolling */
         body, html {
             margin: 0 !important;
             overflow: hidden !important;
@@ -184,8 +173,6 @@
             margin: 0 !important;
         }
         @endif
-        /* Global loading overlay + animated blocks loader
-           (used by resources/views/components/loader.blade.php) */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -203,7 +190,6 @@
             display: none;
         }
 
-        /* Loader10: copied exactly from loading-demo.blade.php for 4-bar animation */
         .loader10{width:100px;height:100px;margin:50px auto;overflow:hidden;position:relative}
         .loader10 span{display:inline-block;position:absolute;animation:loading-10 9s cubic-bezier(.45,.05,.55,.95) infinite}
         .loader10 span:nth-child(1){background:#ff4b7d;animation-name:loading-10}
@@ -277,7 +263,6 @@
             background-attachment: fixed;
         }
 
-            /* Login Modal Styles */
             .modal-login-bg {
                 background: rgba(0,0,0,0.5);
                 backdrop-filter: blur(2px);
@@ -353,7 +338,6 @@
                 text-decoration: underline;
             }
 
-        /* Nested Dropdown Styles */
         .dropdown-menu .dropend .dropdown-menu {
             position: absolute;
             top: 0;
@@ -375,11 +359,6 @@
             font-weight: normal;
             vertical-align: middle;
         }
-        /* ============================= */
-        /* MODERN DROPDOWN UI UPGRADE  */
-        /* ============================= */
-
-        /* Main dropdown container */
         .dropdown-menu {
             border: none;
             border-radius: 14px;
@@ -389,7 +368,6 @@
             animation: fadeSlide 0.18s ease;
         }
 
-        /* Smooth appearance */
         @keyframes fadeSlide {
             from {
                 opacity: 0;
@@ -401,7 +379,6 @@
             }
         }
 
-        /* Dropdown items */
         .dropdown-item {
             border-radius: 10px;
             padding: 0.65rem 0.9rem;
@@ -410,25 +387,21 @@
             transition: all 0.15s ease;
         }
 
-        /* Hover effect */
         .dropdown-item:hover {
             background: #eef2ff;
             color: #2563eb;
             transform: translateX(3px);
         }
 
-        /* Active style */
         .dropdown-item.active {
             background: #e0e7ff;
             color: #2563eb;
         }
 
-        /* Parent toggle styling */
         .dropdown-item.dropdown-toggle {
             position: relative;
         }
 
-        /* Chevron arrow */
         .dropdown-item.dropdown-toggle::after {
             float: right;
             margin-top: 6px;
@@ -437,12 +410,10 @@
             transition: transform 0.2s ease;
         }
 
-        /* Rotate arrow when open */
         .dropdown-item.dropdown-toggle.show::after {
             transform: rotate(180deg);
         }
 
-        /* Nested dropdown styling */
         .dropdown-menu .dropdown-menu {
             border-radius: 12px;
             margin-left: 0.3rem;
@@ -450,18 +421,15 @@
             box-shadow: 0 8px 28px rgba(0, 0, 0, 0.10);
         }
 
-        /* Divider style improvement */
         .dropdown-divider {
             margin: 0.6rem 0;
             opacity: 0.1;
         }
 
-        /* Logout styling */
         .dropdown-item.text-danger:hover {
             background: #fee2e2;
             color: #dc2626;
         }
-        /* Print-only styles: hide chrome (navbar/sidebar/footer) and use a clean page */
         @media print {
             body {
                 background: #ffffff !important;
@@ -489,7 +457,6 @@
         }
         @media (max-width: 991px) {
 
-                /* Make nested dropdowns stack downward */
                 .dropdown-menu .dropend .dropdown-menu {
                     position: relative !important;
                     top: 0 !important;
@@ -500,17 +467,14 @@
                     width: auto;
                 }
 
-                /* Make dropdown take full width */
                 .dropdown-menu {
                     width: 100%;
                 }
 
-                /* Better tap spacing */
                 .dropdown-item {
                     padding: 0.75rem 1rem;
                 }
 
-                /* Rotate arrow properly */
                 .dropdown-item.dropdown-toggle::after {
                     float: right;
                     transform: rotate(0deg);
@@ -526,7 +490,6 @@
 
 <body>
     <script>
-    // disable console output globally
     if (window.console) {
         ['log','warn','error','debug','info','trace'].forEach(m=>{console[m]=function(){};});
     }
@@ -534,7 +497,6 @@
 
     const isMobile = window.innerWidth <= 991;
 
-    // Prevent closing parent dropdown on nested click
     document.querySelectorAll(
         '#userManagementDropdown, #userUtilitiesDropdown'
     ).forEach(function (toggle) {
@@ -547,7 +509,6 @@
 
             if (submenu && submenu.classList.contains('dropdown-menu')) {
 
-                // Close siblings
                 let parentMenu = this.closest('.dropdown-menu');
                 parentMenu.querySelectorAll(':scope > .dropend > .dropdown-menu')
                     .forEach(function (menu) {
@@ -563,7 +524,6 @@
 
     });
 
-    // Close all nested menus when main dropdown closes
     const mainDropdown = document.getElementById('navbarDropdown');
 
     if (mainDropdown) {
@@ -582,20 +542,15 @@
 
         });
         </script>
-    {{-- Loader Overlay (used as background + CSS preloader) --}}
     @include('components.loader')
     <script>
-        // Wait for background AND main CSS before hiding loader (with safe timeout)
-        // but only on the FIRST page load in this tab. Afterwards we skip
-        // the preloading logic so the background doesn't "reload" on module transitions.
         document.addEventListener('DOMContentLoaded', function() {
             try {
                 if (window.sessionStorage && sessionStorage.getItem('bgPreloaded') === '1') {
                     if (typeof hideLoader === 'function') hideLoader();
-                    return; // background & CSS already confirmed in this tab
+                    return;
                 }
             } catch (e) {
-                // If sessionStorage is unavailable, fall back to original behaviour
             }
 
             var bgUrl = '{{ asset('images/dattachments/STBIP cover white.png') }}';
@@ -606,7 +561,7 @@
 
             var bgReady = false;
             var cssReady = false;
-            var maxTotalWaitMs = 8000; // hard cap so user isn't stuck forever
+            var maxTotalWaitMs = 8000;
 
             function markPreloaded() {
                 try {
@@ -614,7 +569,6 @@
                         sessionStorage.setItem('bgPreloaded', '1');
                     }
                 } catch (e) {
-                    // ignore storage failures
                 }
             }
 
@@ -625,13 +579,11 @@
                 }
             }
 
-            // Background image readiness
             img.onload = function() {
                 bgReady = true;
                 maybeHideLoader();
             };
 
-            // CSS readiness: look for Vite-built app CSS and ensure rules are available
             function checkCssLoaded() {
                 try {
                     var sheets = Array.from(document.styleSheets || []);
@@ -639,7 +591,6 @@
                         return s.href && /app-.*\.css/.test(s.href);
                     });
                     if (appSheets.length === 0) {
-                        // No specific app-*.css found; assume inline/other CSS is fine
                         cssReady = true;
                         maybeHideLoader();
                         return;
@@ -648,7 +599,6 @@
                         try {
                             return s.cssRules && s.cssRules.length > 0;
                         } catch (e) {
-                            // Access errors (shouldn't happen same-origin); treat as loaded
                             return true;
                         }
                     });
@@ -658,18 +608,15 @@
                         return;
                     }
                 } catch (e) {
-                    // On any unexpected error, don't block the user
                     cssReady = true;
                     maybeHideLoader();
                     return;
                 }
-                // Retry shortly until CSS is ready or timeout kicks in
                 setTimeout(checkCssLoaded, 150);
             }
 
             checkCssLoaded();
 
-            // Safety timeout: if either background or CSS never confirm, still hide loader
             setTimeout(function() {
                 if (!(bgReady && cssReady) && typeof hideLoader === 'function') {
                     markPreloaded();
@@ -679,19 +626,15 @@
         });
     </script>
     
-    {{-- Navigation Bar --}}
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: #06306e; position: fixed; top: 0; left: 0; width: 100%; z-index: 1030;">
         <div class="container-fluid px-3 d-flex align-items-center justify-content-between flex-nowrap">
-            <!-- On desktop, title is next to sidebar; on mobile, title is on the right -->
             <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}" style="@guest margin-left:0 !important; @endguest; white-space:nowrap;">STB Inventory Portal</a>
             <div class="d-flex align-items-center ms-auto" style="gap: 0.5rem; position: relative; z-index: 1;">
-                <!-- Hamburger for mobile sidebar toggle -->
                 @auth
                     <button class="navbar-toggler d-block d-lg-none order-2" type="button" aria-label="Toggle sidebar" style="z-index:1060;" onclick="document.body.classList.toggle('sidebar-open')">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                 @endauth
-                <!-- User dropdown or login/register always on right -->
                 @auth
                     <div class="order-1">
                         <div class="dropdown">
@@ -783,7 +726,6 @@
                         </a>
                     </div>
                     <style>
-                        /* Guest Auth Links Minimalist UI */
                         .guest-auth-btns .guest-auth-link {
                             color: #fff !important;
                             background: none !important;
@@ -810,14 +752,12 @@
                 @endguest
             </div>
             <div class="collapse navbar-collapse justify-content-end d-lg-none" id="navbarNav" style="display: none !important;">
-                <!-- This is now hidden to prevent duplicate links/names on mobile -->
             </div>
         </div>
     </nav>
 @include('Login.accounts.register')
 @include('Login.login')
     <style>
-        /* Preloader overlay styles */
         #bg-preloader {
             position: fixed;
             top: 0;
@@ -868,7 +808,6 @@
                 left: 0 !important;
                 width: 100% !important;
             }
-            /* Overlay for sidebar */
             body.sidebar-open::before {
                 content: '';
                 position: fixed;
@@ -888,7 +827,6 @@
         }
     </style>
     <script>
-        // Hide sidebar on overlay click (mobile)
         document.addEventListener('click', function(e) {
             if (document.body.classList.contains('sidebar-open')) {
                 if (e.target === document.body) {
@@ -903,7 +841,6 @@
         <nav class="nav flex-column w-100">
             <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
             @if(Auth::check() && (Auth::user()->usergroup === 'admin' || Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'user'))
-            <!-- Collapsible Upload Nav -->
             <a class="nav-link d-flex align-items-center justify-content-between {{ request()->routeIs('upload') ? 'active' : '' }}" data-bs-toggle="collapse" href="#sidebarUploadCollapse" role="button" aria-expanded="{{ request()->routeIs('upload') ? 'true' : 'false' }}" aria-controls="sidebarUploadCollapse" id="sidebarUploadToggle" style="transition:background 0.15s, color 0.15s;">
                 <span><i class="bi bi-upload me-2"></i>Upload</span>
                 <i class="bi bi-chevron-down small" id="sidebarUploadChevron"></i>
@@ -920,7 +857,6 @@
             @endif
         </nav>
         <style>
-            /* Collapsible sidebar nav custom styles */
             #sidebarReportsCollapse .nav-link {
                 background: none;
                 color: #2c3e50;
@@ -976,7 +912,6 @@
             <div>© {{ date('Y') }} DSWD STB Inventory Portal. All rights reserved.</div>
         </div>
     </footer>
-    <!-- Swiper JS (make sure slider initialization in partial works) -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 </body>
 
