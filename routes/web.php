@@ -115,16 +115,16 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
     Route::post('/masterdata/region-items', [MasterDataController::class, 'storeRegionItem'])
         ->name('masterdata.region-items.store')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\MasterDataWriteAccess::class);
     Route::patch('/masterdata/region-items/{regionItem}', [MasterDataController::class, 'updateRegionItem'])
         ->name('masterdata.region-items.update')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\MasterDataWriteAccess::class);
     Route::post('/masterdata/import-google-sheet', [MasterDataController::class, 'importGoogleSheet'])
         ->name('masterdata.import-google-sheet')
         ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
     Route::delete('/masterdata/region-items/{regionItem}', [MasterDataController::class, 'destroyRegionItem'])
         ->name('masterdata.region-items.destroy')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\MasterDataDeleteAccess::class);
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');

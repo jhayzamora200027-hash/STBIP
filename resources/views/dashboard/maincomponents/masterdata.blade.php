@@ -369,9 +369,10 @@
 	}
 	.masterdata-region-count {
 		margin-top: 8px;
-		font-size: 1.7rem;
+		font-size: 2rem;
 		font-weight: 800;
 		color: #175d8f;
+		text-align: center;
 	}
 	.masterdata-region-foot {
 		margin-top: 4px;
@@ -745,19 +746,19 @@
 		<div class="masterdata-stats">
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">Regional Offices</div>
-				<div class="masterdata-stat-value">{{ $overview['total_regions'] }}</div>
+				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['total_regions'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">Total Region Items</div>
-				<div class="masterdata-stat-value">{{ $overview['total_items'] }}</div>
+				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['total_items'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">With MOA</div>
-				<div class="masterdata-stat-value">{{ $overview['with_moa'] }}</div>
+				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['with_moa'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">With Resolution</div>
-				<div class="masterdata-stat-value">{{ $overview['with_resolution'] }}</div>
+				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['with_resolution'] }}</div>
 			</div>
 		</div>
 
@@ -771,9 +772,8 @@
 					<div class="masterdata-region-overview">
 						@foreach($regions as $region)
 							<div class="masterdata-region-box">
-								<div class="masterdata-region-name">{{ $region->name }}</div>
-								<div class="masterdata-region-count">{{ $region->items_count }}</div>
-								<div class="masterdata-region-foot">{{ $region->items_count === 1 ? 'region item' : 'region items' }}</div>
+								<div class="masterdata-region-name" style="text-align: center;">{{ $region->name }}</div>
+								<div class="masterdata-region-count" style="text-align: center;">{{ $region->items_count }}</div>
 							</div>
 						@endforeach
 					</div>

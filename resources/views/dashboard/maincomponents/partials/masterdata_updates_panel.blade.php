@@ -1,4 +1,7 @@
-@php($isSysadmin = auth()->check() && auth()->user()->usergroup === 'sysadmin')
+@php($userGroup = auth()->check() ? auth()->user()->usergroup : null)
+@php($isSysadmin = $userGroup === 'sysadmin')
+@php($canWriteMasterData = in_array($userGroup, ['user', 'admin', 'sysadmin'], true))
+@php($canDeleteMasterData = in_array($userGroup, ['admin', 'sysadmin'], true))
 
 <div class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-body">
@@ -22,13 +25,13 @@
 	</div>
 </div>
 
-@unless($isSysadmin)
+@unless($canWriteMasterData)
 	<div class="masterdata-fixed-note" style="margin-bottom: 22px;">
-		You currently have read-only access to Region Item Management. Only sysadmin accounts can add, update, import, or delete master data items.
+		You currently have read-only access to Region Item Management.
 	</div>
 @endunless
 
-@if($isSysadmin)
+@if($canWriteMasterData)
 <section class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-header">
 		<h2>Add New Item to {{ $selectedRegionName }}</h2>
@@ -241,7 +244,7 @@
 							</div>
 						</div>
 
-						@if($isSysadmin)
+						@if($canWriteMasterData)
 						<form method="POST" action="{{ route('masterdata.region-items.update', $item) }}" data-masterdata-updates-form="update">
 							@csrf
 							@method('PATCH')
@@ -305,6 +308,7 @@
 							</div>
 						</form>
 
+						@if($canDeleteMasterData)
 						<form method="POST" action="{{ route('masterdata.region-items.destroy', $item) }}" onsubmit="return confirm('Delete this region item?');" class="masterdata-item-actions" style="margin-top: 10px;" data-masterdata-updates-form="delete">
 							@csrf
 							@method('DELETE')
@@ -313,6 +317,7 @@
 							<input type="hidden" name="return_page" value="{{ $regionItems->currentPage() }}">
 							<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete Item</button>
 						</form>
+						@endif
 						@else
 						<div class="masterdata-form-grid">
 							<div class="masterdata-field">
@@ -367,7 +372,7 @@
 					@endforeach
 				</div>
 			@else
-				<div class="masterdata-empty">No region items found for {{ $selectedRegionName }} yet. {{ $isSysadmin ? 'Add the first one using the form above.' : '' }}</div>
+				<div class="masterdata-empty">No region items found for {{ $selectedRegionName }} yet. {{ $canWriteMasterData ? 'Add the first one using the form above.' : '' }}</div>
 			@endif
 		</div>
 
