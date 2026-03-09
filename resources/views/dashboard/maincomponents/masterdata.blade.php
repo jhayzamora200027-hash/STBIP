@@ -597,6 +597,27 @@
 		margin-top: 14px;
 		flex-wrap: wrap;
 	}
+	.masterdata-attachment-panel {
+		display: flex;
+		justify-content: space-between;
+		gap: 16px;
+		align-items: center;
+		padding: 16px 18px;
+		margin-bottom: 18px;
+		border: 1px solid #dbe4f0;
+		border-radius: 18px;
+		background: linear-gradient(180deg, #f8fbff 0%, #f2f7fc 100%);
+	}
+	.masterdata-attachment-actions {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+	.masterdata-attachment-actions form {
+		margin: 0;
+	}
 	.masterdata-empty {
 		padding: 26px;
 		text-align: center;
@@ -664,6 +685,15 @@
 		}
 		.masterdata-item-actions {
 			justify-content: stretch;
+		}
+		.masterdata-attachment-panel {
+			align-items: stretch;
+			flex-direction: column;
+		}
+		.masterdata-attachment-actions,
+		.masterdata-attachment-actions form,
+		.masterdata-attachment-actions .masterdata-btn {
+			width: 100%;
 		}
 	}
 </style>
@@ -1191,6 +1221,81 @@
 			initializeUpdatesPanelAjax(root);
 		}
 
+		function openMasterdataAttachmentUploadModal(button) {
+			if (!button || typeof bootstrap === 'undefined') {
+				return;
+			}
+
+			const modalEl = document.getElementById('masterdataAttachmentUploadModal');
+			if (!modalEl) {
+				return;
+			}
+
+			const region = button.getAttribute('data-region') || '';
+			const province = button.getAttribute('data-province') || '';
+			const municipality = button.getAttribute('data-municipality') || '';
+			const title = button.getAttribute('data-title') || '';
+			const year = button.getAttribute('data-year') || '';
+
+			const summary = document.getElementById('masterdataAttachmentUploadSummary');
+			const regionInput = document.getElementById('masterdataAttachmentRegion');
+			const provinceInput = document.getElementById('masterdataAttachmentProvince');
+			const municipalityInput = document.getElementById('masterdataAttachmentMunicipality');
+			const titleInput = document.getElementById('masterdataAttachmentTitle');
+			const yearInput = document.getElementById('masterdataAttachmentYear');
+			const fileInput = document.getElementById('masterdataAttachmentFile');
+
+			if (summary) {
+				const parts = [title, province, municipality, year ? 'MOA ' + year : ''].filter(Boolean);
+				summary.textContent = parts.join(' / ');
+			}
+			if (regionInput) regionInput.value = region;
+			if (provinceInput) provinceInput.value = province;
+			if (municipalityInput) municipalityInput.value = municipality;
+			if (titleInput) titleInput.value = title;
+			if (yearInput) yearInput.value = year;
+			if (fileInput) fileInput.value = '';
+
+			bootstrap.Modal.getOrCreateInstance(modalEl).show();
+		}
+
+		function openMasterdataAttachmentViewModal(button) {
+			if (!button || typeof bootstrap === 'undefined') {
+				return;
+			}
+
+			const url = button.getAttribute('data-url') || '';
+			if (!url) {
+				return;
+			}
+
+			const modalEl = document.getElementById('masterdataAttachmentViewModal');
+			const frame = document.getElementById('masterdataAttachmentViewFrame');
+			const titleEl = document.getElementById('masterdataAttachmentViewModalLabel');
+			const uploaderEl = document.getElementById('masterdataAttachmentViewUploadedBy');
+
+			if (!modalEl || !frame) {
+				return;
+			}
+
+			frame.src = url;
+			if (titleEl) {
+				titleEl.textContent = button.getAttribute('data-title') || 'View Attachment';
+			}
+			if (uploaderEl) {
+				const uploadedBy = button.getAttribute('data-uploader') || '';
+				if (uploadedBy) {
+					uploaderEl.textContent = 'Uploaded by: ' + uploadedBy;
+					uploaderEl.style.display = 'inline-block';
+				} else {
+					uploaderEl.textContent = '';
+					uploaderEl.style.display = 'none';
+				}
+			}
+
+			bootstrap.Modal.getOrCreateInstance(modalEl).show();
+		}
+
 		function setFormBusy(form, isBusy) {
 			if (!(form instanceof HTMLFormElement)) {
 				return;
@@ -1387,6 +1492,36 @@
 			successModal.addEventListener('click', function (event) {
 				if (event.target === successModal) {
 					closeSuccessModal();
+				}
+			});
+		}
+
+		document.addEventListener('click', function (event) {
+			const uploadButton = event.target.closest('.btn-upload-masterdata-attachment');
+			if (uploadButton) {
+				event.preventDefault();
+				openMasterdataAttachmentUploadModal(uploadButton);
+				return;
+			}
+
+			const viewButton = event.target.closest('.btn-view-masterdata-attachment');
+			if (viewButton) {
+				event.preventDefault();
+				openMasterdataAttachmentViewModal(viewButton);
+			}
+		});
+
+		const masterdataAttachmentViewModal = document.getElementById('masterdataAttachmentViewModal');
+		if (masterdataAttachmentViewModal) {
+			masterdataAttachmentViewModal.addEventListener('hidden.bs.modal', function () {
+				const frame = document.getElementById('masterdataAttachmentViewFrame');
+				const uploaderEl = document.getElementById('masterdataAttachmentViewUploadedBy');
+				if (frame) {
+					frame.src = '';
+				}
+				if (uploaderEl) {
+					uploaderEl.textContent = '';
+					uploaderEl.style.display = 'none';
 				}
 			});
 		}

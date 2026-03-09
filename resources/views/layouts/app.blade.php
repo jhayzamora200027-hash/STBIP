@@ -840,20 +840,8 @@
         <img src="{{ asset('images/dattachments/social technology bureau innovating solution logo.png') }}" alt="STB Innovating Solution Logo" class="sidebar-logo">
         <nav class="nav flex-column w-100">
             <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
-            @if(Auth::check() && (Auth::user()->usergroup === 'admin' || Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'user'))
-            <a class="nav-link d-flex align-items-center justify-content-between {{ request()->routeIs('upload') ? 'active' : '' }}" data-bs-toggle="collapse" href="#sidebarUploadCollapse" role="button" aria-expanded="{{ request()->routeIs('upload') ? 'true' : 'false' }}" aria-controls="sidebarUploadCollapse" id="sidebarUploadToggle" style="transition:background 0.15s, color 0.15s;">
-                <span><i class="bi bi-upload me-2"></i>Upload</span>
-                <i class="bi bi-chevron-down small" id="sidebarUploadChevron"></i>
-            </a>
-            <div class="collapse {{ request()->routeIs('uploadmoasts') ? 'show' : '' }}" id="sidebarUploadCollapse">
-                <a class="nav-link ms-4" {{ request()->routeIs('uploadmoasts') ? 'active' : '' }} href="{{ route('uploadmoasts') }}">STs Manager</a>
-                @if (Auth::check() && (Auth::user()->usergroup !== 'user'))
-                <a class="nav-link ms-4 {{ request()->routeIs('upload') ? 'active' : '' }}" href="{{ route('upload') }}">Uploading Document</a>
-                @endif
-            </div>
             @if(Auth::check() && in_array(Auth::user()->usergroup, ['user', 'admin', 'sysadmin']))
             <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}"><i class="bi bi-database-gear me-2"></i>Master Data</a>
-            @endif
             @endif
         </nav>
         <style>

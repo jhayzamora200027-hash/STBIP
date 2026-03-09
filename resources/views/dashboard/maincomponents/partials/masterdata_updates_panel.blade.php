@@ -151,6 +151,8 @@
 					</div>
 					@foreach($regionItems as $item)
 							@php($adoptionStatus = $item->with_adopted ? 'adopted' : ($item->with_replicated ? 'replicated' : 'none'))
+							@php($itemAttachment = $attachmentsByItem[$item->id] ?? null)
+							@php($canManageAttachment = $isSysadmin && $item->with_moa && !empty($item->year_of_moa))
 				<div class="masterdata-item-entry">
 					<div class="masterdata-item-row" data-masterdata-item-toggle="item-{{ $item->id }}" role="button" tabindex="0" aria-expanded="false">
 						<div>
@@ -181,6 +183,61 @@
 									<span>Updated by: {{ $item->updatedby ?: '-' }}</span>
 									<span>Updated at: {{ $item->updated_at?->format('M d, Y h:i A') ?: '-' }}</span>
 								</div>
+							</div>
+						</div>
+
+						<div class="masterdata-attachment-panel">
+							<div>
+								<div class="masterdata-stat-label">MOA Attachment</div>
+								<div class="masterdata-item-meta" style="margin-top: 8px;">
+									@if($itemAttachment)
+										<span>Uploaded PDF available for this item.</span>
+										@if(!empty($itemAttachment['uploaded_by']))
+											<span>Uploaded by: {{ $itemAttachment['uploaded_by'] }}</span>
+										@endif
+									@else
+										<span>No PDF attachment uploaded yet.</span>
+									@endif
+									@if(!$item->with_moa || empty($item->year_of_moa))
+										<span>Enable With MOA and set Year of MOA to upload an attachment.</span>
+									@endif
+								</div>
+							</div>
+							<div class="masterdata-attachment-actions">
+								@if($itemAttachment)
+									<button
+										type="button"
+										class="masterdata-btn masterdata-btn-secondary btn-view-masterdata-attachment"
+										data-url="{{ $itemAttachment['url'] }}"
+										data-title="{{ $item->title }}"
+										data-uploader="{{ $itemAttachment['uploaded_by'] ?? '' }}"
+									>
+										View PDF
+									</button>
+									@if($isSysadmin)
+										<form
+											method="POST"
+											action="{{ route('sts.attachments.destroy', $itemAttachment['id']) }}"
+											onsubmit="return confirm('Delete this attachment?');"
+										>
+											@csrf
+											@method('DELETE')
+											<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete PDF</button>
+										</form>
+									@endif
+								@elseif($canManageAttachment)
+									<button
+										type="button"
+										class="masterdata-btn masterdata-btn-secondary btn-upload-masterdata-attachment"
+										data-region="{{ $item->region?->name ?: $selectedRegionName }}"
+										data-province="{{ $item->province ?? '' }}"
+										data-municipality="{{ $item->municipality ?? '' }}"
+										data-title="{{ $item->title }}"
+										data-year="{{ $item->year_of_moa ?? '' }}"
+									>
+										Upload PDF
+									</button>
+								@endif
 							</div>
 						</div>
 
@@ -321,3 +378,54 @@
 		@endif
 	</div>
 </section>
+
+@if($isSysadmin)
+<div class="modal fade" id="masterdataAttachmentUploadModal" tabindex="-1" aria-labelledby="masterdataAttachmentUploadModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<form method="POST" action="{{ route('sts.attachments.store') }}" enctype="multipart/form-data">
+				@csrf
+				<div class="modal-header">
+					<h5 class="modal-title" id="masterdataAttachmentUploadModalLabel">Upload Attachment for Existing Item</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-2 small text-muted" id="masterdataAttachmentUploadSummary"></div>
+					<input type="hidden" name="region" id="masterdataAttachmentRegion">
+					<input type="hidden" name="province" id="masterdataAttachmentProvince">
+					<input type="hidden" name="municipality" id="masterdataAttachmentMunicipality">
+					<input type="hidden" name="title" id="masterdataAttachmentTitle">
+					<input type="hidden" name="year_of_moa" id="masterdataAttachmentYear">
+
+					<div class="mb-3">
+						<label for="masterdataAttachmentFile" class="form-label">Select PDF file</label>
+						<input type="file" class="form-control" id="masterdataAttachmentFile" name="attachment" accept="application/pdf" required>
+						<div class="form-text">PDF only, max size 10MB.</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-primary">Upload</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+@endif
+
+<div class="modal fade" id="masterdataAttachmentViewModal" tabindex="-1" aria-labelledby="masterdataAttachmentViewModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<div class="d-flex flex-column flex-md-row align-items-start align-items-md-center w-100 justify-content-between">
+					<h5 class="modal-title mb-1 mb-md-0" id="masterdataAttachmentViewModalLabel">View Attachment</h5>
+					<span class="badge bg-light text-muted" id="masterdataAttachmentViewUploadedBy" style="font-size:0.8rem; display:none;">Uploaded by:</span>
+				</div>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body" style="height: 80vh;">
+				<iframe id="masterdataAttachmentViewFrame" src="" style="width: 100%; height: 100%; border: none;" title="ST Attachment PDF"></iframe>
+			</div>
+		</div>
+	</div>
+</div>

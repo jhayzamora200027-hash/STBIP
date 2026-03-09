@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\RegionItem;
 use App\Models\Selectdocslogs;
+use App\Models\StsAttachment;
 use App\Models\Uploadlog;
+use App\Models\User;
 use App\Services\RegionSheetImportService;
 use App\Support\MasterDataRegionCatalog;
 use Illuminate\Http\JsonResponse;
@@ -159,7 +161,13 @@ class MasterDataController extends Controller
         $actorName = $this->resolveActorName();
         $validated = $this->validateRegionItem($request);
 
+        $regionItem->loadMissing('region:id,name');
+        $originalAttachmentIdentity = $this->buildRegionItemAttachmentIdentity($regionItem);
+
         $regionItem->update($this->buildRegionItemPayload($validated, $actorName, $regionItem));
+        $regionItem->load('region:id,name');
+
+        $this->syncRegionItemAttachmentIdentity($originalAttachmentIdentity, $regionItem);
 
         $regionName = $regionItem->fresh('region')?->region?->name ?? Region::query()->find($validated['region_id'])?->name;
 
@@ -283,8 +291,11 @@ class MasterDataController extends Controller
             ]
         );
 
+        $attachmentsByItem = $this->buildAttachmentMapForRegionItems($pagedItems);
+
         return [
             'regionItems' => $regionItems,
+            'attachmentsByItem' => $attachmentsByItem,
             'selectedRegion' => $selectedRegion,
             'selectedRegionName' => $selectedRegionName,
             'selectedProvince' => $selectedProvince,
@@ -331,6 +342,172 @@ class MasterDataController extends Controller
         }
 
         return 'ST item ' . $action . ': ' . implode(' / ', array_filter($segments));
+    }
+
+    private function buildAttachmentMapForRegionItems(Collection $items): array
+    {
+        if ($items->isEmpty()) {
+            return [];
+        }
+
+        $items = $items->values();
+        $items->loadMissing('region:id,name');
+
+        $attachmentsQuery = StsAttachment::query();
+        $attachmentsQuery->where(function ($query) use ($items) {
+            foreach ($items as $item) {
+                $identity = $this->buildRegionItemAttachmentIdentity($item);
+
+                $query->orWhere(function ($subQuery) use ($identity) {
+                    $subQuery->where('region', $identity['region'])
+                        ->where('title', $identity['title']);
+
+                    $this->whereAttachmentColumnMatches($subQuery, 'province', $identity['province']);
+                    $this->whereAttachmentColumnMatches($subQuery, 'municipality', $identity['municipality']);
+                    $this->whereAttachmentColumnMatches($subQuery, 'year_of_moa', $identity['year_of_moa']);
+                });
+            }
+        });
+
+        $attachments = $attachmentsQuery->get();
+        if ($attachments->isEmpty()) {
+            return [];
+        }
+
+        $userNames = [];
+        $userIds = $attachments->pluck('created_by')->filter()->unique()->values();
+        if ($userIds->isNotEmpty()) {
+            $userNames = User::query()
+                ->whereIn('user_id', $userIds)
+                ->pluck('name', 'user_id')
+                ->toArray();
+        }
+
+        $attachmentMap = [];
+        foreach ($attachments as $attachment) {
+            $identity = $this->buildAttachmentIdentity(
+                $attachment->region,
+                $attachment->province,
+                $attachment->municipality,
+                $attachment->title,
+                $attachment->year_of_moa,
+            );
+            $key = $this->buildAttachmentIdentityKey($identity);
+
+            if (!isset($attachmentMap[$key]) || $attachment->id > $attachmentMap[$key]['id']) {
+                $entry = [
+                    'id' => $attachment->id,
+                    'action' => $attachment->action,
+                    'url' => null,
+                    'uploaded_by' => $userNames[$attachment->created_by] ?? $attachment->created_by,
+                ];
+
+                if ($attachment->action === 'added') {
+                    $entry['url'] = route('sts.attachments.show', $attachment->id);
+                }
+
+                $attachmentMap[$key] = $entry;
+            }
+        }
+
+        $attachmentsByItem = [];
+        foreach ($items as $item) {
+            $identity = $this->buildRegionItemAttachmentIdentity($item);
+            $key = $this->buildAttachmentIdentityKey($identity);
+
+            if (!isset($attachmentMap[$key])) {
+                continue;
+            }
+
+            $entry = $attachmentMap[$key];
+            if ($entry['action'] !== 'added' || empty($entry['url'])) {
+                continue;
+            }
+
+            $attachmentsByItem[$item->id] = [
+                'id' => $entry['id'],
+                'url' => $entry['url'],
+                'uploaded_by' => $entry['uploaded_by'],
+            ];
+        }
+
+        return $attachmentsByItem;
+    }
+
+    private function syncRegionItemAttachmentIdentity(array $originalIdentity, RegionItem $regionItem): void
+    {
+        $updatedIdentity = $this->buildRegionItemAttachmentIdentity($regionItem);
+
+        if ($this->buildAttachmentIdentityKey($originalIdentity) === $this->buildAttachmentIdentityKey($updatedIdentity)) {
+            return;
+        }
+
+        $query = StsAttachment::query()
+            ->where('region', $originalIdentity['region'])
+            ->where('title', $originalIdentity['title']);
+
+        $this->whereAttachmentColumnMatches($query, 'province', $originalIdentity['province']);
+        $this->whereAttachmentColumnMatches($query, 'municipality', $originalIdentity['municipality']);
+        $this->whereAttachmentColumnMatches($query, 'year_of_moa', $originalIdentity['year_of_moa']);
+
+        $query->update([
+            'region' => $updatedIdentity['region'],
+            'province' => $updatedIdentity['province'],
+            'municipality' => $updatedIdentity['municipality'],
+            'title' => $updatedIdentity['title'],
+            'year_of_moa' => $updatedIdentity['year_of_moa'],
+        ]);
+    }
+
+    private function buildRegionItemAttachmentIdentity(RegionItem $regionItem): array
+    {
+        return $this->buildAttachmentIdentity(
+            $regionItem->region?->name,
+            $regionItem->province,
+            $regionItem->municipality,
+            $regionItem->title,
+            $regionItem->year_of_moa,
+        );
+    }
+
+    private function buildAttachmentIdentity(
+        ?string $region,
+        mixed $province,
+        mixed $municipality,
+        mixed $title,
+        mixed $yearOfMoa,
+    ): array {
+        return [
+            'region' => trim((string) $region),
+            'province' => trim((string) ($province ?? '')),
+            'municipality' => trim((string) ($municipality ?? '')),
+            'title' => trim((string) ($title ?? '')),
+            'year_of_moa' => trim((string) ($yearOfMoa ?? '')),
+        ];
+    }
+
+    private function buildAttachmentIdentityKey(array $identity): string
+    {
+        return implode('|', [
+            $identity['region'],
+            $identity['province'],
+            $identity['municipality'],
+            $identity['title'],
+            $identity['year_of_moa'],
+        ]);
+    }
+
+    private function whereAttachmentColumnMatches($query, string $column, string $value): void
+    {
+        if ($value === '') {
+            $query->where(function ($nestedQuery) use ($column) {
+                $nestedQuery->whereNull($column)->orWhere($column, '');
+            });
+
+            return;
+        }
+
+        $query->where($column, $value);
     }
 
     private function validateRegionItem(Request $request): array
