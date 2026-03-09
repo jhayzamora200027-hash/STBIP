@@ -5,6 +5,7 @@ use App\Http\Controllers\TableController;
 use App\Http\Controllers\UserApprovalController;
 use App\Http\Controllers\ExcelController;
 use App\Http\Controllers\MainReportController;
+use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\StsMoaListingwithUploadingController;
 use App\Http\Controllers\StsAttachmentController;
 use App\Http\Controllers\STsReportController;
@@ -102,6 +103,30 @@ Route::get('/sts-attachments/{attachment}', [StsAttachmentController::class, 'sh
 Route::middleware(['auth'])->group(function () {
     // Uploading page (with logs)
     Route::get('/upload', [ExcelController::class, 'uploadLogs'])->name('upload');
+    Route::get('/masterdata', [MasterDataController::class, 'index'])
+        ->name('masterdata.index')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::get('/masterdata/updates-panel', [MasterDataController::class, 'updatesPanel'])
+        ->name('masterdata.updates-panel')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::post('/masterdata/regions', [MasterDataController::class, 'storeRegion'])
+        ->name('masterdata.regions.store')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::delete('/masterdata/regions/{region}', [MasterDataController::class, 'destroyRegion'])
+        ->name('masterdata.regions.destroy')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::post('/masterdata/region-items', [MasterDataController::class, 'storeRegionItem'])
+        ->name('masterdata.region-items.store')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::patch('/masterdata/region-items/{regionItem}', [MasterDataController::class, 'updateRegionItem'])
+        ->name('masterdata.region-items.update')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::post('/masterdata/import-google-sheet', [MasterDataController::class, 'importGoogleSheet'])
+        ->name('masterdata.import-google-sheet')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::delete('/masterdata/region-items/{regionItem}', [MasterDataController::class, 'destroyRegionItem'])
+        ->name('masterdata.region-items.destroy')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');

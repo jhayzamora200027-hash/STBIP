@@ -3,11 +3,24 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Services\RegionDashboardDataService;
 
 class STsReportController extends Controller
 {
     protected function getAllData()
     {
+        $service = app(RegionDashboardDataService::class);
+
+        if ($service->hasData()) {
+            $parsed = $service->getData();
+
+            return [
+                'data' => $parsed['data'] ?? [],
+                'regions' => $parsed['regions'] ?? [],
+                'headers' => $parsed['headers'] ?? [],
+            ];
+        }
+
         $stsReportController = new MainReportController();
         $path = $stsReportController->findLatestExcelPath();
 

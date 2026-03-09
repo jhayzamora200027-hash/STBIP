@@ -914,6 +914,9 @@
                 <a class="nav-link ms-4 {{ request()->routeIs('upload') ? 'active' : '' }}" href="{{ route('upload') }}">Uploading Document</a>
                 @endif
             </div>
+            @if(Auth::check() && Auth::user()->usergroup === 'sysadmin')
+            <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}"><i class="bi bi-database-gear me-2"></i>Master Data</a>
+            @endif
             @endif
         </nav>
         <style>

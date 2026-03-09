@@ -840,8 +840,20 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 function showReplicateConfirmPopover(targetEl, stInfo = {}) {
     try {
-        const existing = document.body.querySelector('.replicate-popover');
-        if (existing) existing.remove();
+        if (!targetEl) return;
+        clearReplicatePopoverHideTimer();
+
+        const title = (stInfo && stInfo.title) ? stInfo.title : '';
+        const currentState = window.__replicatePopoverState || null;
+        if (currentState && currentState.pop && currentState.pop.isConnected && currentState.anchor === targetEl && currentState.title === title) {
+            currentState.pop.style.pointerEvents = 'auto';
+            currentState.pop.style.opacity = '1';
+            currentState.pop.style.transform = 'translateY(0) scale(1)';
+            return currentState.pop;
+        }
+
+        closeReplicatePopover(true);
+
         const pop = document.createElement('div');
         pop.className = 'replicate-popover';
         pop.style.position = 'fixed';
@@ -858,7 +870,6 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         pop.style.transform = 'translateY(-6px) scale(0.98)';
         pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
 
-        const title = (stInfo && stInfo.title) ? stInfo.title : '';
         pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
         document.body.appendChild(pop);
         try {
@@ -900,14 +911,45 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
 
         const confirmBtn = pop.querySelector('.rp-confirm');
         const cancelBtn = pop.querySelector('.rp-cancel');
-        const cleanup = () => { try {
-                pop.style.pointerEvents = 'none';
-                pop.style.opacity = '0';
-                pop.style.transform = 'translateY(-6px) scale(0.98)';
-                setTimeout(()=> pop.remove(), 180);
-                document.removeEventListener('keydown', onKey);
-            } catch(e){} };
+        const cleanup = (immediate) => { closeReplicatePopover(!!immediate); };
         const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); cleanup(); } else if (ev.key === 'Enter') { ev.preventDefault(); confirmBtn.click(); } };
+
+        window.__replicatePopoverState = {
+            pop,
+            anchor: targetEl,
+            title,
+            hoverTargets: [],
+            onKey,
+            onScroll: null,
+            onResize: null
+        };
+
+        const hoverTargets = [];
+        const rawHoverTargets = Array.isArray(stInfo.hoverTargets) ? stInfo.hoverTargets : [];
+        rawHoverTargets.forEach(function(el) {
+            if (el && hoverTargets.indexOf(el) === -1) hoverTargets.push(el);
+        });
+        if (targetEl && hoverTargets.indexOf(targetEl) === -1) hoverTargets.push(targetEl);
+        if (hoverTargets.indexOf(pop) === -1) hoverTargets.push(pop);
+        window.__replicatePopoverState.hoverTargets = hoverTargets;
+
+        const onScroll = function() {
+            closeReplicatePopover(true);
+        };
+        const onResize = function() {
+            closeReplicatePopover(true);
+        };
+        window.__replicatePopoverState.onScroll = onScroll;
+        window.__replicatePopoverState.onResize = onResize;
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', onResize, true);
+
+        pop.addEventListener('mouseenter', function() {
+            clearReplicatePopoverHideTimer();
+        });
+        pop.addEventListener('mouseleave', function() {
+            scheduleReplicatePopoverHide(220);
+        });
 
         function doConfirm() {
             try {
@@ -933,13 +975,72 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
     } catch(e) {}
 }
 try { window.showReplicateConfirmPopover = showReplicateConfirmPopover; } catch(e) {}
+let __replicatePopoverHideTimer = null;
+function isPointInsideElement(clientX, clientY, el) {
+    try {
+        if (!el || typeof clientX !== 'number' || typeof clientY !== 'number') return false;
+        const rect = el.getBoundingClientRect();
+        return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    } catch(e) {
+        return false;
+    }
+}
+function isPointInsideAnyElement(clientX, clientY, elements) {
+    try {
+        return (elements || []).some(function(el) {
+            return isPointInsideElement(clientX, clientY, el);
+        });
+    } catch(e) {
+        return false;
+    }
+}
+function clearReplicatePopoverHideTimer() {
+    try {
+        if (__replicatePopoverHideTimer) {
+            clearTimeout(__replicatePopoverHideTimer);
+            __replicatePopoverHideTimer = null;
+        }
+    } catch(e) {}
+}
+function closeReplicatePopover(immediate) {
+    try {
+        clearReplicatePopoverHideTimer();
+        const state = window.__replicatePopoverState || null;
+        if (!state || !state.pop) {
+            window.__replicatePopoverState = null;
+            return;
+        }
+        const pop = state.pop;
+        if (state.onKey) document.removeEventListener('keydown', state.onKey);
+        if (state.onScroll) window.removeEventListener('scroll', state.onScroll, true);
+        if (state.onResize) window.removeEventListener('resize', state.onResize, true);
+        window.__replicatePopoverState = null;
+        if (!pop.isConnected) return;
+        if (immediate) {
+            pop.remove();
+            return;
+        }
+        pop.style.pointerEvents = 'none';
+        pop.style.opacity = '0';
+        pop.style.transform = 'translateY(-6px) scale(0.98)';
+        setTimeout(() => {
+            try { if (pop.isConnected) pop.remove(); } catch(e) {}
+        }, 180);
+    } catch(e) {}
+}
+function scheduleReplicatePopoverHide(delay) {
+    clearReplicatePopoverHideTimer();
+    __replicatePopoverHideTimer = setTimeout(function(){
+        closeReplicatePopover(false);
+    }, typeof delay === 'number' ? delay : 180);
+}
 document.addEventListener('click', function(ev){
     try {
         const pop = document.body.querySelector('.replicate-popover');
         if (!pop) return;
         if (pop.contains(ev.target)) return;
         if (ev.target.closest('.rsm-st-summary-row') || ev.target.closest('.rsm-st-detail-row')) return;
-        pop.remove();
+        closeReplicatePopover(true);
     } catch(e){}
 });
 function deriveRegionFromSlider(source){
@@ -1273,7 +1374,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	function updateSliderBottomPreview() {
 		try {
 			if (window.parent && window.parent !== window && window.parent.postMessage) {
-				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+				window.parent.postMessage({ type:'streportToggleHeight', height:'720px' }, '*');
 			}
 		} catch(_e) {  }
 		try { closePopover(); } catch(e) {}
@@ -1357,7 +1458,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		} catch(e) {  }
 		try {
 			if (window.parent && window.parent !== window && window.parent.postMessage) {
-				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+				window.parent.postMessage({ type:'streportToggleHeight', height:'720px' }, '*');
 			}
 		} catch(_e) { }
 	}
@@ -1477,7 +1578,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	function closeImageModal() {
 		if (!modal) return;
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
-			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+			window.parent.postMessage({ type:'streportToggleHeight', height:'720px' }, '*');
 		}
 		modal.style.display = 'none';
 		modal.classList.remove('expanded');
@@ -1493,7 +1594,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	function closeImageModal() {
 		if (!modal) return;
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
-			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
+			window.parent.postMessage({ type:'streportToggleHeight', height:'650px' }, '*');
 		}
 		modal.style.display = 'none';
 		modal.classList.remove('expanded');
@@ -1731,99 +1832,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch(e){}
     }
     function showReplicateConfirmPopover(targetEl, stInfo = {}) {
-        try {
-            const existing = document.body.querySelector('.replicate-popover');
-            if (existing) existing.remove();
-
-            const pop = document.createElement('div');
-            pop.className = 'replicate-popover';
-            pop.style.position = 'fixed';
-            pop.style.zIndex = '2147483647';
-            pop.style.width = '220px';
-            pop.style.background = 'linear-gradient(180deg,#0b1220, #0f1724)';
-            pop.style.color = '#e6eef1';
-            pop.style.padding = '10px';
-            pop.style.borderRadius = '8px';
-            pop.style.fontSize = '0.92rem';
-            pop.style.boxShadow = '0 12px 40px rgba(2,6,23,0.6)';
-            pop.style.pointerEvents = 'auto';
-            pop.style.opacity = '0';
-            pop.style.transform = 'translateY(-6px) scale(0.98)';
-            pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
-
-            const title = (stInfo && stInfo.title) ? stInfo.title : '';
-            pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
-            document.body.appendChild(pop);
-            try {
-                const cb = pop.querySelector('.rp-confirm');
-                const xb = pop.querySelector('.rp-cancel');
-                if (cb) {
-                    cb.style.background = '#10b981';
-                    cb.style.color = '#042f2e';
-                    cb.style.border = 'none';
-                    cb.style.padding = '6px 10px';
-                    cb.style.borderRadius = '6px';
-                    cb.style.cursor = 'pointer';
-                    cb.style.fontWeight = '600';
-                }
-                if (xb) {
-                    xb.style.background = 'transparent';
-                    xb.style.color = '#9ca3af';
-                    xb.style.border = '1px solid rgba(255,255,255,0.03)';
-                    xb.style.padding = '6px 10px';
-                    xb.style.borderRadius = '6px';
-                    xb.style.cursor = 'pointer';
-                }
-            } catch(e) {}
-            const r = targetEl.getBoundingClientRect();
-            const measure = () => {
-                const pw = pop.offsetWidth;
-                const ph = pop.offsetHeight;
-                let left = r.left + (r.width/2) - (pw/2);
-                let top = r.top - ph - 8;
-                if (top < 8) top = r.bottom + 8;
-                left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
-                pop.style.left = left + 'px';
-                pop.style.top = top + 'px';
-            };
-            requestAnimationFrame(() => { measure();
-                pop.style.opacity = '1';
-                pop.style.transform = 'translateY(0) scale(1)';
-            });
-
-            const confirmBtn = pop.querySelector('.rp-confirm');
-            const cancelBtn = pop.querySelector('.rp-cancel');
-            const cleanup = () => { try {
-                    pop.style.pointerEvents = 'none';
-                    pop.style.opacity = '0';
-                    pop.style.transform = 'translateY(-6px) scale(0.98)';
-                    setTimeout(()=> pop.remove(), 180);
-                    document.removeEventListener('keydown', onKey);
-                } catch(e){} };
-            const onKey = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); cleanup(); } else if (ev.key === 'Enter') { ev.preventDefault(); confirmBtn.click(); } };
-
-            function doConfirm() {
-                try {
-                    const handler = window.replicateST;
-                    const payload = stInfo.row || stInfo;
-                    if (typeof handler === 'function') {
-                        const result = handler(payload, targetEl);
-                        if (result && typeof result.then === 'function') {
-                            confirmBtn.disabled = true; cancelBtn.disabled = true;
-                            result.then(res => { cleanup(); showTransientPopover(targetEl, 'Replication started'); }).catch(err => { cleanup(); showTransientPopover(targetEl, 'Replication failed'); console.error(err); });
-                            return;
-                        }
-                    }
-                    cleanup();
-                    showTransientPopover(targetEl, 'Replication started');
-                } catch(err) { cleanup(); console.error(err); showTransientPopover(targetEl, 'Replication failed'); }
-            }
-
-            confirmBtn.addEventListener('click', doConfirm);
-            cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cleanup(); });
-            requestAnimationFrame(()=> confirmBtn.focus());
-            document.addEventListener('keydown', onKey);
-        } catch(e) {}
+        return window.showReplicateConfirmPopover(targetEl, stInfo);
     }
     try {
         window.replicateST = window.replicateST || function(payload, sourceEl){
@@ -2555,6 +2564,7 @@ function createChartHitZones(chart) {
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 @if(isset($galleryCards) && $galleryCards->count())
+    <h2 class="section-label gallery-section-label">Sectors</h2>
 <section class="card-gallery" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
     <div class="container-cards" style="pointer-events:auto;">
         @foreach($galleryCards as $card)
@@ -2804,7 +2814,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const key = pop._anchorKey || '';
         if (key) {
             document.querySelectorAll('.card-link').forEach(function(el){
-                try { if ((el.dataset && (el.dataset.title === key || el.dataset.href === key)) ) el.classList.add('card-lifted'); } catch(e){}
+                try { if ((el.dataset && (el.dataset.title === key || el.dataset.href === key)) ) el.classList.add('card-popover-anchor'); } catch(e){}
             });
         }
     } catch(e){}
@@ -2813,6 +2823,7 @@ document.addEventListener('DOMContentLoaded', function(){
     try { running = false; scroller.classList.add('autoscroll-paused'); } catch(e){}
     try { const track = document.querySelector('.marquee-track'); if (track) { track.style.animationPlayState = 'paused'; track.dataset.frozen = '1'; } } catch(e){}
     try { cancelHoverSnap(card); } catch(e){}
+    try { scroller.classList.add('gallery-popover-open'); } catch(e){}
     const rect = card.getBoundingClientRect();
     const popRect = pop.getBoundingClientRect();
     const margin = 8;
@@ -2831,48 +2842,20 @@ document.addEventListener('DOMContentLoaded', function(){
     pop.style.left = (left + window.pageXOffset) + 'px';
     pop.style.top = (top + window.pageYOffset) + 'px';
     setTimeout(() => {
-      try {
-        pop.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
-      } catch(e) {}
-      try {
-        card && card.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
-      } catch(e) {}
-      try {
-        const r = pop.getBoundingClientRect();
-        const margin = 12;
-        if (r.height <= window.innerHeight) {
-          if (r.top < margin) {
-            window.scrollBy({ top: r.top - margin, behavior:'smooth' });
-          } else if (r.bottom > window.innerHeight - margin) {
-            window.scrollBy({ top: r.bottom - window.innerHeight + margin, behavior:'smooth' });
-          }
-        } else {
-          const popCenter = r.top + r.height/2;
-          const goal = window.innerHeight/2;
-          window.scrollBy({ top: popCenter - goal, behavior:'smooth' });
-        }
-        const hdr = pop.querySelector('.rsm-header');
-        if (hdr) {
-          const hr = hdr.getBoundingClientRect();
-          const hdrCenter = hr.top + hr.height/2;
-          const winCenter = window.innerHeight/2;
-          const extra = hr.height/2;
-          window.scrollBy({ top: hdrCenter - winCenter + extra, behavior:'smooth' });
-        }
-        try {
-          const pr = pop.getBoundingClientRect();
-          const popMid = pr.top + pr.height/2;
-          const winMid = window.innerHeight/2;
-          const extra2 = pr.height/4;
-          window.scrollBy({ top: popMid - winMid + extra2, behavior:'smooth' });
-        } catch(_e) {}
-      } catch(_e) {}
-      try {
-        pop.tabIndex = -1;
-        pop.focus();
-      } catch(e) {}
+            pop.tabIndex = -1;
+            try {
+                pop.focus({ preventScroll: true });
+            } catch(e) {
+                try { pop.focus(); } catch(_e) {}
+            }
       const first = pop.querySelector('a,button,[tabindex]');
-      if (first) first.focus();
+            if (first) {
+                try {
+                    first.focus({ preventScroll: true });
+                } catch(e) {
+                    try { first.focus(); } catch(_e) {}
+                }
+            }
     }, 0);
     function _docClick(ev){ if (!pop.contains(ev.target) && !card.contains(ev.target)) closePopover(); }
     function _onKey(ev){ if (ev.key === 'Escape') closePopover(); }
@@ -2908,11 +2891,13 @@ document.addEventListener('DOMContentLoaded', function(){
     } catch(e){}
     pop._cleanup = null;
     try { document.querySelectorAll('.card-link.card-lifted').forEach(el => el.classList.remove('card-lifted')); } catch(e){}
+    try { document.querySelectorAll('.card-link.card-popover-anchor').forEach(el => el.classList.remove('card-popover-anchor')); } catch(e){}
     try {
         const anchorKey = pop && pop._anchorKey ? pop._anchorKey : null;
         if (anchorKey) {
             document.querySelectorAll('.card-link').forEach(function(el){
                 try { if (el.dataset && (el.dataset.title === anchorKey || el.dataset.href === anchorKey)) el.classList.remove('card-lifted'); } catch(e){}
+                try { if (el.dataset && (el.dataset.title === anchorKey || el.dataset.href === anchorKey)) el.classList.remove('card-popover-anchor'); } catch(e){}
             });
         }
     } catch(e){}
@@ -2920,6 +2905,7 @@ document.addEventListener('DOMContentLoaded', function(){
     try { pop._anchor = null; pop._anchorKey = null; } catch(e){}
     try { window.__galleryPopoverActive = false; } catch(e){}
     wrapSuspended = false;
+    try { const sc = document.querySelector('.container-cards'); if (sc) sc.classList.remove('gallery-popover-open'); } catch(e){}
     try { const track = document.querySelector('.marquee-track'); if (track) { track.dataset.frozen = '0'; track.style.animationPlayState = ''; } } catch(e){}
     try { _scheduleAutoResume(); } catch(e){}
   }
@@ -3192,14 +3178,59 @@ document.addEventListener('DOMContentLoaded', function(){
 
           stListEl.innerHTML = html;
 
+          const getReplicateRowInfo = function(rowEl) {
+              if (!rowEl) return null;
+              const hoverTargets = [];
+              const detailContainer = rowEl.classList.contains('rsm-st-detail-row')
+                  ? rowEl.closest('.rsm-st-details')
+                  : null;
+              const summaryRow = rowEl.classList.contains('rsm-st-summary-row')
+                  ? rowEl
+                  : (detailContainer
+                      ? stListEl.querySelector('.rsm-st-summary-row[data-detail-id="' + (detailContainer.getAttribute('data-detail-id') || '') + '"]')
+                      : null);
+
+              if (!summaryRow) return null;
+
+              const details = stListEl.querySelector('.rsm-st-details[data-detail-id="' + (summaryRow.getAttribute('data-detail-id') || '') + '"]');
+
+              hoverTargets.push(summaryRow);
+              if (details) hoverTargets.push(details);
+              if (rowEl.classList.contains('rsm-st-detail-row')) hoverTargets.push(rowEl);
+
+              const title = summaryRow.getAttribute('data-title') || rowEl.getAttribute('data-title') || '';
+              return { title, row: { title }, hoverTargets, anchorEl: summaryRow };
+          };
+
+          stListEl.onmouseover = function(ev){
+              const row = ev.target.closest('.rsm-st-summary-row, .rsm-st-detail-row');
+              if (!row || !stListEl.contains(row)) return;
+              const related = ev.relatedTarget;
+              if (related && row.contains(related)) return;
+              const info = getReplicateRowInfo(row);
+              if (!info) return;
+              clearReplicatePopoverHideTimer();
+              showReplicateConfirmPopover(info.anchorEl || row, info);
+          };
+
+          stListEl.onmouseout = function(ev){
+              const row = ev.target.closest('.rsm-st-summary-row, .rsm-st-detail-row');
+              if (!row || !stListEl.contains(row)) return;
+              const related = ev.relatedTarget;
+              if (!related) {
+                  scheduleReplicatePopoverHide(220);
+                  return;
+              }
+              if (related.closest && related.closest('.rsm-st-summary-row, .rsm-st-detail-row, .replicate-popover')) return;
+              scheduleReplicatePopoverHide(220);
+          };
+
           stListEl.onclick = function(ev){
               const detailRow = ev.target.closest('.rsm-st-detail-row');
               if (detailRow) {
                   ev.stopPropagation();
-                  const title = detailRow.getAttribute('data-title') || '';
-                  const province = detailRow.getAttribute('data-province') || '';
-                  const city = detailRow.getAttribute('data-city') || '';
-                  showReplicateConfirmPopover(detailRow, { title, province, city, row: { title, province, city } });
+                  const detailInfo = getReplicateRowInfo(detailRow);
+                  if (detailInfo) showReplicateConfirmPopover(detailInfo.anchorEl || detailRow, detailInfo);
                   return;
               }
 
@@ -3217,11 +3248,11 @@ document.addEventListener('DOMContentLoaded', function(){
                       row.setAttribute('aria-expanded', 'true');
                       return;
                   }
-                  const title = row.getAttribute('data-title') || '';
-                  showReplicateConfirmPopover(row, { title, row: { title } });
+                  const summaryInfo = getReplicateRowInfo(row);
+                  showReplicateConfirmPopover((summaryInfo && summaryInfo.anchorEl) || row, summaryInfo || {});
               } else {
-                  const title = row.getAttribute('data-title') || '';
-                  showReplicateConfirmPopover(row, { title, row: { title } });
+                  const summaryInfo = getReplicateRowInfo(row);
+                  showReplicateConfirmPopover((summaryInfo && summaryInfo.anchorEl) || row, summaryInfo || {});
               }
           };
 
@@ -3232,7 +3263,8 @@ document.addEventListener('DOMContentLoaded', function(){
               if (!detailRow && !row) return;
               e.preventDefault();
               if (detailRow) {
-                  detailRow.click();
+                  const detailInfo = getReplicateRowInfo(detailRow);
+                  if (detailInfo) showReplicateConfirmPopover(detailInfo.anchorEl || detailRow, detailInfo);
               } else if (row) {
                   row.click();
               }
@@ -3545,6 +3577,7 @@ document.addEventListener('DOMContentLoaded', function(){
 @endif
 
 
+<h2 class="section-label slider-label">Regional Overview</h2>
 <div class="slider-wrapper">
     <div class="swiper mySwiper">
 
@@ -3748,8 +3781,10 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards::-webkit-scrollbar{ height:10px; }
 .container-cards::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.08); border-radius:6px; }
 
-.container-cards { display:flex; gap:20px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; }
+.container-cards { display:flex; gap:20px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; overflow-anchor:none; }
 .container-cards::-webkit-scrollbar{ display:none; }
+
+.container-cards.gallery-popover-open { scroll-behavior:auto; }
 
 .container-cards { cursor: grab; -webkit-user-select: none; user-select: none; }
 .container-cards.dragging { cursor: grabbing; }
@@ -3799,6 +3834,18 @@ document.addEventListener('DOMContentLoaded', function(){
     transform: translateX(-50%) translateY(-6px);
 } 
 
+.container-cards .card.card-popover-anchor {
+    flex:0 0 844px;
+    transform: translateY(-6px);
+    box-shadow: 0 18px 60px rgba(2,6,23,0.12);
+    z-index: 12;
+}
+
+.container-cards .card.card-popover-anchor::after {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+}
+
 
 .container-cards .card .content { width:0; opacity:0; visibility:hidden; overflow:hidden; transition: width 360ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease, margin-left 360ms cubic-bezier(.2,.9,.2,1); display:flex; flex-direction:column; justify-content:center; padding:0; margin-left:0; z-index:1; }
 .container-cards .card .content h2 { font-size:0.95rem; margin:0 0 6px 0; text-align:left; }
@@ -3809,7 +3856,8 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards:not(.dragging):not(.is-scrolling) .card:hover .content,
 .container-cards .card:focus-visible .content,
 .container-cards .card.typing-active .content,
-.container-cards .card.card-lifted .content {
+.container-cards .card.card-lifted .content,
+.container-cards .card.card-popover-anchor .content {
     margin-left:180px; 
     width: calc(100% - 220px);
     opacity:1;
@@ -3821,7 +3869,8 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards:not(.dragging):not(.is-scrolling) .card:hover .imgContainer,
 .container-cards .card:focus-visible .imgContainer,
 .container-cards .card.typing-active .imgContainer,
-.container-cards .card.card-lifted .imgContainer {
+.container-cards .card.card-lifted .imgContainer,
+.container-cards .card.card-popover-anchor .imgContainer {
   left:18px;
   top:50%;
   transform:translate(0, -50%);
@@ -3895,8 +3944,45 @@ document.addEventListener('DOMContentLoaded', function(){
     right: 50%;
     margin-left: -50vw;
     margin-right: -50vw;
-    overflow: hidden;
+    overflow: visible;
     margin-top: 2rem;
+}
+
+.gallery-section-label,
+.slider-label,
+.section-label {
+    font-family: 'Poppins', sans-serif;
+    color: #0f172a;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 1.5rem auto;
+    position: relative;
+    display: block;
+    width: max-content;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    left: 140px;
+}
+.section-label::after {
+    content: '';
+    display: block;
+    width: 150px;
+    height: 4px;
+    background: linear-gradient(90deg,#4da1f7,#0369a1);
+    border-radius: 2px;
+    margin: 8px auto 0;
+    transition: width 0.3s ease;
+}
+.section-label:hover::after {
+    width: 200px;
+}
+
+.gallery-section-label,
+.slider-label {
+    font-family: 'Poppins', sans-serif;
+    color: #0f172a;
 }
 
 
@@ -4535,7 +4621,9 @@ document.addEventListener('DOMContentLoaded', function(){
                     try {
                         if (scroller.querySelector('.card:hover, .card:focus-within')) return true;
                         if (scroller.querySelector('.card-lifted')) return true;
+                        if (scroller.querySelector('.card-popover-anchor')) return true;
                         if (scroller.classList.contains('gallery-lifted')) return true;
+                        if (scroller.classList.contains('gallery-popover-open')) return true;
                         return false;
                     } catch(e){ return false; }
                 }

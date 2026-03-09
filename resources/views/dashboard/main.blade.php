@@ -3,7 +3,6 @@
 @section('content')
 @guest
 <style>
-    /* guest only: make parent layout full-width and left-aligned */
     .stb-main-content {
         margin-left: 0 !important;
         margin-right: 0 !important;
@@ -14,12 +13,10 @@
 </style>
 @endguest
 <style>
-	/* mobile mini layout adjustments removed for new mobile view */
 </style>
 <link href="/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
 <style>
-/* Beautify Select2 dropdowns */
 .select2-container--default .select2-selection--multiple {
 	background: #f8fafc;
 	border: 2px solid #06306e;
@@ -74,15 +71,13 @@
 	font-weight: 500;
 }
 
-/* fixed height for each result and scrollable dropdown */
 .select2-results__option,
 .select2-dropdown .select2-results__option {
     height: 40px !important;
     line-height: 40px !important;
-    padding: 0 14px !important; /* keep horizontal padding but remove vertical */
+    padding: 0 14px !important; 
     box-sizing: border-box !important;
 }
-/* constrain the results container to eight rows */
 .select2-results__options,
 .select2-dropdown .select2-results__options {
     max-height: calc(40px * 8) !important;
@@ -97,7 +92,7 @@
 		min-height: 100vh;
 		display: flex;
 		align-items: center;
-		justify-content: flex-start; /* left align container */
+		justify-content: flex-start; 
 		background: none;
 		margin-left: 0 !important;
 		margin-right: auto;   /* optional */
@@ -276,7 +271,6 @@
 			page-break-inside: avoid;
 			break-inside: avoid;
 		}
-		/* Force totals + filter to stay in columns on one row when printing */
 		.st-totals-row {
 			display: grid !important;
 			grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
@@ -288,8 +282,6 @@
 			margin-right: auto !important;
 			align-items: stretch;
 		}
-		/* Place the two totals columns stacked on the left,
-		   and the filter column spanning both rows on the right */
 		.st-totals-row > .col-lg-4 {
 			width: auto !important;
 			max-width: none !important;
@@ -313,7 +305,6 @@
 			margin-bottom: 4mm !important;
 			min-height: auto !important;
 		}
-		/* Make totals + filter row more compact in print */
 		.st-totals-row .st-dashboard-card h1 {
 			font-size: 1.4rem !important;
 			margin: 0 !important;
@@ -344,7 +335,6 @@
 			font-size: 0.8rem !important;
 			padding: 6px 0 !important;
 		}
-		/* Compact card paddings so header + map fit on first page */
 		.st-dashboard-card .card-header {
 			padding: 4px 0 !important;
 			font-size: 0.9rem !important;
@@ -352,17 +342,15 @@
 		.st-dashboard-card .card-body {
 			padding: 8px 8px 6px 8px !important;
 		}
-		/* Let the title listing table expand across pages cleanly */
 		.st-title-listing-scroll {
 			max-height: none !important;
 			overflow: visible !important;
 		}
-		/* Keep Philippines map and region list side-by-side, like on screen */
 		.st-map-card-body {
 			display: flex !important;
 			flex-wrap: nowrap !important;
 			justify-content: flex-end !important;
-			padding-right: 8px !important; /* allow group to reach right edge */
+			padding-right: 8px !important; 
 		}
 
 		.st-map-figure-wrapper { margin-right: 8px !important; }
@@ -373,7 +361,7 @@
 		}
 		.st-map-figure-wrapper {
 			position: relative !important;
-			z-index: 1102 !important; /* keep map above the fixed totals */
+			z-index: 1102 !important; 
 			flex: 0 0 420px !important;
 			max-width: 420px !important;
 			width: 420px !important;
@@ -395,7 +383,7 @@
 		}
 		.st-map-figure-wrapper object#philippines-map {
 			position: relative !important;
-			z-index: 1103 !important; /* ensure SVG sits above totals */
+			z-index: 1103 !important; 
 			pointer-events: auto !important;
 			max-width: 105% !important;
 			max-height: 105mm !important;
@@ -404,7 +392,6 @@
 			margin-right: auto !important;
 			
 		}
-		/* Make region list text more compact in print */
 		.st-map-region-list {
 			font-size: 0.68rem !important;
 			line-height: 1.1 !important;
@@ -417,16 +404,13 @@
 		.st-map-region-count {
 			font-size: 0.68rem !important;
 		}
-		/* Smaller logos in print so header + map fit on first page */
 		.st-header-logo {
 			height: 70px !important;
 			max-width: none !important;
 		}
-		/* Hide interactive map hint text when printing */
 		#map-region-label {
 			display: none !important;
 		}
-		/* Keep header + first map row together on page 1 if possible */
 		.st-dashboard-header-fullwidth {
 			page-break-after: avoid !important;
 			break-after: avoid !important;
@@ -435,7 +419,6 @@
 			margin-top: 2mm !important;
 			page-break-before: avoid !important;
 		}
-		/* Avoid printing modals/tooltips */
 		#region-titles-modal,
 		#st-title-modal,
 		#doughnutTooltip,
@@ -446,49 +429,41 @@
 </style>
 
 <style>
-/* Force header logo width (override inline) */
 		.st-dashboard-header .st-header-logo { width:600px !important; max-width:600px !important; height:140px !important; }
-		/* Map overlay totals (desktop) + responsive adjustments */
 .map-overlay-totals { position: absolute; bottom: 12px; left: -10px; right: auto; transform: none; width: auto; display: grid; grid-template-columns: 1fr; gap: 10px; background: transparent; border-radius: 12px; padding: 8px 12px 8px 26px; box-shadow: none; border: none; z-index: 5; justify-items: center; pointer-events: none; top: 70px; }
-/* decorative vertical bar to the left of the stacked Philippines totals */
 	.map-overlay-totals .st-dashboard-card { margin: 0; box-shadow: none; background: transparent; width: 300px; }
 	.map-overlay-card { width: 150px; min-width: 150px; background: #ffffff; border: 2px solid #1e90ff; box-shadow: 0 6px 18px rgba(16,174,181,0.06), 0 0 0 6px rgba(30,144,255,0.04); border-radius: 10px; padding: 8px 6px; margin: 0; overflow: hidden; box-sizing: border-box; }
-	/* disable hover lift/scale for totals cards */
 	.map-overlay-card:hover { transform: none !important; box-shadow: none !important; }
 	.map-overlay-card .card-body { padding: 6px 0; background: transparent; display: flex; align-items: center; justify-content: center; padding-top: 6px; padding-bottom: 6px; min-height: 140px; }
 	.map-overlay-totals .st-dashboard-card .card-header {
 		display: inline-block;
-		width: 150px; /* pill width */
+		width: 150px; 
 		max-width: 100%;
 		margin: 0 auto -6px;
 		font-size: 0.7rem;
 		padding: 1px 4px;
-		background: transparent; /* remove header background */
+		background: transparent; 
 		background-image: none !important;
-		color: #1e90ff; /* keep blue text */
+		color: #1e90ff;
 		border: none;
 		box-shadow: none;
 		text-align: center;
-		white-space: normal; /* allow wrapping */
+		white-space: normal;
 		line-height: 1;
 	}
 	.map-overlay-totals .st-dashboard-card h1 { font-size: 3.2rem; margin: 8px 0 0 0; color: #1e90ff; line-height:1; font-weight:700; white-space:nowrap; display:block; transition: font-size 140ms ease; max-width: 100%; box-sizing: border-box; padding: 0 6px; overflow: hidden; text-overflow: clip; visibility: hidden; }
 
-	/* Highlighted outer frame for the main Philippines total card (applies via .ph-frame class) */
 	.ph-frame { position: relative; border-radius: 16px; }
 	.ph-frame::before { content: ""; position: absolute; inset: -12px; border-radius: 18px; background: linear-gradient(180deg, rgba(122,235,226,0.08), rgba(16,174,181,0.02)); border: 4px solid rgba(16,174,181,0.22); box-shadow: 0 12px 36px rgba(16,174,181,0.10); pointer-events: none; z-index: -1; }
 
-	/* Mobile: let overlay stack below the map instead of absolute overlay */
 	@media (max-width: 991.98px) {
 	  .map-overlay-totals { position: static; width: 100%; grid-template-columns: repeat(2, 1fr); margin-top: 12px; box-shadow: none; border: none; background: transparent; padding-left:12px; }}
-/* Hide the duplicate totals (the original two columns) on wide screens */
 @media (min-width: 992px) {
   .st-totals-row > .col-lg-4:nth-child(1),
   .st-totals-row > .col-lg-4:nth-child(2) { display: none !important; }
   .st-totals-row > .col-lg-4:nth-child(3) { margin-left: auto !important; }
 }
 
-/* Mobile: let overlay stack below the map instead of absolute overlay */
 @media (max-width: 991.98px) {
   .map-overlay-totals { position: static; grid-template-columns: repeat(2, 1fr); margin-top: 12px; box-shadow: none; border: none; background: transparent; }
   .map-overlay-totals .st-dashboard-card .card-header { color: inherit; }
@@ -496,7 +471,6 @@
 </style>
 
 <style>
-	/* Mobile dashboard container styles */
 	.mobile-dashboard-container {
 		display: none;
 		background: #fff;
@@ -515,17 +489,14 @@
 	}
 </style>
 
-<!-- Desktop/Tablet Dashboard -->
 <div class="st-center-outer" style="justify-content:flex-start;">
 	 <div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:1500px; min-width:300px; max-width:1500px !important; flex-shrink:0; margin:40px 0 40px 0 !important;">
-	<!-- Mobile Dashboard Container (visible only on mobile) -->
 	<div class="mobile-dashboard-container">
 		<div class="st-dashboard-header" style="font-size:1.1rem; padding:12px 0; text-align:center; border-radius:14px 14px 0 0; margin-bottom:12px;">
 			<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:80px; max-width:120px; background:transparent; display:block; margin:0 auto 8px auto;">
 			Adopted & Replicated Social Technologies
 		</div>
 		<div style="padding:0 2vw;">
-			<!-- Example: Show summary cards in a vertical stack for mobile -->
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
 				<div class="card-body">
@@ -552,11 +523,9 @@
 					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalMoa ?? 0 }}</h1>
 				</div>
 			</div>
-			<!-- Add more mobile-friendly dashboard content as needed -->
 		</div>
 	</div>
-    <!-- mobile mini version visible only on narrow screens -->
-	<!-- mobile mini-summary removed for new mobile view -->
+
 	   {{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
 		   <button type="button" class="btn btn-sm btn-primary" onclick="window.print()" style="background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%); border: none; border-radius: 999px; padding: 6px 18px; font-weight: 600; box-shadow: 0 2px 6px rgba(16,174,181,0.35);">
 			   Print / Save as PDF
@@ -573,7 +542,6 @@
 	   		</div>
 	   	</div>
 		<div class="container-fluid" style="max-width: 100%;">
-				<!-- Philippines Map & Regions Section (moved to top as first chart) -->
 				<div class="row mt-4 st-first-map-row">
 					<div class="col-12 p-0">
 						<div class="card st-dashboard-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
@@ -585,9 +553,7 @@
 											Hover a region on the map
 										</div>
 									</div>
-									<!-- totals overlay inserted inside the map -->
 							<div class="map-overlay-totals" aria-hidden="false">
-								<!-- single column, reordered as requested -->
 								<div class="card st-dashboard-card text-center map-overlay-card">
 									<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
 									<div class="card-body">
@@ -641,16 +607,12 @@
 		</div>
 
 
-			{{-- embed STsReport under map using iframe (isolated) --}}
 			<div class="row mt-4">
 			    <div class="col-12">
-			        <iframe id="streportFrame" src="{{ route('streport') }}?embed=1" style="width:100%; height:600px; max-height:600px; border:none; transition: height 0.3s ease;" title="STsReport"></iframe>
+			        <iframe id="streportFrame" src="{{ route('streport') }}?embed=1" style="width:100%; height:720px; max-height:720px Te; border:none; transition: height 0.3s ease;" title="STsReport"></iframe>
 			    </div>
 			</div>
-<!-- SUMMARY OF ST TITLES card (doughnut + list + insight) removed.
-     Keep only the global tooltip helper for use by the Total Social Technologies section. -->
 <script>
-// Ensure tooltip is appended to body for global positioning (used by ST title lists/charts)
 if (!document.getElementById('catListTooltip')) {
 	const tooltipDiv = document.createElement('div');
 	tooltipDiv.id = 'catListTooltip';
@@ -670,7 +632,6 @@ if (!document.getElementById('catListTooltip')) {
 	document.body.appendChild(tooltipDiv);
 }
 </script>
-	<!-- Bar Chart for Year of MOA -->
 
 
 	<div class="row mt-4">
@@ -680,7 +641,6 @@ if (!document.getElementById('catListTooltip')) {
 				<div class="card-body" style="padding: 32px 16px; left: 100px;">
 <div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: flex-start; width: 100%; flex-wrap:nowrap; gap:24px; overflow-x:auto; overflow-y:hidden; height:450px;">
 
-    <!-- left block: cards and small charts -->
 	<div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: nowrap; overflow-x:auto; overflow-y:hidden; height: 450px;">
         <div class="small-cards-grid" style="flex: 0 0 420px;">
             <div id="card1" class="small-card">
@@ -701,14 +661,11 @@ if (!document.getElementById('catListTooltip')) {
             </div>
         </div>
 
-        <!-- My Chart Container -->
         <div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
-            <!-- Top My Chart -->
             <div style="height: 430px; display: flex; align-items: center; justify-content: center;">
                 <canvas id="onGoing" style="width: 800px; height: 430px; padding-left: 50px;"></canvas>
             </div>
 
-            <!-- Duplicate Line Chart -->
             <div style="width: 300px; height: 200px; display: flex; align-items: center; justify-content: center;">
                 <canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
             </div>
@@ -716,14 +673,11 @@ if (!document.getElementById('catListTooltip')) {
 	</div>
 </div>
 
-<!-- Second row: Year MOA bar with Ongoing vs Dissolved doughnut -->
 <div class="st-second-row" style="margin-top:24px; width:100%; display:flex; justify-content:center;">
 	<div class="year-chart-wrap" style="width:100%; max-width:980px; min-width: 980px; height:360px; display:flex; align-items:center; justify-content:space-between; gap:24px;">
-		<!-- Left: Year of MOA bar chart -->
 		<div style="flex: 1 1 auto; min-width:760; height:100%; display:flex; align-items:center; justify-content:center;">
 			<canvas id="yearMoaBar" style="width: 760px !imporant; height: 360px;"></canvas>
 		</div>
-		<!-- Right: Ongoing/Dissolved and Replicated/Adopted doughnuts -->
 		<div style="flex: 0 0 260px; max-width:260px; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:space-between;">
 			<div style="flex:1 1 0; display:flex; align-items:center; justify-content:center;">
 				<canvas id="ongoingDoughnut" style="width: 220px; height: 220px;"></canvas>
@@ -737,11 +691,8 @@ if (!document.getElementById('catListTooltip')) {
 	</div>
 </div>
 
-<!-- Third row inside Total Social Technologies: copy of ST Titles doughnuts + new region/year line chart + ST titles list -->
 <div class="st-third-row" style="margin-top:24px; width:100%; display:flex; justify-content:flex-start;">
 	<div style="width:100%; max-width:1400px; display:flex; flex-direction:row; align-items:flex-start; justify-content:flex-end; gap:32px; margin-right: 200px;">
-		<!-- ST Titles double doughnut (copy) -->
-		<!-- Region/year multi-line chart -->
 		<div style="flex: 0 0 420px; max-width:420px; min-width:380px; height:420px; display:flex;">
 			<canvas id="regionYearLines" style="width: 400px; height: 380px;"></canvas>
 		</div>
@@ -749,7 +700,6 @@ if (!document.getElementById('catListTooltip')) {
 			<canvas id="stTitlesDoughnutCopy" style="position:relative; z-index:2; width: 360px; height: 360px; max-width: 380px; min-width: 320px;"></canvas>
 			<canvas id="stTitlesDoughnutLowCopy" style="position:absolute; z-index:1; width: 190px; height: 190px; max-width: 210px; min-width: 170px; top:50%; left:50%; transform:translate(-50%, -50%);"></canvas>
 		</div>
-		<!-- ST Titles list synced with doughnut copy -->
 		<div style="flex: 0 0 360px; max-width:360px; min-width:320px; height:420px; display:flex; align-items:flex-start; justify-content:center;">
 			<div style="width:100%; height:100%; display:flex; flex-direction:column; border: solid 1px #ccc; border-radius: 14px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
 				<div style="font-weight:600; color:#06306e; font-size:1.05rem; margin-bottom:6px;">ST Titles</div>
@@ -761,7 +711,6 @@ if (!document.getElementById('catListTooltip')) {
 	</div>
 </div>
 
-<!-- Fourth row inside Total Social Technologies: Social Technologies listing -->
 <div class="st-fourth-row" style="margin-top:24px; width:100%; display:flex; justify-content:center; margin-left: -100px;">
 	<div class="row mt-4 justify-content-center" style="width:1400px;">
 		<div class="col-12">
@@ -789,19 +738,15 @@ if (!document.getElementById('catListTooltip')) {
 					</div>
 					<div id="title-listing-table-container"></div>
 					<script>
-					// Pass all listing data to JS (already filtered by any URL query
-					// parameters, but excluding the 2020-2022 summary sheet).
 					window.fullListingData = @json(collect($data)->filter(function($row){
 						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 					})->values());
 					window.fullListingHeaders = @json($headers ?? []);
-					// server-supplied totals for adopted/replicated (used by client script)
 					window.serverTotals = {
 					    totalReplicated: {{ $totalReplicated ?? 0 }},
 					    totalAdopted: {{ $totalAdopted ?? 0 }}
 					};
-					// expose per-year stats (including ongoing/dissolved) from PHP so the
-					// dashboard can reuse the same aggregation as the STsReport view.
+					
 					window.initialYearStats = @json($yearStats ?? []);
 					</script>
 				</div>
@@ -898,7 +843,6 @@ if (!document.getElementById('catListTooltip')) {
 		</div>
 		</div>
 <script>
-								// move Year-of-MOA card above SUMMARY OF ST TITLES on load
 								document.addEventListener('DOMContentLoaded', function(){
 									try {
 										const yearRow = document.querySelector('.year-of-moa-card')?.closest('.row.mt-4');
@@ -911,15 +855,17 @@ if (!document.getElementById('catListTooltip')) {
 								});
 							</script>
 
-							<!-- Title Listing Section: Below Year of MOA -->
 
 		<style>
-		/* Responsive and fixed card/table for Title Listing */
 		.st-title-listing-card {
 			max-width: 98vw;
 			width: 100%;
 			margin: 0 auto;
 			box-shadow: 0 2px 12px rgba(16, 174, 181, 0.10);
+		}
+		.st-title-listing-card:hover {
+			transform: none !important;
+			box-shadow: 0 2px 12px rgba(16, 174, 181, 0.10) !important;
 		}
 		.st-title-listing-table {
 			table-layout: fixed;
@@ -950,8 +896,6 @@ if (!document.getElementById('catListTooltip')) {
 			border-radius: 12px;
 			box-shadow: 0 2px 8px rgba(16, 174, 181, 0.07);
 			padding: 12px 12px 8px 12px;
-			/* Let the list expand naturally so all regions are visible
-			   without an internal scrollbar; rely on page scroll instead. */
 			max-height: none;
 			overflow-y: visible;
 		}
@@ -1000,12 +944,9 @@ if (!document.getElementById('catListTooltip')) {
 		.year-chart-wrap { order: 1; margin-right: 500px;}
 .year-filter-wrap { order: 2; margin-left: 24px; align-self: flex-start; }
 
-/* Anchor filter inside the Year-of-MOA card on wide screens */
 .year-of-moa-card .card-body { position: relative; }
 @media (min-width: 992px) {
-	/* absolutely position the filter to the card's right interior edge and vertically center it */
 	.year-of-moa-card .year-filter-wrap { position: absolute !important; right: 24px; top: 50%; transform: translateY(-50%); width: 320px; z-index: 6; }
-	/* reserve room for the filter so the chart never sits underneath */
 }
 
 @media (max-width: 991px) {
@@ -1023,8 +964,6 @@ if (!document.getElementById('catListTooltip')) {
 		</style>
 
 		<style>
-		/* Make the dashboard header fill the card's width, ignoring card padding */
-		/* Full-width header, with space below for totals/filter */
 		.st-dashboard-header-fullwidth {
 			position: absolute;
 			left: 0;
@@ -1046,7 +985,6 @@ if (!document.getElementById('catListTooltip')) {
 				margin-top: 4mm !important;
 			}
 		}
-		/* Simple custom modal for region ST titles */
 		.st-region-modal-backdrop {
 			position: fixed;
 			top: 0;
@@ -1118,7 +1056,6 @@ if (!document.getElementById('catListTooltip')) {
 			@if(!auth()->check())
 			<div id="guestFloatingFilter" class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px; padding: 10px;">
 	                <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
-	                    <!-- header could be commented out if undesired -->
 	                    <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
 	                    <div class="card-body" style="padding:12px;">
 	                        <form method="GET" action="" class="w-100 d-flex flex-column">
@@ -1160,7 +1097,6 @@ if (!document.getElementById('catListTooltip')) {
 			@endif
 		</div> <!-- end .container-fluid -->
 
-		<!-- Region ST Titles Modal -->
 		<div id="region-titles-modal" style="display:none;">
 			<div class="st-region-modal-backdrop" onclick="window.closeRegionTitlesModal && window.closeRegionTitlesModal()"></div>
 			<div class="st-region-modal-dialog">
@@ -1172,7 +1108,6 @@ if (!document.getElementById('catListTooltip')) {
 			</div>
 		</div>
 
-		<!-- ST Title Details Modal -->
 		<div id="st-title-modal" style="display:none;">
 			<div class="st-region-modal-backdrop" onclick="window.closeStTitleModal && window.closeStTitleModal()"></div>
 			<div class="st-region-modal-dialog">
@@ -1184,7 +1119,6 @@ if (!document.getElementById('catListTooltip')) {
 			</div>
 		</div>
 
-		<!-- ST Attachment View Modal -->
 		<div id="st-attachment-modal" style="display:none;">
 			<div class="st-region-modal-backdrop" onclick="window.closeStAttachmentModal && window.closeStAttachmentModal()"></div>
 			<div class="st-region-modal-dialog" style="max-width: 90%; height: 85vh; display:flex; flex-direction:column;">
@@ -1203,7 +1137,6 @@ if (!document.getElementById('catListTooltip')) {
 
 
 
-	        <!-- Slider image modal moved from STsReport (now in main layout for full-page display) -->
         <div class="slider-modal" id="sliderModal" style="display:none;">
             <div class="slider-modal-overlay" id="sliderModalOverlay"></div>
             <div class="slider-modal-content" id="sliderModalContent" style="position:relative; flex-direction:column; align-items:center; justify-content:flex-start;">
@@ -1227,7 +1160,6 @@ if (!document.getElementById('catListTooltip')) {
 		
 </style>
 
-</div> <!-- end .st-dashboard-container -->
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/css/select2.min.css" rel="stylesheet" />
@@ -1235,11 +1167,9 @@ if (!document.getElementById('catListTooltip')) {
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.3.0/dist/chartjs-chart-matrix.min.js"></script>
 	<script>
-	// Client-side pagination for Title Listing, with attachment icon
 	(function() {
 		const perPage = 10;
 		let currentPage = 1;
-		// keep a master copy plus filtered result used for paging
 		const allData = window.fullListingData || [];
 		let data = allData.slice();
 		let currentSearchTerm = '';
@@ -1257,8 +1187,6 @@ if (!document.getElementById('catListTooltip')) {
 			return true;
 		}
 
-		// derive per-row status (ongoing / dissolved / other) using the
-		// same rules as the yearStats computation
 		const headers = window.fullListingHeaders || [];
 		const lower = h => (h || '').toString().toLowerCase();
 		const idxOngoing = headers.findIndex(h => lower(h).includes('ongoing'));
@@ -1310,7 +1238,6 @@ if (!document.getElementById('catListTooltip')) {
 			currentPage = 1;
 		}
 
-		// wire up search field and filters if present
 		document.addEventListener('DOMContentLoaded', () => {
 			const inp = document.getElementById('title-listing-search');
 			if (inp) {
@@ -1404,14 +1331,12 @@ if (!document.getElementById('catListTooltip')) {
 						<td class="text-center">${attachmentCell}</td>
 					</tr>`;
 				});
-				// Fill remaining rows with blanks to always show 10 rows
 				for (let i = pageData.length; i < perPage; i++) {
 					html += '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
 				}
 			}
 			html += '</tbody></table></div>';
 
-			// Pagination controls (modern, beautiful style)
 			const totalPages = Math.ceil(data.length / perPage);
 			html += `<style>
 				.st-custom-pagination { display: flex; justify-content: center; align-items: center; gap: 14px; background: #f8fafc; border-radius: 12px; box-shadow: 0 2px 8px #b2ebf2; margin-top: 18px; padding: 10px 0 6px 0; }
@@ -1441,7 +1366,6 @@ if (!document.getElementById('catListTooltip')) {
 	</script>
 	<script>
 	window.regionMap = @json($regionMap);
-// compute master lists of provinces and cities for resetting filters
 window.allProvinces = [];
 window.allCities = [];
 Object.keys(window.regionMap).forEach(function(region) {
@@ -1457,7 +1381,6 @@ window.allProvinces = Array.from(new Set(window.allProvinces)).sort();
 window.allCities = Array.from(new Set(window.allCities)).sort();
 window.allYears = @json($allYears ?? $years);
 	$(function() {
-		// Initialise Select2 on all dashboard filters (inline + modal)
 		function initDashboardSelect2() {
 			if (!$.fn || !$.fn.select2) {
 				console && console.warn && console.warn('Select2 plugin is missing for .st-select2');
@@ -1466,7 +1389,7 @@ window.allYears = @json($allYears ?? $years);
 			$('.st-select2').each(function () {
 				var $el = $(this);
 				if ($el.data('select2')) {
-					return; // already initialised
+					return; 
 				}
 				var opts = {
 					width: '100%',
@@ -1477,7 +1400,6 @@ window.allYears = @json($allYears ?? $years);
 					templateSelection: function (data) { return data.text; },
 					escapeMarkup: function (markup) { return markup; }
 				};
-				// For controls inside the modal, constrain dropdown to the modal viewport
 				if ($el.closest('#filterModal').length) {
 					opts.dropdownParent = $('#filterModal');
 				}
@@ -1485,15 +1407,12 @@ window.allYears = @json($allYears ?? $years);
 			});
 		}
 
-		// Run once on page load so the sidebar filter renders with Select2
 		initDashboardSelect2();
 
-		// When the modal opens, re-run in case its contents were just injected
 		$('#filterModal').on('shown.bs.modal', function() {
 			initDashboardSelect2();
 		});
 
-		// Global click handler for attachment view buttons (map + title listing)
 		document.addEventListener('click', function(e) {
 			const btn = e.target.closest('.st-attachment-view-btn');
 			if (!btn) return;
@@ -1505,12 +1424,10 @@ window.allYears = @json($allYears ?? $years);
 			}
 		});
 
-		// region text normalization helper (duplicated early for use inside propagateFilters)
 		function inferRegionCodeFromRegionText(regionText) {
 			if (!regionText) return null;
 			const s = String(regionText).toLowerCase().trim();
 			if (!s) return null;
-			// named aliases
 			if (s.includes('national capital') || s.includes(' ncr') || s.startsWith('ncr')) return 'NCR';
 			if (s.includes('ilocos')) return 'Region I';
 			if (s.includes('cagayan valley')) return 'Region II';
@@ -1553,21 +1470,12 @@ window.allYears = @json($allYears ?? $years);
 			return null;
 		}
 
-			// helper that applies selections to any gallery/iframe on the page
 			function propagateFilters() {
-					// use the modal filter controls as the single source of truth
 					var selRegions = $('#region-select-modal').val() || [];
 					var selYears = $('#year-select-modal').val() || [];
-				// convert any FO-style text to canonical "Region X" codes for the slider
 				selRegions = selRegions.map(function(r){
 					return inferRegionCodeFromRegionText(r) || r;
 				});
-			// previously this notified the embedded STsReport iframe about
-			// filter changes via postMessage. this coupling caused the
-			// ST report content to change whenever the dashboard filter
-			// was used, which is no longer desired. we now keep the
-			// iframe independent and only filter local card galleries.
-				// local filtering of any card-gallery containers on this page
 			if (selRegions.length || selYears.length) {
 				$('.card-gallery .card').each(function(){
 					var $c = $(this);
@@ -1584,38 +1492,35 @@ window.allYears = @json($allYears ?? $years);
 			}
 		}
 
-		// global listener for expand/collapse messages from iframe
 if (!window._streportIframeExpanded) {
     window._streportIframeExpanded = false;
 }
+if (typeof window._streportHasInitialized === 'undefined') {
+	window._streportHasInitialized = false;
+}
 window.addEventListener('message', function(e) {
-	// Height/expand-collapse messages from the embedded STsReport iframe
 	if (e.data && e.data.type === 'streportToggleHeight') {
 		const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
 		if (!iframe) return;
-		// ensure transition is set in case iframe was recreated; always reapply so collapse animates too
+		const wasInitialized = window._streportHasInitialized;
+		window._streportHasInitialized = true;
 		iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
-		// make sure overflow is hidden so changing height doesn't reveal content abruptly
 		iframe.style.overflow = 'hidden';
 		if (e.data.height) {
 			iframe.style.height = e.data.height;
 			iframe.style.maxHeight = e.data.height;
-			// remember expansion state based on height (600px is our default collapsed size)
 			window._streportIframeExpanded = (e.data.height !== '600px');
 		} else {
-			// original toggle behaviour for backwards compatibility
-			// use fixed 1500px expansion rather than full viewport height
 			if (!window._streportIframeExpanded) {
-				iframe.style.height = '1500px';
-				iframe.style.maxHeight = '1500px';
+				iframe.style.height = '1600px';
+				iframe.style.maxHeight = '1600px';
 			} else {
-				iframe.style.height = '600px';
-				iframe.style.maxHeight = '600px';
+				iframe.style.height = '720px';
+				iframe.style.maxHeight = '720px';
 			}
 			window._streportIframeExpanded = !window._streportIframeExpanded;
 		}
-		// when the iframe collapses, clear any filters inside it so it can't
-		// later trigger a fetch for the wrong region when reopened.
+
 		if (!window._streportIframeExpanded) {
 			try {
 				if (iframe.contentWindow && typeof iframe.contentWindow.resetRsmFilters === 'function') {
@@ -1624,9 +1529,7 @@ window.addEventListener('message', function(e) {
 				}
 			} catch(e) { console.warn('parent: failed to reset filters on collapse', e); }
 		}
-		// if we've just expanded, bring the iframe into view and focus it after the transition completes
-		if (window._streportIframeExpanded) {
-			// wait until the CSS transition settles (roughly 300ms)
+		if (window._streportIframeExpanded && wasInitialized) {
 			setTimeout(() => {
 				try {
 					iframe.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1644,8 +1547,7 @@ $('#region-select-modal').on('change', function() {
 			var cities = [];
 			var years = [];
 
-			// When no region is selected, restore the full list of years,
-			// provinces, and cities so everything reverts back.
+
 			if (selectedRegions.length === 0) {
 				var $yearAll = $('#year-select-modal');
 				var selectedYearAll = $yearAll.val() || [];
@@ -1655,7 +1557,6 @@ $('#region-select-modal').on('change', function() {
 					$yearAll.append('<option value="'+yr+'" '+selected+'>'+yr+'</option>');
 				});
 				$yearAll.trigger('change.select2');
-				// restore provinces and cities as well
 				var $provAll = $('#province-select-modal');
 				var selProv = $provAll.val() || [];
 				$provAll.empty();
@@ -1675,7 +1576,6 @@ $('#region-select-modal').on('change', function() {
 				propagateFilters();
 				return;
 			}
-			// use the full listing data for accurate province/city sets
 			var allRows = window.fullListingData || [];
 			allRows.forEach(function(row) {
 				if (selectedRegions.includes(row.region)) {
@@ -1685,13 +1585,11 @@ $('#region-select-modal').on('change', function() {
 				}
 			});
 
-			// Remove duplicates
 			provinces = [...new Set(provinces)];
 			cities = [...new Set(cities)];
 			years = [...new Set(years)];
 			years.sort();
 
-			// Update province dropdown
 			var $province = $('#province-select-modal');
 			var selectedProvince = $province.val() || [];
 			$province.empty();
@@ -1701,7 +1599,6 @@ $('#region-select-modal').on('change', function() {
 			});
 			$province.trigger('change.select2');
 
-			// Update city dropdown
 			var $city = $('#municipality-select-modal');
 			var selectedCity = $city.val() || [];
 			$city.empty();
@@ -1711,7 +1608,6 @@ $('#region-select-modal').on('change', function() {
 			});
 			$city.trigger('change.select2');
 
-			// Update year dropdown (based on selected regions)
 			var $year = $('#year-select-modal');
 			var selectedYear = $year.val() || [];
 			$year.empty();
@@ -1723,12 +1619,10 @@ $('#region-select-modal').on('change', function() {
 			propagateFilters();
 		});
 
-		// province change cascades to cities
 		$('#province-select-modal').on('change', function() {
 			var selectedRegions = $('#region-select-modal').val() || [];
 			var selectedProvinces = $(this).val() || [];
 			var cities = [];
-			// if no filters, restore entire city list
 			if (selectedRegions.length === 0 && selectedProvinces.length === 0) {
 				var $cityAll = $('#municipality-select-modal');
 				var selCity = $cityAll.val() || [];
@@ -1761,24 +1655,18 @@ $('#region-select-modal').on('change', function() {
 			$city.trigger('change.select2');
 		});
 
-		// propagate when year selector is changed as well
 		$('#year-select-modal').on('change', propagateFilters);
 
-		// if the page loaded with preselected filters, fire change events
-		// so dependent dropdowns update immediately
 		$('#region-select-modal').trigger('change');
 		$('#province-select-modal').trigger('change');
-		// update iframe/gallery based on any initial filter values
 		propagateFilters();
 	});
-	// Prepare data for the doughnut chart (ST Titles)
-	// Build a map of title => count first
+
 	const stTitleCounts = {};
 	@foreach(collect($data)->filter(function($row){ return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']); }) as $row)
 		stTitleCounts["{{ addslashes($row['title']) }}"] = (stTitleCounts["{{ addslashes($row['title']) }}"] || 0) + 1;
 	@endforeach
 
-	// Prepare data for the Year of MOA bar chart (use regionFilteredData, so it updates with region/province/municipality filters, but NOT year_of_moa)
 	const yearMoaCounts = {};
 	@foreach(collect($regionFilteredData ?? $data)->filter(function($row){ return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['year_of_moa']); }) as $row)
 		yearMoaCounts["{{ addslashes($row['year_of_moa']) }}"] = (yearMoaCounts["{{ addslashes($row['year_of_moa']) }}"] || 0) + 1;
@@ -1786,13 +1674,10 @@ $('#region-select-modal').on('change', function() {
 	const yearMoaLabels = Object.keys(yearMoaCounts).sort();
 	const yearMoaData = yearMoaLabels.map(y => yearMoaCounts[y]);
 
-	// Highlight selected year bar
 	const urlParams = new URLSearchParams(window.location.search);
 	const selectedYear = urlParams.get('year_of_moa');
 	const defaultColors = ['#10aeb5', '#1de9b6', '#b2ebf2', '#ffb74d', '#9575cd', '#f06292'];
-	// Brighter highlight for selected bar
 	function brighten(hex, percent) {
-		// Simple hex color brightener
 		let num = parseInt(hex.replace('#',''),16), amt = Math.round(2.55 * percent),
 			R = (num >> 16) + amt, G = (num >> 8 & 0x00FF) + amt, B = (num & 0x0000FF) + amt;
 		return '#' + (
@@ -1808,7 +1693,7 @@ $('#region-select-modal').on('change', function() {
 	);
 	const yearMoaBorderColors = yearMoaLabels.map((label, i) => (selectedYear && label === selectedYear)
 		? 'rgba(255, 214, 0, 0.85)'
-		: '#10aeb5'); // Gold glow for selected
+		: '#10aeb5'); 
 	const yearMoaBorderWidths = yearMoaLabels.map((label) => (selectedYear && label === selectedYear) ? 12 : 2);
 
 	if (document.getElementById('yearMoaBar')) {
@@ -1865,14 +1750,13 @@ $('#region-select-modal').on('change', function() {
 			}
 		});
 
-		// Fading (smooth blinking) effect for selected year
 		if (selectedYear) {
 			const idx = yearMoaLabels.indexOf(selectedYear);
 			if (idx !== -1) {
 				let alpha = 0.2;
-				let direction = 1; // 1 = fade in, -1 = fade out
+				let direction = 1; 
 				function fade() {
-					alpha += direction * 0.04; // Adjust speed here
+					alpha += direction * 0.04;
 					if (alpha >= 1) { alpha = 1; direction = -1; }
 					if (alpha <= 0.2) { alpha = 0.2; direction = 1; }
 					yearMoaChart.data.datasets[0].borderColor[idx] = `rgba(255, 214, 0, ${alpha.toFixed(2)})`;
@@ -1885,45 +1769,33 @@ $('#region-select-modal').on('change', function() {
 		}
 	}
 
-	// Convert map to sorted arrays so the biggest titles appear first
 	const stTitleEntries = Object.entries(stTitleCounts).sort((a, b) => b[1] - a[1]); // [title, count]
 	const stTitleLabels = stTitleEntries.map(e => e[0]);
 	const stTitleData = stTitleEntries.map(e => e[1]);
 	const stTitleColors = [
 		'#10aeb5', '#1de9b6', '#b2ebf2', '#ffb74d', '#9575cd', '#f06292', '#4db6ac', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#64b5f6', '#a1887f', '#90a4ae', '#f8bbd0'
 	];
-
-	// Initialize ST titles charts and lists if either the original
-	// or the Total Social Technologies copy doughnut is present.
 	if (document.getElementById('stTitlesDoughnut') || document.getElementById('stTitlesDoughnutCopy')) {
-		// Calculate percentages for the list
 		const total = stTitleData.reduce((a, b) => a + b, 0);
 		const stTitlePercentages = stTitleData.map(v => ((v / total) * 100));
 
-			// update insight box with overall totals and some narrative explanation
 			const insightEl = document.getElementById('stTitlesInsight');
 			if (insightEl) {
 				if (total > 0) {
 					const topLabel = stTitleLabels[0] || '';
 					const topPercent = stTitlePercentages[0] ? stTitlePercentages[0].toFixed(1) : '0.0';
 					const titleCount = stTitleLabels.length;
-					// additional narrative metrics
 					const top3Percent = stTitlePercentages.slice(0,3).reduce((a,b)=>a+b,0).toFixed(1);
 					const insightThreshold = 0.5;
 					const lowTitles = stTitlePercentages.filter(p => p <= insightThreshold);
 					const lowCount = lowTitles.length;
 					const lowSum = lowTitles.reduce((a,b)=>a+b,0).toFixed(1);
 					insightEl.style.display = '';
-					// build structured narrative
 					let narrative = '';
-					// Portfolio Structure
 					narrative += `<strong>Portfolio Structure</strong>: top 3 titles supply ${top3Percent}% of total adoption (${titleCount} titles).`;
 					narrative += `<br>${lowCount} low‑share title(s) (≤ ${insightThreshold}%) together make up ${lowSum}% of STs, indicating a long‑tail innovation profile.`;
-					// Scaling Efficiency placeholder (may require external data)
 					narrative += `<br><br><strong>Scaling Efficiency</strong>: adoption intensity and replication metrics not shown here.`;
-					// Risk & Stability
 					narrative += `<br><br><strong>Risk & Stability</strong>: concentration risk exists with top programs dominating; long tail offers innovation reservoir.`;
-					// Performance signal
 					narrative += `<br><br><strong>Performance Signal</strong>: system appears managed for replication and nationwide rollout.`;
 					insightEl.innerHTML = narrative;
 				} else {
@@ -1960,7 +1832,6 @@ $('#region-select-modal').on('change', function() {
 			}
 		});
 
-		// Add aggregated "Others" slice if needed and map low titles to it
 		if (othersTotal > 0) {
 			const othersIndex = mainLabels.length;
 			mainLabels.push('Others');
@@ -1971,17 +1842,14 @@ $('#region-select-modal').on('change', function() {
 			});
 		}
 
-		// Expose mappings for hover behavior
 		window.stTitleGlobalToMainIndex = globalToMainIndex;
 		window.stTitleGlobalToLowIndex = globalToLowIndex;
 		window.stTitleLowLabels = lowLabels;
 
 
-		// Pagination for the list beside the chart (still shows all titles individually)
 		const itemsPerPage = 10;
 		let currentPage = 1;
 		let doughnutChart = null;
-		// State for continuous blinking of doughnut segments when hovering list items
 		const doughnutBlinkState = {
 			imer: null,
 			mainIdx: null,
@@ -1997,7 +1865,6 @@ $('#region-select-modal').on('change', function() {
 				clearInterval(doughnutBlinkState.timer);
 				doughnutBlinkState.timer = null;
 			}
-			// Reset all arc borders to default
 			if (mainChart) {
 				const metaMain = mainChart.getDatasetMeta(0);
 				metaMain.data.forEach(function(arc) {
@@ -2050,9 +1917,7 @@ $('#region-select-modal').on('change', function() {
 			const lowChart = window.doughnutChartLowInstance;
 			const copyMainChart = window.doughnutChartCopyInstance;
 			const copyLowChart = window.doughnutChartLowCopyInstance;
-			// If there is nothing at all to highlight, just exit
 			if (!mainChart && !lowChart && !copyMainChart && !copyLowChart) return;
-			// Clear any existing blink first
 			stopDoughnutBlink();
 			doughnutBlinkState.mainIdx = (typeof mainIdx === 'number') ? mainIdx : null;
 			doughnutBlinkState.lowIdx = (typeof lowIdx === 'number') ? lowIdx : null;
@@ -2119,7 +1984,6 @@ $('#region-select-modal').on('change', function() {
 					copyLowChart.update();
 				}
 			}
-			// Apply first frame immediately, then toggle visibility on a faster interval
 			applyFrame();
 			doughnutBlinkState.timer = setInterval(function() {
 				doughnutBlinkState.visible = !doughnutBlinkState.visible;
@@ -2142,7 +2006,6 @@ $('#region-select-modal').on('change', function() {
 				`</li>`;
 			});
 			listHtml += '</ul>';
-			// Pagination controls
 			const totalPages = Math.ceil(stTitleLabels.length / itemsPerPage);
 			if (totalPages > 1) {
 				listHtml += `<div style=\"display:flex;justify-content:center;align-items:center;margin-top:8px;gap:8px;\">`;
@@ -2156,7 +2019,6 @@ $('#region-select-modal').on('change', function() {
 				mainListEl.innerHTML = listHtml;
 			}
 
-			// Also render a synchronized copy list (with its own Prev/Next) if present in Total Social Technologies row
 			const copyListEl = document.getElementById('stCategoryListCopy');
 			if (copyListEl) {
 				let copyHtml = '<ul id="stCategoryListUlCopy" style="list-style:none;padding:0 6px 0 0;margin:0;max-height:280px;overflow-y:auto;">';
@@ -2181,7 +2043,6 @@ $('#region-select-modal').on('change', function() {
 				}
 				copyListEl.innerHTML = copyHtml;
 			}
-			// Add event listeners for both main and copy lists
 			if (totalPages > 1) {
 				const prevMain = document.getElementById('stCatPrevBtn');
 				const nextMain = document.getElementById('stCatNextBtn');
@@ -2204,7 +2065,6 @@ $('#region-select-modal').on('change', function() {
 				if (prevCopy) prevCopy.onclick = goPrev;
 				if (nextCopy) nextCopy.onclick = goNext;
 			}
-			// Highlight doughnut segment(s) on hover
 			setTimeout(() => {
 				const items = document.querySelectorAll('.st-cat-list-item');
 				const mainChart = window.doughnutChartInstance;
@@ -2216,14 +2076,11 @@ $('#region-select-modal').on('change', function() {
 						const idx = parseInt(this.getAttribute('data-idx'));
 						const mainIdx = (window.stTitleGlobalToMainIndex || {})[idx];
 						const lowIdx = (window.stTitleGlobalToLowIndex || {})[idx];
-						// Start continuous blinking highlight for the related segments
 						startDoughnutBlink(mainIdx, lowIdx);
-						// Show custom tooltip for list
 						const label = stTitleLabels[idx];
 						const percent = stTitlePercentages[idx].toFixed(1);
 						catListTooltip.innerHTML = `<strong>${label}</strong><br><span style='color:#1de9b6;font-weight:600;'>${percent}%</span>`;
 						catListTooltip.style.display = 'block';
-						// Position tooltip at main doughnut segment centroid (absolute to viewport)
 						let placed = false;
 						if (mainChart && mainIdx !== undefined) {
 							const meta = mainChart.getDatasetMeta(0);
@@ -2234,23 +2091,19 @@ $('#region-select-modal').on('change', function() {
 								const r = (model.outerRadius + model.innerRadius) / 2;
 								const x = model.x + r * Math.cos(midAngle);
 								const y = model.y + r * Math.sin(midAngle);
-								// Get canvas position relative to viewport
 								const canvas = mainChart.canvas;
 								const rect = canvas.getBoundingClientRect();
-								// Offset tooltip to center above the arc centroid
 								catListTooltip.style.left = (rect.left + x - catListTooltip.offsetWidth/2) + 'px';
 								catListTooltip.style.top = (rect.top + y - catListTooltip.offsetHeight/2) + 'px';
 								placed = true;
 							}
 						}
 						if (!placed) {
-							// fallback: center of window
 							catListTooltip.style.left = (window.innerWidth/2 - catListTooltip.offsetWidth/2) + 'px';
 							catListTooltip.style.top = (window.innerHeight/2 - catListTooltip.offsetHeight/2) + 'px';
 						}
 					});
 					item.addEventListener('mouseleave', function() {
-						// Stop blinking and reset all segments
 						stopDoughnutBlink();
 						catListTooltip.style.display = 'none';
 					});
@@ -2265,7 +2118,6 @@ $('#region-select-modal').on('change', function() {
 			}, 10);
 		}
 
-		// Draw the main chart (grouping low-percentage titles into "Others")
 		if (document.getElementById('stTitlesDoughnut')) {
 			window.doughnutChartInstance = new Chart(document.getElementById('stTitlesDoughnut').getContext('2d'), {
 				type: 'doughnut',
@@ -2303,7 +2155,6 @@ $('#region-select-modal').on('change', function() {
 						if (!elements || !elements.length) return;
 						const idx = elements[0].index;
 						const label = this.data.labels && this.data.labels[idx];
-						// Ignore aggregated "Others" slice
 						if (!label || label === 'Others') return;
 						if (window.openStTitleModal) {
 							window.openStTitleModal(label);
@@ -2313,7 +2164,6 @@ $('#region-select-modal').on('change', function() {
 			});
 		}
 
-		// Draw the secondary chart showing only low-percentage titles (<= 0.5%)
 		if (document.getElementById('stTitlesDoughnutLow') && lowLabels.length > 0) {
 			window.doughnutChartLowInstance = new Chart(document.getElementById('stTitlesDoughnutLow').getContext('2d'), {
 				type: 'doughnut',
@@ -2331,12 +2181,8 @@ $('#region-select-modal').on('change', function() {
 					plugins: {
 						legend: { display: false },
 						title: { display: false },
-						// Disable the inner chart's built-in tooltip to avoid overlapping labels; we'll use a custom tooltip instead
 						tooltip: { enabled: false }
 					},
-					// Custom hover handler so inner slices still show their name/percent,
-					// using the outer chart's global percentages and positioning over the
-					// corresponding (aggregated) slice in the outer doughnut.
 					onHover: function(evt, activeEls) {
 						const tooltipDiv = document.getElementById('catListTooltip');
 						if (!tooltipDiv) return;
@@ -2359,7 +2205,6 @@ $('#region-select-modal').on('change', function() {
 							const percent = (stTitlePercentages[globalIdx] || 0).toFixed(1);
 							tooltipDiv.innerHTML = `<strong>${label}</strong><br><span style="color:#1de9b6;font-weight:600;">${percent}% (${value})</span>`;
 							tooltipDiv.style.display = 'block';
-							// Position tooltip centered over the corresponding outer slice ("Others").
 							const mainIdxMap = window.stTitleGlobalToMainIndex || {};
 							const mainIdx = mainIdxMap[globalIdx];
 							let placed = false;
@@ -2379,7 +2224,6 @@ $('#region-select-modal').on('change', function() {
 									placed = true;
 								}
 							}
-							// Fallback: near the mouse pointer if we can't find the outer slice
 							if (!placed) {
 								tooltipDiv.style.left = (evt.clientX + 14) + 'px';
 								tooltipDiv.style.top = (evt.clientY + 14) + 'px';
@@ -2400,8 +2244,6 @@ $('#region-select-modal').on('change', function() {
 				}
 			});
 		}
-		// Relay hover/click events from the outer doughnut canvas to the inner one
-		// so both charts remain interactive even though the outer canvas sits on top.
 		(function() {
 			const outerCanvas = document.getElementById('stTitlesDoughnut');
 			const innerCanvas = document.getElementById('stTitlesDoughnutLow');
@@ -2421,8 +2263,6 @@ $('#region-select-modal').on('change', function() {
 		})();
 		renderCategoryList(currentPage);
 
-		// Full-size copy of ST Titles outer/inner doughnuts and top categories
-		// in the "Total Social Technologies" second row (if present).
 		const copyCanvas = document.getElementById('stTitlesDoughnutCopy');
 		if (copyCanvas) {
 			window.doughnutChartCopyInstance = new Chart(copyCanvas.getContext('2d'), {
@@ -2454,13 +2294,11 @@ $('#region-select-modal').on('change', function() {
 						}
 					},
 					cutout: '55%',
-					// Enable clicking on the Total Social Technologies doughnut segments
-					// to open the ST title details modal, similar to the main ST Titles chart.
+
 					onClick: function(evt, elements) {
 						if (!elements || !elements.length) return;
 						const idx = elements[0].index;
 						const label = this.data.labels && this.data.labels[idx];
-						// Ignore aggregated "Others" slice
 						if (!label || label === 'Others') return;
 						if (window.openStTitleModal) {
 							window.openStTitleModal(label);
@@ -2489,12 +2327,10 @@ $('#region-select-modal').on('change', function() {
 						title: { display: false },
 						tooltip: { enabled: false }
 					},
-					// Use the same style of custom hover tooltip as the main inner chart,
-					// so inner-copy labels appear above both doughnuts.
+					
 					onHover: function(evt, activeEls) {
 						const tooltipDiv = document.getElementById('catListTooltip');
 						if (!tooltipDiv) return;
-						// For the copy, position relative to the copy's outer chart
 						const mainChart = window.doughnutChartCopyInstance;
 						if (activeEls && activeEls.length) {
 							const lowIdx = activeEls[0].index;
@@ -2514,7 +2350,6 @@ $('#region-select-modal').on('change', function() {
 							const percent = (stTitlePercentages[globalIdx] || 0).toFixed(1);
 							tooltipDiv.innerHTML = `<strong>${label}</strong><br><span style="color:#1de9b6;font-weight:600;">${percent}% (${value})</span>`;
 							tooltipDiv.style.display = 'block';
-							// Position tooltip centered over the corresponding outer slice ("Others").
 							const mainIdxMap = window.stTitleGlobalToMainIndex || {};
 							const mainIdx = mainIdxMap[globalIdx];
 							let placed = false;
@@ -2534,7 +2369,6 @@ $('#region-select-modal').on('change', function() {
 									placed = true;
 								}
 							}
-							// Fallback: near the mouse pointer if we can't find the outer slice
 							if (!placed) {
 								tooltipDiv.style.left = (evt.clientX + 14) + 'px';
 								tooltipDiv.style.top = (evt.clientY + 14) + 'px';
@@ -2543,7 +2377,6 @@ $('#region-select-modal').on('change', function() {
 							tooltipDiv.style.display = 'none';
 						}
 						},
-						// Allow clicking inner copy segments to open the same ST title modal.
 						onClick: function(evt, elements) {
 							if (!elements || !elements.length) return;
 							const idx = elements[0].index;
@@ -2556,8 +2389,6 @@ $('#region-select-modal').on('change', function() {
 				}
 			});
 		}
-		// Relay hover/click events from the outer copy doughnut canvas to the inner copy
-		// so both charts remain interactive even though the outer canvas sits on top.
 		(function() {
 			const outerCopyCanvas = document.getElementById('stTitlesDoughnutCopy');
 			const innerCopyCanvas = document.getElementById('stTitlesDoughnutLowCopy');
@@ -2575,11 +2406,9 @@ $('#region-select-modal').on('change', function() {
 				});
 			});
 		})();
-		// Modal helpers for ST title details
 		function normalizeStTitle(raw) {
 			if (!raw) return '';
 			const str = raw.toString();
-			// Decode any HTML entities like &amp; back to their characters
 			const div = document.createElement('div');
 			div.innerHTML = str;
 			const decoded = (div.textContent || div.innerText || '').trim();
@@ -2591,9 +2420,7 @@ $('#region-select-modal').on('change', function() {
 			const titleEl = document.getElementById('st-title-modal-title');
 			const bodyEl = document.getElementById('st-title-modal-body');
 			if (titleEl) {
-				// Show a decoded, human‑readable title (fix &amp; etc.)
 				const humanTitle = normalizeStTitle(stTitle) || 'st title';
-				// Capitalization: keep original if provided, otherwise use normalized
 				titleEl.textContent = stTitle || humanTitle;
 			}
 			const data = window.fullListingData || [];
@@ -2660,7 +2487,6 @@ $('#region-select-modal').on('change', function() {
 		window.openStTitleModal = openStTitleModal;
 		window.closeStTitleModal = closeStTitleModal;
 
-		// Attachment modal helpers (shared by map + title listing)
 		function openStAttachmentModal(url, stTitle, uploadedBy) {
 			if (!url) return;
 			const modal = document.getElementById('st-attachment-modal');
@@ -2708,7 +2534,6 @@ $('#region-select-modal').on('change', function() {
 		window.openStAttachmentModal = openStAttachmentModal;
 		window.closeStAttachmentModal = closeStAttachmentModal;
 
-		// Simple modal helpers for region ST titles
 		function openRegionTitlesModal(regionDisplayName, rows) {
 			const modal = document.getElementById('region-titles-modal');
 			if (!modal) return;
@@ -2758,7 +2583,6 @@ $('#region-select-modal').on('change', function() {
 				}
 			}
 			modal.style.display = 'block';
-			// Prevent background scroll while modal is open
 			if (document.body) {
 				document.body.style.overflow = 'hidden';
 			}
@@ -2774,11 +2598,9 @@ $('#region-select-modal').on('change', function() {
 		}
 		window.closeRegionTitlesModal = closeRegionTitlesModal;
 
-		// Region-level hover + click for Philippines SVG map embedded via <object>
 		function initPhilippinesMapHover() {
 			const phMapObject = document.getElementById('philippines-map');
 			if (!phMapObject) return;
-			// Prevent running twice if both the load handler and timeout fire
 			if (phMapObject.dataset.phRegionsBound === '1') return;
 			const regionLabelEl = document.getElementById('map-region-label');
 			const svgDoc = phMapObject.contentDocument || (phMapObject.getSVGDocument && phMapObject.getSVGDocument());
@@ -2786,7 +2608,6 @@ $('#region-select-modal').on('change', function() {
 			const paths = svgDoc.querySelectorAll('path');
 			if (!paths.length) return;
 
-			// Map provinces (by their SVG title attribute) to administrative regions
 			const provinceToRegion = {
 				// Region I – Ilocos Region
 				'Ilocos Norte': 'Region I',
@@ -2947,7 +2768,6 @@ $('#region-select-modal').on('change', function() {
 				'CARAGA': '#a5d6a7',
 				'BARMM': '#ffecb3'
 			};
-			// Timers used for blinking highlights when hovering region list items
 			const regionBlinkTimers = {};
 
 			paths.forEach(path => {
@@ -2988,7 +2808,6 @@ $('#region-select-modal').on('change', function() {
 				}
 
 				path.dataset.phHoverBound = '1';
-				// Set base fill by region so each region has a distinct color
 				path.style.fill = info.originalFill;
 				path.style.transition = 'fill 0.15s ease-out, stroke 0.15s ease-out, stroke-width 0.15s ease-out';
 				path.style.cursor = 'pointer';
@@ -3020,9 +2839,7 @@ $('#region-select-modal').on('change', function() {
 				}
 			}
 
-			// Build counts per region using fullListingData and generic region inference.
-			// At the same time, pre-compute per-region ongoing/dissolved counts so the
-			// small summary cards can show numbers for a selected region (e.g. Region X).
+	
 			const dataForCounts = window.fullListingData || [];
 			const regionCounts = {};
 			if (Array.isArray(dataForCounts) && dataForCounts.length) {
@@ -3033,8 +2850,6 @@ $('#region-select-modal').on('change', function() {
 				});
 			}
 
-			// Shared tooltip for map + region list hover (shows region name and ST count).
-			// We reuse the global #catListTooltip so only one floating tooltip exists.
 			const mapTooltip = (function() {
 				let el = document.getElementById('catListTooltip');
 				if (!el) {
@@ -3072,19 +2887,15 @@ $('#region-select-modal').on('change', function() {
 				if (!html) return;
 				mapTooltip.innerHTML = html;
 				mapTooltip.style.display = 'block';
-				// Anchor tooltip close to the hovered element (region path or
-				// list row). Fallback to the whole map if no anchorRect is
-				// provided.
+
 				const baseRect = anchorRect || phMapObject.getBoundingClientRect();
 				const tooltipWidth = mapTooltip.offsetWidth || 0;
 				const tooltipHeight = mapTooltip.offsetHeight || 0;
 				let left = baseRect.left + (baseRect.width - tooltipWidth) / 2;
 				let top = baseRect.top - tooltipHeight - 8; // above anchor
-				// if there isn't enough space above, place it below instead
 				if (top < 8) {
 					top = baseRect.bottom + 8;
 				}
-				// keep fully inside viewport
 				left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
 				if (top + tooltipHeight + 8 > window.innerHeight) {
 					top = Math.max(8, window.innerHeight - tooltipHeight - 8);
@@ -3098,7 +2909,6 @@ $('#region-select-modal').on('change', function() {
 				mapTooltip.style.display = 'none';
 			}
 
-			// Render region list with counts beside the map
 			const regionListEl = document.getElementById('map-region-list');
 			if (regionListEl) {
 				const orderedRegions = [
@@ -3133,7 +2943,6 @@ $('#region-select-modal').on('change', function() {
 					html += '</div>';
 				});
 				regionListEl.innerHTML = html;
-				// Helper to get a representative path info for a region
 				function getRegionRepresentativeInfo(regionCode) {
 					const arr = regionToPaths[regionCode];
 					return (arr && arr.length) ? arr[0] : null;
@@ -3147,12 +2956,10 @@ $('#region-select-modal').on('change', function() {
 					if (!regionCode) return;
 					const info = getRegionRepresentativeInfo(regionCode);
 					if (!info) return;
-					// Ensure any existing timer for this region is cleared first
 					if (regionBlinkTimers[regionCode]) {
 						clearInterval(regionBlinkTimers[regionCode]);
 					}
 					let visible = true;
-					// Immediately highlight once
 					highlightGroup(info, true, { color: '#ffeb3b', stroke: '#f9a825' });
 					regionBlinkTimers[regionCode] = setInterval(function() {
 						visible = !visible;
@@ -3171,7 +2978,6 @@ $('#region-select-modal').on('change', function() {
 						highlightGroup(info, false);
 					}
 				}
-				// Bind hover and click events from list rows to the map regions
 				const listRows = regionListEl.querySelectorAll('.st-map-region-row');
 				listRows.forEach(function(row) {
 					const code = row.getAttribute('data-region');
@@ -3197,8 +3003,6 @@ $('#region-select-modal').on('change', function() {
 						const info = getRegionRepresentativeInfo(code);
 						if (info) {
 							handleRegionClick(info);
-							// clicking a region in the side list should also update
-							// the Ongoing/Dissolved summary cards for that region.
 							if (window.updateStatusSummaryCards) {
 								window.updateStatusSummaryCards([code]);
 							}
@@ -3234,8 +3038,6 @@ $('#region-select-modal').on('change', function() {
 			function normalizeProvinceName(name) {
 				if (!name) return '';
 				let n = String(name).toLowerCase().trim().replace(/\s+/g, ' ');
-				// Handle known variants where data and SVG use different word order
-				// e.g. "Occidental Mindoro" vs "Mindoro Occidental", "Oriental Mindoro" vs "Mindoro Oriental"
 				if (n.includes('mindoro')) {
 					if (n.includes('occidental')) return 'mindoro occidental';
 					if (n.includes('oriental')) return 'mindoro oriental';
@@ -3247,12 +3049,10 @@ $('#region-select-modal').on('change', function() {
 				if (!regionText) return null;
 				const s = String(regionText).toLowerCase().trim();
 				if (!s) return null;
-				// Named-region aliases
 				if (s.includes('national capital') || s.includes(' ncr') || s.startsWith('ncr')) return 'NCR';
 				if (s.includes('ilocos')) return 'Region I';
 				if (s.includes('cagayan valley')) return 'Region II';
 				if (s.includes('central luzon')) return 'Region III';
-				// accept a couple of common variants/misspellings
 				if (s.includes('calabarzon') || s.includes('calborazon')) return 'Region IV-A';
 				if (s.includes('mimaropa')) return 'Region IV-B';
 				if (s.includes('bicol')) return 'Region V';
@@ -3264,13 +3064,10 @@ $('#region-select-modal').on('change', function() {
 				if (s.includes('davao region')) return 'Region XI';
 				if (s.includes('soccsksargen')) return 'Region XII';
 				if (s.includes('caraga')) return 'CARAGA';
-				// Only treat explicit BARMM/Bangsamoro labels as BARMM; avoid loose 'armm' matches
 				if (s.includes('bangsamoro') || /\bbarmm\b/.test(s)) return 'BARMM';
-				// CAR (Cordillera Administrative Region) but not CARAGA
 				if (!s.includes('caraga') && (s === 'car' || s.includes('cordillera') || /\bcar\b/.test(s))) {
 					return 'CAR';
 				}
-				// Generic roman-numeral based detection (handles "FO I", "Region VI", etc.)
 				const txt = s;
 				const romanPatterns = [
 					{ code: 'Region XII', re: /\bxii\b/ },
@@ -3300,11 +3097,7 @@ $('#region-select-modal').on('change', function() {
 					const normProv = normalizeProvinceName(row.province);
 					byProvince = provinceRegionIndex[normProv] || null;
 				}
-				// Also infer from the region/field-office text
 				const byRegionText = inferRegionCodeFromRegionText(row.region);
-				// Special case: provinces like Basilan, Sulu, Tawi-Tawi appear in the FO IX sheet.
-				// When the map groups them under BARMM but the region text clearly says Region IX,
-				// treat them as Region IX so counts match the FO IX tab.
 				if (byProvince === 'BARMM' && byRegionText && byRegionText !== 'BARMM') {
 					return byRegionText;
 				}
@@ -3321,13 +3114,10 @@ $('#region-select-modal').on('change', function() {
 				}
 				let rows = [];
 				if (regionName) {
-					// For region clicks, always use the same inference as the counts
-					// so the modal total matches the number in the side list.
 					rows = data.filter(function(row){
 						return inferRegionCodeFromRow(row, provinceRegionIndex) === regionName;
 					});
 				} else {
-					// Fallback: if this path isn't mapped to a region, filter by its province only.
 					const singleProv = targetInfo.path.getAttribute('title') || '';
 					if (singleProv) {
 						const targetProvNorm = normalizeProvinceName(singleProv);
@@ -3339,8 +3129,6 @@ $('#region-select-modal').on('change', function() {
 				}
 				const displayName = (regionName && regionLabels[regionName]) || regionName || (targetInfo.path.getAttribute('title') ? ('Province: ' + targetInfo.path.getAttribute('title')) : 'Region');
 				openRegionTitlesModal(displayName, rows);
-				// also update the Ongoing/Dissolved summary cards to reflect this
-				// region selection when the user clicks on the map.
 				if (regionName && window.updateStatusSummaryCards) {
 					window.updateStatusSummaryCards([regionName]);
 				}
@@ -3387,12 +3175,10 @@ $('#region-select-modal').on('change', function() {
 			phMapObject.addEventListener('load', function () {
 				setTimeout(initPhilippinesMapHover, 0);
 			});
-			// Fallback in case the load event fired before this script
 			setTimeout(initPhilippinesMapHover, 500);
 		}
 	}
 
-	// Auto-fit overlay totals' numbers to their card area (grow to fill, shrink for long numbers)
 	function adjustOverlayTotalsNumbers() {
 		const els = document.querySelectorAll('.map-overlay-card h1');
 		if (!els || !els.length) return;
@@ -3406,26 +3192,22 @@ $('#region-select-modal').on('change', function() {
 			const maxW = Math.max(24, rect.width - paddingX - 12);
 			const maxH = Math.max(24, rect.height - paddingY - 12);
 
-			// start from a large font based on available height but cap by width-per-digit
 			let font = Math.floor(maxH * 0.65);
 			const digits = (el.textContent || '').trim().length || 1;
 			const approxPerDigit = Math.max(8, Math.floor(maxW / Math.max(1, digits)));
 			font = Math.min(font, approxPerDigit * Math.floor(1.05 * Math.max(1, digits) / Math.max(1, digits)));
 
-			// reduce starting font for very long numbers so loop converges quickly
 			if (digits > 4) font = Math.floor(font * Math.max(0.6, 4 / digits));
 
 			el.style.whiteSpace = 'nowrap';
 			el.style.lineHeight = '1';
 			el.style.fontSize = font + 'px';
 
-			// shrink until it fits horizontally and vertically
 			while ((el.scrollWidth > maxW || el.scrollHeight > maxH) && font > 8) {
 				font -= 1;
 				el.style.fontSize = font + 'px';
 			}
 
-			// ensure the number is visible only after sizing (prevents flashes/overflow)
 			el.style.visibility = 'visible';
 		});
 	}
@@ -3435,7 +3217,6 @@ $('#region-select-modal').on('change', function() {
 		return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
 	}
 
-	// watch for window resize and content changes
 	document.addEventListener('DOMContentLoaded', function(){
 		adjustOverlayTotalsNumbers();
 		window.adjustOverlayTotalsNumbers = adjustOverlayTotalsNumbers; // expose for manual calls
@@ -3444,7 +3225,6 @@ $('#region-select-modal').on('change', function() {
 		document.querySelectorAll('.map-overlay-card h1').forEach(h => observer.observe(h, { childList: true, characterData: true, subtree: true }));
 	});
 
-// make replicate-popover helper available on main dashboard as well
 if (typeof showReplicateConfirmPopover !== 'function') {
     function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         try {
@@ -3538,12 +3318,9 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 }
 
 	window.onload = function() {
-	// prefer server-computed counts if available
 	let yearStats = window.initialYearStats || {};
 	console.log('server yearStats', yearStats);
 	if (!yearStats || Object.keys(yearStats).length === 0) {
-		// fall back to client-side computation based on the
-		// region/year-filtered listing data coming from PHP
 		const allData = window.fullListingData || [];
 		console.log('fullListingData sample', allData.slice(0,20));
 		const headers = window.fullListingHeaders || [];
@@ -3554,10 +3331,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 			return lh.includes('dissolved') || lh.includes('inactive');
 		});
 		console.log('status column indexes', idxOngoing, idxDissolved, headers);
-
-		// mirror the PHP status-mark helper for the indicator columns: treat any
-		// non-empty, non-zero cell in the "Ongoing"/"Dissolved/Inactive" columns
-		// as a mark, so we count "X" or other symbols in addition to TRUE/1.
 		const hasStatusMark = v => {
 			if (typeof v === 'boolean') return v;
 			if (v == null) return false;
@@ -3574,8 +3347,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 				yearStats[yr] = { total: 0, ongoing: 0, dissolved: 0 };
 			}
 			yearStats[yr].total++;
-			// infer status from explicit status column first,
-			// then from the indicator columns
 			let st = (r.status || '').toString().toLowerCase();
 			if (!st && idxOngoing !== -1) {
 				const cell = r.row && r.row[idxOngoing];
@@ -3602,7 +3373,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const ongoingCounts = years.map(y => yearStats[y].ongoing);
     const dissolvedCounts = years.map(y => yearStats[y].dissolved);
 
-    // update summary cards with overall counts
 	const totalOngoing = ongoingCounts.reduce((a,b)=>a+b, 0);
 	const totalDissolved = dissolvedCounts.reduce((a,b)=>a+b, 0);
 	const card1 = document.getElementById('card1');
@@ -3610,8 +3380,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const card3 = document.getElementById('card3');
     const card4 = document.getElementById('card4');
 
-    // compute replicated/adopted using available data
-    // prefer totals computed by server when available
     const server = window.serverTotals || {};
     const allData = window.fullListingData || [];
     const truthy = v => (typeof v === 'boolean') ? v : (String(v||'').toLowerCase().trim() === 'true');
@@ -3620,9 +3388,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const totalAdopted = (typeof server.totalAdopted === 'number') ? server.totalAdopted :
             allData.reduce((a,r)=> a + (truthy(r.with_adopted) ? 1 : 0), 0);
 
-	// card1 / card2 values are rendered on the server from the
-	// dedicated Ongoing / Dissolved columns; do not override them
-	// here so they always match the upload data for the current filter.
     if(card3) {
         const val = card3.querySelector('.card-value');
         if(val) val.textContent = totalReplicated;
@@ -3632,11 +3397,9 @@ if (typeof showReplicateConfirmPopover !== 'function') {
         if(val) val.textContent = totalAdopted;
     }
 
-	// Doughnut chart: Ongoing vs Dissolved STs, with center percentage of Ongoing
 	const grandTotal = totalOngoing + totalDissolved;
 	const ongoingPercent = grandTotal > 0 ? Math.round((totalOngoing / grandTotal) * 100) : 0;
 
-	// Plugin to draw text in the center of the doughnut
 	const centerTextPlugin = {
 		id: 'centerText',
 		afterDraw(chart, args, pluginOptions) {
@@ -3709,7 +3472,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		});
 	}
 
-	// Doughnut chart: Replicated vs Adopted STs, center text is % Replicated
 	const repTotal = totalReplicated + totalAdopted;
 	const replicatedPercent = repTotal > 0 ? Math.round((totalReplicated / repTotal) * 100) : 0;
 
@@ -3763,7 +3525,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		});
 	}
 
-	// helper to create a simple line chart config (kept for future use)
 	function makeLineConfig(label, dataArray, color) {
 		return {
 			type: 'line',
@@ -3785,8 +3546,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		};
 	}
 
-	// draw a combined chart on the Ongoing canvas with both
-	// Ongoing and Dissolved STs as separate lines
 	const ongoingCtx = document.getElementById('onGoing').getContext('2d');
 	new Chart(ongoingCtx, {
 		type: 'line',
@@ -3817,7 +3576,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		}
 	});
 
-	// Region-by-year total STs heatmap (x = years, y = regions, color = ST count)
 	const regionYearCanvas = document.getElementById('regionYearLines');
 	if (regionYearCanvas && regionYearCanvas.getContext) {
 		const regionYearCtx = regionYearCanvas.getContext('2d');
@@ -3836,7 +3594,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 			regionYearMap[regionRaw][year]++;
 		});
 		const regionNames = Object.keys(regionYearMap).sort();
-		// Build matrix cells: each cell is { x: year, y: region, v: count }
 		const matrixData = [];
 		let maxVal = 0;
 		regionNames.forEach(function(region) {
@@ -3926,35 +3683,26 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		});
 	}
 
-	// the separate "dissolved" canvas is no longer used here, but
-	// remains in the markup for layout compatibility.
-	// (if the extra canvas myLineChart3 is still needed you can also reuse totalCounts)
-
-	    // (optional) you can initialise other charts here if needed
 	};
         
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));
 
 	</script>
 
-    <!-- floating filter button using external icon file -->
 	@if(auth()->check())
-    <button id="floatingBtn" class="btn" aria-label="Filter" style="background-color: white; width: 80px; height:50px;" data-bs-toggle="modal" data-bs-target="#filterModal">
-        <img src="/images/dattachments/filtering%20icon.png" width="24" height="24" alt="Filter" />
+	<button id="floatingBtn" class="btn" aria-label="Open filters" data-bs-toggle="modal" data-bs-target="#filterModal">
+		<img src="/images/dattachments/filtering%20icon.png" class="floating-btn-icon" alt="Filter" />
         <span class="filter-label">Filter</span>
     </button>
 	@endif
 
-	<!-- filter modal (for authenticated users only) -->
 	@auth
 	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-body d-flex justify-content-center align-items-center" id="filterModalBody" style="background:transparent;">
-            <!-- standalone filter form for modal -->
             <div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px;">
                 <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
-                    <!-- header could be commented out if undesired -->
                     <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
                     <div class="card-body" style="padding:12px;">
                         <form method="GET" action="" class="w-100 d-flex flex-column">
@@ -4001,42 +3749,78 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     <style>
         #floatingBtn {
             position: fixed;
-            top: 80px;      /* starting offset */
-            right: 20px;    /* top-right */
-			z-index: 900; /* keep below Bootstrap modal (1050) */
-            background: #fff !important;
-            border: 1.5px solid rgba(0,0,0,0.2);
-            border-radius: 6px;
-            color: inherit;
+			top: 112px;
+            right: 22px;
+			z-index: 920;
+            min-width: 132px;
+            min-height: 72px;
+            background: linear-gradient(135deg, #ffffff 0%, #eef6ff 100%) !important;
+            border: 3px solid #06306e;
+            border-radius: 18px;
+            color: #06306e;
             display: flex;
             align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            /* longer duration and smoother curve for pleasant movement */
-            transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 18px;
+			box-shadow: none;
+			transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
             will-change: transform;
         }
         #floatingBtn .filter-label {
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1;
         }
-		/* guest floating filter card: same scroll-lag feel as floatingBtn */
+		#floatingBtn .floating-btn-icon {
+			width: 30px;
+			height: 30px;
+			object-fit: contain;
+			filter: none;
+		}
+		#floatingBtn:hover,
+		#floatingBtn:focus-visible {
+			transform: translateY(-4px) scale(1.03);
+			background: linear-gradient(135deg, #ffffff 0%, #dff6f7 100%) !important;
+			border-color: #10aeb5;
+			outline: none;
+		}
+		#floatingBtn:active {
+			transform: translateY(-1px) scale(0.99);
+		}
+		@media (max-width: 767px) {
+			#floatingBtn {
+				top: 96px;
+				right: 12px;
+				min-width: 116px;
+				min-height: 64px;
+				padding: 12px 14px;
+				gap: 8px;
+			}
+			#floatingBtn .filter-label {
+				font-size: 0.98rem;
+			}
+			#floatingBtn .floating-btn-icon {
+				width: 26px;
+				height: 26px;
+			}
+        }
 		#guestFloatingFilter {
 			position: fixed;
 			top: 80px;
 			right: -240px;
-			z-index: 890; /* keep aligned just under floatingBtn */
+			z-index: 890; 
 			max-width: 360px;
 			width: 320px;
 			transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 			will-change: transform;
 		}
-		/* hide floating filter button visually & from clicks when any modal is open */
 		body.modal-open #floatingBtn {
 			opacity: 0;
 			pointer-events: none;
 		}
-        /* ensure modal itself is transparent */
         #filterModal .modal-content {
             background: transparent !important;
             border: none !important;
@@ -4045,7 +3829,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
         #filterModal .modal-dialog {
             background: transparent !important;
         }
-        /* when card is cloned into modal, give it its original background so it's visible */
         #filterModalBody .card {
             background: #fff !important;
             box-shadow: 0 2px 12px rgba(16,174,181,0.06) !important;
@@ -4068,13 +3851,13 @@ document.addEventListener('DOMContentLoaded', function () {
 		movers.push(guestCard);
 	}
 
-	if (!movers.length) return; // nothing to animate
+	if (!movers.length) return; 
 
     let lastScrollTop = window.scrollY;
     let timeout;
 
-    const maxLag = 1000;      // maximum push distance
-    const scrollFactor = 0.2; // px of push per px scrolled cumulatively
+    const maxLag = 1000;     
+    const scrollFactor = 0.2;
     const delayBeforeReturn = 400;
     let cumulative = 0;
 
@@ -4084,7 +3867,6 @@ document.addEventListener('DOMContentLoaded', function () {
         let delta = currentScroll - lastScrollTop;
 
         cumulative += Math.abs(delta);
-        // calculate how far to push based on total scroll since last reset
         let lag = Math.min(cumulative * scrollFactor, maxLag);
 		movers.forEach(function(el) {
 			if (delta > 0) {

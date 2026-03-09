@@ -8,9 +8,34 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\StsAttachment;
 use App\Models\User;
 use App\Models\GalleryCard;
+use App\Services\RegionDashboardDataService;
 
 class MainReportController extends Controller
 {
+    protected function getPrimaryDashboardData(?string $path = null): array
+    {
+        $service = app(RegionDashboardDataService::class);
+
+        if ($service->hasData()) {
+            return $service->getData();
+        }
+
+        if ($path && file_exists($path)) {
+            return $this->getParsedData($path);
+        }
+
+        return [
+            'regions' => [],
+            'titles' => [],
+            'provinces' => [],
+            'municipalities' => [],
+            'years' => [],
+            'data' => [],
+            'regionMap' => [],
+            'headers' => [],
+        ];
+    }
+
     protected function addAttachmentInfo(array $rows): array
     {
         if (empty($rows)) {
@@ -338,7 +363,9 @@ class MainReportController extends Controller
         
         $embed = $request->query('embed');
         $path = $this->findLatestExcelPath();
-        if (!$path) {
+        $parsed = $this->getPrimaryDashboardData($path);
+
+        if (empty($parsed['data'])) {
             $galleryCards = GalleryCard::with([
                 'children' => function($q){ $q->whereNull('parent_child_id')->orderBy('docno','asc'); },
                 'children.children' => function($q){ $q->orderBy('docno','asc'); }
@@ -364,8 +391,6 @@ class MainReportController extends Controller
                 'totalMoa' => 0,
             ]);
         }
-
-        $parsed = $this->getParsedData($path);
 
         $regions = $parsed['regions'];
         $titles = $parsed['titles'];
@@ -585,11 +610,11 @@ class MainReportController extends Controller
     public function titleListingAjax(Request $request)
     {
         $path = $this->findLatestExcelPath();
-        if (!$path) {
+        $parsed = $this->getPrimaryDashboardData($path);
+
+        if (empty($parsed['data'])) {
             return response()->view('dashboard.mainreports.partials.title_listing_ajax', ['data' => []]);
         }
-
-        $parsed = $this->getParsedData($path);
         $allData = $parsed['data'] ?? [];
 
         // Apply filters from request (same as index)
@@ -640,8 +665,10 @@ class MainReportController extends Controller
     public function prewarm(Request $request)
     {
         $path = $this->findLatestExcelPath();
-        if ($path) {
-            // Trigger cache population; result is discarded here.
+        $service = app(RegionDashboardDataService::class);
+        if ($service->hasData()) {
+            $service->getData();
+        } elseif ($path) {
             $this->getParsedData($path);
         }
 
