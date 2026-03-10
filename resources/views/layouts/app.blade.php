@@ -5,6 +5,29 @@
             .stb-navbar-title {
                 transition: all 0.2s;
             }
+            .stb-nav-avatar {
+                width: 30px;
+                height: 30px;
+                border-radius: 10px;
+                object-fit: cover;
+                border: 1px solid rgba(255,255,255,0.28);
+                box-shadow: 0 6px 12px rgba(0,0,0,0.14);
+            }
+            .stb-nav-avatar-fallback {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 30px;
+                height: 30px;
+                border-radius: 10px;
+                background: rgba(255,255,255,0.14);
+                border: 1px solid rgba(255,255,255,0.22);
+                font-size: 0.78rem;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                color: #fff;
+                box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+            }
             @media (max-width: 600px) {
                 .stb-navbar-title {
                     font-size: 1.05rem !important;
@@ -646,15 +669,19 @@
                                data-bs-auto-close="outside"
                                aria-expanded="false">
                                 <span class="fw-semibold d-flex align-items-center" style="gap:8px; color:#fff;">
-                                    <i class="bi bi-person-circle fs-5"></i>
+                                    @if(Auth::user()->profile_picture_url)
+                                        <img src="{{ Auth::user()->profile_picture_url }}" alt="{{ Auth::user()->display_name }}" class="stb-nav-avatar">
+                                    @else
+                                        <span class="stb-nav-avatar-fallback">{{ Auth::user()->initials }}</span>
+                                    @endif
                                     {{ Auth::user()->name }}
                                 </span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="{{ route('profile') }}">
+                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#profileModal">
                                         <i class="bi bi-person me-2"></i>Profile
-                                    </a>
+                                    </button>
                                 </li>
                                 @if(Auth::user()->usergroup === 'sysadmin' || Auth::user()->usergroup === 'admin')
                                     <li class="dropend">
@@ -757,6 +784,9 @@
     </nav>
 @include('Login.accounts.register')
 @include('Login.login')
+@auth
+@include('Login.accounts.profile')
+@endauth
     <style>
         #bg-preloader {
             position: fixed;

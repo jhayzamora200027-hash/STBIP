@@ -1503,6 +1503,7 @@ window.addEventListener('message', function(e) {
 		const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
 		if (!iframe) return;
 		const wasInitialized = window._streportHasInitialized;
+		const shouldAutoScroll = e.data.scrollIntoView === true;
 		window._streportHasInitialized = true;
 		iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
 		iframe.style.overflow = 'hidden';
@@ -1529,11 +1530,10 @@ window.addEventListener('message', function(e) {
 				}
 			} catch(e) { console.warn('parent: failed to reset filters on collapse', e); }
 		}
-		if (window._streportIframeExpanded && wasInitialized) {
+		if (window._streportIframeExpanded && wasInitialized && shouldAutoScroll) {
 			setTimeout(() => {
 				try {
 					iframe.scrollIntoView({ behavior: 'smooth', block: 'start' });
-					iframe.focus && iframe.focus();
 				} catch(err) { console.warn('scrollIntoView failed', err); }
 			}, 350);
 		}

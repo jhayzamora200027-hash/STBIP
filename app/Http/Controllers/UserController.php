@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -363,33 +363,43 @@ class UserController extends Controller
     }
 
     public function profile(){
-        $user = Auth::user();
-        return view('login.accounts.profile', compact('user'));
+        return redirect()->route('main')->with('profile_modal_open', true);
     }
 
     public function updateProfile(Request $request)
     {
         $user = User::find(Auth::id());
+
+        $normalize = static fn ($value) => trim((string) ($value ?? ''));
+        $detailsChanged = $normalize($request->email) !== $normalize($user->email)
+            || $normalize($request->usergroup) !== $normalize($user->usergroup)
+            || $normalize($request->phonenumber) !== $normalize($user->phonenumber)
+            || $normalize($request->gender) !== $normalize($user->gender)
+            || $normalize($request->address) !== $normalize($user->address)
+            || $request->filled('new_password');
         
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email,' . $user->id,
             'usergroup' => 'required|in:admin,user,sysadmin',
-            'current_password' => 'required',
+            'current_password' => $detailsChanged ? 'required' : 'nullable',
             'new_password' => 'nullable|min:8|confirmed',
             'phonenumber' => 'nullable|string|max:20',
             'gender' => 'nullable|string|in:Male,Female',
             'address' => 'nullable|string|max:500',
+            'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         if ($validator->fails()) {
             return redirect()->back()
-                ->withErrors($validator)
+                ->withErrors($validator, 'profileUpdate')
+                ->with('profile_modal_open', true)
                 ->withInput();
         }
 
-        if (!password_verify($request->current_password, $user->password)) {
+        if ($detailsChanged && !password_verify($request->current_password, $user->password)) {
             return redirect()->back()
-                ->with('error', 'Current password is incorrect.')
+                ->with('profile_error', 'Current password is incorrect.')
+                ->with('profile_modal_open', true)
                 ->withInput();
         }
 
@@ -406,14 +416,25 @@ class UserController extends Controller
                 $updateData['password'] = bcrypt($request->new_password);
             }
 
+            if ($request->hasFile('profile_picture')) {
+                $newProfilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+
+                if ($user->profile_picture_path) {
+                    Storage::disk('public')->delete($user->profile_picture_path);
+                }
+
+                $updateData['profile_picture_path'] = $newProfilePicturePath;
+            }
+
             $user->update($updateData);
 
-
-            return redirect()->route('profile')
-                ->with('success', 'Profile updated successfully.');
+            return redirect()->back()
+                ->with('profile_success', 'Profile updated successfully.')
+                ->with('profile_modal_open', true);
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Failed to update profile: ' . $e->getMessage())
+                ->with('profile_error', 'Failed to update profile: ' . $e->getMessage())
+                ->with('profile_modal_open', true)
                 ->withInput();
         }
     }
