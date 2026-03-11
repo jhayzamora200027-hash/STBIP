@@ -1583,7 +1583,7 @@ if (!document.getElementById('catListTooltip')) {
 
 	<div class="row mt-4">
 		<div class="col-12 p-0">
-			<div class="card st-dashboard-card year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
+			<div class="card st-dashboard-card no-hover year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 				<div class="card-header text-center">Total Social Technologies</div>
 				<div class="card-body total-st-body">
 <div class="formal-st-overview">
@@ -1886,6 +1886,12 @@ if (!document.getElementById('catListTooltip')) {
 <style>
 .total-st-body {
 	padding: 28px 20px 24px 20px !important;
+}
+
+/* Disable hover transform/box-shadow for cards marked no-hover */
+.st-dashboard-card.no-hover:hover {
+	transform: none !important;
+	box-shadow: none !important;
 }
 
 .formal-st-overview {
