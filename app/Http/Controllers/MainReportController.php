@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\StsAttachment;
 use App\Models\User;
 use App\Models\GalleryCard;
+use App\Models\RegionItem;
 use App\Services\RegionDashboardDataService;
 
 class MainReportController extends Controller
@@ -364,6 +365,43 @@ class MainReportController extends Controller
         $embed = $request->query('embed');
         $path = $this->findLatestExcelPath();
         $parsed = $this->getPrimaryDashboardData($path);
+
+        // Merge DB-backed RegionItem year_of_resolution into parsed spreadsheet rows
+        // This ensures the dashboard modal shows the masterdata SB resolution year immediately.
+        try {
+            $regionItems = RegionItem::with('region:id,name')
+                ->get(['id', 'region_id', 'title', 'province', 'municipality', 'year_of_resolution', 'with_res']);
+
+            $dbMap = [];
+            foreach ($regionItems as $ri) {
+                $rname = $ri->region?->name ?? '';
+                $key = implode('|', [
+                    strtolower(trim((string) $rname)),
+                    strtolower(trim((string) $ri->title)),
+                    strtolower(trim((string) ($ri->province ?? ''))),
+                    strtolower(trim((string) ($ri->municipality ?? ''))),
+                ]);
+                $dbMap[$key] = $ri;
+            }
+
+            if (!empty($parsed['data'])) {
+                foreach ($parsed['data'] as $i => $row) {
+                    $key = implode('|', [
+                        strtolower(trim((string) ($row['region'] ?? ''))),
+                        strtolower(trim((string) ($row['title'] ?? ''))),
+                        strtolower(trim((string) ($row['province'] ?? ''))),
+                        strtolower(trim((string) ($row['municipality'] ?? ''))),
+                    ]);
+                    if (isset($dbMap[$key])) {
+                        $parsed['data'][$i]['year_of_resolution'] = $dbMap[$key]->year_of_resolution;
+                        // also prefer DB's with_res flag when available
+                        $parsed['data'][$i]['with_res'] = $dbMap[$key]->with_res ?? ($parsed['data'][$i]['with_res'] ?? null);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // don't fail page render if DB merge has issues — parsed data remains unchanged
+        }
 
         if (empty($parsed['data'])) {
             $galleryCards = GalleryCard::with([

@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-@include('components.loader')
 @guest
 <style>
     .stb-main-content {
@@ -31,11 +30,743 @@
 		}
     }
 </style>
+<style>
+	/* Blur the main listing when details modal is open */
+	body.st-details-open .st-dashboard-container,
+	body.st-details-open .masterdata-item-list,
+	body.st-details-open .st-summary-table-wrap,
+	body.st-details-open .social-listing,
+	body.st-details-open .slider-modal-content {
+		filter: blur(6px) brightness(0.96);
+		transition: filter 0.18s ease;
+		pointer-events: none;
+		user-select: none;
+	}
+	/* Ensure modals and overlays are not blurred */
+	body.st-details-open #st-details-modal,
+	body.st-details-open #st-attachment-modal,
+	body.st-details-open .st-region-modal-dialog,
+	body.st-details-open .modal {
+		filter: none !important;
+		pointer-events: auto !important;
+		user-select: auto !important;
+	}
+</style>
 @endguest
 <style>
 </style>
 <link href="/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<!-- Masterdata styles copied to ensure the ST details modal matches masterdata UI -->
+<style>
+	.masterdata-shell {
+		width: min(100%, 1920px);
+		max-width: none;
+		margin: 0 auto;
+		padding-inline: clamp(12px, 2vw, 28px);
+		padding-bottom: 32px;
+		box-sizing: border-box;
+	}
+	.masterdata-hero {
+		background: linear-gradient(135deg, #0b2540 0%, #0f4c75 52%, #2f7aa2 100%);
+		color: #fff;
+		border-radius: 28px;
+		padding: clamp(20px, 2.2vw, 32px);
+		box-shadow: 0 20px 50px rgba(11, 37, 64, 0.18);
+		margin-bottom: 24px;
+	}
+	.masterdata-hero h1 {
+		margin: 0;
+		font-size: clamp(1.55rem, 2.3vw, 2.2rem);
+		font-weight: 800;
+	}
+	.masterdata-hero p {
+		margin: 10px 0 0;
+		max-width: min(100%, 1100px);
+		opacity: 0.9;
+		font-size: clamp(0.95rem, 1.1vw, 1.02rem);
+	}
+	.masterdata-alert {
+		border-radius: 16px;
+		padding: 14px 18px;
+		margin-bottom: 18px;
+		border: 1px solid;
+	}
+	.masterdata-alert-success {
+		background: #ecfdf3;
+		color: #166534;
+		border-color: #bbf7d0;
+	}
+	.masterdata-alert-error {
+		background: #fef2f2;
+		color: #991b1b;
+		border-color: #fecaca;
+	}
+	.masterdata-ajax-feedback {
+		margin-bottom: 18px;
+	}
+	.masterdata-modal {
+		position: fixed;
+		inset: 0;
+		z-index: 1200;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+		background: rgba(11, 37, 64, 0.42);
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transition: opacity 0.22s ease, visibility 0.22s ease;
+	}
+	.masterdata-modal.is-open {
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
+	}
+	.masterdata-modal-card {
+		width: min(100%, 460px);
+		background: #fff;
+		border-radius: 24px;
+		box-shadow: 0 28px 80px rgba(11, 37, 64, 0.24);
+		overflow: hidden;
+		transform: translateY(12px) scale(0.98);
+		transition: transform 0.22s ease;
+	}
+	.masterdata-modal.is-open .masterdata-modal-card {
+		transform: translateY(0) scale(1);
+	}
+	.masterdata-modal-header {
+		padding: 22px 24px 16px;
+		background: linear-gradient(135deg, #ecfdf3 0%, #f6fffa 100%);
+		border-bottom: 1px solid #d8f3e4;
+	}
+	.masterdata-modal-title {
+		margin: 0;
+		font-size: 1.15rem;
+		font-weight: 800;
+		color: #166534;
+	}
+	.masterdata-modal-body {
+		padding: 20px 24px;
+		color: #244865;
+		font-size: 0.97rem;
+		line-height: 1.6;
+	}
+	.masterdata-modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		padding: 0 24px 24px;
+	}
+	.masterdata-tabs {
+		display: flex;
+		gap: 12px;
+		margin-bottom: 22px;
+		flex-wrap: wrap;
+	}
+	.masterdata-tab-btn {
+		border: 1px solid #c9d8e6;
+		background: #fff;
+		color: #194566;
+		padding: 12px 18px;
+		border-radius: 999px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.18s ease;
+	}
+	.masterdata-tab-btn.active {
+		background: linear-gradient(135deg, #0b2540, #175d8f);
+		color: #fff;
+		border-color: transparent;
+		box-shadow: 0 10px 26px rgba(23, 93, 143, 0.22);
+	}
+	.masterdata-panel {
+		display: none;
+	}
+	.masterdata-panel.active {
+		display: block;
+	}
+	.masterdata-stats {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 18px;
+		margin-bottom: 22px;
+	}
+	.masterdata-stat-card,
+	.masterdata-card {
+		background: #fff;
+		border: 1px solid #dbe4f0;
+		border-radius: 22px;
+		box-shadow: 0 14px 34px rgba(11, 37, 64, 0.08);
+		overflow: hidden;
+	}
+	.masterdata-stat-card {
+		padding: 20px 22px;
+	}
+	.masterdata-stat-label {
+		font-size: 0.82rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #5e7388;
+	}
+	.masterdata-stat-value {
+		margin-top: 10px;
+		font-size: 2rem;
+		font-weight: 800;
+		color: #0b2540;
+	}
+	.masterdata-stat-note {
+		margin-top: 6px;
+		font-size: 0.92rem;
+		color: #5e7388;
+	}
+	.masterdata-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
+		gap: 22px;
+		align-items: start;
+		margin-bottom: 22px;
+	}
+	.masterdata-grid.masterdata-grid-single {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.masterdata-card-header {
+		padding: 18px 22px;
+		background: linear-gradient(135deg, #eff6fb, #f8fbfe);
+		border-bottom: 1px solid #e4edf6;
+	}
+	.masterdata-card-header h2,
+	.masterdata-card-header h3 {
+		margin: 0;
+		font-size: 1.08rem;
+		font-weight: 800;
+		color: #0b2540;
+	}
+	.masterdata-card-header p {
+		margin: 8px 0 0;
+		font-size: 0.92rem;
+		color: #5e7388;
+	}
+	.masterdata-card-body {
+		padding: 22px;
+	}
+	.masterdata-form-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 16px;
+	}
+	.masterdata-field {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.masterdata-field.full {
+		grid-column: 1 / -1;
+	}
+	.masterdata-field.is-hidden {
+		display: none;
+	}
+	.masterdata-field label {
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: #244865;
+	}
+	.masterdata-field input,
+	.masterdata-field select {
+		width: 100%;
+		border: 1px solid #bfd1e4;
+		border-radius: 12px;
+		padding: 11px 13px;
+		font-size: 0.95rem;
+		background: #f9fbfd;
+	}
+	.masterdata-field input:focus,
+	.masterdata-field select:focus {
+		outline: none;
+		border-color: #175d8f;
+		box-shadow: 0 0 0 3px rgba(23, 93, 143, 0.12);
+	}
+	.masterdata-checks {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 10px 14px;
+	}
+	.masterdata-check {
+		position: relative;
+		display: grid;
+		grid-template-columns: 30px minmax(0, 1fr);
+		align-items: start;
+		gap: 12px;
+		border: 1px solid #dbe4f0;
+		background: linear-gradient(180deg, #f8fbff 0%, #f2f8fd 100%);
+		border-radius: 14px;
+		padding: 12px 14px;
+		font-size: 0.92rem;
+		color: #1f3f5b;
+		cursor: pointer;
+		transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, transform 0.18s ease;
+	}
+	.masterdata-check:hover {
+		border-color: #a9c4dd;
+		box-shadow: 0 10px 22px rgba(23, 93, 143, 0.08);
+		transform: translateY(-1px);
+	}
+	.masterdata-check-control {
+		position: relative;
+		width: 30px;
+		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.masterdata-check input[type="checkbox"] {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		opacity: 0;
+		cursor: pointer;
+		z-index: 2;
+	}
+	.masterdata-check-indicator {
+		width: 24px;
+		height: 24px;
+		border-radius: 8px;
+		border: 1.6px solid #9eb8d1;
+		background: #fff;
+		display: inline-grid;
+		place-items: center;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+		transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+	}
+	.masterdata-check-indicator::after {
+		content: '';
+		width: 10px;
+		height: 6px;
+		border-left: 2px solid #fff;
+		border-bottom: 2px solid #fff;
+		transform: rotate(-45deg) scale(0.4);
+		opacity: 0;
+		transition: transform 0.18s ease, opacity 0.18s ease;
+		margin-top: -1px;
+	}
+	.masterdata-check input[type="checkbox"]:checked + .masterdata-check-indicator {
+		background: linear-gradient(135deg, #0b2540, #175d8f);
+		border-color: #175d8f;
+		box-shadow: 0 0 0 4px rgba(23, 93, 143, 0.14);
+	}
+	.masterdata-check input[type="checkbox"]:checked + .masterdata-check-indicator::after {
+		opacity: 1;
+		transform: rotate(-45deg) scale(1);
+	}
+	.masterdata-check input[type="checkbox"]:focus-visible {
+		outline: none;
+	}
+	.masterdata-check input[type="checkbox"]:focus-visible + .masterdata-check-indicator {
+		box-shadow: 0 0 0 4px rgba(23, 93, 143, 0.16);
+	}
+	.masterdata-check-text {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+	.masterdata-check-title {
+		font-size: 0.92rem;
+		font-weight: 700;
+		color: #143752;
+	}
+	.masterdata-check-note {
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: #6a7f92;
+	}
+	.masterdata-btn {
+		border: none;
+		border-radius: 12px;
+		padding: 11px 16px;
+		font-weight: 700;
+		cursor: pointer;
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.masterdata-btn-primary {
+		background: linear-gradient(135deg, #0b2540, #175d8f);
+		color: #fff;
+	}
+	.masterdata-btn-secondary {
+		background: #eff6fb;
+		color: #194566;
+		border: 1px solid #d8e5f1;
+	}
+	.masterdata-btn-danger {
+		background: #fef2f2;
+		color: #b91c1c;
+		border: 1px solid #fecaca;
+	}
+	.masterdata-region-overview {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		gap: 14px;
+	}
+	.masterdata-region-box {
+		padding: 16px;
+		border-radius: 18px;
+		background: linear-gradient(180deg, #f8fbfd 0%, #eef5fb 100%);
+		border: 1px solid #d9e6f2;
+	}
+	.masterdata-region-name {
+		font-size: 0.92rem;
+		font-weight: 800;
+		color: #0b2540;
+	}
+	.masterdata-region-count {
+		margin-top: 8px;
+		font-size: 2rem;
+		font-weight: 800;
+		color: #175d8f;
+		text-align: center;
+	}
+	.masterdata-region-foot {
+		margin-top: 4px;
+		font-size: 0.86rem;
+		color: #5e7388;
+	}
+	.masterdata-fixed-note {
+		margin-top: 16px;
+		padding: 14px 16px;
+		border-radius: 16px;
+		background: #f7fafc;
+		border: 1px dashed #cbd8e6;
+		color: #4c6276;
+		font-size: 0.92rem;
+	}
+	.masterdata-charts {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 22px;
+		margin-bottom: 22px;
+	}
+	.masterdata-chart-card canvas {
+		width: 100% !important;
+		height: 320px !important;
+	}
+	.masterdata-table-wrap {
+		overflow: auto;
+	}
+	.masterdata-table {
+		width: 100%;
+		border-collapse: collapse;
+		min-width: 720px;
+	}
+	.masterdata-table th,
+	.masterdata-table td {
+		padding: 12px 14px;
+		border-bottom: 1px solid #edf2f7;
+		text-align: left;
+		vertical-align: top;
+		font-size: 0.92rem;
+	}
+	.masterdata-table th {
+		background: #f7fafc;
+		color: #244865;
+		font-weight: 800;
+	}
+	.masterdata-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 10px;
+		border-radius: 999px;
+		background: #eef6ff;
+		color: #175d8f;
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+	.masterdata-status-ongoing {
+		background: #ecfdf3;
+		color: #047857;
+	}
+	.masterdata-status-dissolved {
+		background: #fef2f2;
+		color: #b91c1c;
+	}
+	.masterdata-toolbar {
+		display: flex;
+		justify-content: space-between;
+		align-items: end;
+		gap: 18px;
+		margin-bottom: 22px;
+		flex-wrap: wrap;
+	}
+	.masterdata-toolbar .masterdata-field {
+		min-width: min(100%, 260px);
+		flex: 1 1 260px;
+	}
+	.masterdata-filter-bar {
+		display: flex;
+		gap: 14px;
+		align-items: end;
+		flex-wrap: wrap;
+		margin-bottom: 18px;
+	}
+	.masterdata-filter-bar .masterdata-field {
+		min-width: min(100%, 220px);
+		flex: 1 1 240px;
+	}
+	.masterdata-list-meta {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+		color: #607588;
+		font-size: 0.9rem;
+	}
+	.masterdata-item-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.masterdata-item-list {
+		border: 1px solid #dbe4f0;
+		border-radius: 20px;
+		overflow: hidden;
+		background: #fff;
+	}
+	.masterdata-item-list-head,
+	.masterdata-item-row {
+		display: grid;
+		grid-template-columns: minmax(220px, 1.5fr) minmax(120px, 0.85fr) minmax(140px, 0.9fr) minmax(120px, 0.75fr) minmax(140px, 0.85fr) minmax(160px, 0.9fr) 56px;
+		gap: 12px;
+		align-items: center;
+		padding: 14px 18px;
+	}
+	.masterdata-item-list-head {
+		background: #f7fafc;
+		border-bottom: 1px solid #dbe4f0;
+		font-size: 0.82rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: #607588;
+	}
+	.masterdata-item-entry {
+		border-bottom: 1px solid #edf2f7;
+	}
+	.masterdata-item-entry:last-child {
+		border-bottom: none;
+	}
+	.masterdata-item-row {
+		background: #fff;
+		cursor: pointer;
+		transition: background 0.18s ease;
+	}
+	.masterdata-item-row:hover {
+		background: #f8fbfe;
+	}
+	.masterdata-item-row.is-open {
+		background: #f3f8fc;
+	}
+	.masterdata-item-row-title {
+		font-size: 0.97rem;
+		font-weight: 700;
+		color: #0b2540;
+	}
+	.masterdata-item-row-cell {
+		font-size: 0.9rem;
+		color: #244865;
+	}
+	.masterdata-item-row-cell-muted {
+		color: #607588;
+	}
+	.masterdata-row-chevron {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 999px;
+		background: #e8f1f8;
+		color: #175d8f;
+		font-size: 1rem;
+		font-weight: 800;
+		transition: transform 0.18s ease, background 0.18s ease;
+	}
+	.masterdata-item-row.is-open .masterdata-row-chevron {
+		transform: rotate(180deg);
+		background: #dbeaf5;
+	}
+	.masterdata-item-detail {
+		max-height: 0;
+		overflow: hidden;
+		padding: 0 18px;
+		background: linear-gradient(180deg, #fbfdff 0%, #f4f8fb 100%);
+		border-top: 1px solid transparent;
+		opacity: 0;
+		transform: translateY(-8px);
+		pointer-events: none;
+		transition: max-height 0.32s ease, padding 0.24s ease, opacity 0.24s ease, transform 0.24s ease, border-color 0.24s ease;
+	}
+	.masterdata-item-detail.is-open {
+		max-height: 1400px;
+		padding: 18px;
+		border-top-color: #e4edf6;
+		opacity: 1;
+		transform: translateY(0);
+		pointer-events: auto;
+	}
+	.masterdata-item-card {
+		border: 1px solid #dbe4f0;
+		border-radius: 20px;
+		background: #fff;
+		box-shadow: 0 12px 28px rgba(11, 37, 64, 0.06);
+		padding: 18px;
+	}
+	.masterdata-item-head {
+		display: flex;
+		justify-content: space-between;
+		gap: 14px;
+		margin-bottom: 14px;
+		align-items: start;
+		flex-wrap: wrap;
+	}
+	.masterdata-item-title {
+		font-size: 1rem;
+		font-weight: 800;
+		color: #0b2540;
+	}
+	.masterdata-item-meta {
+		display: flex;
+		gap: 10px 14px;
+		flex-wrap: wrap;
+		font-size: 0.84rem;
+		color: #607588;
+	}
+	.masterdata-item-actions {
+		display: flex;
+		gap: 10px;
+		justify-content: flex-end;
+		margin-top: 14px;
+		flex-wrap: wrap;
+	}
+	.masterdata-attachment-panel {
+		display: flex;
+		justify-content: space-between;
+		gap: 16px;
+		align-items: center;
+		padding: 16px 18px;
+		margin-bottom: 18px;
+		border: 1px solid #dbe4f0;
+		border-radius: 18px;
+		background: linear-gradient(180deg, #f8fbff 0%, #f2f7fc 100%);
+	}
+	.masterdata-attachment-actions {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+	.masterdata-attachment-actions form {
+		margin: 0;
+	}
+	.masterdata-empty {
+		padding: 26px;
+		text-align: center;
+		color: #5b6b7d;
+		background: #f8fbfd;
+		border: 1px dashed #cdd9e5;
+		border-radius: 16px;
+	}
+	.masterdata-pagination {
+		display: flex;
+		justify-content: center;
+		margin-top: 18px;
+	}
+	.masterdata-pagination nav {
+		width: 100%;
+	}
+	.masterdata-pagination svg {
+		width: 18px;
+		height: 18px;
+	}
+	@media (max-width: 1200px) {
+		.masterdata-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+	@media (max-width: 820px) {
+		.masterdata-shell {
+			padding-inline: 12px;
+		}
+		.masterdata-tabs {
+			gap: 10px;
+		}
+		.masterdata-tab-btn {
+			width: 100%;
+			justify-content: center;
+		}
+		.masterdata-item-list-head {
+			display: none;
+		}
+		.masterdata-item-row {
+			grid-template-columns: 1fr;
+			gap: 10px;
+			padding: 16px;
+		}
+		.masterdata-hero {
+			border-radius: 22px;
+		}
+		.masterdata-card-body,
+		.masterdata-card-header,
+		.masterdata-stat-card {
+			padding-left: 16px;
+			padding-right: 16px;
+		}
+		.masterdata-table {
+			min-width: 640px;
+		}
+	}
+	@media (max-width: 560px) {
+		.masterdata-modal {
+			padding: 14px;
+		}
+		.masterdata-btn,
+		.masterdata-item-actions .masterdata-btn {
+			width: 100%;
+		}
+		.masterdata-item-actions {
+			justify-content: stretch;
+		}
+		.masterdata-attachment-panel {
+			align-items: stretch;
+			flex-direction: column;
+		}
+		.masterdata-attachment-actions,
+		.masterdata-attachment-actions form,
+		.masterdata-attachment-actions .masterdata-btn {
+			width: 100%;
+		}
+	}
+</style>
+<style>
+	/* Ensure Bootstrap attachment viewer appears above masterdata/dashboard modals */
+	.modal-backdrop {
+		z-index: 1990 !important;
+	}
+	.modal {
+		z-index: 2000 !important;
+	}
+
+/* Keep next style block for Select2 */
+/* (Inserted to ensure PDF iframe modal stacks above custom modals) */
+</style>
 <style>
 .select2-container--default .select2-selection--multiple {
 	background: #f8fafc;
@@ -2464,7 +3195,9 @@ if (!document.getElementById('catListTooltip')) {
 			bottom: 0;
 			background: rgba(15, 23, 42, 0.52);
 			backdrop-filter: blur(5px);
-			z-index: 1040;
+			-webkit-backdrop-filter: blur(5px);
+			/* place the details modal backdrop above page content but below Bootstrap modals */
+			z-index: 1980;
 		}
 		.st-region-modal-dialog {
 			position: fixed;
@@ -2478,7 +3211,8 @@ if (!document.getElementById('catListTooltip')) {
 			overflow: hidden;
 			box-shadow: 0 28px 90px rgba(15, 23, 42, 0.28);
 			border: 1px solid rgba(148, 163, 184, 0.16);
-			z-index: 1050;
+			/* modal dialog above its backdrop but below Bootstrap modals */
+			z-index: 1985;
 			display: flex;
 			flex-direction: column;
 		}
@@ -2691,7 +3425,7 @@ if (!document.getElementById('catListTooltip')) {
 				</div>
 			</div>
 			@endif
-		</div> <!-- end .container-fluid -->
+		</div> 
 
 		<div id="region-titles-modal" style="display:none;">
 			<div class="st-region-modal-backdrop" onclick="window.closeRegionTitlesModal && window.closeRegionTitlesModal()"></div>
@@ -2741,6 +3475,37 @@ if (!document.getElementById('catListTooltip')) {
 				</div>
 			</div>
 		</div>
+
+		<div id="st-details-modal" style="display:none;">
+			<div class="st-region-modal-backdrop" onclick="window.closeStDetailsModal && window.closeStDetailsModal()"></div>
+			<div class="st-region-modal-dialog" style="max-width: 980px;">
+				<div class="st-region-modal-header">
+					<h5 id="st-details-modal-title">ST Details</h5>
+					<button type="button" class="st-region-modal-close" onclick="window.closeStDetailsModal && window.closeStDetailsModal()">&times;</button>
+				</div>
+				<div id="st-details-modal-body" class="st-region-modal-body"></div>
+			</div>
+		</div>
+
+		<style>
+		/* When details modal is open, hard-blur other listing modals (region listing) */
+		body.st-details-open #region-titles-modal .st-region-modal-dialog,
+		body.st-details-open #st-summary-modal .st-region-modal-dialog,
+		body.st-details-open #st-title-modal .st-region-modal-dialog {
+			filter: blur(10px) grayscale(0.12) brightness(0.92) !important;
+			transition: filter 0.14s linear !important;
+			pointer-events: none !important;
+			user-select: none !important;
+			opacity: 0.98 !important;
+		}
+
+		/* Slightly dim the backdrop of those listing modals so the details modal stands out */
+		body.st-details-open #region-titles-modal .st-region-modal-backdrop,
+		body.st-details-open #st-summary-modal .st-region-modal-backdrop,
+		body.st-details-open #st-title-modal .st-region-modal-backdrop {
+			background: rgba(11,37,64,0.48) !important;
+		}
+		</style>
 
 
 
@@ -2982,6 +3747,31 @@ if (!document.getElementById('catListTooltip')) {
 					html += '</div>';
 
 			document.getElementById('title-listing-table-container').innerHTML = html;
+			// attach click handlers to table rows so they open the details modal
+			try {
+				const container = document.getElementById('title-listing-table-container');
+				const table = container.querySelector('.social-listing-table');
+				if (table) {
+					const tbody = table.querySelector('tbody');
+					if (tbody) {
+						const trs = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('social-listing-empty'));
+						trs.forEach(function(tr, i) {
+							// compute index within pageData by counting only real rows
+							const idx = i;
+							tr.tabIndex = 0;
+							tr.addEventListener('click', function(e) {
+								// ignore clicks on attachment controls
+								if (e.target.closest('.social-listing-action') || e.target.closest('.st-attachment-view-btn') || e.target.closest('a')) return;
+								const row = pageData[idx] || null;
+								if (row && window.openStDetailsModal) {
+									try { window.openStDetailsModal(row); } catch(err) { console.error('openStDetailsModal error', err); }
+								}
+							});
+							tr.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); } });
+						});
+					}
+				}
+			} catch(e) { console.error('bind listing row handlers failed', e); }
 		}
 
 		window.changePage = function(page) {
@@ -4112,6 +4902,24 @@ $('#region-select-modal').on('change', function() {
 				});
 				html += '</tbody></table></div>';
 				bodyEl.innerHTML = html;
+				// add an inline debug panel to inspect the row object when console is unavailable
+				try {
+					bodyEl.insertAdjacentHTML('beforeend', '\n\t\t\t\t<div class="st-details-debug" style="margin-top:12px;">\n\t\t\t\t\t<button type="button" id="st-debug-toggle" class="btn btn-sm btn-outline-secondary">Show debug</button>\n\t\t\t\t\t<pre id="st-debug-pre" style="display:none; white-space:pre-wrap; word-break:break-word; background:#f7fafc; border:1px solid #e6eef5; padding:8px; margin-top:8px; max-height:280px; overflow:auto;"></pre>\n\t\t\t\t</div>');
+					setTimeout(function(){
+						const dbgBtn = bodyEl.querySelector('#st-debug-toggle');
+						const dbgPre = bodyEl.querySelector('#st-debug-pre');
+						if (dbgBtn && dbgPre) {
+							dbgBtn.addEventListener('click', function(){
+								if (dbgPre.style.display === 'none') {
+									try { dbgPre.textContent = JSON.stringify(row, null, 2); } catch(e) { dbgPre.textContent = String(row); }
+									dbgPre.style.display = 'block'; dbgBtn.textContent = 'Hide debug';
+								} else {
+									dbgPre.style.display = 'none'; dbgBtn.textContent = 'Show debug';
+								}
+							});
+						}
+					}, 10);
+				} catch(e) {}
 			}
 			modal.style.display = 'block';
 			if (document.body) {
@@ -4128,6 +4936,105 @@ $('#region-select-modal').on('change', function() {
 		}
 		window.openStTitleModal = openStTitleModal;
 		window.closeStTitleModal = closeStTitleModal;
+
+		function openStDetailsModal(row) {
+			const modal = document.getElementById('st-details-modal');
+			const titleEl = document.getElementById('st-details-modal-title');
+			const bodyEl = document.getElementById('st-details-modal-body');
+			if (!modal || !bodyEl) return;
+			// Debug: log row object to help trace missing year_of_resolution
+			try {
+				console.log('openStDetailsModal row:', row);
+				console.log('openStDetailsModal year_of_resolution:', row ? row.year_of_resolution : undefined);
+			} catch(e) {}
+			if (titleEl) titleEl.textContent = (row && row.title) ? row.title : 'ST Details';
+			if (!row) {
+				bodyEl.innerHTML = '<p class="st-title-modal-empty">No details available.</p>';
+			} else {
+				const status = (row.status || '').toString();
+				const adoption = (row.with_adopted ? 'Adopted' : (row.with_replicated ? 'Replicated' : 'None'));
+				const indicators = [];
+				if (row.with_expr) indicators.push('Expression of Interest');
+				if (row.with_moa) indicators.push('With MOA');
+				if (row.with_res) indicators.push('With Resolution');
+				if (row.included_aip) indicators.push('Included AIP');
+				let html = '';
+				html += '<div class="masterdata-item-head">';
+				html += '<div>';
+				html += '<div class="masterdata-item-title">' + escapeHtml(row.title || '-') + '</div>';
+				html += '<div class="masterdata-item-meta">';
+				if (row.createdby) html += '<span>Created by: ' + escapeHtml(row.createdby) + '</span>';
+				if (row.updatedby) html += '<span>Updated by: ' + escapeHtml(row.updatedby) + '</span>';
+				if (row.updated_at) html += '<span>Updated at: ' + escapeHtml(row.updated_at) + '</span>';
+				html += '</div></div></div>';
+
+				// attachment panel (MOA)
+				const attUrl = row.attachment_url || '';
+				html += '<div class="masterdata-attachment-panel">';
+				html += '<div>';
+				html += '<div class="masterdata-stat-label">MOA ATTACHMENT</div>';
+				html += '<div class="masterdata-item-meta" style="margin-top:8px;">';
+				if (attUrl) {
+					html += '<span>Uploaded PDF available for this item.</span>';
+					if (row.attachment_uploaded_by) html += '<span>Uploaded by: ' + escapeHtml(row.attachment_uploaded_by) + '</span>';
+				} else {
+					html += '<span>No PDF attachment uploaded yet.</span>';
+					if (!row.with_moa || !row.year_of_moa) html += '<span> Enable With MOA and set Year of MOA to upload an attachment.</span>';
+				}
+				html += '</div>';
+				html += '</div>';
+				html += '<div class="masterdata-attachment-actions">';
+				if (attUrl) {
+					html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + attUrl + '" data-title="' + escapeHtml(row.title || '') + '" data-uploader="' + escapeHtml(row.attachment_uploaded_by || '') + '">View PDF</button>';
+					html += '<a href="' + attUrl + '" class="masterdata-btn" target="_blank" download>Download</a>';
+				}
+				html += '</div>';
+				html += '</div>';
+
+				// readonly form fields
+				html += '<div class="masterdata-form-grid">';
+				html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + escapeHtml(row.region || '-') + '" readonly></div>';
+				html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + escapeHtml(status ? (status.charAt(0).toUpperCase() + status.slice(1)) : '-') + '" readonly></div>';
+				html += '<div class="masterdata-field full"><label>Social Technology Title</label><input type="text" value="' + escapeHtml(row.title || '-') + '" readonly></div>';
+				html += '<div class="masterdata-field"><label>Province</label><input type="text" value="' + escapeHtml(row.province || '-') + '" readonly></div>';
+				html += '<div class="masterdata-field"><label>Municipality</label><input type="text" value="' + escapeHtml(row.municipality || '-') + '" readonly></div>';
+				html += '<div class="masterdata-field"><label>Adopted / Replicated</label><input type="text" value="' + escapeHtml(adoption) + '" readonly></div>';
+				html += '<div class="masterdata-field full"><label>Indicators</label><div class="masterdata-checks">';
+				html += '<label class="masterdata-check"><input type="hidden" name="with_expr" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.with_expr ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Expression of Interest</span></span></label>';
+				html += '<label class="masterdata-check"><input type="hidden" name="with_moa" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.with_moa ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With MOA</span><span class="masterdata-check-note">Enable when a memorandum of agreement exists.</span></span></label>';
+				html += '<label class="masterdata-check"><input type="hidden" name="with_res" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.with_res ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Resolution</span><span class="masterdata-check-note">Enable when a formal resolution has been issued.</span></span></label>';
+				html += '<label class="masterdata-check"><input type="hidden" name="included_aip" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.included_aip ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">Included AIP</span><span class="masterdata-check-note">Use when the item is included in the AIP.</span></span></label>';
+				html += '</div></div>';
+				if (row.with_moa) {
+					html += '<div class="masterdata-field"><label>Year of MOA</label><input type="text" value="' + escapeHtml(row.year_of_moa || '-') + '" readonly></div>';
+				}
+				if (row.with_res) {
+					html += '<div class="masterdata-field"><label>Year of Resolution</label><input type="text" value="' + escapeHtml(row.year_of_resolution || '-') + '" readonly></div>';
+				}
+				html += '</div>';
+
+				bodyEl.innerHTML = html;
+			}
+			// add blur class to body so underlying listing is blurred
+			if (document.body) {
+				document.body.classList.add('st-details-open');
+				document.body.style.overflow = 'hidden';
+			}
+			modal.style.display = 'block';
+		}
+
+		function closeStDetailsModal() {
+			const modal = document.getElementById('st-details-modal');
+			if (!modal) return;
+			modal.style.display = 'none';
+			if (document.body) {
+				document.body.style.overflow = '';
+				document.body.classList.remove('st-details-open');
+			}
+		}
+
+		window.openStDetailsModal = openStDetailsModal;
+		window.closeStDetailsModal = closeStDetailsModal;
 
 		function openStSummaryModal(config) {
 			const modal = document.getElementById('st-summary-modal');
@@ -4147,9 +5054,9 @@ $('#region-select-modal').on('change', function() {
 				html += '<div class="st-summary-table-wrap">';
 				html += '<table class="st-summary-table">';
 				html += '<thead><tr><th>ST Title</th><th>Region</th><th>Province</th><th>City/Municipality</th><th>Year of MOA</th></tr></thead><tbody>';
-				rows.forEach(function(row) {
+				rows.forEach(function(row, idx) {
 					const safeTitle = escapeHtml(row.title || 'Untitled ST');
-					html += '<tr>' +
+					html += '<tr data-idx="' + idx + '">' +
 						'<td>' + safeTitle + '</td>' +
 						'<td>' + escapeHtml(row.region || '') + '</td>' +
 						'<td>' + escapeHtml(row.province || '') + '</td>' +
@@ -4159,6 +5066,29 @@ $('#region-select-modal').on('change', function() {
 				});
 				html += '</tbody></table></div>';
 				bodyEl.innerHTML = html;
+				// save rows so clicks can open details modal
+				modal._rows = rows;
+				// attach click handler to table rows to open details modal
+				setTimeout(function(){
+					try {
+						const table = bodyEl.querySelector('.st-summary-table');
+						if (!table) return;
+						const tbody = table.querySelector('tbody');
+						if (!tbody) return;
+						tbody.querySelectorAll('tr[data-idx]').forEach(function(tr){
+							tr.addEventListener('click', function(e){
+								const idxAttr = this.getAttribute('data-idx');
+								const i = parseInt(idxAttr, 10);
+								const row = (modal._rows && modal._rows[i]) || null;
+								if (row) {
+									openStDetailsModal(row);
+								}
+							});
+							tr.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); } });
+							tr.tabIndex = 0;
+						});
+					} catch(e) { console.error('attach summary row handlers failed', e); }
+				}, 10);
 			}
 
 			modal.style.display = 'block';
@@ -4178,6 +5108,60 @@ $('#region-select-modal').on('change', function() {
 
 		window.openStSummaryModal = openStSummaryModal;
 		window.closeStSummaryModal = closeStSummaryModal;
+
+	// Wire total cards to open the ST summary modal with matching filters
+	function initTotalCardsToSummary() {
+		const parseFlag = function(v) {
+			if (typeof v === 'boolean') return v;
+			if (v === null || v === undefined) return false;
+			const s = String(v).toLowerCase().trim();
+			if (s === '' || s === '0') return false;
+			if (!isNaN(s)) return Number(s) !== 0;
+			return s === 'true' || s === 'yes' || s === 'y';
+		};
+
+		// mapping for small metric cards (#card1..#card4)
+		const cardBindings = {
+			'card1': { title: 'Ongoing STs', filter: function(r) { return ((r.status||'').toString().toLowerCase().includes('ongoing')) || false; } },
+			'card2': { title: 'Dissolved STs', filter: function(r) { const s=(r.status||'').toString().toLowerCase(); return s.includes('dissolved') || s.includes('inactive') || s.includes('completed'); } },
+			'card3': { title: 'Replicated STs', filter: function(r) { return parseFlag(r.with_replicated); } },
+			'card4': { title: 'Adopted STs', filter: function(r) { return parseFlag(r.with_adopted); } },
+		};
+
+		Object.keys(cardBindings).forEach(function(id) {
+			const el = document.getElementById(id);
+			if (!el) return;
+			el.addEventListener('click', function() {
+				try { openStSummaryModal({ title: cardBindings[id].title, filter: cardBindings[id].filter }); } catch(e) { console.error('openStSummaryModal failed', e); }
+			});
+			el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+		});
+
+		// map overlay cards (order-based)
+		try {
+			const overlayCards = Array.from(document.querySelectorAll('.map-overlay-totals .map-overlay-card'));
+			if (overlayCards && overlayCards.length) {
+				// expected order: total adopted/replicated, expr, sb resolution, moa
+				overlayCards.forEach(function(el, idx) {
+					let cfg = null;
+					if (idx === 0) cfg = cardBindings['card1'] || null; // adopted+replicated total - show all titles
+					if (idx === 1) cfg = { title: 'Expression of Interest', filter: function(r){ return parseFlag(r.with_expr); } };
+					if (idx === 2) cfg = { title: 'SB Resolution', filter: function(r){ return parseFlag(r.with_res); } };
+					if (idx === 3) cfg = { title: 'MOA', filter: function(r){ return parseFlag(r.with_moa); } };
+					if (!cfg) return;
+					el.style.cursor = 'pointer';
+					el.addEventListener('click', function(){ try { openStSummaryModal({ title: cfg.title, filter: cfg.filter }); } catch(e){ console.error(e); } });
+					el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+				});
+			}
+		} catch(e) { console.error('initTotalCardsToSummary overlay bind failed', e); }
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initTotalCardsToSummary);
+	} else {
+		setTimeout(initTotalCardsToSummary, 10);
+	}
 
 		function openStAttachmentModal(url, stTitle, uploadedBy) {
 			if (!url) return;
@@ -4200,6 +5184,17 @@ $('#region-select-modal').on('change', function() {
 					uploaderEl.textContent = '';
 					uploaderEl.style.display = 'none';
 				}
+			}
+			// Ensure this attachment modal stacks above any open ST details modal
+			try {
+				const localBackdrop = modal.querySelector('.st-region-modal-backdrop');
+				const localDialog = modal.querySelector('.st-region-modal-dialog');
+				if (localBackdrop) localBackdrop.style.zIndex = 1990;
+				if (localDialog) localDialog.style.zIndex = 1995;
+				// also set wrapper z-index just in case
+				modal.style.zIndex = 1995;
+			} catch (e) {
+				// ignore
 			}
 			modal.style.display = 'block';
 			if (document.body) {
@@ -4233,32 +5228,31 @@ $('#region-select-modal').on('change', function() {
 			const bodyEl = document.getElementById('region-titles-modal-body');
 			if (titleEl) {
 				titleEl.textContent = regionDisplayName || 'Region';
-			}
-			if (bodyEl) {
-				if (!rows || !rows.length) {
-					bodyEl.innerHTML = '<p style="margin:0; color:#64748b;">No ST titles for this region based on the current filters.</p>';
-				} else {
-					let html = '';
-					rows.forEach(function(row) {
-						const title = row.title || '';
-						const province = row.province || '';
-						const municipality = row.municipality || '';
-						const uploadedBy = row.attachment_uploaded_by || '';
-						const attachmentUrl = row.attachment_url || '';
-						html += '<div class="st-region-title-item">';
-						html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">';
-						html += '<div>'; 
-						html += '<div class="st-region-title-item-main">' + title + '</div>';
-						html += '<div class="st-region-title-item-sub">' + province;
-						if (municipality) {
-							html += ' &bull; ' + municipality;
-						}
-						html += '</div>';
-						html += '</div>';
-						if (attachmentUrl) {
-							const safeTitle = (title || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-							const safeUploader = (uploadedBy || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-									html += '' +
+					if (bodyEl) {
+						if (!rows || !rows.length) {
+							bodyEl.innerHTML = "<p style=\"margin:0; color:#64748b;\">No ST titles for this region based on the current filters.</p>";
+						} else {
+							let html = '';
+							rows.forEach(function(row, idx) {
+								const title = row.title || '';
+								const province = row.province || '';
+								const municipality = row.municipality || '';
+								const uploadedBy = row.attachment_uploaded_by || '';
+								const attachmentUrl = row.attachment_url || '';
+								html += '<div class="st-region-title-item" data-idx="' + idx + '">';
+								html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">';
+								html += '<div>'; 
+								html += '<div class="st-region-title-item-main">' + title + '</div>';
+								html += '<div class="st-region-title-item-sub">' + province;
+								if (municipality) {
+									html += ' &bull; ' + municipality;
+								}
+								html += '</div>';
+								html += '</div>';
+								if (attachmentUrl) {
+									const safeTitle = (title || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+									const safeUploader = (uploadedBy || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+										html += '' +
 										'<div class="btn-group" role="group">' +
 											'<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="' + attachmentUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment">' +
 												'<i class="bi bi-eye"></i>' +
@@ -4266,13 +5260,33 @@ $('#region-select-modal').on('change', function() {
 											'<a href="' + attachmentUrl + '" class="btn btn-sm btn-outline-primary" title="Download attachment" target="_blank" download>' +
 												'<i class="bi bi-download"></i>' +
 											'</a>' +
-										'</div>';
+											'</div>';
+									}
+								html += '</div>';
+								html += '</div>';
+							});
+							bodyEl.innerHTML = html;
+							// save rows for details modal lookup
+							modal._rows = rows;
+							// attach click handlers for items to open details modal
+							setTimeout(function(){
+								const items = bodyEl.querySelectorAll('.st-region-title-item');
+								items.forEach(function(it){
+									it.addEventListener('click', function(e){
+										if (e.target.closest('.st-attachment-view-btn') || e.target.closest('a')) {
+											// allow attachment buttons to work without opening details
+											return;
+										}
+										const idx = parseInt(this.getAttribute('data-idx'), 10);
+										const row = (modal._rows && modal._rows[idx]) || null;
+										if (row) {
+											openStDetailsModal(row);
+										}
+									});
+								});
+							}, 10);
 						}
-						html += '</div>';
-						html += '</div>';
-					});
-					bodyEl.innerHTML = html;
-				}
+					}
 			}
 			modal.style.display = 'block';
 			if (document.body) {
@@ -4720,6 +5734,12 @@ $('#region-select-modal').on('change', function() {
 						info.path.style.stroke = highlightStroke;
 						info.path.style.strokeWidth = '1.5';
 					} else {
+						// Debug: log rows and find entries with with_res but missing year_of_resolution
+						try {
+							console.log('openRegionTitlesModal rows count:', rows.length);
+							console.log('openRegionTitlesModal sample rows:', (rows || []).slice(0,5));
+							console.log('openRegionTitlesModal with_res but missing year_of_resolution:', (rows || []).filter(function(r){ return r && (r.with_res || r.with_res === true || String(r.with_res) === '1') && !(r.year_of_resolution || r.year_of_resolution === 0); }));
+						} catch(e) {}
 						info.path.style.fill = info.originalFill;
 						info.path.style.stroke = info.originalStroke;
 						info.path.style.strokeWidth = info.originalStrokeWidth;

@@ -384,7 +384,7 @@
 	</div>
 </section>
 
-@if($isSysadmin)
+@if($canWriteMasterData)
 <div class="modal fade" id="masterdataAttachmentUploadModal" tabindex="-1" aria-labelledby="masterdataAttachmentUploadModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

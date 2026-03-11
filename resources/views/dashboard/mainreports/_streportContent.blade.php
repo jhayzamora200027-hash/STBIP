@@ -102,6 +102,18 @@ function renderStTitlesFromRows(rows, regionParam) {
         }
         const titleCounts = {};
         const titleLocations = {};
+        // Representative original row lookup by title|province|city and by title
+        const originalRowByKey = {};
+        rows.forEach(r => {
+            const t = (r && r.title) ? String(r.title).trim() : '';
+            if (!t) return;
+            const prov = (r.province || '').toString().trim();
+            const cityVal = (typeof getRowCity === 'function' ? getRowCity(r) : ((r && (r.municipality || r.city)) || '')).toString().trim();
+            const key = (t + '||' + prov + '||' + cityVal).toLowerCase();
+            if (!originalRowByKey[key]) originalRowByKey[key] = r;
+            const titleKey = t.toLowerCase();
+            if (!originalRowByKey[titleKey]) originalRowByKey[titleKey] = r;
+        });
         rows.forEach(r => {
             const t = (r && r.title) ? String(r.title).trim() : '';
             if (!t) return;
@@ -224,7 +236,20 @@ function renderStTitlesFromRows(rows, regionParam) {
                         const rowColor = isDissolvedLoc ? '#b91c1c' : '#0f172a';
                         const statusColor = isDissolvedLoc ? '#b91c1c' : '#2563eb';
 
-                    html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:${rowColor};">` +
+                        const repKey = (title + '||' + (loc.province||'') + '||' + (loc.city||'')).toLowerCase();
+                        const rep = originalRowByKey[repKey] || originalRowByKey[title.toLowerCase()] || null;
+                        const dataAttrs = rep ?
+                            ' data-with-expr="' + (rep.with_expr ? '1' : '0') + '"' +
+                            ' data-with-moa="' + (rep.with_moa ? '1' : '0') + '"' +
+                            ' data-with-res="' + (rep.with_res ? '1' : '0') + '"' +
+                            ' data-included-aip="' + (rep.included_aip ? '1' : '0') + '"' +
+                            ' data-with-adopted="' + (rep.with_adopted ? '1' : '0') + '"' +
+                            ' data-with-replicated="' + (rep.with_replicated ? '1' : '0') + '"' +
+                            ' data-status="' + (rep.status ? rep.status : '') + '"' +
+                            ' data-year-of-resolution="' + (rep.year_of_resolution || '') + '"' +
+                            ' data-year-of-moa="' + (rep.year_of_moa || '') + '"' : '';
+
+                        html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" ${dataAttrs} tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:${rowColor};">` +
                             `<span>${esc(label)}</span>` +
                             `<span style="color:${statusColor};font-weight:500;margin-left:8px;white-space:nowrap;">${statusText}</span>` +
                             `</div>`;
@@ -242,6 +267,35 @@ function renderStTitlesFromRows(rows, regionParam) {
                 const title = detailRow.getAttribute('data-title') || '';
                 const province = detailRow.getAttribute('data-province') || '';
                 const city = detailRow.getAttribute('data-city') || '';
+                const rowObj = { title: title, province: province, municipality: city, region: getCurrentRegion() };
+                // attach indicator/status fields if present on the detail row
+                try {
+                    const parseFlag = v => (v === '1' || v === 1 || v === true || String(v || '').toLowerCase() === 'true');
+                    const withExpr = detailRow.getAttribute('data-with-expr');
+                    const withMoa = detailRow.getAttribute('data-with-moa');
+                    const withRes = detailRow.getAttribute('data-with-res');
+                    const includedAip = detailRow.getAttribute('data-included-aip');
+                    const withAdopted = detailRow.getAttribute('data-with-adopted');
+                    const withReplicated = detailRow.getAttribute('data-with-replicated');
+                    const status = detailRow.getAttribute('data-status');
+                    const yearRes = detailRow.getAttribute('data-year-of-resolution');
+                    if (withExpr !== null) rowObj.with_expr = parseFlag(withExpr);
+                    if (withMoa !== null) rowObj.with_moa = parseFlag(withMoa);
+                    if (withRes !== null) rowObj.with_res = parseFlag(withRes);
+                    if (includedAip !== null) rowObj.included_aip = parseFlag(includedAip);
+                    if (withAdopted !== null) rowObj.with_adopted = parseFlag(withAdopted);
+                    if (withReplicated !== null) rowObj.with_replicated = parseFlag(withReplicated);
+                    if (status !== null) rowObj.status = status;
+                    if (yearRes !== null) rowObj.year_of_resolution = yearRes || null;
+                    const yearMoa = detailRow.getAttribute('data-year-of-moa');
+                    if (yearMoa !== null) rowObj.year_of_moa = yearMoa || null;
+                } catch (e) {}
+                try {
+                    if (window.parent && window.parent.openStDetailsModal) {
+                        window.parent.openStDetailsModal(rowObj);
+                        return;
+                    }
+                } catch(e) {}
                 showReplicateConfirmPopover(detailRow, { title, province, city, row: { title, province, city } });
                 return;
             }
@@ -270,6 +324,28 @@ function renderStTitlesFromRows(rows, regionParam) {
             }
 
             const title = row.getAttribute('data-title') || '';
+            const rowObj = { title: title, region: getCurrentRegion() };
+            // try to attach representative original row fields if available
+            try {
+                const rep = originalRowByKey[title.toLowerCase()];
+                if (rep) {
+                    if (rep.with_expr !== undefined) rowObj.with_expr = rep.with_expr;
+                    if (rep.with_moa !== undefined) rowObj.with_moa = rep.with_moa;
+                    if (rep.with_res !== undefined) rowObj.with_res = rep.with_res;
+                    if (rep.included_aip !== undefined) rowObj.included_aip = rep.included_aip;
+                    if (rep.with_adopted !== undefined) rowObj.with_adopted = rep.with_adopted;
+                    if (rep.with_replicated !== undefined) rowObj.with_replicated = rep.with_replicated;
+                    if (rep.status !== undefined) rowObj.status = rep.status;
+                    if (rep.year_of_resolution !== undefined) rowObj.year_of_resolution = rep.year_of_resolution;
+                    if (rep.year_of_moa !== undefined) rowObj.year_of_moa = rep.year_of_moa;
+                }
+            } catch(e) {}
+            try {
+                if (window.parent && window.parent.openStDetailsModal) {
+                    window.parent.openStDetailsModal(rowObj);
+                    return;
+                }
+            } catch(e) {}
             showReplicateConfirmPopover(row, { title, row: { title } });
         };
 
