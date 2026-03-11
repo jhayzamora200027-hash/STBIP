@@ -41,10 +41,17 @@ class UserController extends Controller
                     'regex:/^[A-Za-z0-9._%+-]+@dswd\.gov\.ph$/i',
                 ],
                 'usergroup' => 'required|in:admin,user,sysadmin',
-                'password' => 'required|string|min:8|confirmed',
+                'password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
+                    'confirmed',
+                ],
             ],
             [
                 'email.regex' => 'The email address must be a DSWD email (example: user@dswd.gov.ph).',
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.',
             ]
         );
 
@@ -228,10 +235,17 @@ class UserController extends Controller
                     'max:255',
                     'regex:/^[A-Za-z0-9._%+-]+@dswd\.gov\.ph$/i',
                 ],
-                'password' => 'required|string|min:8|confirmed',
+                'password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
+                    'confirmed',
+                ],
             ],
             [
                 'email.regex' => 'The email address must be a DSWD email (example: user@dswd.gov.ph).',
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.',
             ]
         );
         
@@ -382,11 +396,18 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email,' . $user->id,
             'usergroup' => 'required|in:admin,user,sysadmin',
             'current_password' => $detailsChanged ? 'required' : 'nullable',
-            'new_password' => 'nullable|min:8|confirmed',
+            'new_password' => [
+                'nullable',
+                'min:8',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
+                'confirmed',
+            ],
             'phonenumber' => 'nullable|string|max:20',
             'gender' => 'nullable|string|in:Male,Female',
             'address' => 'nullable|string|max:500',
             'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'new_password.regex' => 'New password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.',
         ]);
 
         if ($validator->fails()) {
@@ -458,7 +479,14 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email,' . $user->id,
             'usergroup' => 'required|in:admin,user,sysadmin',
             'active' => 'required|boolean',
-            'password' => 'nullable|min:8|confirmed',
+            'password' => [
+                'nullable',
+                'min:8',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
+                'confirmed',
+            ],
+        ], [
+            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.',
         ]);
 
         if ($validator->fails()) {

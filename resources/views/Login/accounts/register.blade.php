@@ -53,6 +53,55 @@
                         .form-group-compact {
                             margin-bottom: 12px;
                         }
+                        .pw-requirements {
+                            margin-top: 6px;
+                            background: rgba(20,20,20,0.94);
+                            padding: 12px;
+                            border-radius: 8px;
+                            display: none; /* hidden by default, shown as popover when active */
+                            position: fixed;
+                            z-index: 3050;
+                            width: 320px;
+                            max-width: 90vw;
+                            box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+                            opacity: 0;
+                            transition: opacity 0.28s ease;
+                        }
+                        .pw-requirements.show {
+                            opacity: 1;
+                        }
+                        .pw-popover-arrow {
+                            position: absolute;
+                            width: 10px;
+                            height: 10px;
+                            background: rgba(255,255,255,0.03);
+                            transform: rotate(45deg);
+                            left: 16px;
+                            top: -6px;
+                            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+                        }
+                        .pw-req-list {
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .pw-req-item {
+                            display: flex;
+                            align-items: center;
+                            color: #bbb;
+                            margin: 4px 0;
+                            font-size: 0.85rem;
+                        }
+                        .pw-req-icon {
+                            width: 20px;
+                            text-align: center;
+                            margin-right: 8px;
+                            font-weight: 700;
+                            color: #bbb;
+                        }
+                        .pw-req-item.met { color: #b8ffb8; }
+                        .pw-req-item.met .pw-req-icon { color: #b8ffb8; }
+                        .pw-strength .progress { height: 8px; border-radius: 8px; overflow: hidden; }
+                        .pw-strength .progress-bar { transition: width 0.22s ease, background 0.22s ease; }
                     </style>
                     
                     <form method="POST" action="{{ route('register') }}" id="ajaxRegisterForm">
@@ -109,8 +158,25 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group-compact">
-                                    <label for="registerPassword" class="register-form-label">Password</label>
-                                    <input type="password" id="registerPassword" name="password" placeholder="Password" class="register-form-input">
+                                            <label for="registerPassword" class="register-form-label">Password</label>
+                                            <input type="password" id="registerPassword" name="password" placeholder="Password" class="register-form-input" aria-describedby="pwRequirements">
+                                            <div id="pwRequirements" class="pw-requirements" aria-live="polite">
+                                                <div class="pw-req-header" style="font-size:0.85rem;color:#ddd;margin-bottom:6px;">Password must include</div>
+                                                <div class="pw-req-list">
+                                                    <div class="pw-req-item" data-test="length"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 8 characters</span></div>
+                                                    <div class="pw-req-item" data-test="upper"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 1 uppercase letter</span></div>
+                                                    <div class="pw-req-item" data-test="lower"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 1 lowercase letter</span></div>
+                                                    <div class="pw-req-item" data-test="number"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 1 number</span></div>
+                                                    <div class="pw-req-item" data-test="symbol"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 1 symbol (e.g., !@#$%)</span></div>
+                                                </div>
+                                                <div class="pw-strength mt-2">
+                                                    <div class="progress" style="background:rgba(255,255,255,0.12);">
+                                                        <div id="pwStrengthBar" class="progress-bar" role="progressbar" style="width:0%;background:#d9534f;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                                                    </div>
+                                                    <div id="pwStrengthText" class="small text-muted mt-1 pw-strength-text" style="color:#ddd;">Strength: Very weak</div>
+                                                </div>
+                                                <div id="pwMatchMsg" class="small mt-1 pw-match-msg" style="display:none;color:#ffb3b3;">Passwords do not match.</div>
+                                            </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -172,10 +238,219 @@
         // AJAX registration logic (mirrors AJAX login)
         const registerForm = document.getElementById('ajaxRegisterForm');
         if (registerForm) {
+            // Password UI functions and live updates (setup once, outside submit handler)
+            const pwdInputEl = document.getElementById('registerPassword');
+            const pwdConfirmEl = document.getElementById('registerPasswordConfirmation');
+            const popEl = document.getElementById('pwRequirements');
+            let popClone = null;
+            let autoFadeTimeout = null;
+            let hideAnimationTimeout = null;
+
+            function evaluatePassword(pwd) {
+                return {
+                    length: pwd.length >= 8,
+                    upper: /[A-Z]/.test(pwd),
+                    lower: /[a-z]/.test(pwd),
+                    number: /[0-9]/.test(pwd),
+                    symbol: /[^A-Za-z0-9]/.test(pwd),
+                };
+            }
+
+            function updatePwdUI() {
+                const pwd = pwdInputEl ? pwdInputEl.value : '';
+                const conf = pwdConfirmEl ? pwdConfirmEl.value : '';
+                const checks = evaluatePassword(pwd);
+                const activePop = popClone || popEl;
+                const reqItems = (activePop && activePop.querySelectorAll) ? activePop.querySelectorAll('.pw-req-item') : registerForm.querySelectorAll('.pw-req-item');
+                reqItems.forEach(item => {
+                    const test = item.getAttribute('data-test');
+                    const met = !!checks[test];
+                    item.classList.toggle('met', met);
+                    const icon = item.querySelector('.pw-req-icon');
+                    if (icon) icon.textContent = met ? '✓' : '○';
+                });
+
+                const score = Object.values(checks).filter(Boolean).length;
+                const percent = Math.round((score / 5) * 100);
+                const bar = (activePop && activePop.querySelector) ? activePop.querySelector('.progress-bar') : document.getElementById('pwStrengthBar');
+                const text = (activePop && activePop.querySelector) ? activePop.querySelector('.pw-strength-text') : document.getElementById('pwStrengthText');
+                if (bar) {
+                    bar.style.width = percent + '%';
+                    bar.setAttribute('aria-valuenow', percent);
+                    if (score <= 2) { bar.style.background = '#d9534f'; if (text) text.textContent = 'Strength: Weak'; }
+                    else if (score === 3) { bar.style.background = '#f0ad4e'; if (text) text.textContent = 'Strength: Fair'; }
+                    else if (score >= 4) { bar.style.background = '#28a745'; if (text) text.textContent = 'Strength: Strong'; }
+                }
+
+                // If password is strong, schedule a delayed fade/hide; otherwise cancel any pending auto-fade
+                if (score >= 4) {
+                    scheduleAutoFade();
+                } else {
+                    cancelAutoFade();
+                }
+
+                const matchMsg = (activePop && activePop.querySelector) ? activePop.querySelector('.pw-match-msg') : document.getElementById('pwMatchMsg');
+                if (matchMsg) {
+                    if (pwd && conf && pwd !== conf) { matchMsg.style.display = 'block'; }
+                    else { matchMsg.style.display = 'none'; }
+                }
+            }
+
+            function hidePopoverWithFade(active) {
+                if (!active) return;
+                // start fade
+                active.classList.remove('show');
+                if (hideAnimationTimeout) clearTimeout(hideAnimationTimeout);
+                hideAnimationTimeout = setTimeout(() => {
+                    try { active.style.display = 'none'; } catch(e){}
+                    hideAnimationTimeout = null;
+                }, 320);
+            }
+
+            function hidePopoverImmediate(active) {
+                if (!active) return;
+                if (hideAnimationTimeout) { clearTimeout(hideAnimationTimeout); hideAnimationTimeout = null; }
+                active.classList.remove('show');
+                try { active.style.display = 'none'; } catch(e){}
+                if (autoFadeTimeout) { clearTimeout(autoFadeTimeout); autoFadeTimeout = null; }
+            }
+
+            function scheduleAutoFade() {
+                if (autoFadeTimeout) clearTimeout(autoFadeTimeout);
+                autoFadeTimeout = setTimeout(() => {
+                    const active = popClone || popEl;
+                    if (active) hidePopoverWithFade(active);
+                    autoFadeTimeout = null;
+                }, 2000);
+            }
+
+            function cancelAutoFade() {
+                if (autoFadeTimeout) { clearTimeout(autoFadeTimeout); autoFadeTimeout = null; }
+            }
+
+            if (pwdInputEl) pwdInputEl.addEventListener('input', updatePwdUI);
+            if (pwdConfirmEl) pwdConfirmEl.addEventListener('input', updatePwdUI);
+
+            // create a clone of the popover and append to body to avoid modal stacking issues
+            if (popEl) {
+                try {
+                    popClone = popEl.cloneNode(true);
+                    popClone.id = 'pwRequirements_clone';
+                    // add helper classes so we can query inside clone without relying on duplicate ids
+                    const innerText = popClone.querySelector('#pwStrengthText');
+                    if (innerText) innerText.classList.add('pw-strength-text');
+                    const innerMatch = popClone.querySelector('#pwMatchMsg');
+                    if (innerMatch) innerMatch.classList.add('pw-match-msg');
+                    const clonedBar = popClone.querySelector('#pwStrengthBar');
+                    if (clonedBar) clonedBar.classList.add('progress-bar');
+                    popClone.style.display = 'none';
+                    popClone.style.position = 'fixed';
+                    popClone.style.zIndex = '9999';
+                    document.body.appendChild(popClone);
+                } catch (e) {
+                    console.debug('pw pop clone failed', e);
+                    popClone = null;
+                }
+            }
+            // call once in case of prefilled values
+            updatePwdUI();
+
+            // Popover show/position/hide logic
+            if (popEl) {
+                popEl.style.display = 'none';
+                let inputHovered = false;
+                let popHovered = false;
+                let hideTimeout = null;
+
+                function getActivePop() { return popClone || popEl; }
+
+                function positionPopover() {
+                    const active = getActivePop();
+                    if (!pwdInputEl || !active) return;
+                    // ensure pop is visible for measurement
+                    const wasHidden = active.style.display === 'none';
+                    if (wasHidden) {
+                        active.style.visibility = 'hidden';
+                        active.style.display = 'block';
+                    }
+                    const rect = pwdInputEl.getBoundingClientRect();
+                    const popRect = active.getBoundingClientRect();
+                    let left = rect.left;
+                    let top = rect.bottom + 8;
+                    // if not enough space below, place above
+                    if (top + popRect.height > window.innerHeight) {
+                        top = rect.top - popRect.height - 8;
+                    }
+                    // clamp to viewport
+                    if (left + popRect.width > window.innerWidth) {
+                        left = window.innerWidth - popRect.width - 8;
+                    }
+                    if (left < 8) left = 8;
+                    if (top < 8) top = 8;
+                    active.style.left = left + 'px';
+                    active.style.top = top + 'px';
+                    if (wasHidden) {
+                        active.style.display = 'none';
+                        active.style.visibility = '';
+                    }
+                }
+
+                function showPopover() {
+                    const active = getActivePop();
+                    if (!active) return;
+                    // ensure popover is a direct child of document.body to avoid modal stacking/position issues
+                    try {
+                        if (active.parentElement !== document.body) {
+                            document.body.appendChild(active);
+                            active.style.position = 'fixed';
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                    // cancel any pending auto-hide/fade
+                    cancelAutoFade();
+                    if (hideAnimationTimeout) { clearTimeout(hideAnimationTimeout); hideAnimationTimeout = null; }
+                    active.style.display = 'block';
+                    active.style.zIndex = 9999;
+                    positionPopover();
+                    // trigger opacity transition
+                    requestAnimationFrame(() => active.classList.add('show'));
+                    if (window.console && console.debug) console.debug('pw popover shown');
+                }
+
+                function hideIfNotActive() {
+                    if (hideTimeout) clearTimeout(hideTimeout);
+                    hideTimeout = setTimeout(() => {
+                        if (!pwdInputEl) return;
+                        if (document.activeElement === pwdInputEl || inputHovered || popHovered) return;
+                        const active = getActivePop();
+                        hidePopoverImmediate(active);
+                    }, 150);
+                }
+
+                // input interactions
+                if (pwdInputEl) {
+                    pwdInputEl.addEventListener('focus', showPopover);
+                    pwdInputEl.addEventListener('input', showPopover);
+                    pwdInputEl.addEventListener('blur', hideIfNotActive);
+                    pwdInputEl.addEventListener('mouseenter', () => { inputHovered = true; showPopover(); });
+                    pwdInputEl.addEventListener('mouseleave', () => { inputHovered = false; hideIfNotActive(); });
+                }
+
+                // attach pop hover listeners to both original and clone if present
+                popEl.addEventListener('mouseenter', () => { popHovered = true; });
+                popEl.addEventListener('mouseleave', () => { popHovered = false; hideIfNotActive(); });
+                if (popClone) {
+                    popClone.addEventListener('mouseenter', () => { popHovered = true; });
+                    popClone.addEventListener('mouseleave', () => { popHovered = false; hideIfNotActive(); });
+                }
+
+                window.addEventListener('resize', positionPopover);
+                window.addEventListener('scroll', () => { const active = getActivePop(); if (active && active.style.display === 'block') positionPopover(); }, true);
+            }
+
             registerForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                const formData = new FormData(registerForm);
 
                 // Clear any existing error list in the alert (server-rendered)
                 const existingAlert = registerForm.closest('.modal-login-content').querySelector('.alert-danger');
@@ -189,6 +464,29 @@
                     errorContainer.style.display = 'none';
                     errorContainer.innerHTML = '';
                 }
+
+                
+
+                const pwdVal = pwdInputEl ? pwdInputEl.value : '';
+                const pwdConfirmVal = pwdConfirmEl ? pwdConfirmEl.value : '';
+                const checks = evaluatePassword(pwdVal);
+                const allGood = Object.values(checks).every(Boolean);
+                if (!allGood) {
+                    if (errorContainer) {
+                        errorContainer.innerHTML = 'Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.';
+                        errorContainer.style.display = 'block';
+                    }
+                    return;
+                }
+                if (pwdVal !== pwdConfirmVal) {
+                    if (errorContainer) {
+                        errorContainer.innerHTML = 'Passwords do not match.';
+                        errorContainer.style.display = 'block';
+                    }
+                    return;
+                }
+
+                const formData = new FormData(registerForm);
 
                 // Show loading state on button
                 const submitBtn = registerForm.querySelector('button[type="submit"]');
@@ -280,6 +578,9 @@
                     }
                 });
             });
+
+            // Password UI handled above with updatePwdUI()
+
         }
     });
 </script>
