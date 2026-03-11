@@ -155,7 +155,7 @@
 					@foreach($regionItems as $item)
 							@php($adoptionStatus = $item->with_adopted ? 'adopted' : ($item->with_replicated ? 'replicated' : 'none'))
 							@php($itemAttachment = $attachmentsByItem[$item->id] ?? null)
-							@php($canManageAttachment = $isSysadmin && $item->with_moa && !empty($item->year_of_moa))
+							@php($canManageAttachment = $canWriteMasterData && $item->with_moa && !empty($item->year_of_moa))
 				<div class="masterdata-item-entry">
 					<div class="masterdata-item-row" data-masterdata-item-toggle="item-{{ $item->id }}" role="button" tabindex="0" aria-expanded="false">
 						<div>
