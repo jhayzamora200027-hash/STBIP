@@ -310,8 +310,9 @@ class UserController extends Controller
             $body = 'Greetings!
 
             This is to inform you about the current number 
-            of accounts that are pending for approval. Kindly review the pending approval at 
-            your earliest convenience so they can be processed accordingly.';
+            of accounts that are pending for approval. 
+            Kindly review the pending approval at your earliest 
+            convenience so they can be processed accordingly.';
 
             Mail::raw($body, function ($message) use ($subject) {
                 $message->to('jpscarullo@dswd.gov.ph')

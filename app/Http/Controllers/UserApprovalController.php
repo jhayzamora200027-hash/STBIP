@@ -81,11 +81,16 @@ class UserApprovalController extends Controller
                     "Email: {$user->email}\n" .
                     "User Group: {$user->usergroup}\n\n" .
                     "Thank you for registering with STB Inventory Portal!\n\n" .
-                    "Best regards,\n" .
-                    "STB Inventory Team",
+                    "Best regards,\n\n" .
+                    "STB Inventory Portal Team\n" .
+                    "Social Technology Bureau\n" .
+                    "Department of Social Welfare and Development - Central Office\n" .
+                    "Batasan Pambansa, Constitution Hills, Quezon City 1126\n" .
+                    "☎️ (632) 89517124 / 89318144\n" .
+                    "Please do not reply this is automated email.",
                     function ($message) use ($user) {
                         $message->to($user->email)
-                                ->subject('Registration Approved - STB Inventory');
+                                ->subject('Registration Approved - STB Inventory Portal');
                     }
                 );
             } else {
@@ -96,11 +101,16 @@ class UserApprovalController extends Controller
                     $reasonText .
                     "If you believe this is an error or would like more information, please contact support.\n\n" .
                     "Email: " . Auth::user()->email . "\n\n" .
-                    "Best regards,\n" .
-                    "STB Inventory Team",
+                    "Best regards,\n\n" .
+                    "STB Inventory Portal Team\n" .
+                    "Social Technology Bureau\n" .
+                    "Department of Social Welfare and Development - Central Office\n" .
+                    "Batasan Pambansa, Constitution Hills, Quezon City 1126\n" .
+                    "☎️ (632) 89517124 / 89318144\n" .
+                    "Please do not reply this is automated email.",
                     function ($message) use ($user) {
                         $message->to($user->email)
-                                ->subject('Registration Status - STB Inventory');
+                                ->subject('Registration Status - STB Inventory Portal');
                     }
                 );
             }
