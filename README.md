@@ -83,7 +83,7 @@ php artisan storage:link
 php artisan db:seed
 
 
-## to add in env
+## IMPORTANT to add in env
 MAIL_MAILER=smtp
 MAIL_SCHEME=null
 MAIN_HOST=smtp.gmail.com

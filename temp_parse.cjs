@@ -6,8 +6,6 @@ blocks.forEach((m,i)=>{
   const script = m[1];
   try{
     new Function(script);
-    // console.log(`block ${i} parsed OK`);
   }catch(e){
-    // console.error(`block ${i} parse error at`, e.message);
   }
 });

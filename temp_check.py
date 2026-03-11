@@ -10,5 +10,4 @@ for idx, script in enumerate(blocks):
     openp = script.count('(')
     closep = script.count(')')
     print('  braces { }', openb, closeb, 'parens ( )', openp, closep)
-    # show tail of script
     print(script[-200:])

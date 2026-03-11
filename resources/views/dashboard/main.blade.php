@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+@include('components.loader')
 @guest
 <style>
     .stb-main-content {
@@ -297,7 +298,7 @@
 			column-gap: 6mm !important;
 			row-gap: 3mm !important;
 			max-width: 90% !important;
-			margin-left: auto !important;
+			margin-left: auto100px !important;
 			margin-right: auto !important;
 			align-items: stretch;
 		}
@@ -376,7 +377,7 @@
 
 		@media (max-width: 991.98px) {
 			.st-map-card-body { justify-content: center !important; padding-right: 24px !important; }
-			.st-map-figure-wrapper, .st-map-region-list { margin-right: 0 !important; }
+			.st-map-figure-wrapper, .st-map-region-list { margin-right: 1000 !important; margin-left: 1000; }
 		}
 		.st-map-figure-wrapper {
 			position: relative !important;
@@ -540,7 +541,7 @@
 @media (min-width: 992px) {
   .st-totals-row > .col-lg-4:nth-child(1),
   .st-totals-row > .col-lg-4:nth-child(2) { display: none !important; }
-  .st-totals-row > .col-lg-4:nth-child(3) { margin-left: auto !important; }
+  .st-totals-row > .col-lg-4:nth-child(3) { margin-left: 0 !important; }
 }
 
 @media (max-width: 991.98px) {
@@ -575,7 +576,7 @@
 			<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:80px; max-width:120px; background:transparent; display:block; margin:0 auto 8px auto;">
 			Adopted & Replicated Social Technologies
 		</div>
-		<div style="padding:0 2vw;">
+		<div style="padding:0;">
 			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
 				<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
 				<div class="card-body">
@@ -625,7 +626,7 @@
 					<div class="col-12 p-0">
 						<div class="card st-dashboard-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 							<div class="card-header text-center">PHILIPPINES MAP & REGIONS</div>
-								<div class="card-body st-map-card-body">
+								<div class="card-body st-map-card-body" >
 									<div class="map-overlay-totals" aria-hidden="false">
 								<div class="card st-dashboard-card text-center map-overlay-card">
 									<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
@@ -670,7 +671,11 @@
 								</div>
 							</div>
 
-									<div class="st-map-figure-wrapper">
+									<div class="st-map-figure-wrapper ph-frame" style="position:relative;">
+										<div id="ph-map-loading" class="ph-map-loading" aria-hidden="false" role="status" style="">
+											<div class="spinner" aria-hidden="true" style="width:48px;height:48px;border:6px solid rgba(16,174,181,0.12);border-top-color:#10aeb5;border-radius:50%;animation:spin 1s linear infinite"></div>
+											<div style="color:#10aeb5;font-weight:700;margin-top:6px;font-size:0.95rem;">Loading map…</div>
+										</div>
 										<object id="philippines-map" data="{{ asset('images/philippines.svg') }}" type="image/svg+xml"></object>
 										<div id="map-region-label" style="margin-top:10px; font-size:0.95rem; font-weight:600; color:#10aeb5; text-align:center; min-height:22px;">
 											Hover a region on the map
@@ -711,6 +716,137 @@ if (!document.getElementById('catListTooltip')) {
 	tooltipDiv.style.lineHeight = '1.3';
 	document.body.appendChild(tooltipDiv);
 }
+</script>
+
+<script>
+// Fallback periodic checker: if SVG or visible map area appears, ensure global loader is removed.
+(function(){
+	var checks = 0;
+	var maxChecks = 50; // ~15s (50 * 300ms)
+	var interval = 300;
+	var id = setInterval(function(){
+		checks++;
+		try{
+			var obj = document.getElementById('philippines-map');
+			var svgPresent = false;
+			if(obj && obj.contentDocument){
+				svgPresent = !!obj.contentDocument.querySelector('svg');
+			}
+			// also check for visible map by bounding rect of object element itself
+			var objRectVisible = false;
+			if(obj){
+				var r = obj.getBoundingClientRect();
+				objRectVisible = (r.width > 2 && r.height > 2 && r.top < window.innerHeight && r.bottom > 0);
+			}
+
+			if(svgPresent || objRectVisible){
+				console.debug('map-checker: map detected, hiding loader (svgPresent=' + svgPresent + ', rectVisible=' + objRectVisible + ')');
+				try{ if(typeof hideOverlay === 'function'){ hideOverlay(); } else { /* call internal hideOverlay via global */ window.hideOverlay && window.hideOverlay(); } }catch(e){}
+				// also attempt direct hide of global loader
+				try{ var g = document.getElementById('loading-overlay'); if(g){ g.classList.add('hidden'); g.style.display='none'; g.hidden=true; if(g.parentNode){ g.parentNode.removeChild(g); } } }catch(e){}
+				clearInterval(id);
+				return;
+			}
+			if(checks >= maxChecks){
+				console.debug('map-checker: max checks reached, removing loader fallback');
+				try{ var g2 = document.getElementById('loading-overlay'); if(g2){ g2.classList.add('hidden'); g2.style.display='none'; g2.hidden=true; if(g2.parentNode){ g2.parentNode.removeChild(g2); } } }catch(e){}
+				clearInterval(id);
+			}
+		}catch(e){
+			// swallow errors
+			if(checks >= maxChecks) clearInterval(id);
+		}
+	}, interval);
+})();
+</script>
+
+<style>
+	.ph-map-loading { position:absolute; inset:12px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.92); z-index:1200; border-radius:12px; flex-direction:column; gap:8px; }
+	@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+// Show a loading overlay until the Philippines SVG is ready.
+(function(){
+	var obj = document.getElementById('philippines-map');
+	var overlay = document.getElementById('ph-map-loading');
+	var maxWait = 10000; // ms
+	var pollInterval = 200;
+
+	function hideOverlay(){
+		console.debug('map: hideOverlay called');
+		try{ if(overlay) overlay.style.display = 'none'; }catch(e){}
+		// reveal totals which are hidden by default until map loads
+		try{
+			var cards = document.querySelectorAll('.map-overlay-totals .st-dashboard-card h1');
+			cards.forEach(function(h){ h.style.visibility = 'visible'; });
+		}catch(e){}
+		// also hide the global page loader if present; try helper, class toggle, style hide, attribute, and removal as fallback
+		try{ if(typeof hideLoader === 'function'){ try{ hideLoader(); }catch(e){} } }catch(e){}
+		try{
+			var global = document.getElementById('loading-overlay');
+			if(global){
+				global.classList.add('hidden');
+				global.style.display = 'none';
+				global.setAttribute('aria-hidden','true');
+				try{ global.hidden = true; }catch(e){}
+				// remove from DOM after short delay to avoid lingering z-index issues
+				setTimeout(function(){ try{ if(global && global.parentNode){ global.parentNode.removeChild(global); console.debug('map: removed global loader from DOM'); } }catch(e){} }, 600);
+			}
+		}catch(e){}
+	}
+
+	function showOverlay(){ if(overlay) overlay.style.display = 'flex'; }
+
+	// Start with overlay visible
+	showOverlay();
+
+	if(!obj){
+		// no object found - remove overlay after short delay
+		setTimeout(hideOverlay, 800);
+		return;
+	}
+
+	// If the object has already loaded by the time this script runs, hide immediately
+	try{
+		var alreadySvg = obj.contentDocument && obj.contentDocument.querySelector('svg');
+		if(alreadySvg){
+			hideOverlay();
+			return;
+		}
+	}catch(e){ /* ignore cross-origin or other errors */ }
+
+	var timedOut = false;
+	var timeoutId = setTimeout(function(){ timedOut = true; hideOverlay(); }, maxWait + 100);
+
+	obj.addEventListener('load', function(){
+		try{
+			// If contentDocument and svg root are ready, hide overlay immediately
+			var svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
+			if(svg){
+				clearTimeout(timeoutId);
+				hideOverlay();
+				return;
+			}
+
+			// otherwise poll for readiness until timeout
+			var waited = 0;
+			var id = setInterval(function(){
+				svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
+				waited += pollInterval;
+				if(svg || waited >= maxWait || timedOut){
+					clearInterval(id);
+					clearTimeout(timeoutId);
+					hideOverlay();
+				}
+			}, pollInterval);
+		}catch(e){
+			// If any error (rare), remove overlay so UI becomes usable
+			clearTimeout(timeoutId);
+			hideOverlay();
+		}
+	});
+})();
 </script>
 
 
@@ -1841,8 +1977,12 @@ if (!document.getElementById('catListTooltip')) {
 	font-weight: 700;
 }
 
+.social-listing-pagination-wrapper {
+	text-align: center;
+}
+
 .social-listing-pagination {
-	display: flex;
+	display: inline-flex; /* shrink to contents */
 	justify-content: center;
 	align-items: center;
 	gap: 14px;
@@ -1850,7 +1990,7 @@ if (!document.getElementById('catListTooltip')) {
 	border: 1px solid rgba(148, 163, 184, 0.16);
 	border-radius: 16px;
 	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.04);
-	margin-top: 16px;
+	margin: 16px auto 0;
 	padding: 10px 12px;
 	flex-wrap: wrap;
 }
@@ -2773,7 +2913,7 @@ if (!document.getElementById('catListTooltip')) {
 				'<th>Province</th>' +
 				'<th>City/Municipality</th>' +
 				'<th class="text-center">Status</th>' +
-				'<th class="text-center">Attachment</th>' +
+				'<th class="text-center" style= "font-size: 0.7rem">Attachment</th>' +
 			'</tr></thead><tbody>';
 			if (pageData.length === 0) {
 				html += '<tr><td colspan="5" class="social-listing-empty">No data found.</td></tr>';
@@ -2827,13 +2967,19 @@ if (!document.getElementById('catListTooltip')) {
 					</tr>`;
 				});
 			}
-			html += '</tbody></table></div>';
-
-			html += '<div class="social-listing-pagination">';
-			html += `<button class="social-listing-pagination-btn" ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">&#8592; Prev</button>`;
-			html += `<span class="social-listing-pagination-indicator">Page ${page} of ${totalPages}</span>`;
-			html += `<button class="social-listing-pagination-btn" ${page === totalPages ? 'disabled' : ''} onclick="changePage(${page + 1})">Next &#8594;</button>`;
-			html += '</div>';
+					if (pageData.length < perPage) {
+						for (let i = pageData.length; i < perPage; i++) {
+							html += '<tr><td colspan="5" class="social-listing-empty">&nbsp;</td></tr>';
+						}
+					}
+					html += '</tbody></table></div>';
+					html += '<div class="social-listing-pagination-wrapper">';
+					html += '<div class="social-listing-pagination">';
+					html += `<button class="social-listing-pagination-btn" ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">&#8592; Prev</button>`;
+					html += `<span class="social-listing-pagination-indicator">Page ${page} of ${totalPages}</span>`;
+					html += `<button class="social-listing-pagination-btn" ${page === totalPages ? 'disabled' : ''} onclick="changePage(${page + 1})">Next &#8594;</button>`;
+					html += '</div>';
+					html += '</div>';
 
 			document.getElementById('title-listing-table-container').innerHTML = html;
 		}
@@ -4671,6 +4817,12 @@ $('#region-select-modal').on('change', function() {
 							if (!row || !row.province) return false;
 							return normalizeProvinceName(row.province) === targetProvNorm;
 						});
+                // add blank rows to reach perPage when there are fewer entries
+                if (pageData.length < perPage) {
+                    for (let i = pageData.length; i < perPage; i++) {
+                        html += '<tr><td colspan="5" class="social-listing-empty">&nbsp;</td></tr>';
+                    }
+                }
 					}
 				}
 				const displayName = (regionName && regionLabels[regionName]) || regionName || (targetInfo.path.getAttribute('title') ? ('Province: ' + targetInfo.path.getAttribute('title')) : 'Region');

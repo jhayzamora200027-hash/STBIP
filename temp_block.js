@@ -1,6 +1,6 @@
-// disable console output for this script
+
 if (typeof console !== 'undefined') { ['log','warn','error','debug','info','trace'].forEach(m=>{console[m]=function(){};}); }
-// available regardless of which <script> block runs first.
+
 function deriveRegionFromSlider(source){
     let name = '';
     if (source && typeof source === 'object'){
@@ -44,23 +44,23 @@ function deriveRegionFromSlider(source){
 
 document.addEventListener("DOMContentLoaded", function () {
 
-	// load jquery+select2 to make filters multi-select/searchable
+	
 	(function(){
 		function loadCss(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}        
 		function loadScript(u,cb){var s=document.createElement('script');s.onload=cb;s.src=u;document.head.appendChild(s);}        
 		function init(){
 			try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true });
-                // after select2 has replaced the <select>, attach listeners to it
+                
                 const $prov = jQuery('#rsm-filter-prov');
                 if ($prov.length) {
                     $prov.on('change.select2 select2:select select2:unselect', function(){
                         console.log('[RSM] select2 province event fired');
                         setTimeout(()=>{
-                            // these functions are defined later in the file; guard against
-                            // the case where the user interacts before the second script
-                            // block has executed (see errors in console). if they're not
-                            // ready yet we'll simply log and wait for the normal
-                            // binding later on to take effect.
+                            
+                            
+                            
+                            
+                            
                             if (typeof updateProvinceFilters === 'function') {
                                 updateProvinceFilters();
                             } else {
@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             }
                         },0);
                     });
-                    // if there is already a selection, update once now
+                    
                     setTimeout(()=>{
                         if (typeof updateProvinceFilters === 'function') {
                             updateProvinceFilters();
@@ -93,12 +93,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		}else{init();}
 	})();
 
-	// strip ASCII control characters from a string (mirrors PHP cleanup)
+	
 	function clean(s) {
 		return (s||'').toString().replace(/[\x00-\x1F\x7F]/g, '');
 	}
 
-	// helper to trim province/city keys received from server
+	
 	function normalizeGrouping(src) {
 		const out = {};
 		Object.keys(src || {}).forEach(p => {
@@ -133,9 +133,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		},
 	});
 
-	// normalize various region strings to canonical slider labels
-	// helper used throughout to convert disparate region identifiers to the canonical keys
-	// stored in window.parent.regionMap.
+	
+	
+	
 	function normalizeRegionText(r){
 		if (!r) return '';
 		var s = String(r).toLowerCase().trim();
@@ -144,7 +144,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (s.includes('ilocos')) return 'Region I';
 		if (s.includes('cagayan valley')) return 'Region II';
 		if (s.includes('central luzon')) return 'Region III';
-		// treat typo as IV-A as well
+		
 		if (s.includes('calabarzon') || s.includes('calborazon')) return 'Region IV-A';
 		if (s.includes('mimaropa')) return 'Region IV-B';
 		if (s.includes('bicol')) return 'Region V';
@@ -160,7 +160,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!s.includes('caraga') && (s === 'car' || s.includes('cordillera') || /\bcar\b/.test(s))) {
 			return 'CAR';
 		}
-		// generic roman detection
+		
 		var romanPatterns = [
 			{ code: 'Region XII', re: /\bxii\b/ },
 			{ code: 'Region XI', re: /\bxi\b/ },
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		return r;
 	}
 
-	// helper to hide/show slides based on a list of region names
+	
 	function filterSliderByRegions(regions){
 		if (!regions || !regions.length) return;
 		const filenameToRegion = {
@@ -198,8 +198,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			const img = slide.querySelector('img');
 			if (!img) return;
 			const fileName = (img.dataset.img||img.src||'').split('/').pop();
-			// same fallback as main script: use mapped name or explicit name,
-			// otherwise use the raw number so digit-normalizer can convert it.
+			
+			
 			const region = filenameToRegion[fileName] || img.getAttribute('data-region-name') || (img.getAttribute('data-region-number')||'');
 			if (regions.includes(region)) {
 				slide.style.display = '';
@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (swiper && typeof swiper.update === 'function') swiper.update();
 	}
 
-	// hide/show gallery cards based on region/year text matching
+	
 	function filterGalleryCards(regions, years) {
 		const cards = document.querySelectorAll('.card-gallery .card');
 		cards.forEach(card => {
@@ -226,16 +226,16 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-	// when the page loads read any region[] query params and apply
+	
 	document.addEventListener('DOMContentLoaded', function(){
 		const urlParams = new URLSearchParams(window.location.search);
 		let selected = urlParams.getAll('region[]');
 		if (!selected.length) selected = urlParams.getAll('region');
 		let yrs = urlParams.getAll('year_of_moa[]');
 		if (!yrs.length) yrs = urlParams.getAll('year_of_moa');
-		// normalize any region inputs (e.g. "FO I")
+		
 		selected = selected.map(normalizeRegionText);
-		// if only year filters present, derive regions from parent.regionMap if available
+		
 		if (!selected.length && yrs.length) {
 			try {
 				var map = window.parent.regionMap || {};
@@ -251,12 +251,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	});
 
-	// listen for filter updates from parent frame (executed even before DOM ready)
+	
 	window.addEventListener('message', function(e){
 		if (e.data && e.data.type === 'streportFilters') {
 			var regs = (e.data.regions || []).map(normalizeRegionText);
 			var yrs = e.data.years || [];
-			// if only year filters provided, try to derive regions from parent.regionMap
+			
 			if (!regs.length && yrs.length) {
 				try {
 					var map = window.parent.regionMap || {};
@@ -268,17 +268,17 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 			filterSliderByRegions(regs);
 			filterGalleryCards(regs, yrs);
-			// update graph for the most recently selected region
+			
 			if (regs.length) {
 				var target = regs[regs.length-1];
-				// clear any cached payload so render runs fresh
+				
 				window._lastRsmPayload = null;
 				var imgs = document.querySelectorAll('.slider-img');
 				for (var i = 0; i < imgs.length; i++) {
 					var nm = normalizeRegionText(imgs[i].getAttribute('data-region-name') || '');
 					if (nm === target) {
-						// if the slider library provides a click or activate method, use it;
-						// otherwise just render stats directly
+						
+						
 						try { imgs[i].click(); } catch(e) {}
 						renderRegionStatsForImg(imgs[i]);
 						break;
@@ -288,11 +288,11 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	});
 
-	// legacy: click actions were previously disabled here. behaviour is now handled
-	// further down by a dedicated listener that shows the region stats panel and
-	// also notifies parent to adjust iframe height.
+	
+	
+	
 
-	// bottom preview: mirror the currently-centered slide into the bottom preview area
+	
 	function renderBottomProvinceList(payload) {
 		try {
 			const list = document.getElementById('sliderBottomProvinceList');
@@ -317,22 +317,22 @@ document.addEventListener("DOMContentLoaded", function () {
 				html += `<div class="province-item"><div class="prov-name">${esc(label)}</div><div class="province-badge">${cityCount}</div></div>`;
 			});
 			list.innerHTML = html;
-			// nothing else needed here
+			
 
 		} catch (e) { console.error('renderBottomProvinceList error', e); }
 	}
 
 	function updateSliderBottomPreview() {
-		// when the slider center image moves (or user drags) we want the
-		// parent STsReport iframe to collapse if it was expanded. the parent
-		// listens for a `streportToggleHeight` message with an explicit
-		// height of 600px, so post that here. repeated messages harmless.
+		
+		
+		
+		
 		try {
 			if (window.parent && window.parent !== window && window.parent.postMessage) {
 				window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 			}
-		} catch(_e) { /* ignore */ }
-		// close any open gallery popover when the active region changes
+		} catch(_e) {  }
+		
 		try { closePopover(); } catch(e) {}
 		try {
 			const activeImg = document.querySelector('.swiper-slide.swiper-slide-active .slider-img');
@@ -348,10 +348,10 @@ document.addEventListener("DOMContentLoaded", function () {
 				preview.setAttribute('data-region-name', regionName);
 				preview.setAttribute('data-region-number', regionNumber);
 				if (label) label.textContent = regionName || ('Region ' + regionNumber);
-				// emit custom event so graphing code can react
+				
 				document.dispatchEvent(new CustomEvent('sliderActiveRegionChanged', { detail: { src, regionName, regionNumber } }));
 
-                // also log years right away for debugging (bypass listener timing issues)
+                
                 try {
                     if (!regionName) {
                         regionName = deriveRegionFromSlider({src, regionName, regionNumber});
@@ -373,19 +373,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
                 } catch(e) { console.warn('[RSM] year log error', e); }
 
-				// fetch provinces for the active region and render into the bottom preview
+				
 				try {
 					const fileName = (src || '').split('/').pop();
 					const bottomList = document.getElementById('sliderBottomProvinceList');
 					if (fileName && bottomList) {
-						// map slider image filename -> region code expected by ajaxRegionHierarchy
+						
 						const filenameToRegion = {
 							'1.png': 'Region I','2.png': 'Region II','3.png': 'Region III',
 							'4_a.png': 'Region IV-A','4_b.png': 'Region IV-B','5.png': 'Region V',
 							'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
 							'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
 							'12.png': 'Region XII',
-					// map image for Region 13 to CARAGA (backend expects this key)
+					
 					'13.png': 'CARAGA',
 					'barmm.png': 'BARMM',
 							'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
@@ -407,7 +407,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		} catch (e) { console.error(e); }
 	}
 
-	// helper to tell parent iframe to collapse
+	
 	function collapseStreportIframe(){
 		try {
 			if (window.parent && window.parent !== window && window.parent.postMessage) {
@@ -416,25 +416,25 @@ document.addEventListener("DOMContentLoaded", function () {
 		} catch(_e) { }
 	}
 
-	// initial sync + attach to Swiper events
+	
 	updateSliderBottomPreview();
 	if (swiper && typeof swiper.on === 'function') {
 		swiper.on('slideChangeTransitionEnd', updateSliderBottomPreview);
 		swiper.on('init', updateSliderBottomPreview);
-		// collapse immediately when a new slide starts moving (drag or arrow)
+		
 		swiper.on('slideChangeTransitionStart', collapseStreportIframe);
-		// sometimes fast/forceful drags bypass transition events; the
-		// `slideChange` callback fires whenever the active index changes.
+		
+		
 		swiper.on('slideChange', collapseStreportIframe);
 	}
 
-	// helper that looks for an element first in the current document and
-	// then in the parent frame (if same‑origin). this allows the modal
-	// markup to live outside the iframe while the script continues to run
-	// inside it.
-	// NOTE: global fetchEl is already defined at the top of the file,
-	// so we just refer to that rather than redeclare.
-	// variant that accepts a CSS selector and queries both parent and local documents
+	
+	
+	
+	
+	
+	
+	
 	function fetchQS(selector) {
 		if (window.parent && window.parent !== window && window.parent.document) {
 			const pe = window.parent.document.querySelector(selector);
@@ -448,21 +448,21 @@ document.addEventListener("DOMContentLoaded", function () {
 	const modalContent = fetchEl("sliderModalContent");
 	const modalViewport = fetchEl('sliderModalViewport');
 	const modalImg = fetchEl("sliderModalImg");
-	const closeBtn = null; // close button removed — keep variable falsey so existing checks remain safe
+	const closeBtn = null; 
 	const modalTitle = fetchEl("sliderModalTitle");
 	
-	// helper for region stats elements (also looked up in parent)
-	// public API used in numerous handlers outside the DOMContentLoaded
-	// callback, so define it at top level rather than inside the ready
-	// listener. (global rsmEl already exists)
+	
+	
+	
+	
 	
 
 
-	// shared truthiness helper for parsed Excel fields (boolean or textual 'true')
+	
 	const truthy = v => (typeof v === 'boolean') ? v : (String(v || '').toLowerCase().trim() === 'true');
 	let _titleTypingTimer = null;
 
-	// baseline capture so we can neutralize browser zoom changes
+	
 	const _modalBaseDPR = window.devicePixelRatio || 1;
 	const computeNominalDesktopWidth = w => Math.min(Math.round(w * 0.55 + 250), Math.max(w - 64, 520));
 	const _modalBaseWidth = computeNominalDesktopWidth(window.innerWidth);
@@ -471,9 +471,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!modal || !modalContent) return;
 		const viewport = modalViewport || modalContent.querySelector('.slider-modal-viewport');
 		const curDPR = window.devicePixelRatio || 1;
-		const scaleFix = (_modalBaseDPR || 1) / curDPR; // inverse scale to neutralize browser zoom
+		const scaleFix = (_modalBaseDPR || 1) / curDPR; 
 
-		// set modalContent width to the baseline (clamped to viewport) so visual size is stable
+		
 		let width = _modalBaseWidth || computeNominalDesktopWidth(window.innerWidth);
 		const maxAllowed = Math.max(window.innerWidth - 64, 520);
 		width = Math.min(width, maxAllowed);
@@ -485,7 +485,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	}
 
-	// position the external Total-STs card so it visually sits to the right of the Provinces card
+	
 	function positionProvinceTotalCard() {
 		try {
 			const provCard = document.getElementById('sliderProvinceListCard');
@@ -493,28 +493,28 @@ document.addEventListener("DOMContentLoaded", function () {
 			const modalRect = modalContent && modalContent.getBoundingClientRect ? modalContent.getBoundingClientRect() : { left:0, top:0, width: window.innerWidth };
 			if (!provCard || !totalCard) return;
 
-			// compute coordinates relative to modalContent — remove gap so the Total card sits nearly flush
+			
 			const pRect = provCard.getBoundingClientRect();
 			const headerEl = provCard.querySelector('.province-card-title');
 			const headerRect = headerEl && headerEl.getBoundingClientRect ? headerEl.getBoundingClientRect() : pRect;
-			const gap = 0; // px — minimal spacing
+			const gap = 0; 
 			const unclampedLeft = (pRect.right - modalRect.left) + gap;
-			// allow a very small clamp so the card never goes off-screen but otherwise sit flush
+			
 			const left = Math.min(Math.max(2, unclampedLeft), Math.max(2, modalRect.width - totalCard.offsetWidth - 2));
 
-			// align Total card tightly with the province header
+			
 			const top = Math.max(2, headerRect.top - modalRect.top + 2);
 			totalCard.style.left = left + 'px';
 			totalCard.style.top = top + 'px';
-		} catch (e) { /* ignore positioning errors */ }
+		} catch (e) {  }
 	}
 
-	// keep our position helper responsive
+	
 	window.addEventListener('resize', () => {
 		try { positionProvinceTotalCard(); } catch(e){}
 	});
 
-	// human-friendly region lookup (used when image filename is numeric)
+	
 	const REGION_LOOKUP = {
 		'1': 'Ilocos Region',
 		'2': 'Cagayan Valley',
@@ -546,14 +546,14 @@ document.addEventListener("DOMContentLoaded", function () {
 		return res;
 	}
 
-	// modal title typing removed (function intentionally deleted)
+	
 
 
-	// track last opened image and its bounding rect so we can animate back on close
+	
 	let _lastActiveImgEl = null;
 	let _lastActiveImgRect = null;
 
-	// image‑preview modal helper using sliderModal elements
+	
 	function openImageModal(target) {
 		if (!modal) return;
 		const url = (target && (target.dataset.img || target.src)) || '';
@@ -561,14 +561,14 @@ document.addEventListener("DOMContentLoaded", function () {
 		modalImg.src = url;
 		modal.style.display = 'block';
 		modal.classList.add('expanded');
-		// explicitly expand content in case CSS gets overridden
+		
 		if (modalContent) {
 			modalContent.style.width = '90vw';
 			modalContent.style.height = '90vh';
 		}
 		overlay.style.display = 'block';
 		document.body.style.overflow = 'hidden';
-		// tell parent to bump iframe height for the slider preview
+		
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
 			window.parent.postMessage({ type:'streportToggleHeight', height:'2000px' }, '*');
 		}
@@ -576,7 +576,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function closeImageModal() {
 		if (!modal) return;
-		// notify parent that slider preview went away and iframe can shrink
+		
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
 			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 		}
@@ -593,7 +593,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function closeImageModal() {
 		if (!modal) return;
-		// notify parent that slider preview went away and iframe can shrink
+		
 		if (window.parent && window.parent !== window && window.parent.postMessage) {
 			window.parent.postMessage({ type:'streportToggleHeight', height:'600px' }, '*');
 		}
@@ -604,14 +604,14 @@ document.addEventListener("DOMContentLoaded", function () {
 		document.body.style.overflow = '';
 	}
 
-	// wire overlay and escape key
+	
 	overlay && overlay.addEventListener('click', closeImageModal);
 	document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeImageModal(); } });
 
 
 	(function enableModalPinchAndZoom(){
 
-    /* --- Province-list helper (AJAX) ---------------------------------- */
+    
     function renderProvinceCard(payload) {
         const card = document.getElementById('sliderProvinceListCard');
         const list = document.getElementById('sliderProvinceList');
@@ -630,19 +630,19 @@ document.addEventListener("DOMContentLoaded", function () {
             const cities = Object.keys(grouped[prov] || {});
             const cityCount = cities.length || 0;
             const displayProv = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
-            // render province as a button with caret — supports inline accordion expansion
+            
             html += `<div class="province-item" role="button" tabindex="0" data-prov="${esc(prov)}"><div class="prov-name">${esc(displayProv)}</div><div class="province-badge">${cityCount}</div></div>`;
         });
         
         list.innerHTML = html;
-        // keep main province list tall regardless of item count
+        
         list.style.height = 'calc(40px * 8 + 16px)';
-        // also lock card height in case CSS is overridden
+        
         if(card) card.style.height = 'calc(40px * 8 + 16px + 40px)';
         card.setAttribute('aria-hidden','false');
-        try { positionProvinceTotalCard(); } catch(e) { /* ignore */ }
+        try { positionProvinceTotalCard(); } catch(e) {  }
 
-        // update external Total-STs card + Expression-of-Interest
+        
         try {
             const card = document.getElementById('sliderProvinceTotalCard');
             const stCountEl = document.getElementById('sliderProvinceTotalCardCount');
@@ -657,7 +657,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (payload && Array.isArray(payload.allRows)) total = payload.allRows.length;
             else if (payload && typeof payload.uploadedCount === 'number') total = payload.uploadedCount;
             else {
-                // fallback: sum grouped counts
+                
                 total = provinces.reduce((acc, p) => {
                     const citiesForProv = grouped[p] || {};
                     for (const k in citiesForProv) acc += (citiesForProv[k] || []).length;
@@ -665,7 +665,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }, 0);
             }
 
-            // Expression-of-Interest count (only available when server returns allRows)
+            
             let exprTotal = 0;
             if (payload && Array.isArray(payload.allRows)) {
                 exprTotal = payload.allRows.reduce((acc, r) => {
@@ -675,7 +675,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }, 0);
             }
 
-            // new totals are dummy, always show zero
+            
             const replicatedTotal = 0;
             const adoptedTotal = 0;
 
@@ -692,9 +692,9 @@ document.addEventListener("DOMContentLoaded", function () {
             if (adCard) adCard.setAttribute('aria-hidden', 'false');
 
             try { positionProvinceTotalCard(); } catch(e) {}
-        } catch(e) { /* ignore */ }
+        } catch(e) {  }
 
-        // attach click + keyboard handler to expand/collapse province (inline accordion)
+        
         Array.from(list.querySelectorAll('.province-item')).forEach(el => {
             function _toggleProv(ev){
                 ev.stopPropagation();
@@ -707,14 +707,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function showCitiesInProvince(provEl, prov, citiesObj) {
-        // New behavior: selecting a province hides *all other provinces* and shows
-        // its city list inline (single-focused dropdown). Cities behave the same.
+        
+        
         const card = document.getElementById('sliderProvinceListCard');
         const list = document.getElementById('sliderProvinceList');
         if (!card || !list || !provEl) return;
         const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-        // helper: animate collapse + remove a sublist node
+        
         function collapseAndRemove(node) {
             return new Promise(resolve => {
                 try {
@@ -732,13 +732,13 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        // toggle: if already expanded, collapse and restore all provinces
+        
         if (provEl.classList.contains('expanded')) {
             provEl.classList.remove('expanded');
             provEl.setAttribute('aria-expanded','false');
             const next = provEl.nextElementSibling;
             if (next && next.classList.contains('province-sublist')) {
-                // animate collapse then restore siblings
+                
                 collapseAndRemove(next).then(() => {
                     Array.from(list.querySelectorAll('.province-item.hidden')).forEach(x => { x.classList.remove('hidden'); x.style.display = ''; });
                     provEl.focus();
@@ -750,20 +750,20 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // hide all other provinces (single-focus mode) — add inline style as a defensive fallback
+        
         Array.from(list.querySelectorAll('.province-item')).forEach(pi => {
             if (pi !== provEl) { pi.classList.add('hidden'); pi.style.display = 'none'; }
             else { pi.classList.remove('hidden'); pi.style.display = ''; }
         });
 
-        // remove any existing sublists (animate collapse)
+        
         Array.from(list.querySelectorAll('.province-sublist')).forEach(s => { try { collapseAndRemove(s); } catch(e) { try { s.remove(); } catch(e){} } });
 
-        // build focused sublist (header shows province — back-to-all removed per UI change)
+        
         const cities = Object.keys(citiesObj || {});
         const sub = document.createElement('div');
         sub.className = 'province-sublist';
-        // header center uses .sublist-title — show a static prompt instead of the province/city name
+        
         let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div></div><div class="sublist-title" style="font-weight:700;color:#0f1724;">Choose City</div><div></div></div>`;
 
         if (!cities.length) {
@@ -785,11 +785,11 @@ document.addEventListener("DOMContentLoaded", function () {
         html += '<div class="st-list" style="margin-top:8px;"></div>';
         sub.innerHTML = html;
 
-        // insert and mark expanded
+        
         provEl.parentNode.insertBefore(sub, provEl.nextSibling);
         provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
 
-        // animate expand (slide + fade)
+        
         try {
             sub.style.overflow = 'hidden';
             sub.style.maxHeight = '0px';
@@ -801,23 +801,23 @@ document.addEventListener("DOMContentLoaded", function () {
                 sub.style.maxHeight = Math.max(64, full) + 'px';
                 sub.style.opacity = '1';
                 sub.style.transform = 'translateY(0)';
-                // stagger reveal of city items
+                
                 Array.from(sub.querySelectorAll('.city-item')).forEach((it, i) => { it.style.transitionDelay = (i * 34) + 'ms'; });
-                // clear max-height after transition so content can grow naturally
+                
                 const tidy = (ev) => { if (ev.propertyName === 'max-height') { sub.style.maxHeight = ''; sub.removeEventListener('transitionend', tidy); } };
                 sub.addEventListener('transitionend', tidy);
                 sub.classList.add('open');
             });
         } catch(e){}
 
-        /* "All provinces" back-control removed per request; collapse the province element to return to province list */
+        
 
-        // city click handlers — selecting a city will hide other cities (dropdown behavior)
+        
         const cityItems = Array.from(sub.querySelectorAll('.city-item'));
         cityItems.forEach(ci => {
             const renderSTs = () => {
-                // IMPORTANT: do NOT populate or modify ST Titles from province/city interactions.
-                // ST Titles are managed in their dedicated panel and must remain unchanged.
+                
+                
                 const stContainer = sub.querySelector('.st-list');
                 if (!stContainer) return;
                 stContainer.innerHTML = '<div class="province-empty">ST Titles are managed in the ST Titles panel and are not affected by province selection.</div>';
@@ -825,18 +825,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
             ci.addEventListener('click', ev => {
                 ev.stopPropagation();
-                // toggle selection: if already selected, behave as city-back
+                
                 if (ci.classList.contains('selected')) {
                     cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
                     const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
-                    // remove the inline ST header
+                    
                     try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
-                    // restore header back to 'Choose City' and make it visible again when deselecting a city
+                    
                     try { const stitle = sub.querySelector('.sublist-title'); if (stitle) { stitle.textContent = 'Choose City'; stitle.style.display = ''; } } catch(e){}
                     return;
                 }
 
-                // hide sibling cities (dropdown) and mark selected
+                
                 cityItems.forEach(x => {
                     if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); }
                     else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); }
@@ -847,7 +847,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ci.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); ci.click(); }});
         });
 
-        // focus first city for keyboard users
+        
         const firstCity = sub.querySelector('.city-item'); if (firstCity) firstCity.focus();
     }
 
@@ -864,10 +864,10 @@ document.addEventListener("DOMContentLoaded", function () {
 .catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
 
-    // expose helper globally so openImageModal (outer scope) can call it
+    
     try { window.fetchModalProvinces = fetchModalProvinces; window.renderProvinceCard = renderProvinceCard; } catch(e) {}
 
-    // transient popover used for ST click feedback (non-navigating)
+    
     function showTransientPopover(targetEl, text, opts = {}) {
         try {
             const existing = document.querySelector('.slider-province-card .transient-popover');
@@ -887,15 +887,15 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch(e){}
     }
 
-    // confirm / cancel popover for replicating an ST
+    
     function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         try {
-            // remove any existing popover first
+            
             const existing = document.body.querySelector('.replicate-popover');
             if (existing) existing.remove();
 
             const pop = document.createElement('div');
-            // inline styling so no external CSS dependency
+            
             pop.style.position = 'fixed';
             pop.style.zIndex = '2147483647';
             pop.style.width = '220px';
@@ -914,7 +914,7 @@ document.addEventListener("DOMContentLoaded", function () {
             pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
             document.body.appendChild(pop);
 
-            // style action buttons
+            
             try {
                 const cb = pop.querySelector('.rp-confirm');
                 const xb = pop.querySelector('.rp-cancel');
@@ -937,14 +937,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             } catch(e) {}
 
-            // positioning
+            
             const r = targetEl.getBoundingClientRect();
             const measure = () => {
                 const pw = pop.offsetWidth;
                 const ph = pop.offsetHeight;
                 let left = r.left + (r.width/2) - (pw/2);
-                let top = r.top - ph - 8; // prefer above
-                if (top < 8) top = r.bottom + 8; // fallback below
+                let top = r.top - ph - 8; 
+                if (top < 8) top = r.bottom + 8; 
                 left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
                 pop.style.left = left + 'px';
                 pop.style.top = top + 'px';
@@ -989,23 +989,23 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch(e) {}
     }
 
-    // default stub — consumers may override window.replicateST with a real implementation
+    
     try { window.replicateST = window.replicateST || function(payload, sourceEl){ return new Promise(res => setTimeout(()=> res({ ok:true }), 600)); }; } catch(e) {}
 
 
 
-// modal image gesture/zoom handlers removed — province helpers preserved
-	// keep a harmless stub so code that checks for modal.resetZoom won't fail
+
+	
 	try { modal.resetZoom = function(){}; } catch(e) {}
 	})();
 
 
 
-	/* global modal zoom removed — no-op stub retained */
+	
 	try { modal.resetGlobalZoom = function(){}; } catch(e) {}
 
 
-	// click handlers: open only for the active slide; clicking non-active slide will navigate to it
+	
 	function renderRegionStatsForImg(img){
 		try {
 			if (!img) return;
@@ -1017,14 +1017,14 @@ document.addEventListener("DOMContentLoaded", function () {
 				'6.png': 'Region VI','7.png': 'Region VII','8.png': 'Region VIII',
 				'9.png': 'Region IX','10.png': 'Region X','11.png': 'Region XI',
 				'12.png': 'Region XII',
-						// region XIII stored as CARAGA in dataset
+						
 						'13.png': 'CARAGA','barmm.png': 'BARMM',
 				'car.png': 'CAR','ncr.png': 'NCR','nir.png': 'NIR'
 			};
 			const mappedRegion = filenameToRegion[fileName] || null;
 			const regionParam = mappedRegion || img.getAttribute('data-region-name') || img.getAttribute('data-region-number') || fileName;
 
-			// no modal wrappers – simply update image and data
+			
 			const titleEl = rsmEl('rsm-modal-image');
 			if (titleEl) {
 				const srcFull = src || img.src || '';
@@ -1032,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				titleEl.style.visibility = 'visible';
 			}
 
-// show modal image immediately (animation removed)
+
             try {
                 const modalImgEl = rsmEl('rsm-modal-image');
                 const srcFull = src || img.src || '';
@@ -1043,16 +1043,16 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch(e) { console.error('rsm animation removed', e); try { const ri = rsmEl('rsm-modal-image'); if (ri) { ri.src = src || ''; ri.style.visibility = 'visible'; } } catch(e){} }
 
 
-			// show loader, hide content while fetching
+			
 			rsmEl('rsm-loading').style.display = ''; 
 			document.getElementById('rsm-cards').style.display = 'none';
 			rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
 
-			// fetch aggregated JSON for the region (provinces, grouped, rows, uploads, per-year totals)
+			
 			fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
 				.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
 				.then(payload => {
-					// populate provinces list
+					
 					const provEl = rsmEl('rsm-provinces');
 					if (provEl) {
 					const provincesArr = Array.isArray(payload.provinces) ? payload.provinces : [];
@@ -1069,10 +1069,10 @@ document.addEventListener("DOMContentLoaded", function () {
 						}).join('');
 						provEl.setAttribute('aria-hidden','false');
 
-						// store last payload for quick lookup when interacting with provinces/cities
+						
 						window._lastRsmPayload = payload;
 
-						// capture-phase handler: ensure city clicks always render inline STs (runs before bubble handlers that may stopPropagation)
+						
 						try {
 							if (!provEl.dataset.cityCaptureBound) {
 								provEl.addEventListener('click', function(ev){
@@ -1094,14 +1094,14 @@ document.addEventListener("DOMContentLoaded", function () {
 									}
 
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
-									// toggle off (restore)
+									
 									if (ci.classList.contains('selected')) {
 										cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
 										const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
 										try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
 										return;
 									}
-									// single-focus: hide siblings and mark selected
+									
 									cityItems.forEach(x => { if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); } else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); } });
 									const stContainer = sub.querySelector('.st-list');
 									if (!stContainer) return;
@@ -1118,7 +1118,7 @@ document.addEventListener("DOMContentLoaded", function () {
 							}
 						} catch(e) {}
 
-						// delegated city click handler for the Provinces card — expand city row and render STs inline (provinces card only)
+						
 						if (!provEl.dataset.cityDelegateBound) {
 							provEl.addEventListener('click', function(ev) {
 								const ci = ev.target.closest('.city-item');
@@ -1138,14 +1138,14 @@ document.addEventListener("DOMContentLoaded", function () {
 								}
 
 								const cityItems = Array.from(sub.querySelectorAll('.city-item'));
-								// toggle off (restore)
+								
 								if (ci.classList.contains('selected')) {
 									cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
 									const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
 									try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
 									return;
 								}
-								// single-focus: hide siblings and mark selected
+								
 						cityItems.forEach(x => {
 							if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); }
 							else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); }
@@ -1166,15 +1166,15 @@ document.addEventListener("DOMContentLoaded", function () {
 							provEl.dataset.cityDelegateBound = '1';
 						}
 
-						// attach expand/click handlers: provinces -> cities -> STs
+						
 						Array.from(provEl.querySelectorAll('.province-item')).forEach(pi => {
 							pi.addEventListener('click', function(ev){
 								ev.stopPropagation();
 								const prov = this.getAttribute('data-prov');
-								// collapse if already expanded
+								
 								const next = this.nextElementSibling;
 								if (next && next.classList && next.classList.contains('province-sublist')) {
-									// remove sublist and restore all provinces + clear ST listing
+									
 									next.remove();
 									this.classList.remove('expanded');
 									this.setAttribute('aria-expanded','false');
@@ -1182,13 +1182,13 @@ document.addEventListener("DOMContentLoaded", function () {
 									
 									return;
 								}
-								// remove other sublists and mark this expanded
+								
 								Array.from(provEl.querySelectorAll('.province-sublist')).forEach(s => s.remove());
 								Array.from(provEl.querySelectorAll('.province-item.expanded')).forEach(x => { x.classList.remove('expanded'); x.setAttribute('aria-expanded','false'); });
 								this.classList.add('expanded');
 								this.setAttribute('aria-expanded','true');
 
-								// hide all other provinces (single-focus mode)
+								
 								Array.from(provEl.querySelectorAll('.province-item')).forEach(pi2 => {
 									if (pi2 !== this) { pi2.classList.add('hidden'); pi2.style.display = 'none'; }
 									else { pi2.classList.remove('hidden'); pi2.style.display = ''; pi2.classList.add('selected'); }
@@ -1196,18 +1196,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
 								const citiesObj = grouped[prov] || {};
 								const cityNames = Object.keys(citiesObj);
-					// include an inline ST container so city clicks expand in-place (provinces card only)
+					
 					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => { const key=(cn||'').toString().trim(); const displayCity = (cn === 'UNKNOWN') ? '(no city specified)' : cn; return `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="city-name">${esc(displayCity)}</div><div class="province-badge">${(citiesObj[key]||[]).length}</div></div>` }).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
-					// insert the sublist so city items are visible when a province is expanded
+					
 					this.insertAdjacentHTML('afterend', subHtml);
-								// attach city handlers (render STs into right-side listing) — hide other cities when one selected
+								
 								const sub = this.nextElementSibling;
 								if (sub) {
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
 									cityItems.forEach(ci => {
 										const renderSTs = () => {
-								// NO-OP: do not update the global ST Titles panel from province/city interactions.
-								// ST Titles must remain unchanged.
+								
+								
 								return;
 							};
 											ci.addEventListener('click', ev2 => {
@@ -1217,7 +1217,7 @@ document.addEventListener("DOMContentLoaded", function () {
 												
 												return;
 											}
-											// hide sibling cities and mark selected
+											
 											cityItems.forEach(x => {
 									if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); }
 									else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); }
@@ -1226,7 +1226,7 @@ document.addEventListener("DOMContentLoaded", function () {
 										});
 										ci.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); ci.click(); } });
 									});
-									// focus first city for keyboard users
+									
 									const firstCity = sub.querySelector('.city-item'); if (firstCity) firstCity.focus();
 								}
 							});
@@ -1234,27 +1234,27 @@ document.addEventListener("DOMContentLoaded", function () {
 						});
 					}}
 
-					// totals
+					
 					const allRows = Array.isArray(payload.allRows) ? payload.allRows : [];
 					rsmEl('rsm-total-sts').textContent = String(allRows.length || 0);
 				try { const modalTotal = document.getElementById('modalStatsTotal'); if (modalTotal) modalTotal.textContent = `Total STs: ${allRows.length || 0}`; } catch(e) {}
 					rsmEl('rsm-total-moa').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0));
 					rsmEl('rsm-total-res').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0));
 				rsmEl('rsm-total-expr').textContent = String(allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0));
-					// Total MOA Attachment — sum uploaded counts across perYearTotals (attachments for MOA years)
+					
 					let moaAttachments = 0;
 					if (payload.perYearTotals) {
 						Object.values(payload.perYearTotals).forEach(arr => { moaAttachments += Number((arr && arr[1]) || 0); });
 					} else moaAttachments = Number(payload.uploadedCount || 0);
 					rsmEl('rsm-total-moa-attachments').textContent = String(moaAttachments || 0);
 
-				// --- build chart values (X order requested: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest)
-					// prepare a container outside the try so it's always in scope
+				
+					
 					let _chartData = { base: [], perYear: null };
 					try {
 						const totalMoa = allRows.reduce((acc,r) => acc + (truthy(r.with_moa) ? 1 : 0), 0);
 						const totalRes = allRows.reduce((acc,r) => acc + (truthy(r.with_res) ? 1 : 0), 0);
-					// keep the standalone SB-resolution stat card up to date too
+					
 					rsmEl('rsm-total-res').textContent = String(totalRes);
 						const totalExpr = allRows.reduce((acc,r) => acc + (truthy(r.with_expr) ? 1 : 0), 0);
 						const baseValuesOrdered = [ Number(moaAttachments || 0), Number(totalMoa || 0), Number(totalRes || 0), Number(totalExpr || 0) ];
@@ -1262,11 +1262,11 @@ document.addEventListener("DOMContentLoaded", function () {
 						if (payload.perYearTotals) {
 							perYearTransformed = {};
 							Object.keys(payload.perYearTotals).forEach(y => {
-								const arr = payload.perYearTotals[y] || [0,0,0,0]; // [moaY, uploadedY, exprY, resY]
+								const arr = payload.perYearTotals[y] || [0,0,0,0]; 
 								perYearTransformed[y] = [ Number(arr[1]||0), Number(arr[0]||0), Number(arr[3]||0), Number(arr[2]||0) ];
 							});
 						}
-						// postpone chart rendering until after metrics cards are visible
+						
 						_chartData = {base: baseValuesOrdered, perYear: perYearTransformed};
 					} catch(e) { console.error('modal chart error', e); }
 
@@ -1276,10 +1276,10 @@ document.addEventListener("DOMContentLoaded", function () {
 						if (typeof initOrUpdateModalStatsChart === 'function') {
 							initOrUpdateModalStatsChart(_chartData.base, _chartData.perYear);
 						}
-						// ensure chart.js recalculates size if it already existed
+						
 						try { if (modalStatsChart && typeof modalStatsChart.resize === 'function') modalStatsChart.resize(); } catch(e) {}
 
-					// load the ST listing (HTML partial) for the region
+					
                 (function renderRegionAggregatedTitles(){
                     try {
                         const stListEl = rsmEl('rsm-st-list');
@@ -1289,14 +1289,14 @@ document.addEventListener("DOMContentLoaded", function () {
                         }
                         if (!stListEl) return;
                         const rows = Array.isArray(payload.allRows) ? payload.allRows : [];
-                        // if server didn't return rows, keep the instruction shown to users
+                        
                         if (!rows.length) {
                             const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
                             stListEl.innerHTML = emptyMsg;
                             return;
                         }
 
-                        // build frequency map of titles (trim and ignore empty titles)
+                        
                         const titleMap = {};
                         rows.forEach(r => {
                             const t = (r && r.title) ? String(r.title).trim() : '';
@@ -1311,7 +1311,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             return;
                         }
 
-                        // header summary (unique / total)
+                        
                         const totalSts = rows.length;
                         const uniqueTitles = entries.length;
                         const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1329,7 +1329,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         html += '</div>';
 
                         stListEl.innerHTML = html;
-                        // delegated handler so events persist through re-renders
+                        
                         const applyHandlers = el => {
                             if (!el) return;
                             el.onclick = function(ev) {
@@ -1362,19 +1362,19 @@ document.addEventListener("DOMContentLoaded", function () {
 		} catch(e){ console.error('renderRegionStatsForImg', e); }
 	}
 
-	// slider click interactions: render region stats and ask parent to extend iframe.
-	// we still want the height animation but the image/totals/ST listing should appear
-	// immediately rather than waiting for the toggling to finish.
+	
+	
+	
 	(function(){
 		document.addEventListener('click', function(ev){
 			const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : null;
 			if (!img) return;
-			// only react when the image is inside the active (center) slide
+			
 			const slide = img.closest('.swiper-slide');
 			if (!slide || !slide.classList.contains('swiper-slide-active')) return;
-			// immediately log years for the clicked image's region
+			
 			try {
-				// regionName attribute is empty for numeric slides; derive from img if needed
+				
 				let regionName = img.getAttribute('data-region-name') || '';
 				if (!regionName) {
 					regionName = deriveRegionFromSlider(img) || '';
@@ -1427,7 +1427,7 @@ document.addEventListener("DOMContentLoaded", function () {
 							}
 						}
 					} catch(e){ console.warn('[iframe] update selects failed', e); }
-					// inform parent so filtering fields can be updated (optional)
+					
 					try {
 						window.parent.postMessage({ type:'sliderRegionData', region: regionName, years: yrs, provinces: provs, cities: cities }, '*');
 					} catch(e) { console.warn('[iframe] post sliderRegionData failed', e); }
@@ -1441,30 +1441,30 @@ document.addEventListener("DOMContentLoaded", function () {
 	})();
 
 
-	// modal close interactions removed (close button / overlay / Escape) for the slider image modal (kept as no-op)
-	// previously: closeBtn.click, overlay.click, Escape key would close the modal — disabled.
+	
+	
 
 
 
-// Chart instance for Region Stats modal (lazy-initialized)
+
 let modalStatsChart = null;
 function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
-    // helper for checkbox controls (hoisted so update branch can call it)
+    
     function refreshControls(){
         const ctrl = fetchEl('modalStatsChartControls');
         if (!ctrl || !modalStatsChart) return;
-        // intentionally left blank; no user controls
+        
         ctrl.innerHTML = '';
     }
-    // prefer local canvas; fetchEl may return parent element which can be null in embed context
+    
     let el = document.getElementById('modalStatsChart');
     if (!el) el = fetchEl('modalStatsChart');
     if (!el) { console.warn('[STsReport] modalStatsChart element not found'); return; }
-    // allow Chart.js from parent if embed context doesn’t have it
+    
     let ChartCtor = (typeof Chart !== 'undefined') ? Chart : (window.parent && window.parent.Chart);
     if (!ChartCtor) {
         console.warn('[STsReport] Chart.js not available anywhere; attempting to load dynamically');
-        // dynamically inject Chart.js and retry once loaded
+        
         const existing = document.querySelector('script[src*="chart.js"]');
         if (!existing) {
             const s = document.createElement('script');
@@ -1475,12 +1475,12 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             s.onerror = () => console.error('[STsReport] failed to load Chart.js dynamically');
             document.head.appendChild(s);
         } else {
-            // if script tag exists but library still not ready, wait briefly and retry
+            
             setTimeout(() => initOrUpdateModalStatsChart(values, perYearTotals), 200);
         }
         return;
     }
-    // X order requested by user: Uploaded MOA, Total MOA, SB Resolution, Expression of Interest
+    
     const labels = ['Uploaded MOA','Total MOA','SB Resolution','Expression of Interest'];
     const ctx = el.getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, el.height || 120);
@@ -1489,7 +1489,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
 
     function buildDatasets(baseValues, perYear) {
         const datasets = [];
-        // primary "All" series: thin blue line with light gradient fill
+        
         datasets.push({
             label: 'All',
             data: baseValues,
@@ -1498,7 +1498,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
             fill: true,
             cubicInterpolationMode: 'monotone',
             tension: 0.3,
-            pointRadius: 0,                // hide individual points for minimalist look
+            pointRadius: 0,                
             pointHoverRadius: 6,
             borderWidth: 2
         });
@@ -1570,7 +1570,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                     x: { grid: { display: false }, ticks: { color: '#374151', maxRotation: 0, autoSkip: true, font: { size: 11, weight: '600' }, padding: 8,
                         callback: function(val) {
                             const lbl = this.getLabelForValue(val) || '';
-                            // explicit mapping for each metric
+                            
                             switch(lbl) {
                                 case 'Uploaded MOA': return 'Upload MOA';
                                 case 'Total MOA': return 'Total MOA';
@@ -1583,7 +1583,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
                     y: { beginAtZero: true, suggestedMax: _suggestedMax, ticks: { precision: 0, stepSize: _step, color: '#374151', font: { size: 14, weight: '600' } }, grid: { color: 'rgba(15,23,42,0.08)' }, title: { display: true, text: 'Number of STs', color: '#6b7280', font: { size: 13, weight: '700' }, padding: { bottom: 6 } } }
                 }
             },
-            // minimalist chart – plugins for value indicators
+            
             plugins: [
                 {
                     id: 'simpleValues',
@@ -1634,14 +1634,14 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
         });
         try { createChartHitZones(modalStatsChart); } catch(e) {}
 
-        // build and render show/hide controls.  We already defined a
-        // checkbox-friendly version earlier in the outer scope, so just
-        // call that helper here instead of redefining it.  This ensures the
-        // multi‑select dropdown used throughout the modal always has checkboxes
-        // (and avoids accidentally overriding the function).
+        
+        
+        
+        
+        
         refreshControls();
 
-        // attach alpha animators + init alpha state
+        
         modalStatsChart._labelAlphas = {}; modalStatsChart._labelFadeHandles = {};
         modalStatsChart._setLabelAlpha = function(label, v) { this._labelAlphas[label] = v; };
         modalStatsChart._getLabelAlpha = function(label) { return (this._labelAlphas && typeof this._labelAlphas[label] !== 'undefined') ? this._labelAlphas[label] : 1; };
@@ -1738,11 +1738,11 @@ function createChartHitZones(chart) {
             zone.addEventListener('click', function(ev) { ev.stopPropagation(); try { const idx = Number(zone.dataset.idx || 0); chart.setActiveElements([{ datasetIndex: 0, index: idx }]); chart.tooltip.setActiveElements([{ datasetIndex: 0, index: idx }], { x: p.x, y: p.y }); chart.update(); } catch (err) {} });
             zonesContainer.appendChild(zone);
         });
-    } catch (e) { /* ignore */ }
+    } catch (e) {  }
 }
 
-	// Unified replicate popover — single component for All ST Titles and ST Titles panel
-	(function initUnifiedReplicatePopover() { return; /* modal popover removed */
+	
+	(function initUnifiedReplicatePopover() { return; 
 		if (window.__unifiedReplicatePopoverBound) return;
 		window.__unifiedReplicatePopoverBound = true;
 		const pop = document.getElementById('stReplicatePopover');
