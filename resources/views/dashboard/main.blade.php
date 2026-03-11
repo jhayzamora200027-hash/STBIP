@@ -7,8 +7,27 @@
         margin-left: 0 !important;
         margin-right: 0 !important;
         padding-left: 50px !important;
+		padding-right: 430px !important;
         width: 100vw !important;
         max-width: 100vw !important;
+		box-sizing: border-box !important;
+		overflow-x: hidden;
+	}
+
+	.stb-main-content .st-dashboard-container {
+		width: min(1500px, calc(100vw - 520px)) !important;
+		max-width: calc(100vw - 520px) !important;
+	}
+
+	@media (max-width: 1199px) {
+		.stb-main-content {
+			padding-right: 50px !important;
+		}
+
+		.stb-main-content .st-dashboard-container {
+			width: min(1500px, calc(100vw - 100px)) !important;
+			max-width: calc(100vw - 100px) !important;
+		}
     }
 </style>
 @endguest
@@ -430,14 +449,53 @@
 
 <style>
 		.st-dashboard-header .st-header-logo { width:600px !important; max-width:600px !important; height:140px !important; }
-.map-overlay-totals { position: absolute; bottom: 12px; left: -10px; right: auto; transform: none; width: auto; display: grid; grid-template-columns: 1fr; gap: 10px; background: transparent; border-radius: 12px; padding: 8px 12px 8px 26px; box-shadow: none; border: none; z-index: 5; justify-items: center; pointer-events: none; top: 70px; }
-	.map-overlay-totals .st-dashboard-card { margin: 0; box-shadow: none; background: transparent; width: 300px; }
-	.map-overlay-card { width: 150px; min-width: 150px; background: #ffffff; border: 2px solid #1e90ff; box-shadow: 0 6px 18px rgba(16,174,181,0.06), 0 0 0 6px rgba(30,144,255,0.04); border-radius: 10px; padding: 8px 6px; margin: 0; overflow: hidden; box-sizing: border-box; }
+	.st-map-card-body {
+		display: grid !important;
+		grid-template-columns: minmax(210px, 260px) minmax(430px, 1.35fr) minmax(250px, 320px);
+		gap: 24px;
+		align-items: start;
+		padding: 24px !important;
+	}
+	.st-map-figure-wrapper {
+		position: relative;
+		width: 100%;
+		max-width: 560px;
+		min-width: 0;
+		margin: 0 auto;
+		display: flex !important;
+		flex-direction: column;
+		align-items: center;
+		justify-self: center;
+	}
+	.st-map-figure-wrapper object#philippines-map {
+		width: 100%;
+		max-width: 560px;
+		height: auto;
+		display: block;
+	}
+	.map-overlay-totals {
+		position: static;
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 12px;
+		background: transparent;
+		border-radius: 12px;
+		padding: 0;
+		box-shadow: none;
+		border: none;
+		z-index: 1;
+		justify-items: stretch;
+		pointer-events: auto;
+		align-self: stretch;
+	}
+	.map-overlay-totals .st-dashboard-card { margin: 0; box-shadow: none; background: transparent; width: 100%; max-width: none; min-width: 0; }
+	.map-overlay-card { width: 100%; min-width: 0; background: #ffffff; border: 2px solid #1e90ff; box-shadow: 0 6px 18px rgba(16,174,181,0.06), 0 0 0 6px rgba(30,144,255,0.04); border-radius: 10px; padding: 8px 6px; margin: 0; overflow: hidden; box-sizing: border-box; }
 	.map-overlay-card:hover { transform: none !important; box-shadow: none !important; }
 	.map-overlay-card .card-body { padding: 6px 0; background: transparent; display: flex; align-items: center; justify-content: center; padding-top: 6px; padding-bottom: 6px; min-height: 140px; }
 	.map-overlay-totals .st-dashboard-card .card-header {
 		display: inline-block;
-		width: 150px; 
+		width: 100%; 
 		max-width: 100%;
 		margin: 0 auto -6px;
 		font-size: 0.7rem;
@@ -452,12 +510,33 @@
 		line-height: 1;
 	}
 	.map-overlay-totals .st-dashboard-card h1 { font-size: 3.2rem; margin: 8px 0 0 0; color: #1e90ff; line-height:1; font-weight:700; white-space:nowrap; display:block; transition: font-size 140ms ease; max-width: 100%; box-sizing: border-box; padding: 0 6px; overflow: hidden; text-overflow: clip; visibility: hidden; }
+	.st-map-region-list {
+		width: 100% !important;
+		max-width: none !important;
+		min-width: 0 !important;
+		align-self: stretch;
+	}
 
 	.ph-frame { position: relative; border-radius: 16px; }
 	.ph-frame::before { content: ""; position: absolute; inset: -12px; border-radius: 18px; background: linear-gradient(180deg, rgba(122,235,226,0.08), rgba(16,174,181,0.02)); border: 4px solid rgba(16,174,181,0.22); box-shadow: 0 12px 36px rgba(16,174,181,0.10); pointer-events: none; z-index: -1; }
 
+	@media (max-width: 1199.98px) {
+	  .st-map-card-body {
+		grid-template-columns: minmax(190px, 220px) minmax(320px, 1.15fr) minmax(220px, 280px);
+		gap: 18px;
+	  }
+	}
 	@media (max-width: 991.98px) {
-	  .map-overlay-totals { position: static; width: 100%; grid-template-columns: repeat(2, 1fr); margin-top: 12px; box-shadow: none; border: none; background: transparent; padding-left:12px; }}
+	  .st-map-card-body {
+		grid-template-columns: 1fr;
+		gap: 18px;
+	  }
+	  .map-overlay-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	  .st-map-figure-wrapper,
+	  .st-map-region-list {
+		max-width: none !important;
+	  }
+	}
 @media (min-width: 992px) {
   .st-totals-row > .col-lg-4:nth-child(1),
   .st-totals-row > .col-lg-4:nth-child(2) { display: none !important; }
@@ -465,7 +544,7 @@
 }
 
 @media (max-width: 991.98px) {
-  .map-overlay-totals { position: static; grid-template-columns: repeat(2, 1fr); margin-top: 12px; box-shadow: none; border: none; background: transparent; }
+  .map-overlay-totals { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; box-shadow: none; border: none; background: transparent; }
   .map-overlay-totals .st-dashboard-card .card-header { color: inherit; }
 }
 </style>
@@ -546,14 +625,8 @@
 					<div class="col-12 p-0">
 						<div class="card st-dashboard-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 							<div class="card-header text-center">PHILIPPINES MAP & REGIONS</div>
-								<div class="card-body st-map-card-body" style="padding: 24px 24px; display:flex; flex-wrap:wrap; gap:150px; justify-content:flex-end; align-items:flex-start; padding-left: 435px;">
-									<div class="st-map-figure-wrapper" style="position:relative; flex: 0 0 420px; max-width:420px; width:420px; display:flex; flex-direction:column; align-items:center;">
-										<object id="philippines-map" data="{{ asset('images/philippines.svg') }}" type="image/svg+xml" style="width:100%; max-width:420px; height:auto; display:block;"></object>
-										<div id="map-region-label" style="margin-top:10px; font-size:0.95rem; font-weight:600; color:#10aeb5; text-align:center; min-height:22px;">
-											Hover a region on the map
-										</div>
-									</div>
-							<div class="map-overlay-totals" aria-hidden="false">
+								<div class="card-body st-map-card-body">
+									<div class="map-overlay-totals" aria-hidden="false">
 								<div class="card st-dashboard-card text-center map-overlay-card">
 									<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
 									<div class="card-body">
@@ -597,7 +670,14 @@
 								</div>
 							</div>
 
-							<div id="map-region-list" class="st-map-region-list" style="flex: 0 0 360px; max-width:360px; width:360px; align-self:stretch;"></div>
+									<div class="st-map-figure-wrapper">
+										<object id="philippines-map" data="{{ asset('images/philippines.svg') }}" type="image/svg+xml"></object>
+										<div id="map-region-label" style="margin-top:10px; font-size:0.95rem; font-weight:600; color:#10aeb5; text-align:center; min-height:22px;">
+											Hover a region on the map
+										</div>
+									</div>
+
+									<div id="map-region-list" class="st-map-region-list"></div>
 								</div>
 							</div>
 						</div>
@@ -638,102 +718,283 @@ if (!document.getElementById('catListTooltip')) {
 		<div class="col-12 p-0">
 			<div class="card st-dashboard-card year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
 				<div class="card-header text-center">Total Social Technologies</div>
-				<div class="card-body" style="padding: 32px 16px; left: 100px;">
-<div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: flex-start; width: 100%; flex-wrap:nowrap; gap:24px; overflow-x:auto; overflow-y:hidden; height:450px;">
-
-	<div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: nowrap; overflow-x:auto; overflow-y:hidden; height: 450px;">
-        <div class="small-cards-grid" style="flex: 0 0 420px;">
-            <div id="card1" class="small-card">
+				<div class="card-body total-st-body">
+<div class="formal-st-overview">
+	<div class="formal-st-top-grid">
+		<div class="small-cards-grid formal-st-metrics">
+			<div id="card1" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View ongoing ST listing">
+				<div class="formal-metric-kicker">Operational Status</div>
 				<div class="card-value">{{ $totalOngoingStatus ?? 0 }}</div>
                 <div class="card-label">Ongoing STs</div>
+                <div class="formal-metric-note">Programs with continuing implementation records.</div>
             </div>
-            <div id="card2" class="small-card">
+			<div id="card2" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View dissolved ST listing">
+                <div class="formal-metric-kicker">Operational Status</div>
 				<div class="card-value">{{ $totalDissolvedStatus ?? 0 }}</div>
                 <div class="card-label">Dissolved STs</div>
+                <div class="formal-metric-note">Programs tagged as inactive or dissolved.</div>
             </div>
-            <div id="card3" class="small-card">
+			<div id="card3" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View replicated ST listing">
+                <div class="formal-metric-kicker">Adoption Status</div>
                 <div class="card-value">0</div>
                 <div class="card-label">Replicated STs</div>
+                <div class="formal-metric-note">Titles with documented replication activity.</div>
             </div>
-            <div id="card4" class="small-card">
+			<div id="card4" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View adopted ST listing">
+                <div class="formal-metric-kicker">Adoption Status</div>
                 <div class="card-value">0</div>
                 <div class="card-label">Adopted STs</div>
+                <div class="formal-metric-note">Titles formally adopted in target areas.</div>
             </div>
         </div>
 
-        <div style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 20px;">
-            <div style="height: 430px; display: flex; align-items: center; justify-content: center;">
-                <canvas id="onGoing" style="width: 800px; height: 430px; padding-left: 50px;"></canvas>
+        <div class="formal-st-chart-stack">
+			<div class="formal-chart-panel formal-chart-panel-wide">
+				<div class="formal-panel-header">
+					<div>
+						<div class="formal-panel-eyebrow">Trend Overview</div>
+						<div class="formal-panel-title">Status Movement Over Time</div>
+					</div>
+				</div>
+                <div class="formal-chart-canvas formal-chart-canvas-large">
+                    <canvas id="onGoing" style="width: 800px; height: 430px; padding-left: 50px;"></canvas>
+                </div>
             </div>
 
-            <div style="width: 300px; height: 200px; display: flex; align-items: center; justify-content: center;">
-                <canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
+            <div class="formal-chart-panel formal-chart-panel-compact d-none">
+                <div class="formal-panel-header">
+					<div>
+						<div class="formal-panel-eyebrow">Reference</div>
+						<div class="formal-panel-title">Inactive Trend Snapshot</div>
+					</div>
+				</div>
+                <div class="formal-chart-canvas">
+                    <canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
+                </div>
             </div>
         </div>
 	</div>
-</div>
 
-<div class="st-second-row" style="margin-top:24px; width:100%; display:flex; justify-content:center;">
-	<div class="year-chart-wrap" style="width:100%; max-width:980px; min-width: 980px; height:360px; display:flex; align-items:center; justify-content:space-between; gap:24px;">
-		<div style="flex: 1 1 auto; min-width:760; height:100%; display:flex; align-items:center; justify-content:center;">
-			<canvas id="yearMoaBar" style="width: 760px !imporant; height: 360px;"></canvas>
-		</div>
-		<div style="flex: 0 0 260px; max-width:260px; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:space-between;">
-			<div style="flex:1 1 0; display:flex; align-items:center; justify-content:center;">
-				<canvas id="ongoingDoughnut" style="width: 220px; height: 220px;"></canvas>
+<div class="st-second-row formal-dashboard-row">
+	<div class="year-chart-wrap formal-second-row-wrap">
+		<div class="formal-chart-panel formal-chart-panel-yearly">
+			<div class="formal-panel-header">
+				<div>
+					<div class="formal-panel-eyebrow">Distribution</div>
+					<div class="formal-panel-title">Year of MOA Count</div>
+				</div>
+			</div>
+			<div class="formal-chart-canvas formal-chart-canvas-medium">
+				<canvas id="yearMoaBar" style="width: 760px !imporant; height: 360px;"></canvas>
+			</div>
+			<div class="formal-year-summary">
+				<div class="formal-year-summary-grid">
+					<div class="formal-year-stat">
+						<div class="formal-year-stat-label">Peak Year</div>
+						<div class="formal-year-stat-value" id="yearSummaryPeakYear">-</div>
+						<div class="formal-year-stat-meta" id="yearSummaryPeakCount">No records yet</div>
+					</div>
+					<div class="formal-year-stat">
+						<div class="formal-year-stat-label">Average Volume</div>
+						<div class="formal-year-stat-value" id="yearSummaryAverage">-</div>
+						<div class="formal-year-stat-meta">Average records per year</div>
+					</div>
+					<div class="formal-year-stat">
+						<div class="formal-year-stat-label">Latest Year</div>
+						<div class="formal-year-stat-value" id="yearSummaryLatestYear">-</div>
+						<div class="formal-year-stat-meta" id="yearSummaryLatestCount">No records yet</div>
+					</div>
+					<div class="formal-year-stat">
+						<div class="formal-year-stat-label">Coverage Span</div>
+						<div class="formal-year-stat-value" id="yearSummarySpan">-</div>
+						<div class="formal-year-stat-meta">Years represented in MOA data</div>
+					</div>
+				</div>
 			</div>
 		</div>
-		<div style="flex: 0 0 260px; max-width:260px; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:space-between;">
-			<div style="flex:1 1 0; display:flex; align-items:center; justify-content:center;">
-				<canvas id="replicatedDoughnut" style="width: 220px; height: 220px;"></canvas>
+		<div class="formal-mini-panel-group">
+			<div class="formal-chart-panel formal-chart-panel-mini">
+				<div class="formal-panel-header formal-panel-header-centered">
+					<div>
+						<div class="formal-panel-eyebrow">Share Analysis</div>
+						<div class="formal-panel-title">Ongoing vs Dissolved</div>
+					</div>
+				</div>
+				<div class="formal-chart-canvas formal-chart-canvas-mini">
+					<canvas id="ongoingDoughnut" style="width: 220px; height: 220px;"></canvas>
+				</div>
+				<div class="formal-share-summary">
+					<div class="formal-share-metrics">
+						<div class="formal-share-stat formal-share-stat-teal">
+							<div class="formal-share-stat-label">Ongoing</div>
+							<div class="formal-share-stat-value" id="ongoingShareCount">{{ $totalOngoingStatus ?? 0 }}</div>
+							<div class="formal-share-stat-meta" id="ongoingSharePercent">0%</div>
+						</div>
+						<div class="formal-share-stat formal-share-stat-rose">
+							<div class="formal-share-stat-label">Dissolved</div>
+							<div class="formal-share-stat-value" id="dissolvedShareCount">{{ $totalDissolvedStatus ?? 0 }}</div>
+							<div class="formal-share-stat-meta" id="dissolvedSharePercent">0%</div>
+						</div>
+					</div>
+					<div class="formal-share-insight">
+						<div class="formal-share-insight-label">Current lead</div>
+						<div class="formal-share-insight-value" id="ongoingShareLead">Awaiting summary</div>
+					</div>
+				</div>
+			</div>
+			<div class="formal-chart-panel formal-chart-panel-mini">
+				<div class="formal-panel-header formal-panel-header-centered">
+					<div>
+						<div class="formal-panel-eyebrow">Share Analysis</div>
+						<div class="formal-panel-title">Replicated vs Adopted</div>
+					</div>
+				</div>
+				<div class="formal-chart-canvas formal-chart-canvas-mini">
+					<canvas id="replicatedDoughnut" style="width: 220px; height: 220px;"></canvas>
+				</div>
+				<div class="formal-share-summary">
+					<div class="formal-share-metrics">
+						<div class="formal-share-stat formal-share-stat-blue">
+							<div class="formal-share-stat-label">Replicated</div>
+							<div class="formal-share-stat-value" id="replicatedShareCount">0</div>
+							<div class="formal-share-stat-meta" id="replicatedSharePercent">0%</div>
+						</div>
+						<div class="formal-share-stat formal-share-stat-gold">
+							<div class="formal-share-stat-label">Adopted</div>
+							<div class="formal-share-stat-value" id="adoptedShareCount">0</div>
+							<div class="formal-share-stat-meta" id="adoptedSharePercent">0%</div>
+						</div>
+					</div>
+					<div class="formal-share-insight">
+						<div class="formal-share-insight-label">Current lead</div>
+						<div class="formal-share-insight-value" id="replicatedShareLead">Awaiting summary</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
 
-<div class="st-third-row" style="margin-top:24px; width:100%; display:flex; justify-content:flex-start;">
-	<div style="width:100%; max-width:1400px; display:flex; flex-direction:row; align-items:flex-start; justify-content:flex-end; gap:32px; margin-right: 200px;">
-		<div style="flex: 0 0 420px; max-width:420px; min-width:380px; height:420px; display:flex;">
-			<canvas id="regionYearLines" style="width: 400px; height: 380px;"></canvas>
-		</div>
-		<div style="flex: 0 0 420px; max-width:420px; min-width:380px; height:420px; display:flex; align-items:center; justify-content:center; position:relative;">
-			<canvas id="stTitlesDoughnutCopy" style="position:relative; z-index:2; width: 360px; height: 360px; max-width: 380px; min-width: 320px;"></canvas>
-			<canvas id="stTitlesDoughnutLowCopy" style="position:absolute; z-index:1; width: 190px; height: 190px; max-width: 210px; min-width: 170px; top:50%; left:50%; transform:translate(-50%, -50%);"></canvas>
-		</div>
-		<div style="flex: 0 0 360px; max-width:360px; min-width:320px; height:420px; display:flex; align-items:flex-start; justify-content:center;">
-			<div style="width:100%; height:100%; display:flex; flex-direction:column; border: solid 1px #ccc; border-radius: 14px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-				<div style="font-weight:600; color:#06306e; font-size:1.05rem; margin-bottom:6px;">ST Titles</div>
-				<div id="stCategoryListCopy" style="flex:1 1 auto; max-height:380px; overflow-y:auto;"></div>
+<div class="st-third-row formal-dashboard-row">
+	<div class="formal-third-row-grid">
+		<div class="formal-chart-panel formal-chart-panel-region">
+			<div class="formal-panel-header">
+				<div>
+					<div class="formal-panel-eyebrow">Regional Pattern</div>
+					<div class="formal-panel-title">Regional Year Heatmap</div>
+				</div>
+			</div>
+			<div class="formal-chart-canvas formal-chart-canvas-region">
+				<canvas id="regionYearLines" style="width: 100%; height: 100%;"></canvas>
 			</div>
 		</div>
-		
-		
+		<div class="formal-linked-st-panels">
+			<div class="formal-chart-panel formal-chart-panel-doughnut formal-linked-panel-start">
+				<div class="formal-panel-header">
+					<div>
+						<div class="formal-panel-eyebrow">Title Composition</div>
+						<div class="formal-panel-title">Share of ST Titles</div>
+					</div>
+				</div>
+				<div class="formal-chart-canvas formal-chart-canvas-doughnut">
+					<div class="formal-doughnut-stage">
+						<canvas id="stTitlesDoughnutCopy" class="formal-doughnut-outer"></canvas>
+						<canvas id="stTitlesDoughnutLowCopy" class="formal-doughnut-inner"></canvas>
+					</div>
+				</div>
+			</div>
+			<div class="formal-list-panel formal-linked-panel-end">
+				<div class="formal-panel-header formal-panel-header-list">
+					<div>
+						<div class="formal-panel-eyebrow">Reference Listing</div>
+						<div class="formal-panel-title">ST Titles</div>
+					</div>
+					<div class="formal-panel-caption">Ordered by share of total records</div>
+				</div>
+				<div id="stCategoryListCopy" class="formal-st-category-list"></div>
+			</div>
+		</div>
 	</div>
 </div>
 
-<div class="st-fourth-row" style="margin-top:24px; width:100%; display:flex; justify-content:center; margin-left: -100px;">
-	<div class="row mt-4 justify-content-center" style="width:1400px;">
+	<div class="formal-insight-row formal-dashboard-row">
+		<div class="formal-insight-grid">
+			<div class="formal-chart-panel formal-chart-panel-docflow">
+				<div class="formal-panel-header">
+					<div>
+						<div class="formal-panel-eyebrow">Overall Totals</div>
+						<div class="formal-panel-title">Social Technology Totals Snapshot</div>
+					</div>
+					<div class="formal-panel-caption">Expression of interest, resolution, agreement, status, replication, and adoption totals</div>
+				</div>
+				<div class="formal-chart-canvas formal-chart-canvas-docflow">
+					<canvas id="documentCoverageChart" style="width: 100%; height: 100%;"></canvas>
+				</div>
+				<div class="formal-doc-summary">
+					<div class="formal-doc-summary-item">
+						<div class="formal-doc-summary-label">Highest Coverage</div>
+						<div class="formal-doc-summary-value" id="docCoverageLeader">-</div>
+					</div>
+					<div class="formal-doc-summary-item">
+						<div class="formal-doc-summary-label">Lowest Coverage</div>
+						<div class="formal-doc-summary-value" id="docCoverageLowest">-</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="formal-list-panel formal-ranking-panel">
+				<div class="formal-panel-header formal-panel-header-list">
+					<div>
+						<div class="formal-panel-eyebrow">Geographic Reach</div>
+						<div class="formal-panel-title">Top Regions</div>
+					</div>
+					<div class="formal-panel-caption">Highest record concentration</div>
+				</div>
+				<div id="topRegionsList" class="formal-ranking-list"></div>
+			</div>
+
+			<div class="formal-list-panel formal-ranking-panel">
+				<div class="formal-panel-header formal-panel-header-list">
+					<div>
+						<div class="formal-panel-eyebrow">Local Concentration</div>
+						<div class="formal-panel-title">Top Provinces</div>
+					</div>
+					<div class="formal-panel-caption">Most recorded ST locations</div>
+				</div>
+				<div id="topProvincesList" class="formal-ranking-list"></div>
+			</div>
+		</div>
+	</div>
+
+<div class="st-fourth-row formal-dashboard-row" style="margin-top:24px;">
+	<div class="row mt-4 justify-content-center" style="width:min(1400px, 100%); margin:0;">
 		<div class="col-12">
 			<div class="card st-dashboard-card st-title-listing-card flex-fill">
 				<div class="card-header text-center">SOCIAL TECHNOLOGIES</div>
-				<div class="card-body" style="padding: 20px 4px;">
-					<div class="mb-2" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-						<div style="flex:1 1 260px; min-width:220px;">
-							<input type="text" id="title-listing-search" class="form-control" placeholder="Search ST title" />
+				<div class="card-body social-listing-body">
+					<div class="social-listing-toolbar">
+						<div class="social-listing-heading">
+							<div class="social-listing-eyebrow">Directory View</div>
+							<div class="social-listing-title">Search and review Social Technology implementations</div>
 						</div>
-						<div style="flex:0 0 170px; min-width:150px;">
-							<select id="title-listing-status-filter" class="form-control">
+						<div class="social-listing-controls">
+							<div class="social-listing-control social-listing-control-search">
+								<input type="text" id="title-listing-search" class="form-control social-listing-input" placeholder="Search ST title" />
+							</div>
+							<div class="social-listing-control">
+								<select id="title-listing-status-filter" class="form-control social-listing-select">
 								<option value="">All statuses</option>
 								<option value="ongoing">Ongoing STs</option>
 								<option value="dissolved">Dissolved / Inactive STs</option>
 							</select>
-						</div>
-						<div style="flex:0 0 170px; min-width:150px;">
-							<select id="title-listing-adopt-filter" class="form-control">
+							</div>
+							<div class="social-listing-control">
+								<select id="title-listing-adopt-filter" class="form-control social-listing-select">
 								<option value="">All types</option>
 								<option value="replicated">With Replicated</option>
 								<option value="adopted">With Adopted</option>
 							</select>
+							</div>
 						</div>
 					</div>
 					<div id="title-listing-table-container"></div>
@@ -756,43 +1017,1034 @@ if (!document.getElementById('catListTooltip')) {
 </div>
 
 <style>
+.total-st-body {
+	padding: 28px 20px 24px 20px !important;
+}
+
+.formal-st-overview {
+	display: grid;
+	gap: 24px;
+}
+
+.formal-st-top-grid {
+	display: grid;
+	grid-template-columns: 420px minmax(0, 1fr);
+	gap: 24px;
+	align-items: stretch;
+}
+
+.formal-st-metrics {
+	height: 100%;
+}
+
 .small-cards-grid {
     display: grid;
-    grid-template-columns: repeat(2, 210px);
-    grid-template-rows: repeat(2, 210px);
-    gap: 10px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+	width: 100%;
+	min-height: 430px;
 }
 .small-card {
-    width: 200px;
-    height: 200px;
-    background: #f8fafc;
-    border: 1px solid #ccc;
-    border-radius: 12px;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid rgba(14, 75, 131, 0.12);
+    border-radius: 18px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(16,174,181,0.05);
-    transition: background 0.2s;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 18px 18px 16px 18px;
+    box-shadow: 0 14px 32px rgba(8, 43, 81, 0.06);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .small-card:hover {
-    background: #eaf4fa;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 18px 36px rgba(8, 43, 81, 0.1);
+}
+.formal-metric-card-clickable {
+	cursor: pointer;
+}
+
+.formal-metric-card-clickable:focus-visible {
+	outline: 3px solid rgba(59, 130, 246, 0.28);
+	outline-offset: 3px;
+}
+.formal-metric-kicker {
+	margin-bottom: 0.9rem;
+	color: #6d8296;
+	font-size: 0.72rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 }
 .small-card .card-value {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 2.3rem;
+    font-weight: 800;
     color: #06306e;
+    letter-spacing: -0.04em;
 }
 .small-card .card-label {
-    margin-top: 6px;
+    margin-top: 0.45rem;
     font-size: 1rem;
-    color: #222;
-    text-align: center;
+    color: #16324f;
+    text-align: left;
+    font-weight: 700;
+}
+.formal-metric-note {
+	margin-top: auto;
+	padding-top: 0.95rem;
+	color: #6c7f91;
+	font-size: 0.86rem;
+	line-height: 1.45;
 }
 /* make dissolved count red */
 #card2 .card-value {
     color: #ff4d4f;
+}
+
+#card1 { border-top: 4px solid #2e6fd8; }
+#card2 { border-top: 4px solid #dd6378; }
+#card3 { border-top: 4px solid #1db2a6; }
+#card4 { border-top: 4px solid #d6a638; }
+
+.formal-st-chart-stack,
+.formal-third-row-grid,
+.formal-second-row-wrap,
+.formal-mini-panel-group {
+	display: grid;
+	gap: 24px;
+}
+
+.formal-st-chart-stack {
+	grid-template-columns: 1fr;
+	height: 100%;
+}
+
+.formal-second-row-wrap {
+	grid-template-columns: minmax(0, 1fr) 260px 260px;
+	width: 100%;
+	max-width: 1480px;
+	align-items: start;
+}
+
+.formal-third-row-grid {
+	grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.85fr);
+	width: 100%;
+	max-width: 100%;
+	justify-content: stretch;
+	align-items: stretch;
+}
+
+.formal-insight-row {
+	margin-top: 24px;
+}
+
+.formal-insight-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.28fr) minmax(300px, 0.86fr) minmax(300px, 0.86fr);
+	gap: 24px;
+	width: 100%;
+	max-width: 100%;
+	align-items: stretch;
+}
+
+.formal-linked-st-panels {
+	display: grid;
+	grid-template-columns: minmax(0, 1.06fr) minmax(340px, 0.94fr);
+	gap: 0;
+	min-width: 0;
+	border: 1px solid rgba(14, 75, 131, 0.1);
+	border-radius: 24px;
+	background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.98) 100%);
+	box-shadow: 0 16px 36px rgba(8, 43, 81, 0.08);
+	overflow: hidden;
+	position: relative;
+}
+
+.formal-mini-panel-group {
+	grid-template-columns: 1fr 1fr;
+}
+
+.formal-dashboard-row {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.formal-chart-panel,
+.formal-list-panel {
+	border: 1px solid rgba(14, 75, 131, 0.1);
+	border-radius: 20px;
+	background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.98) 100%);
+	box-shadow: 0 16px 36px rgba(8, 43, 81, 0.08);
+	padding: 18px 18px 16px;
+}
+
+.formal-chart-panel-region,
+.formal-chart-panel-doughnut,
+.formal-list-panel {
+	min-width: 0;
+}
+
+.formal-linked-st-panels .formal-chart-panel-doughnut,
+.formal-linked-st-panels .formal-list-panel {
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	min-height: 100%;
+	padding: 18px 18px 16px;
+	position: relative;
+}
+
+.formal-linked-panel-start::after {
+	content: '';
+	position: absolute;
+	top: 20px;
+	right: 0;
+	bottom: 20px;
+	width: 1px;
+	background: linear-gradient(180deg, rgba(14, 75, 131, 0) 0%, rgba(14, 75, 131, 0.12) 12%, rgba(14, 75, 131, 0.12) 88%, rgba(14, 75, 131, 0) 100%);
+}
+
+.formal-linked-panel-end {
+	padding-left: 20px !important;
+}
+
+.formal-chart-panel-wide {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.formal-chart-panel-docflow,
+.formal-ranking-panel {
+	min-width: 0;
+}
+
+.formal-chart-panel-mini {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+}
+
+.formal-chart-panel-yearly {
+	align-self: start;
+}
+
+.formal-year-summary {
+	display: grid;
+	gap: 14px;
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid rgba(14, 75, 131, 0.08);
+}
+
+.formal-year-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.formal-year-stat {
+	border-radius: 14px;
+	padding: 12px 14px;
+	background: #fff;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.04);
+}
+
+.formal-year-stat-label {
+	color: #6d8296;
+	font-size: 0.76rem;
+	font-weight: 800;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	margin-bottom: 0.35rem;
+}
+
+.formal-year-stat-value {
+	color: #16324f;
+	font-size: 1.3rem;
+	font-weight: 800;
+	line-height: 1.15;
+}
+
+.formal-year-stat-meta {
+	margin-top: 0.35rem;
+	color: #62778d;
+	font-size: 0.84rem;
+	font-weight: 700;
+	line-height: 1.45;
+}
+
+.formal-panel-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.9rem;
+}
+
+.formal-panel-header-centered {
+	justify-content: center;
+	text-align: center;
+}
+
+.formal-panel-header-list {
+	align-items: flex-end;
+}
+
+.formal-panel-eyebrow {
+	color: #6d8296;
+	font-size: 0.72rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-bottom: 0.3rem;
+}
+
+.formal-panel-title {
+	color: #16324f;
+	font-size: 1.05rem;
+	font-weight: 800;
+	line-height: 1.35;
+}
+
+.formal-panel-caption {
+	color: #6c7f91;
+	font-size: 0.82rem;
+	font-weight: 600;
+}
+
+.formal-chart-canvas {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-height: 220px;
+	border-radius: 16px;
+	background: #fbfdff;
+	border: 1px solid rgba(14, 75, 131, 0.06);
+}
+
+.formal-chart-canvas-large {
+	min-height: 430px;
+	flex: 1 1 auto;
+}
+
+.formal-chart-canvas-medium {
+	min-height: 360px;
+}
+
+.formal-chart-canvas-docflow {
+	min-height: 360px;
+}
+
+.formal-chart-canvas-mini {
+	min-height: 250px;
+}
+
+.formal-share-summary {
+	display: grid;
+	gap: 14px;
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid rgba(14, 75, 131, 0.08);
+}
+
+.formal-share-metrics {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+.formal-share-stat {
+	border-radius: 14px;
+	padding: 12px 12px 10px;
+	background: #fff;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.04);
+}
+
+.formal-share-stat-teal {
+	border-top: 3px solid rgb(75, 192, 192);
+}
+
+.formal-share-stat-rose {
+	border-top: 3px solid rgb(255, 99, 132);
+}
+
+.formal-share-stat-blue {
+	border-top: 3px solid rgb(54, 162, 235);
+}
+
+.formal-share-stat-gold {
+	border-top: 3px solid rgb(255, 205, 86);
+}
+
+.formal-share-stat-label {
+	color: #6d8296;
+	font-size: 0.76rem;
+	font-weight: 800;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	margin-bottom: 0.35rem;
+}
+
+.formal-share-stat-value {
+	color: #16324f;
+	font-size: 1.45rem;
+	font-weight: 800;
+	line-height: 1.15;
+}
+
+.formal-share-stat-meta {
+	margin-top: 0.35rem;
+	color: #62778d;
+	font-size: 0.85rem;
+	font-weight: 700;
+}
+
+.formal-share-insight {
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: linear-gradient(180deg, #f8fbff 0%, #f2f7fd 100%);
+	border: 1px solid rgba(14, 75, 131, 0.08);
+}
+
+.formal-share-insight-label {
+	color: #6d8296;
+	font-size: 0.74rem;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	margin-bottom: 0.35rem;
+}
+
+.formal-share-insight-value {
+	color: #16324f;
+	font-size: 0.92rem;
+	font-weight: 700;
+	line-height: 1.45;
+}
+
+.formal-chart-canvas-region,
+.formal-chart-canvas-doughnut {
+	min-height: 380px;
+}
+
+.formal-chart-canvas-region canvas,
+.formal-chart-canvas-doughnut > canvas:first-child {
+	width: 100% !important;
+	height: 100% !important;
+}
+
+.formal-chart-canvas-doughnut {
+	overflow: hidden;
+}
+
+.formal-doughnut-stage {
+	position: relative;
+	width: min(100%, 420px);
+	aspect-ratio: 1 / 1;
+	margin: 0 auto;
+	flex: 0 0 auto;
+}
+
+.formal-doughnut-stage canvas {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+.formal-doughnut-outer {
+	z-index: 2;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.formal-doughnut-inner {
+	z-index: 1;
+	width: 58% !important;
+	height: 58% !important;
+	min-width: 205px;
+	min-height: 205px;
+	max-width: 270px;
+	max-height: 270px;
+}
+
+.formal-list-panel {
+	display: flex;
+	flex-direction: column;
+	min-height: 420px;
+}
+
+.formal-ranking-list {
+	display: grid;
+	gap: 12px;
+	min-height: 0;
+}
+
+.formal-ranking-item {
+	display: grid;
+	grid-template-columns: 50px minmax(0, 1fr) auto;
+	gap: 12px;
+	align-items: center;
+	padding: 12px 14px;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	border-radius: 14px;
+	background: #fff;
+	box-shadow: 0 8px 20px rgba(8, 43, 81, 0.04);
+}
+
+.formal-ranking-rank {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 999px;
+	background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+	color: #1d4ed8;
+	font-size: 0.88rem;
+	font-weight: 800;
+}
+
+.formal-ranking-main {
+	min-width: 0;
+}
+
+.formal-ranking-label {
+	color: #16324f;
+	font-size: 0.95rem;
+	font-weight: 800;
+	line-height: 1.35;
+}
+
+.formal-ranking-meta {
+	margin-top: 0.2rem;
+	color: #6b7f92;
+	font-size: 0.84rem;
+	font-weight: 600;
+}
+
+.formal-ranking-value {
+	text-align: right;
+	color: #0f766e;
+	font-size: 0.95rem;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+.formal-doc-summary {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid rgba(14, 75, 131, 0.08);
+}
+
+.formal-doc-summary-item {
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: #fff;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.04);
+}
+
+.formal-doc-summary-label {
+	color: #6d8296;
+	font-size: 0.75rem;
+	font-weight: 800;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	margin-bottom: 0.3rem;
+}
+
+.formal-doc-summary-value {
+	color: #16324f;
+	font-size: 0.94rem;
+	font-weight: 800;
+	line-height: 1.4;
+}
+
+.social-listing-body {
+	padding: 20px 16px 16px !important;
+}
+
+.social-listing-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 18px;
+	margin-bottom: 16px;
+	padding-bottom: 14px;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+	flex-wrap: wrap;
+}
+
+.social-listing-heading {
+	min-width: 220px;
+}
+
+.social-listing-eyebrow {
+	color: #6d8296;
+	font-size: 0.74rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-bottom: 0.25rem;
+}
+
+.social-listing-title {
+	color: #16324f;
+	font-size: 1rem;
+	font-weight: 800;
+	line-height: 1.4;
+}
+
+.social-listing-controls {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+	flex: 1 1 720px;
+}
+
+.social-listing-control {
+	flex: 0 0 180px;
+	min-width: 160px;
+}
+
+.social-listing-control-search {
+	flex: 1 1 320px;
+	min-width: 240px;
+}
+
+.social-listing-input,
+.social-listing-select {
+	min-height: 44px;
+	border-radius: 12px;
+	border: 1px solid rgba(148, 163, 184, 0.22);
+	background: #fbfdff;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+	color: #1f3b57;
+	font-weight: 600;
+}
+
+.social-listing-summary {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.social-listing-stat {
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+	border: 1px solid rgba(148, 163, 184, 0.16);
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.04);
+}
+
+.social-listing-stat-label {
+	color: #6d8296;
+	font-size: 0.75rem;
+	font-weight: 800;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	margin-bottom: 0.3rem;
+}
+
+.social-listing-stat-value {
+	color: #16324f;
+	font-size: 1.28rem;
+	font-weight: 800;
+	line-height: 1.15;
+}
+
+.social-listing-scroll {
+	overflow-y: auto;
+	overflow-x: hidden;
+	max-height: 440px;
+	border: 1px solid rgba(148, 163, 184, 0.16);
+	border-radius: 18px;
+	background: #fff;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.social-listing-table {
+	width: 100%;
+	min-width: 100%;
+	table-layout: fixed;
+	border-collapse: separate;
+	border-spacing: 0;
+	margin: 0;
+	background: #fff;
+}
+
+.social-listing-col-title {
+	width: 42%;
+}
+
+.social-listing-col-province {
+	width: 16%;
+}
+
+.social-listing-col-city {
+	width: 16%;
+}
+
+.social-listing-col-status {
+	width: 17%;
+}
+
+.social-listing-col-attachment {
+	width: 9%;
+}
+
+.social-listing-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: 12px 14px;
+	background: #f8fbff;
+	color: #50657a;
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+	white-space: normal;
+	line-height: 1.3;
+}
+
+.social-listing-table tbody td {
+	padding: 11px 12px;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+	color: #1f3b57;
+	font-size: 0.94rem;
+	vertical-align: top;
+	overflow: hidden;
+}
+
+.social-listing-table tbody tr:nth-child(even) {
+	background: #fcfdff;
+}
+
+.social-listing-table tbody tr:hover {
+	background: #f4f9ff;
+}
+
+.social-listing-title-cell {
+	min-width: 0;
+}
+
+.social-listing-title-text {
+	color: #16324f;
+	font-weight: 700;
+	line-height: 1.5;
+	word-break: break-word;
+}
+
+.social-listing-location-text {
+	color: #334155;
+	font-weight: 600;
+	word-break: break-word;
+}
+
+.social-listing-status-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	gap: 6px;
+	flex-wrap: nowrap;
+	min-height: 56px;
+}
+
+.social-listing-pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 5px 10px;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.social-listing-pill-status-ongoing {
+	background: #e8fbf2;
+	color: #0f8c5c;
+	border: 1px solid rgba(16, 185, 129, 0.18);
+}
+
+.social-listing-pill-status-dissolved {
+	background: #fff1f2;
+	color: #d7263d;
+	border: 1px solid rgba(244, 63, 94, 0.16);
+}
+
+.social-listing-pill-type {
+	background: #eff6ff;
+	color: #1d4ed8;
+	border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+.social-listing-pill-type-adopted {
+	background: #fff9e8;
+	color: #b7791f;
+	border: 1px solid rgba(245, 158, 11, 0.16);
+}
+
+.social-listing-attach {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+}
+
+.social-listing-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+	border: 1px solid rgba(59, 130, 246, 0.15);
+	background: #fff;
+	color: #1d4ed8;
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.05);
+}
+
+.social-listing-action.social-listing-action-view {
+	color: #0f766e;
+	border-color: rgba(16, 185, 129, 0.18);
+}
+
+.social-listing-empty {
+	padding: 18px;
+	text-align: center;
+	color: #64748b;
+	font-weight: 700;
+}
+
+.social-listing-pagination {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 14px;
+	background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+	border: 1px solid rgba(148, 163, 184, 0.16);
+	border-radius: 16px;
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.04);
+	margin-top: 16px;
+	padding: 10px 12px;
+	flex-wrap: wrap;
+}
+
+.social-listing-pagination-btn {
+	border: none;
+	background: linear-gradient(90deg, #06306e 0%, #124c9f 100%);
+	color: #fff;
+	font-weight: 800;
+	border-radius: 10px;
+	padding: 9px 20px;
+	font-size: 0.98rem;
+	box-shadow: 0 10px 24px rgba(8, 43, 81, 0.12);
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.social-listing-pagination-btn:disabled {
+	background: #e2e8f0;
+	color: #94a3b8;
+	box-shadow: none;
+	cursor: not-allowed;
+}
+
+.social-listing-pagination-btn:not(:disabled):hover {
+	transform: translateY(-1px);
+	box-shadow: 0 14px 28px rgba(8, 43, 81, 0.14);
+}
+
+.social-listing-pagination-indicator {
+	color: #16324f;
+	font-size: 0.96rem;
+	font-weight: 800;
+	min-width: 120px;
+	text-align: center;
+}
+
+.st-summary-modal-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 14px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid rgba(14, 75, 131, 0.08);
+	flex-wrap: wrap;
+}
+
+.st-summary-modal-meta {
+	color: #64748b;
+	font-size: 0.92rem;
+	font-weight: 700;
+}
+
+.st-summary-table-wrap {
+	max-height: 62vh;
+	overflow: auto;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	border-radius: 14px;
+	background: #fff;
+}
+
+.st-summary-table {
+	width: 100%;
+	min-width: 860px;
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
+.st-summary-table thead th {
+	position: sticky;
+	top: 0;
+	background: #f8fbff;
+	z-index: 1;
+	color: #50657a;
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	padding: 12px 14px;
+	border-bottom: 1px solid rgba(14, 75, 131, 0.08);
+}
+
+.st-summary-table tbody td {
+	padding: 12px 14px;
+	border-bottom: 1px solid rgba(14, 75, 131, 0.06);
+	color: #1f3b57;
+	font-size: 0.94rem;
+	vertical-align: top;
+}
+
+.st-summary-table tbody tr:hover {
+	background: #f8fbff;
+}
+
+.st-summary-empty {
+	margin: 0;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: #f8fbff;
+	color: #64748b;
+	font-weight: 700;
+}
+
+.formal-st-category-list {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.formal-st-category-list .st-cat-list {
+	list-style: none;
+	margin: 0;
+	padding: 0 4px 0 0;
+	max-height: 320px;
+	overflow-y: auto;
+}
+
+.formal-st-category-list .st-cat-list-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.8rem;
+	margin-bottom: 0.8rem;
+	padding: 0.9rem 0.85rem;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	border-radius: 14px;
+	background: #fff;
+	box-shadow: 0 8px 20px rgba(8, 43, 81, 0.04);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.formal-st-category-list .st-cat-list-item:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 12px 24px rgba(8, 43, 81, 0.08);
+}
+
+.formal-st-category-list .st-cat-list-swatch {
+	flex: 0 0 16px;
+	width: 16px;
+	height: 16px;
+	border-radius: 4px;
+	margin-top: 0.15rem;
+	box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
+}
+
+.formal-st-category-list .st-cat-list-metric {
+	flex: 0 0 88px;
+	color: #0f766e;
+	font-weight: 800;
+	font-size: 0.94rem;
+	line-height: 1.4;
+}
+
+.formal-st-category-list .st-cat-list-label {
+	flex: 1 1 auto;
+	color: #334155;
+	font-size: 0.94rem;
+	line-height: 1.5;
+	white-space: pre-line;
+	word-break: break-word;
+}
+
+.formal-st-category-list .st-cat-pagination {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 0.7rem;
+	margin-top: 0.85rem;
+}
+
+.formal-st-category-list .st-cat-page {
+	color: #556b81;
+	font-size: 0.85rem;
+	font-weight: 700;
+}
+
+.formal-st-category-list .st-cat-page-btn {
+	padding: 0.48rem 0.95rem;
+	border-radius: 10px;
+	border: 1px solid rgba(14, 75, 131, 0.12);
+	background: #fff;
+	color: #164a84;
+	font-weight: 700;
+	box-shadow: 0 8px 18px rgba(8, 43, 81, 0.05);
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.formal-st-category-list .st-cat-page-btn:disabled {
+	opacity: 0.5;
+	box-shadow: none;
+}
+
+.formal-st-category-list .st-cat-page-btn:not(:disabled):hover {
+	background: #f5f9ff;
+	border-color: rgba(14, 75, 131, 0.22);
 }
 
 </style>
@@ -941,7 +2193,7 @@ if (!document.getElementById('catListTooltip')) {
 			.st-title-listing-card { max-width: 99vw; }
 			.st-title-listing-table { min-width: 700px; }
 		}
-		.year-chart-wrap { order: 1; margin-right: 500px;}
+		.year-chart-wrap { order: 1; margin-right: 0;}
 .year-filter-wrap { order: 2; margin-left: 24px; align-self: flex-start; }
 
 .year-of-moa-card .card-body { position: relative; }
@@ -955,10 +2207,89 @@ if (!document.getElementById('catListTooltip')) {
 			.year-filter-wrap { position: static !important; transform: none !important; right: auto !important; top: auto !important; flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; margin-top: 16px; order: 2; margin-left: 0; }
 			.year-chart-wrap { order: 1; width:100% !important; flex: 1 1 100% !important; min-width: 0;}
 			.year-filter-wrap .card { min-height: auto; }
+			.formal-st-top-grid,
+			.formal-second-row-wrap,
+			.formal-third-row-grid,
+			.formal-mini-panel-group,
+			.formal-linked-st-panels {
+				grid-template-columns: 1fr !important;
+			}
+			.formal-insight-grid {
+				grid-template-columns: 1fr !important;
+			}
+			.formal-share-metrics {
+				grid-template-columns: 1fr 1fr;
+			}
+			.social-listing-summary {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+			.formal-year-summary-grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+			.formal-third-row-grid,
+			.formal-second-row-wrap {
+				max-width: 100%;
+			}
+			.formal-linked-panel-start::after {
+				display: none;
+			}
+			.formal-linked-panel-end {
+				padding-left: 18px !important;
+			}
+			.formal-st-metrics {
+				justify-content: center;
+				height: auto;
+			}
 		}
 		@media (max-width: 767px) {
 			.st-title-listing-card { max-width: 100vw; }
 			.st-title-listing-table { min-width: 400px; font-size: 0.95em; }
+			.small-cards-grid {
+				grid-template-columns: 1fr;
+				grid-template-rows: none;
+			}
+			.small-card {
+				width: 100%;
+				height: auto;
+				min-height: 168px;
+			}
+			.small-cards-grid {
+				min-height: 0;
+			}
+			.formal-share-metrics {
+				grid-template-columns: 1fr;
+			}
+			.formal-doc-summary {
+				grid-template-columns: 1fr;
+			}
+			.formal-ranking-item {
+				grid-template-columns: 42px minmax(0, 1fr);
+			}
+			.formal-ranking-value {
+				grid-column: 2;
+				text-align: left;
+			}
+			.formal-year-summary-grid {
+				grid-template-columns: 1fr;
+			}
+			.social-listing-controls {
+				flex-direction: column;
+				align-items: stretch;
+			}
+			.social-listing-control,
+			.social-listing-control-search {
+				flex: 1 1 auto;
+				min-width: 0;
+			}
+			.social-listing-summary {
+				grid-template-columns: 1fr;
+			}
+			.social-listing-table {
+				min-width: 100%;
+			}
+			.st-summary-table {
+				min-width: 680px;
+			}
 		}
 
 		</style>
@@ -991,7 +2322,8 @@ if (!document.getElementById('catListTooltip')) {
 			left: 0;
 			right: 0;
 			bottom: 0;
-			background: rgba(15, 23, 42, 0.45);
+			background: rgba(15, 23, 42, 0.52);
+			backdrop-filter: blur(5px);
 			z-index: 1040;
 		}
 		.st-region-modal-dialog {
@@ -999,30 +2331,31 @@ if (!document.getElementById('catListTooltip')) {
 			top: 50%;
 			left: 50%;
 			transform: translate(-50%, -50%);
-			background: #ffffff;
-			border-radius: 16px;
-			width: 90vw;
-			max-width: 840px;
-			max-height: 80vh;
+			background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+			border-radius: 24px;
+			width: min(94vw, 980px);
+			max-height: 84vh;
 			overflow: hidden;
-			box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+			box-shadow: 0 28px 90px rgba(15, 23, 42, 0.28);
+			border: 1px solid rgba(148, 163, 184, 0.16);
 			z-index: 1050;
 			display: flex;
 			flex-direction: column;
 		}
 		.st-region-modal-header {
-			padding: 14px 20px;
-			border-bottom: 1px solid #e0f2f1;
+			padding: 18px 22px;
+			border-bottom: 0;
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
+			background: linear-gradient(135deg, #06306e 0%, #124c9f 100%);
 			color: #ffffff;
 		}
 		.st-region-modal-header h5 {
 			margin: 0;
-			font-weight: 600;
-			font-size: 1.05rem;
+			font-weight: 700;
+			font-size: 1.18rem;
+			line-height: 1.35;
 		}
 		.st-region-modal-close {
 			border: none;
@@ -1033,9 +2366,114 @@ if (!document.getElementById('catListTooltip')) {
 			cursor: pointer;
 		}
 		.st-region-modal-body {
-			padding: 16px 20px;
-			background: #f8fafc;
+			padding: 18px 20px 20px;
+			background: transparent;
 			overflow-y: auto;
+		}
+		.st-title-modal-toolbar {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 1rem;
+			flex-wrap: wrap;
+			padding: 0 2px 14px;
+			margin-bottom: 14px;
+			border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+		}
+		.st-title-modal-count {
+			color: #0f766e;
+			font-size: 0.92rem;
+			font-weight: 800;
+		}
+		.st-title-modal-subtitle {
+			color: #64748b;
+			font-size: 0.9rem;
+			font-weight: 600;
+		}
+		.st-title-modal-table-wrap {
+			max-height: 60vh;
+			overflow: auto;
+			border: 1px solid rgba(148, 163, 184, 0.16);
+			border-radius: 18px;
+			background: #fff;
+			box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+		}
+		.st-title-modal-table {
+			width: 100%;
+			min-width: 860px;
+			border-collapse: separate;
+			border-spacing: 0;
+		}
+		.st-title-modal-table thead th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			padding: 12px 14px;
+			background: #f8fbff;
+			color: #50657a;
+			font-size: 0.78rem;
+			font-weight: 800;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+		}
+		.st-title-modal-table tbody td {
+			padding: 12px 14px;
+			border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+			color: #1f3b57;
+			font-size: 0.94rem;
+			vertical-align: top;
+		}
+		.st-title-modal-table tbody tr:nth-child(even) {
+			background: #fcfdff;
+		}
+		.st-title-modal-table tbody tr:hover {
+			background: #f4f9ff;
+		}
+		.st-title-modal-empty {
+			margin: 0;
+			padding: 14px 16px;
+			border-radius: 14px;
+			background: #f8fbff;
+			color: #64748b;
+			font-weight: 700;
+		}
+		.st-title-modal-attach {
+			display: inline-flex;
+			gap: 8px;
+			align-items: center;
+			justify-content: center;
+		}
+		.st-title-modal-action {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 34px;
+			height: 34px;
+			border-radius: 10px;
+			border: 1px solid rgba(59, 130, 246, 0.15);
+			background: #fff;
+			color: #1d4ed8;
+			box-shadow: 0 8px 18px rgba(8, 43, 81, 0.05);
+		}
+		.st-title-modal-action.st-title-modal-view {
+			color: #0f766e;
+			border-color: rgba(16, 185, 129, 0.18);
+		}
+		@media (max-width: 767px) {
+			.st-region-modal-dialog {
+				width: min(96vw, 980px);
+				max-height: 88vh;
+			}
+			.st-region-modal-header {
+				padding: 16px 18px;
+			}
+			.st-region-modal-body {
+				padding: 16px;
+			}
+			.st-title-modal-table {
+				min-width: 720px;
+			}
 		}
 		.st-region-title-item {
 			padding: 8px 10px;
@@ -1054,46 +2492,64 @@ if (!document.getElementById('catListTooltip')) {
 		}
 		</style>
 			@if(!auth()->check())
-			<div id="guestFloatingFilter" class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px; padding: 10px;">
-	                <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
-	                    <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
-	                    <div class="card-body" style="padding:12px;">
-	                        <form method="GET" action="" class="w-100 d-flex flex-column">
-	                            <label for="region-select-modal" class="st-filter-label">Region</label>
-	                            <select id="region-select-modal" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
-	                                @foreach($regions as $region)
-	                                @if (stripos($region, 'Data CY 2020-2022') === false)
-	                                <option value="{{ $region }}" {{ collect(request('region'))->contains($region) ? 'selected' : '' }}>{{ $region }}</option>
-	                                @endif
-	                                @endforeach
-	                            </select>
+			<div id="guestFilterDock" class="guest-filter-dock">
+				<div id="guestFloatingFilter" class="year-filter-wrap guest-filter-panel">
+					<div class="card st-dashboard-card guest-filter-card">
+						<div class="guest-filter-header">
+							<div class="guest-filter-kicker">Dashboard Filters</div>
+							<div class="guest-filter-title">Filter By Location &amp; Year</div>
+							<div class="guest-filter-subtitle">Refine the dashboard by region, year, province, and city or municipality.</div>
+						</div>
+						<div class="card-body guest-filter-body">
+							<form method="GET" action="" class="w-100 d-flex flex-column">
+								<div class="guest-filter-grid">
+									<div class="guest-filter-field guest-filter-field-wide">
+										<label for="region-select-modal" class="st-filter-label">Region</label>
+										<select id="region-select-modal" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
+											@foreach($regions as $region)
+											@if (stripos($region, 'Data CY 2020-2022') === false)
+											<option value="{{ $region }}" {{ collect(request('region'))->contains($region) ? 'selected' : '' }}>{{ $region }}</option>
+											@endif
+											@endforeach
+										</select>
+									</div>
 
-	                            <label for="year-select-modal" class="st-filter-label">Year</label>
-	                            <select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
-	                                @foreach($years as $year)
-	                                <option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
-	                                @endforeach
-	                            </select>
+									<div class="guest-filter-field">
+										<label for="year-select-modal" class="st-filter-label">Year</label>
+										<select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
+											@foreach($years as $year)
+											<option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
+											@endforeach
+										</select>
+									</div>
 
-	                            <label for="province-select-modal" class="st-filter-label">Province</label>
-	                            <select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
-	                                @foreach($provinces as $province)
-	                                <option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
-	                                @endforeach
-	                            </select>
+									<div class="guest-filter-field">
+										<label for="province-select-modal" class="st-filter-label">Province</label>
+										<select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
+											@foreach($provinces as $province)
+											<option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
+											@endforeach
+										</select>
+									</div>
 
-	                            <label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
-	                            <select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
-	                                @foreach($municipalities as $municipality)
-	                                <option value="{{ $municipality }}" {{ collect(request('municipality'))->contains($municipality) ? 'selected' : '' }}>{{ $municipality }}</option>
-	                                @endforeach
-	                            </select>
+									<div class="guest-filter-field">
+										<label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
+										<select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
+											@foreach($municipalities as $municipality)
+											<option value="{{ $municipality }}" {{ collect(request('municipality'))->contains($municipality) ? 'selected' : '' }}>{{ $municipality }}</option>
+											@endforeach
+										</select>
+									</div>
+								</div>
 
-	                            <button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
-	                        </form>
-	                    </div>
-	                </div>
-	            </div>
+								<div class="guest-filter-actions">
+									<button type="submit" class="btn guest-filter-submit">Apply Filters</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
 			@endif
 		</div> <!-- end .container-fluid -->
 
@@ -1116,6 +2572,17 @@ if (!document.getElementById('catListTooltip')) {
 					<button type="button" class="st-region-modal-close" onclick="window.closeStTitleModal && window.closeStTitleModal()">&times;</button>
 				</div>
 				<div id="st-title-modal-body" class="st-region-modal-body"></div>
+			</div>
+		</div>
+
+		<div id="st-summary-modal" style="display:none;">
+			<div class="st-region-modal-backdrop" onclick="window.closeStSummaryModal && window.closeStSummaryModal()"></div>
+			<div class="st-region-modal-dialog" style="max-width: 1120px;">
+				<div class="st-region-modal-header">
+					<h5 id="st-summary-modal-title">ST Listing</h5>
+					<button type="button" class="st-region-modal-close" onclick="window.closeStSummaryModal && window.closeStSummaryModal()">&times;</button>
+				</div>
+				<div id="st-summary-modal-body" class="st-region-modal-body"></div>
 			</div>
 		</div>
 
@@ -1178,6 +2645,14 @@ if (!document.getElementById('catListTooltip')) {
 
 		function escapeAttr(str) {
 			return (str || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+		}
+		function escapeHtml(str) {
+			return (str || '').toString()
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
 		}
 		function truthy(v) {
 			if (typeof v === 'boolean') return v;
@@ -1263,24 +2738,45 @@ if (!document.getElementById('catListTooltip')) {
 					renderTable(currentPage);
 				});
 			}
+			applyFilters();
+			renderTable(currentPage);
 		});
 
 		function renderTable(page) {
 			const start = (page - 1) * perPage;
 			const end = start + perPage;
 			const pageData = data.slice(start, end);
+			const filteredOngoing = data.filter(row => deriveStatus(row) === 'ongoing').length;
+			const filteredDissolved = data.filter(row => deriveStatus(row) === 'dissolved').length;
+			const filteredReplicated = data.filter(row => truthy(row.with_replicated)).length;
+			const filteredAdopted = data.filter(row => truthy(row.with_adopted)).length;
+			const totalPages = Math.ceil(data.length / perPage);
 
-			let html = '<div class="st-title-listing-scroll">';
-			html += '<table class="table table-bordered table-striped align-middle mb-0 st-title-listing-table">';
-			html += '<thead style="background:linear-gradient(90deg,#10aeb5 60%,#1de9b6 100%);color:#fff;"><tr>' +
-				'<th style="width:340px;max-width:340px;">Title</th>' +
-				'<th style="width:180px;max-width:180px;">Province</th>' +
-				'<th style="width:180px;max-width:180px;">City/Municipality</th>' +
-				'<th style="width:110px;max-width:110px; text-align:center;">Status</th>' +
-				'<th style="width:80px;max-width:80px; text-align:center;">Attachment</th>' +
+			let html = '<div class="social-listing-summary">';
+			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Filtered Results</div><div class="social-listing-stat-value">' + data.length + '</div></div>';
+			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Ongoing</div><div class="social-listing-stat-value">' + filteredOngoing + '</div></div>';
+			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Dissolved</div><div class="social-listing-stat-value">' + filteredDissolved + '</div></div>';
+			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">With Adoption / Replication</div><div class="social-listing-stat-value">' + Math.max(filteredReplicated, filteredAdopted) + '</div></div>';
+			html += '</div>';
+
+			html += '<div class="social-listing-scroll">';
+			html += '<table class="social-listing-table">';
+			html += '<colgroup>' +
+				'<col class="social-listing-col-title">' +
+				'<col class="social-listing-col-province">' +
+				'<col class="social-listing-col-city">' +
+				'<col class="social-listing-col-status">' +
+				'<col class="social-listing-col-attachment">' +
+			'</colgroup>';
+			html += '<thead><tr>' +
+				'<th>Title</th>' +
+				'<th>Province</th>' +
+				'<th>City/Municipality</th>' +
+				'<th class="text-center">Status</th>' +
+				'<th class="text-center">Attachment</th>' +
 			'</tr></thead><tbody>';
 			if (pageData.length === 0) {
-				html += '<tr><td colspan="5" class="text-center">No data found.</td></tr>';
+				html += '<tr><td colspan="5" class="social-listing-empty">No data found.</td></tr>';
 			} else {
 				pageData.forEach(row => {
 					const title = row.title || '';
@@ -1290,22 +2786,21 @@ if (!document.getElementById('catListTooltip')) {
 					const isReplicated = truthy(row.with_replicated);
 					const isAdopted = truthy(row.with_adopted);
 					let primaryLabel = '';
-					let statusClass = 'badge bg-secondary';
+					let statusClass = '';
 					if (stStatus === 'ongoing') {
 						primaryLabel = 'Ongoing';
-						statusClass = 'badge bg-success';
+						statusClass = 'social-listing-pill social-listing-pill-status-ongoing';
 					} else if (stStatus === 'dissolved') {
 						primaryLabel = 'Dissolved';
-						statusClass = 'badge bg-danger';
+						statusClass = 'social-listing-pill social-listing-pill-status-dissolved';
 					}
 					const extraParts = [];
 					if (isReplicated) {
-						extraParts.push('Replicated');
+						extraParts.push('<span class="social-listing-pill social-listing-pill-type">Replicated</span>');
 					}
 					if (isAdopted) {
-						extraParts.push('Adopted');
+						extraParts.push('<span class="social-listing-pill social-listing-pill-type social-listing-pill-type-adopted">Adopted</span>');
 					}
-					const extraLabel = extraParts.join(', ');
 					const attachmentUrl = row.attachment_url || '';
 					const uploadedBy = row.attachment_uploaded_by || '';
 					let attachmentCell = '';
@@ -1313,42 +2808,31 @@ if (!document.getElementById('catListTooltip')) {
 						const safeTitle = escapeAttr(title);
 						const safeUploader = escapeAttr(uploadedBy);
 						attachmentCell = `
-							<div class="btn-group" role="group">
-								<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="${attachmentUrl}" data-title="${safeTitle}" data-uploader="${safeUploader}" title="View attachment">
+							<div class="social-listing-attach">
+								<button type="button" class="social-listing-action social-listing-action-view st-attachment-view-btn" data-url="${attachmentUrl}" data-title="${safeTitle}" data-uploader="${safeUploader}" title="View attachment">
 									<i class="bi bi-eye"></i>
 								</button>
-								<a href="${attachmentUrl}" class="btn btn-sm btn-outline-primary" title="Download attachment" target="_blank" download>
+								<a href="${attachmentUrl}" class="social-listing-action" title="Download attachment" target="_blank" download>
 									<i class="bi bi-download"></i>
 								</a>
 							</div>`;
 					}
 
 					html += `<tr>
-						<td title="${escapeAttr(title)}">${title ? title.substring(0, 60) : ''}</td>
-						<td title="${escapeAttr(province)}">${province ? province.substring(0, 30) : ''}</td>
-						<td title="${escapeAttr(municipality)}">${municipality ? municipality.substring(0, 30) : ''}</td>
-						<td class="text-center">${primaryLabel ? `<span class="${statusClass}">${primaryLabel}</span>` : ''}${extraLabel ? `<span style="margin-left:4px;">${extraLabel}</span>` : ''}</td>
+						<td class="social-listing-title-cell" title="${escapeAttr(title)}"><div class="social-listing-title-text">${escapeHtml(title)}</div></td>
+						<td title="${escapeAttr(province)}"><div class="social-listing-location-text">${escapeHtml(province)}</div></td>
+						<td title="${escapeAttr(municipality)}"><div class="social-listing-location-text">${escapeHtml(municipality)}</div></td>
+						<td class="text-center"><div class="social-listing-status-cell">${primaryLabel ? `<span class="${statusClass}">${primaryLabel}</span>` : ''}${extraParts.join('')}</div></td>
 						<td class="text-center">${attachmentCell}</td>
 					</tr>`;
 				});
-				for (let i = pageData.length; i < perPage; i++) {
-					html += '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
-				}
 			}
 			html += '</tbody></table></div>';
 
-			const totalPages = Math.ceil(data.length / perPage);
-			html += `<style>
-				.st-custom-pagination { display: flex; justify-content: center; align-items: center; gap: 14px; background: #f8fafc; border-radius: 12px; box-shadow: 0 2px 8px #b2ebf2; margin-top: 18px; padding: 10px 0 6px 0; }
-				.st-custom-pagination-btn { border: none; background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; font-weight: 700; border-radius: 8px; padding: 7px 26px; font-size: 1.08em; box-shadow: 0 2px 8px #b2ebf2; outline: none; transition: background 0.18s, box-shadow 0.18s, transform 0.12s; cursor: pointer; position: relative; }
-				.st-custom-pagination-btn:disabled { background: #e0f7fa; color: #b0b0b0; box-shadow: none; cursor: not-allowed; }
-				.st-custom-pagination-btn:not(:disabled):hover { background: linear-gradient(90deg, #06306e 60%, #06306e 100%); transform: translateY(-2px) scale(1.04); box-shadow: 0 4px 16px #b2ebf2; }
-				.st-custom-pagination-indicator { font-weight: 600; color: #06306e; font-size: 1.13em; min-width: 110px; text-align: center; letter-spacing: 0.5px; }
-			</style>`;
-			html += '<div class="st-custom-pagination">';
-			html += `<button class="st-custom-pagination-btn" ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">&#8592; Prev</button>`;
-			html += `<span class="st-custom-pagination-indicator">Page ${page} of ${totalPages}</span>`;
-			html += `<button class="st-custom-pagination-btn" ${page === totalPages ? 'disabled' : ''} onclick="changePage(${page + 1})">Next &#8594;</button>`;
+			html += '<div class="social-listing-pagination">';
+			html += `<button class="social-listing-pagination-btn" ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">&#8592; Prev</button>`;
+			html += `<span class="social-listing-pagination-indicator">Page ${page} of ${totalPages}</span>`;
+			html += `<button class="social-listing-pagination-btn" ${page === totalPages ? 'disabled' : ''} onclick="changePage(${page + 1})">Next &#8594;</button>`;
 			html += '</div>';
 
 			document.getElementById('title-listing-table-container').innerHTML = html;
@@ -1361,7 +2845,6 @@ if (!document.getElementById('catListTooltip')) {
 			renderTable(currentPage);
 		};
 
-		renderTable(currentPage);
 	})();
 	</script>
 	<script>
@@ -1993,25 +3476,25 @@ $('#region-select-modal').on('change', function() {
 		function renderCategoryList(page = 1) {
 			const start = (page - 1) * itemsPerPage;
 			const end = start + itemsPerPage;
-			let listHtml = '<ul id="stCategoryListUl" style="list-style:none;padding:0 8px 0 0;margin:0;max-height:370px;overflow-y:auto;">';
+			let listHtml = '<ul id="stCategoryListUl" class="st-cat-list">';
 			stTitleLabels.slice(start, end).forEach((label, i) => {
 				const idx = start + i;
 				const color = stTitleColors[idx % stTitleColors.length];
 				const count = stTitleData[idx];
 				const percent = stTitlePercentages[idx].toFixed(1);
-				listHtml += `<li class=\"st-cat-list-item\" data-idx=\"${idx}\" style=\"display:flex;align-items:center;margin-bottom:14px;padding:10px 8px;border-radius:8px;background:#fff;box-shadow:0 1px 4px #e0f7fa;transition:box-shadow 0.2s;cursor:pointer;\">\n` +
-					`<span style=\"display:inline-block;width:18px;height:18px;background:${color};border-radius:4px;margin-right:10px;box-shadow:0 1px 4px #b2ebf2;\"></span>` +
-					`<span style=\"font-weight:700;font-size:1.08em;color:#10aeb5;min-width:72px;display:inline-block;\">${percent}% (${count})</span>` +
-					`<span style=\"margin-left:8px;white-space:pre-line;word-break:break-word;\">${label}</span>` +
+				listHtml += `<li class=\"st-cat-list-item\" data-idx=\"${idx}\">` +
+					`<span class=\"st-cat-list-swatch\" style=\"background:${color};\"></span>` +
+					`<span class=\"st-cat-list-metric\">${percent}% (${count})</span>` +
+					`<span class=\"st-cat-list-label\">${label}</span>` +
 				`</li>`;
 			});
 			listHtml += '</ul>';
 			const totalPages = Math.ceil(stTitleLabels.length / itemsPerPage);
 			if (totalPages > 1) {
-				listHtml += `<div style=\"display:flex;justify-content:center;align-items:center;margin-top:8px;gap:8px;\">`;
-				listHtml += `<button id=\"stCatPrevBtn\" ${page === 1 ? 'disabled' : ''} style=\"padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;\">Prev</button>`;
-				listHtml += `<span style=\"margin:0 8px;font-weight:500;color:#10aeb5;\">Page ${page} of ${totalPages}</span>`;
-				listHtml += `<button id=\"stCatNextBtn\" ${page === totalPages ? 'disabled' : ''} style=\"padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;\">Next</button>`;
+				listHtml += `<div class=\"st-cat-pagination\">`;
+				listHtml += `<button id=\"stCatPrevBtn\" class=\"st-cat-page-btn\" ${page === 1 ? 'disabled' : ''}>Prev</button>`;
+				listHtml += `<span class=\"st-cat-page\">Page ${page} of ${totalPages}</span>`;
+				listHtml += `<button id=\"stCatNextBtn\" class=\"st-cat-page-btn\" ${page === totalPages ? 'disabled' : ''}>Next</button>`;
 				listHtml += `</div>`;
 			}
 			const mainListEl = document.getElementById('stCategoryList');
@@ -2021,24 +3504,24 @@ $('#region-select-modal').on('change', function() {
 
 			const copyListEl = document.getElementById('stCategoryListCopy');
 			if (copyListEl) {
-				let copyHtml = '<ul id="stCategoryListUlCopy" style="list-style:none;padding:0 6px 0 0;margin:0;max-height:280px;overflow-y:auto;">';
+				let copyHtml = '<ul id="stCategoryListUlCopy" class="st-cat-list">';
 				stTitleLabels.slice(start, end).forEach((label, i) => {
 					const idx = start + i;
 					const color = stTitleColors[idx % stTitleColors.length];
 					const count = stTitleData[idx];
 					const percent = stTitlePercentages[idx].toFixed(1);
-					copyHtml += '<li class="st-cat-list-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;margin-bottom:12px;font-size:0.98rem;">' +
-						`<span style="display:inline-block;width:18px;height:18px;background:${color};border-radius:4px;margin-right:10px;box-shadow:0 1px 4px #b2ebf2;"></span>` +
-						`<span style="font-weight:700;color:#10aeb5;margin-right:8px;min-width:78px;">${percent}% (${count})</span>` +
-						`<span style="flex:1 1 auto;white-space:pre-line;word-break:break-word;">${label}</span>` +
+					copyHtml += '<li class="st-cat-list-item" data-idx="' + idx + '">' +
+						`<span class="st-cat-list-swatch" style="background:${color};"></span>` +
+						`<span class="st-cat-list-metric">${percent}% (${count})</span>` +
+						`<span class="st-cat-list-label">${label}</span>` +
 					'</li>';
 				});
 				copyHtml += '</ul>';
 				if (totalPages > 1) {
-					copyHtml += '<div style="display:flex;justify-content:center;align-items:center;margin-top:8px;gap:8px;">';
-					copyHtml += `<button id="stCatPrevBtnCopy" ${page === 1 ? 'disabled' : ''} style="padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;">Prev</button>`;
-					copyHtml += `<span style="margin:0 8px;font-weight:500;color:#10aeb5;">Page ${page} of ${totalPages}</span>`;
-					copyHtml += `<button id="stCatNextBtnCopy" ${page === totalPages ? 'disabled' : ''} style="padding:4px 16px;border-radius:6px;border:1.5px solid #10aeb5;background:#fff;color:#10aeb5;font-weight:600;box-shadow:0 1px 4px #b2ebf2;transition:background 0.15s;">Next</button>`;
+					copyHtml += '<div class="st-cat-pagination">';
+					copyHtml += `<button id="stCatPrevBtnCopy" class="st-cat-page-btn" ${page === 1 ? 'disabled' : ''}>Prev</button>`;
+					copyHtml += `<span class="st-cat-page">Page ${page} of ${totalPages}</span>`;
+					copyHtml += `<button id="stCatNextBtnCopy" class="st-cat-page-btn" ${page === totalPages ? 'disabled' : ''}>Next</button>`;
 					copyHtml += '</div>';
 				}
 				copyListEl.innerHTML = copyHtml;
@@ -2293,7 +3776,7 @@ $('#region-select-modal').on('change', function() {
 							}
 						}
 					},
-					cutout: '55%',
+					cutout: '52%',
 
 					onClick: function(evt, elements) {
 						if (!elements || !elements.length) return;
@@ -2414,6 +3897,14 @@ $('#region-select-modal').on('change', function() {
 			const decoded = (div.textContent || div.innerText || '').trim();
 			return decoded.toLowerCase();
 		}
+		function escapeHtml(value) {
+			return String(value == null ? '' : value)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
 		function openStTitleModal(stTitle) {
 			const modal = document.getElementById('st-title-modal');
 			if (!modal) return;
@@ -2434,28 +3925,33 @@ $('#region-select-modal').on('change', function() {
 			}
 			if (!bodyEl) return;
 			if (!rows.length) {
-				bodyEl.innerHTML = '<p style="margin:0; color:#64748b;">No records found for this ST title based on the current filters.</p>';
+				bodyEl.innerHTML = '<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>';
 			} else {
-				let html = '<div style="max-height:60vh;overflow:auto;">';
-				html += '<table class="table table-sm table-striped table-bordered mb-0">';
+				let html = '<div class="st-title-modal-toolbar">';
+				html += '<div class="st-title-modal-count">' + rows.length + ' matching records</div>';
+				html += '<div class="st-title-modal-subtitle">Regional and local adoption coverage for this title</div>';
+				html += '</div>';
+				html += '<div class="st-title-modal-table-wrap">';
+				html += '<table class="st-title-modal-table">';
 				html += '<thead><tr><th>Region</th><th>Province</th><th>City/Municipality</th><th>Year of MOA</th><th class="text-center">Attachment</th></tr></thead><tbody>';
 				rows.forEach(function(row) {
-					const region = row.region || '';
-					const province = row.province || '';
-					const municipality = row.municipality || '';
-					const year = row.year_of_moa || '';
+					const region = escapeHtml(row.region || '');
+					const province = escapeHtml(row.province || '');
+					const municipality = escapeHtml(row.municipality || '');
+					const year = escapeHtml(row.year_of_moa || '');
 					const attachmentUrl = row.attachment_url || '';
 					const uploadedBy = row.attachment_uploaded_by || '';
 					let attachmentCell = '';
 					if (attachmentUrl) {
-						const safeTitle = (stTitle || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-						const safeUploader = (uploadedBy || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+						const safeUrl = escapeHtml(attachmentUrl);
+						const safeTitle = escapeHtml(stTitle || '');
+						const safeUploader = escapeHtml(uploadedBy || '');
 						attachmentCell = '' +
-							'<div class="btn-group" role="group">' +
-								'<button type="button" class="btn btn-sm btn-outline-success st-attachment-view-btn" data-url="' + attachmentUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment">' +
+							'<div class="st-title-modal-attach">' +
+								'<button type="button" class="st-title-modal-action st-title-modal-view st-attachment-view-btn" data-url="' + safeUrl + '" data-title="' + safeTitle + '" data-uploader="' + safeUploader + '" title="View attachment">' +
 									'<i class="bi bi-eye"></i>' +
 								'</button>' +
-								'<a href="' + attachmentUrl + '" class="btn btn-sm btn-outline-primary" title="Download attachment" target="_blank" download>' +
+								'<a href="' + safeUrl + '" class="st-title-modal-action" title="Download attachment" target="_blank" download>' +
 									'<i class="bi bi-download"></i>' +
 								'</a>' +
 							'</div>';
@@ -2486,6 +3982,56 @@ $('#region-select-modal').on('change', function() {
 		}
 		window.openStTitleModal = openStTitleModal;
 		window.closeStTitleModal = closeStTitleModal;
+
+		function openStSummaryModal(config) {
+			const modal = document.getElementById('st-summary-modal');
+			const titleEl = document.getElementById('st-summary-modal-title');
+			const bodyEl = document.getElementById('st-summary-modal-body');
+			if (!modal || !titleEl || !bodyEl || !config || typeof config.filter !== 'function') return;
+
+			const rows = (window.fullListingData || []).filter(config.filter);
+			titleEl.textContent = config.title || 'ST Listing';
+
+			if (!rows.length) {
+				bodyEl.innerHTML = '<p class="st-summary-empty">No ST records matched this summary card.</p>';
+			} else {
+				let html = '<div class="st-summary-modal-toolbar">';
+				html += '<div class="st-summary-modal-meta">' + rows.length + ' matching records</div>';
+				html += '</div>';
+				html += '<div class="st-summary-table-wrap">';
+				html += '<table class="st-summary-table">';
+				html += '<thead><tr><th>ST Title</th><th>Region</th><th>Province</th><th>City/Municipality</th><th>Year of MOA</th></tr></thead><tbody>';
+				rows.forEach(function(row) {
+					const safeTitle = escapeHtml(row.title || 'Untitled ST');
+					html += '<tr>' +
+						'<td>' + safeTitle + '</td>' +
+						'<td>' + escapeHtml(row.region || '') + '</td>' +
+						'<td>' + escapeHtml(row.province || '') + '</td>' +
+						'<td>' + escapeHtml(row.municipality || '') + '</td>' +
+						'<td>' + escapeHtml(row.year_of_moa || '') + '</td>' +
+					'</tr>';
+				});
+				html += '</tbody></table></div>';
+				bodyEl.innerHTML = html;
+			}
+
+			modal.style.display = 'block';
+			if (document.body) {
+				document.body.style.overflow = 'hidden';
+			}
+		}
+
+		function closeStSummaryModal() {
+			const modal = document.getElementById('st-summary-modal');
+			if (!modal) return;
+			modal.style.display = 'none';
+			if (document.body) {
+				document.body.style.overflow = '';
+			}
+		}
+
+		window.openStSummaryModal = openStSummaryModal;
+		window.closeStSummaryModal = closeStSummaryModal;
 
 		function openStAttachmentModal(url, stTitle, uploadedBy) {
 			if (!url) return;
@@ -3373,6 +4919,35 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const ongoingCounts = years.map(y => yearStats[y].ongoing);
     const dissolvedCounts = years.map(y => yearStats[y].dissolved);
 
+	const peakYearEl = document.getElementById('yearSummaryPeakYear');
+	const peakCountEl = document.getElementById('yearSummaryPeakCount');
+	const averageEl = document.getElementById('yearSummaryAverage');
+	const latestYearEl = document.getElementById('yearSummaryLatestYear');
+	const latestCountEl = document.getElementById('yearSummaryLatestCount');
+	const spanEl = document.getElementById('yearSummarySpan');
+	if (years.length > 0) {
+		const peakCount = Math.max(...totalCounts);
+		const peakIndex = totalCounts.indexOf(peakCount);
+		const peakYear = years[peakIndex];
+		const numericYears = years.filter(year => /^\d{4}$/.test(String(year)));
+		const latestYear = numericYears.length > 0 ? numericYears[numericYears.length - 1] : years[years.length - 1];
+		const latestCount = yearStats[latestYear] ? yearStats[latestYear].total : totalCounts[totalCounts.length - 1];
+		const averageCount = totalCounts.reduce((sum, count) => sum + count, 0) / totalCounts.length;
+		const firstYearSource = numericYears.length > 0 ? numericYears[0] : years[0];
+		const firstYearNumeric = Number(firstYearSource);
+		const latestYearNumeric = Number(latestYear);
+		const spanText = Number.isFinite(firstYearNumeric) && Number.isFinite(latestYearNumeric)
+			? ((latestYearNumeric - firstYearNumeric) + 1) + ' years'
+			: years.length + ' years';
+
+		if (peakYearEl) peakYearEl.textContent = peakYear;
+		if (peakCountEl) peakCountEl.textContent = peakCount + ' recorded MOAs';
+		if (averageEl) averageEl.textContent = averageCount.toFixed(1);
+		if (latestYearEl) latestYearEl.textContent = latestYear;
+		if (latestCountEl) latestCountEl.textContent = latestCount + ' recorded MOAs';
+		if (spanEl) spanEl.textContent = spanText;
+	}
+
 	const totalOngoing = ongoingCounts.reduce((a,b)=>a+b, 0);
 	const totalDissolved = dissolvedCounts.reduce((a,b)=>a+b, 0);
 	const card1 = document.getElementById('card1');
@@ -3399,6 +4974,67 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 
 	const grandTotal = totalOngoing + totalDissolved;
 	const ongoingPercent = grandTotal > 0 ? Math.round((totalOngoing / grandTotal) * 100) : 0;
+	const dissolvedPercent = grandTotal > 0 ? Math.round((totalDissolved / grandTotal) * 100) : 0;
+
+	const ongoingCountEl = document.getElementById('ongoingShareCount');
+	const dissolvedCountEl = document.getElementById('dissolvedShareCount');
+	const ongoingPercentEl = document.getElementById('ongoingSharePercent');
+	const dissolvedPercentEl = document.getElementById('dissolvedSharePercent');
+	const ongoingLeadEl = document.getElementById('ongoingShareLead');
+	if (ongoingCountEl) ongoingCountEl.textContent = totalOngoing;
+	if (dissolvedCountEl) dissolvedCountEl.textContent = totalDissolved;
+	if (ongoingPercentEl) ongoingPercentEl.textContent = ongoingPercent + '% of status records';
+	if (dissolvedPercentEl) dissolvedPercentEl.textContent = dissolvedPercent + '% of status records';
+	if (ongoingLeadEl) {
+		if (totalOngoing === totalDissolved) {
+			ongoingLeadEl.textContent = 'Operational status is evenly split between active and dissolved records.';
+		} else if (totalOngoing > totalDissolved) {
+			ongoingLeadEl.textContent = 'Ongoing STs lead by ' + (totalOngoing - totalDissolved) + ' records.';
+		} else {
+			ongoingLeadEl.textContent = 'Dissolved STs lead by ' + (totalDissolved - totalOngoing) + ' records.';
+		}
+	}
+
+	function bindSummaryCard(cardEl, config) {
+		if (!cardEl || !config || !window.openStSummaryModal) return;
+		const open = function() {
+			window.openStSummaryModal(config);
+		};
+		cardEl.addEventListener('click', open);
+		cardEl.addEventListener('keydown', function(event) {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				open();
+			}
+		});
+	}
+
+	bindSummaryCard(card1, {
+		title: 'Ongoing STs',
+		filter: function(row) {
+			const status = String(row.status || '').toLowerCase();
+			return status.includes('ongoing') || status === 'on going';
+		}
+	});
+	bindSummaryCard(card2, {
+		title: 'Dissolved STs',
+		filter: function(row) {
+			const status = String(row.status || '').toLowerCase();
+			return status.includes('dissolved') || status.includes('inactive') || status.includes('completed');
+		}
+	});
+	bindSummaryCard(card3, {
+		title: 'Replicated STs',
+		filter: function(row) {
+			return truthy(row.with_replicated);
+		}
+	});
+	bindSummaryCard(card4, {
+		title: 'Adopted STs',
+		filter: function(row) {
+			return truthy(row.with_adopted);
+		}
+	});
 
 	const centerTextPlugin = {
 		id: 'centerText',
@@ -3474,6 +5110,26 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 
 	const repTotal = totalReplicated + totalAdopted;
 	const replicatedPercent = repTotal > 0 ? Math.round((totalReplicated / repTotal) * 100) : 0;
+	const adoptedPercent = repTotal > 0 ? Math.round((totalAdopted / repTotal) * 100) : 0;
+
+	const replicatedCountEl = document.getElementById('replicatedShareCount');
+	const adoptedCountEl = document.getElementById('adoptedShareCount');
+	const replicatedPercentEl = document.getElementById('replicatedSharePercent');
+	const adoptedPercentEl = document.getElementById('adoptedSharePercent');
+	const replicatedLeadEl = document.getElementById('replicatedShareLead');
+	if (replicatedCountEl) replicatedCountEl.textContent = totalReplicated;
+	if (adoptedCountEl) adoptedCountEl.textContent = totalAdopted;
+	if (replicatedPercentEl) replicatedPercentEl.textContent = replicatedPercent + '% of replicated records';
+	if (adoptedPercentEl) adoptedPercentEl.textContent = adoptedPercent + '% of adoption records';
+	if (replicatedLeadEl) {
+		if (totalReplicated === totalAdopted) {
+			replicatedLeadEl.textContent = 'Replication and adoption activity are currently balanced.';
+		} else if (totalReplicated > totalAdopted) {
+			replicatedLeadEl.textContent = 'Replicated STs lead by ' + (totalReplicated - totalAdopted) + ' records.';
+		} else {
+			replicatedLeadEl.textContent = 'Adopted STs lead by ' + (totalAdopted - totalReplicated) + ' records.';
+		}
+	}
 
 	const replicatedCanvas = document.getElementById('replicatedDoughnut');
 	if (replicatedCanvas && replicatedCanvas.getContext) {
@@ -3524,6 +5180,117 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 			}
 		});
 	}
+
+	const overallTotalsData = [
+		{ label: 'Expression of Interest', color: '#2dd4bf', value: allData.reduce((count, row) => count + (truthy(row.with_expr) ? 1 : 0), 0) },
+		{ label: 'SB Resolution', color: '#38bdf8', value: allData.reduce((count, row) => count + (truthy(row.with_res) ? 1 : 0), 0) },
+		{ label: 'Memorandum of Agreement', color: '#818cf8', value: allData.reduce((count, row) => count + (truthy(row.with_moa) ? 1 : 0), 0) },
+		{ label: 'Ongoing STs', color: '#34d399', value: totalOngoing },
+		{ label: 'Dissolved STs', color: '#fb7185', value: totalDissolved },
+		{ label: 'Replicated STs', color: '#f472b6', value: totalReplicated },
+		{ label: 'Adopted STs', color: '#fbbf24', value: totalAdopted }
+	];
+
+	const documentCoverageCanvas = document.getElementById('documentCoverageChart');
+	if (documentCoverageCanvas && documentCoverageCanvas.getContext) {
+		const docCtx = documentCoverageCanvas.getContext('2d');
+		new Chart(docCtx, {
+			type: 'bar',
+			data: {
+				labels: overallTotalsData.map(item => item.label),
+				datasets: [{
+					data: overallTotalsData.map(item => item.value),
+					backgroundColor: overallTotalsData.map(item => item.color),
+					borderRadius: 12,
+					maxBarThickness: 56
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				indexAxis: 'y',
+				plugins: {
+					legend: { display: false },
+					tooltip: {
+						callbacks: {
+							label(context) {
+								return context.label + ': ' + context.parsed.y + ' records';
+							}
+						}
+					}
+				},
+				scales: {
+					x: {
+						beginAtZero: true,
+						ticks: {
+							color: '#64748b',
+							font: { size: 11, weight: '600' },
+						},
+						grid: { color: 'rgba(148, 163, 184, 0.18)' }
+					},
+					y: {
+						ticks: {
+							color: '#50657a',
+							font: { size: 11, weight: '600' }
+						},
+						grid: { display: false }
+					}
+				}
+			}
+		});
+	}
+
+	const docLeaderEl = document.getElementById('docCoverageLeader');
+	const docLowestEl = document.getElementById('docCoverageLowest');
+	const sortedMilestones = overallTotalsData.slice().sort((left, right) => right.value - left.value);
+	if (docLeaderEl && sortedMilestones.length) {
+		docLeaderEl.textContent = sortedMilestones[0].label + ' (' + sortedMilestones[0].value + ')';
+	}
+	if (docLowestEl && sortedMilestones.length) {
+		const lowest = sortedMilestones[sortedMilestones.length - 1];
+		docLowestEl.textContent = lowest.label + ' (' + lowest.value + ')';
+	}
+
+	function renderRankingList(elementId, items, noun) {
+		const container = document.getElementById(elementId);
+		if (!container) return;
+		if (!items.length) {
+			container.innerHTML = '<div class="formal-ranking-item"><div class="formal-ranking-main"><div class="formal-ranking-label">No records available</div><div class="formal-ranking-meta">No ranking data could be derived.</div></div></div>';
+			return;
+		}
+		container.innerHTML = items.map((item, index) => {
+			return '<div class="formal-ranking-item">' +
+				'<div class="formal-ranking-rank">#' + (index + 1) + '</div>' +
+				'<div class="formal-ranking-main">' +
+					'<div class="formal-ranking-label">' + item.name + '</div>' +
+					'<div class="formal-ranking-meta">' + item.share + '% of total ' + noun + ' records</div>' +
+				'</div>' +
+				'<div class="formal-ranking-value">' + item.count + ' records</div>' +
+			'</div>';
+		}).join('');
+	}
+
+	function buildTopCounts(fieldName) {
+		const counts = {};
+		allData.forEach(row => {
+			const rawValue = row[fieldName];
+			const value = (rawValue == null ? '' : String(rawValue)).trim();
+			if (!value || value.toLowerCase() === 'unknown') return;
+			counts[value] = (counts[value] || 0) + 1;
+		});
+		const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+		return Object.entries(counts)
+			.sort((left, right) => right[1] - left[1])
+			.slice(0, 5)
+			.map(([name, count]) => ({
+				name,
+				count,
+				share: total > 0 ? ((count / total) * 100).toFixed(1) : '0.0'
+			}));
+	}
+
+	renderRankingList('topRegionsList', buildTopCounts('region'), 'regional');
+	renderRankingList('topProvincesList', buildTopCounts('province'), 'provincial');
 
 	function makeLineConfig(label, dataArray, color) {
 		return {
@@ -3698,45 +5465,64 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 
 	@auth
 	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
+	  <div class="modal-dialog modal-dialog-centered filter-modal-dialog" style="width:min(1280px, calc(100vw - 1.5rem)); max-width:none;">
         <div class="modal-content">
-          <div class="modal-body d-flex justify-content-center align-items-center" id="filterModalBody" style="background:transparent;">
-            <div class="year-filter-wrap" style="flex:0 0 320px; max-width:600px !important;; width:600px !important; min-width:320px;">
-                <div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
-                    <div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
-                    <div class="card-body" style="padding:12px;">
-                        <form method="GET" action="" class="w-100 d-flex flex-column">
-                            <label for="region-select-modal" class="st-filter-label">Region</label>
-                            <select id="region-select-modal" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
+		  <div class="modal-body" id="filterModalBody" style="background:transparent;">
+			<div class="year-filter-wrap filter-modal-wrap" style="width:min(1220px, calc(100vw - 2rem)); max-width:none; min-width:0;">
+				<div class="card st-dashboard-card filter-modal-panel">
+					<div class="filter-modal-header">
+						<div class="filter-modal-heading">
+							<div class="filter-modal-kicker">Dashboard Filters</div>
+							<div class="filter-modal-title">Filter By Location &amp; Year</div>
+							<div class="filter-modal-subtitle">Refine the dashboard by region, year, province, and city or municipality.</div>
+						</div>
+					</div>
+					<div class="card-body filter-modal-body">
+						<form method="GET" action="" class="w-100 d-flex flex-column">
+							<div class="filter-form-grid">
+								<div class="filter-field">
+	                                <label for="region-select-modal" class="st-filter-label">Region</label>
+	                                <select id="region-select-modal" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
                                 @foreach($regions as $region)
                                 @if (stripos($region, 'Data CY 2020-2022') === false)
                                 <option value="{{ $region }}" {{ collect(request('region'))->contains($region) ? 'selected' : '' }}>{{ $region }}</option>
                                 @endif
                                 @endforeach
-                            </select>
+								</select>
+								</div>
 
-                            <label for="year-select-modal" class="st-filter-label">Year</label>
-                            <select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
+								<div class="filter-field">
+	                                <label for="year-select-modal" class="st-filter-label">Year</label>
+	                                <select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
                                 @foreach($years as $year)
                                 <option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
                                 @endforeach
-                            </select>
+								</select>
+								</div>
 
-                            <label for="province-select-modal" class="st-filter-label">Province</label>
-                            <select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
+								<div class="filter-field">
+	                                <label for="province-select-modal" class="st-filter-label">Province</label>
+	                                <select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
                                 @foreach($provinces as $province)
                                 <option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
                                 @endforeach
-                            </select>
+								</select>
+								</div>
 
-                            <label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
-                            <select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
+								<div class="filter-field">
+	                                <label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
+	                                <select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
                                 @foreach($municipalities as $municipality)
                                 <option value="{{ $municipality }}" {{ collect(request('municipality'))->contains($municipality) ? 'selected' : '' }}>{{ $municipality }}</option>
                                 @endforeach
-                            </select>
+								</select>
+								</div>
+							</div>
 
-                            <button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
+	                            <div class="filter-modal-actions">
+	                                <button type="button" class="btn filter-modal-secondary" data-bs-dismiss="modal">Close</button>
+	                                <button type="submit" class="btn filter-modal-submit">Apply Filters</button>
+	                            </div>
                         </form>
 					  </div>
 					</div>
@@ -3808,32 +5594,430 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 			}
         }
 		#guestFloatingFilter {
+			position: relative;
+			top: auto;
+			right: auto;
+			z-index: auto;
+			max-width: none;
+			width: min(388px, calc(100vw - 1rem));
+		}
+		#guestFilterDock {
 			position: fixed;
-			top: 80px;
-			right: -240px;
-			z-index: 890; 
-			max-width: 360px;
-			width: 320px;
-			transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+			top: 112px;
+			right: 18px;
+			z-index: 890;
+			width: min(388px, calc(100vw - 1rem));
+			transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
 			will-change: transform;
+		}
+		.guest-filter-panel {
+			width: 100%;
+			position: relative;
+		}
+		.guest-filter-card {
+			border: 1px solid rgba(16, 174, 181, 0.14) !important;
+			border-radius: 24px !important;
+			overflow: hidden;
+			background:
+				radial-gradient(circle at top left, rgba(16, 174, 181, 0.12), transparent 38%),
+				linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%) !important;
+			box-shadow: 0 24px 56px rgba(6, 48, 110, 0.18) !important;
+			box-shadow: 0 24px 56px rgba(6, 48, 110, 0.18) !important;
+		}
+		.guest-filter-header {
+			padding: 1.15rem 1.2rem 0.95rem;
+			border-bottom: 1px solid rgba(6, 48, 110, 0.08);
+		}
+		.guest-filter-kicker {
+			font-size: 0.7rem;
+			font-weight: 800;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: #10aeb5;
+			margin-bottom: 0.45rem;
+		}
+		.guest-filter-title {
+			font-size: 1.2rem;
+			font-weight: 800;
+			line-height: 1.15;
+			color: #062c67;
+		}
+		.guest-filter-subtitle {
+			margin-top: 0.45rem;
+			font-size: 0.88rem;
+			line-height: 1.55;
+			color: #5f7891;
+		}
+		.guest-filter-body {
+			padding: 1rem 1.2rem 1.2rem !important;
+		}
+		.guest-filter-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.95rem;
+		}
+		.guest-filter-field {
+			padding: 0.95rem;
+			background: rgba(255, 255, 255, 0.82);
+			border: 1px solid rgba(6, 48, 110, 0.08);
+			border-radius: 18px;
+			min-height: 132px;
+		}
+		.guest-filter-field-wide {
+			grid-column: 1 / -1;
+			min-height: 148px;
+		}
+		#guestFloatingFilter .st-filter-label {
+			display: block;
+			margin-bottom: 0.55rem;
+			font-size: 0.76rem;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: #0a548a;
+		}
+		#guestFloatingFilter .select2-container {
+			width: 100% !important;
+		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple {
+			min-height: 50px;
+			padding: 0.35rem 0.5rem;
+			border-radius: 14px;
+			border: 1px solid rgba(6, 48, 110, 0.12);
+			background: #ffffff;
+			box-shadow: 0 8px 18px rgba(6, 48, 110, 0.04);
+		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-selection__choice {
+			margin-top: 4px;
+			border: none;
+			border-radius: 999px;
+			padding: 0.25rem 0.56rem;
+			background: rgba(16, 174, 181, 0.14);
+			color: #084a70;
+			font-size: 0.8rem;
+			font-weight: 700;
+		}
+		.guest-filter-actions {
+			display: flex;
+			gap: 0.75rem;
+			margin-top: 1rem;
+		}
+		.guest-filter-secondary,
+		.guest-filter-submit {
+			flex: 1 1 0;
+			min-height: 46px;
+			border-radius: 999px;
+			font-weight: 700;
+		}
+		.guest-filter-secondary {
+			border: 1px solid rgba(6, 48, 110, 0.14);
+			background: rgba(255, 255, 255, 0.9);
+			color: #0a4f83;
+		}
+		.guest-filter-submit {
+			border: none;
+			color: #ffffff;
+			background: linear-gradient(135deg, #06306e 0%, #0a5f96 52%, #10aeb5 100%);
+			box-shadow: 0 12px 26px rgba(6, 48, 110, 0.2);
+		}
+		.guest-filter-submit:hover,
+		.guest-filter-submit:focus-visible {
+			transform: translateY(-1px);
+		}
+		@media (max-width: 991px) {
+			#guestFilterDock {
+				top: auto;
+				bottom: 14px;
+				right: 12px;
+				left: auto;
+			}
+
+			.guest-filter-panel {
+				width: min(100vw - 1rem, 420px);
+			}
+		}
+		@media (max-width: 767px) {
+			.guest-filter-panel {
+				width: min(100vw - 1rem, 360px);
+			}
+
+			.guest-filter-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.guest-filter-field,
+			.guest-filter-field-wide {
+				min-height: auto;
+			}
+
+			.guest-filter-actions {
+				flex-direction: column-reverse;
+			}
 		}
 		body.modal-open #floatingBtn {
 			opacity: 0;
 			pointer-events: none;
 		}
-        #filterModal .modal-content {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        #filterModal .modal-dialog {
-            background: transparent !important;
-        }
-        #filterModalBody .card {
-            background: #fff !important;
-            box-shadow: 0 2px 12px rgba(16,174,181,0.06) !important;
-            border: 1px solid rgba(16,174,181,0.06) !important;
-        }
+		#filterModal .modal-dialog.filter-modal-dialog {
+			width: min(1280px, calc(100vw - 1.5rem));
+			max-width: none;
+			margin: min(3vh, 1.5rem) auto;
+			min-height: calc(100vh - 1.5rem);
+			display: flex;
+			align-items: center;
+		}
+		#filterModal .modal-content {
+			background: transparent !important;
+			border: none !important;
+			box-shadow: none !important;
+			width: 100%;
+		}
+		#filterModal .modal-dialog {
+			background: transparent !important;
+		}
+		#filterModalBody {
+			padding: 1rem;
+			width: 100%;
+			display: flex !important;
+			justify-content: center;
+			align-items: center;
+			min-height: calc(100vh - 1.5rem);
+			padding-left: 100px;
+		}
+		.filter-modal-wrap {
+			flex: 1 1 100%;
+			width: 100% !important;
+			max-width: none !important;
+			min-width: 0;
+			margin: 0 auto !important;
+			align-self: stretch;
+			order: initial;
+			display: block;
+		}
+		#filterModal .year-filter-wrap {
+			position: static !important;
+			right: auto !important;
+			top: auto !important;
+			transform: none !important;
+		}
+		#filterModalBody .filter-modal-panel {
+			background:
+				radial-gradient(circle at top left, rgba(16, 174, 181, 0.12), transparent 32%),
+				linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%) !important;
+			box-shadow: 0 26px 60px rgba(6, 48, 110, 0.18) !important;
+			border: 1px solid rgba(16, 174, 181, 0.14) !important;
+			border-radius: 28px !important;
+			overflow: hidden;
+			width: 100%;
+			position: relative;
+		}
+		#filterModal .filter-modal-body > form {
+			width: 100%;
+		}
+		.filter-modal-header {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 1rem;
+			padding: 1.75rem 5.5rem 1.25rem;
+			border-bottom: 1px solid rgba(6, 48, 110, 0.08);
+			text-align: center;
+			position: relative;
+		}
+		.filter-modal-heading {
+			max-width: 720px;
+			margin: 0 auto;
+		}
+		.filter-modal-kicker {
+			font-size: 0.72rem;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: #10aeb5;
+			margin-bottom: 0.45rem;
+		}
+		.filter-modal-title {
+			font-size: 1.55rem;
+			line-height: 1.15;
+			font-weight: 800;
+			color: #062c67;
+		}
+		.filter-modal-subtitle {
+			margin-top: 0.45rem;
+			font-size: 0.94rem;
+			line-height: 1.6;
+			color: #53718c;
+			max-width: 620px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+		.filter-modal-close {
+		}
+		.filter-modal-body {
+			padding: 1.55rem 1.75rem 1.75rem;
+		}
+		.filter-form-grid {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 1.15rem 1.2rem;
+			width: 100%;
+		}
+		.filter-field {
+			padding: 1rem 1.05rem 0.8rem;
+			background: rgba(255, 255, 255, 0.82);
+			border: 1px solid rgba(6, 48, 110, 0.08);
+			border-radius: 18px;
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+			min-height: 148px;
+		}
+		.filter-form-grid .filter-field:first-child {
+			grid-column: 1 / -1;
+			min-height: 170px;
+		}
+		@media (min-width: 992px) {
+			#filterModal .modal-dialog.filter-modal-dialog {
+				width: min(1380px, calc(100vw - 1rem)) !important;
+			}
+
+			#filterModalBody .filter-modal-panel {
+				min-width: 1180px;
+			}
+
+			.filter-modal-body {
+				min-width: 1180px;
+			}
+		}
+		#filterModal .st-filter-label {
+			display: block;
+			margin-bottom: 0.55rem;
+			font-size: 0.78rem;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: #0a548a;
+		}
+		#filterModal .select2-container {
+			width: 100% !important;
+		}
+		#filterModal .select2-container--default .select2-selection--multiple {
+			min-height: 52px;
+			padding: 0.35rem 0.55rem;
+			border-radius: 14px;
+			border: 1px solid rgba(6, 48, 110, 0.12);
+			background: #ffffff;
+			box-shadow: 0 8px 18px rgba(6, 48, 110, 0.04);
+		}
+		#filterModal .select2-container--default.select2-container--focus .select2-selection--multiple {
+			border-color: rgba(16, 174, 181, 0.75);
+			box-shadow: 0 0 0 4px rgba(16, 174, 181, 0.12);
+		}
+		#filterModal .select2-container--default .select2-search--inline .select2-search__field {
+			margin-top: 4px;
+			color: #33516b;
+		}
+		#filterModal .select2-container--default .select2-selection--multiple .select2-selection__choice {
+			margin-top: 4px;
+			border: none;
+			border-radius: 999px;
+			padding: 0.28rem 0.62rem;
+			background: rgba(16, 174, 181, 0.14);
+			color: #084a70;
+			font-size: 0.82rem;
+			font-weight: 700;
+		}
+		#filterModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+			color: #0a548a;
+			margin-right: 0.35rem;
+		}
+		.filter-modal-actions {
+			display: flex;
+			justify-content: center;
+			gap: 0.8rem;
+			margin-top: 1.5rem;
+			padding-top: 1.25rem;
+			border-top: 1px solid rgba(6, 48, 110, 0.08);
+		}
+		.filter-modal-secondary,
+		.filter-modal-submit {
+			min-width: 152px;
+			min-height: 48px;
+			border-radius: 999px;
+			font-weight: 700;
+			letter-spacing: 0.01em;
+		}
+		.filter-modal-secondary {
+			border: 1px solid rgba(6, 48, 110, 0.14);
+			background: rgba(255, 255, 255, 0.85);
+			color: #0a4f83;
+		}
+		.filter-modal-secondary:hover {
+			background: #ffffff;
+			color: #06306e;
+		}
+		.filter-modal-submit {
+			border: none;
+			color: #ffffff;
+			background: linear-gradient(135deg, #06306e 0%, #0a5f96 52%, #10aeb5 100%);
+			box-shadow: 0 14px 30px rgba(6, 48, 110, 0.22);
+		}
+		.filter-modal-submit:hover {
+			color: #ffffff;
+			transform: translateY(-1px);
+			box-shadow: 0 18px 34px rgba(6, 48, 110, 0.28);
+		}
+		@media (max-width: 767px) {
+			#filterModal .modal-dialog.filter-modal-dialog {
+				width: calc(100vw - 1rem);
+				margin: 0.5rem auto;
+				min-height: calc(100vh - 1rem);
+			}
+
+			#filterModalBody {
+				padding: 0.75rem;
+				min-height: calc(100vh - 1rem);
+			}
+
+			.filter-modal-header {
+				padding: 1.2rem 1.1rem 0.95rem;
+				text-align: left;
+			}
+
+			.filter-modal-heading {
+				max-width: none;
+				margin: 0;
+			}
+
+			.filter-modal-subtitle {
+				margin-left: 0;
+				margin-right: 0;
+			}
+
+			.filter-modal-title {
+				font-size: 1.28rem;
+			}
+
+			.filter-modal-body {
+				padding: 1rem 1.1rem 1.15rem;
+			}
+
+			.filter-form-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.filter-field,
+			.filter-form-grid .filter-field:first-child {
+				min-height: auto;
+			}
+
+			.filter-modal-actions {
+				flex-direction: column-reverse;
+			}
+
+			.filter-modal-secondary,
+			.filter-modal-submit {
+				width: 100%;
+			}
+		}
     </style>
 
 <script>
@@ -3841,14 +6025,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	const movers = [];
 	const btn = document.getElementById('floatingBtn');
+	const guestDock = document.getElementById('guestFilterDock');
 	if (btn && !btn.dataset.initialized) {
 		btn.dataset.initialized = "true";
 		movers.push(btn);
 	}
-	const guestCard = document.getElementById('guestFloatingFilter');
-	if (guestCard && !guestCard.dataset.initialized) {
-		guestCard.dataset.initialized = "true";
-		movers.push(guestCard);
+	if (guestDock && !guestDock.dataset.initialized) {
+		guestDock.dataset.initialized = "true";
+		movers.push(guestDock);
 	}
 
 	if (!movers.length) return; 

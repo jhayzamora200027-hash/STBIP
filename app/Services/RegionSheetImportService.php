@@ -93,9 +93,7 @@ class RegionSheetImportService
             throw new \RuntimeException('No region data rows were found in the selected Google Sheet file.');
         }
 
-        DB::transaction(function () use ($actorName, $regionNames, $rowsToInsert) {
-            RegionItem::query()->delete();
-
+        $stats = DB::transaction(function () use ($actorName, $regionNames, $rowsToInsert) {
             $regionIdMap = [];
             foreach (MasterDataRegionCatalog::all() as $regionName) {
                 $region = Region::query()->firstOrCreate(
@@ -117,15 +115,29 @@ class RegionSheetImportService
                 $regionIdMap[$regionName] = $region->id;
             }
 
+            $regionIds = array_values(array_unique(array_intersect_key($regionIdMap, $regionNames)));
+            $existingItems = RegionItem::query()
+                ->whereIn('region_id', $regionIds)
+                ->get()
+                ->keyBy(fn (RegionItem $item) => $this->buildIdentityKey(
+                    $item->region_id,
+                    $item->title,
+                    $item->province,
+                    $item->municipality
+                ));
+
             $timestamp = now();
             $payload = [];
+            $addedCount = 0;
+            $updatedCount = 0;
             foreach ($rowsToInsert as $row) {
                 if (!isset($regionIdMap[$row['region_name']])) {
                     continue;
                 }
 
-                $payload[] = [
-                    'region_id' => $regionIdMap[$row['region_name']],
+                $regionId = $regionIdMap[$row['region_name']];
+                $record = [
+                    'region_id' => $regionId,
                     'title' => $row['title'],
                     'province' => $row['province'],
                     'municipality' => $row['municipality'],
@@ -138,23 +150,63 @@ class RegionSheetImportService
                     'with_adopted' => $row['with_adopted'],
                     'with_replicated' => $row['with_replicated'],
                     'status' => $row['status'],
-                    'createdby' => $actorName,
                     'updatedby' => $actorName,
-                    'created_at' => $timestamp,
                     'updated_at' => $timestamp,
                 ];
+
+                $identityKey = $this->buildIdentityKey(
+                    $regionId,
+                    $row['title'],
+                    $row['province'],
+                    $row['municipality']
+                );
+
+                $existingItem = $existingItems->get($identityKey);
+                if ($existingItem) {
+                    $existingItem->forceFill($record)->save();
+                    $updatedCount++;
+                    continue;
+                }
+
+                $payload[] = $record + [
+                    'createdby' => $actorName,
+                    'created_at' => $timestamp,
+                ];
+                $addedCount++;
             }
 
             foreach (array_chunk($payload, 500) as $chunk) {
                 RegionItem::query()->insert($chunk);
             }
+
+            return [
+                'added_count' => $addedCount,
+                'updated_count' => $updatedCount,
+            ];
         });
 
         return [
             'source' => $sourceName ?: basename($fullPath),
             'regions_count' => count($regionNames),
             'items_count' => count($rowsToInsert),
+            'added_count' => $stats['added_count'],
+            'updated_count' => $stats['updated_count'],
         ];
+    }
+
+    private function buildIdentityKey(int $regionId, ?string $title, ?string $province, ?string $municipality): string
+    {
+        return implode('|', [
+            $regionId,
+            $this->normalizeIdentityValue($title),
+            $this->normalizeIdentityValue($province),
+            $this->normalizeIdentityValue($municipality),
+        ]);
+    }
+
+    private function normalizeIdentityValue(?string $value): string
+    {
+        return mb_strtolower(trim((string) $value));
     }
 
     private function extractHeaders(array $rows): array

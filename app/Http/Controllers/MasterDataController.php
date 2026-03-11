@@ -119,7 +119,7 @@ class MasterDataController extends Controller
 
             return redirect()->route('masterdata.index', ['tab' => 'overview'])->with(
                 'status',
-                'Imported ' . $result['items_count'] . ' region items across ' . $result['regions_count'] . ' regions from ' . $result['source'] . '.'
+                'Imported ' . $result['items_count'] . ' sheet rows across ' . $result['regions_count'] . ' regions from ' . $result['source'] . '. Added ' . $result['added_count'] . ' new STs and updated ' . $result['updated_count'] . ' existing STs.'
             );
         } catch (\Throwable $e) {
             return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('error', $e->getMessage());

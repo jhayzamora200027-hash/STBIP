@@ -583,7 +583,7 @@
                                     <div class="col-md-6">
                                         <label for="profile_current_password" class="form-label">Current Password</label>
                                         <input type="password" name="current_password" id="profile_current_password" class="form-control @error('current_password', 'profileUpdate') is-invalid @enderror">
-                                        <div class="profile-help">Required when changing account details or password. Not required for photo-only uploads.</div>
+                                        <div class="profile-help">Required when changing account details or password. Not required for photo only uploads.</div>
                                         @error('current_password', 'profileUpdate')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror

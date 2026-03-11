@@ -784,7 +784,7 @@
 				<section class="masterdata-card">
 					<div class="masterdata-card-header">
 						<h2>Upload and Import</h2>
-						<p>The upload source remains available here and imports into the fixed office structure.</p>
+						<p>The upload source remains available here and imports into the fixed office structure. Matching STs are updated, and new STs are added in bulk.</p>
 					</div>
 					<div class="masterdata-card-body">
 						<form method="POST" action="{{ route('masterdata.import-google-sheet') }}">
@@ -803,7 +803,7 @@
 								</div>
 							</div>
 							<div class="masterdata-item-actions" style="justify-content:flex-start; margin-top: 18px;">
-								<button type="submit" class="masterdata-btn masterdata-btn-primary">Import Sheet to Master Data</button>
+								<button type="submit" class="masterdata-btn masterdata-btn-primary">Add or Update STs from Sheet</button>
 								<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('upload') }}">Open Uploading Document</a>
 							</div>
 						</form>
