@@ -892,6 +892,12 @@
 		transform: translateY(-4px) scale(1.03);
 		box-shadow: 0 8px 24px rgba(16, 174, 181, 0.18);
 	}
+
+/* Disable hover effect for dashboard cards that use flexible fill layout */
+.st-dashboard-card.flex-fill:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
 	.st-dashboard-card .card-header {
 		background: linear-gradient(90deg, #06306e 60%, #06306e 100%);
 		color: #fff;
