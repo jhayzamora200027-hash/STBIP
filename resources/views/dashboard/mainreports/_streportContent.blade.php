@@ -83,6 +83,98 @@ function getRowYear(r){
     }
     try { window.fetchRegionHierarchy = fetchRegionHierarchy; } catch(e) {}
 })();
+
+/* Local details modal for ST Titles inside the ST report iframe. */
+try {
+    (function(){
+        const tpl = `
+            <div id="rsm-st-details-modal" style="display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;padding:20px;">
+                <div style="max-width:920px;width:100%;margin:40px auto;background:#fff;border-radius:12px;box-shadow:0 24px 80px rgba(2,6,23,0.2);overflow:hidden;">
+                    <div style="background:linear-gradient(90deg,#0b4a93,#06306e);color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
+                        <div id="rsm-st-details-title" style="font-weight:800;font-size:1.05rem;line-height:1.2;">ST Details</div>
+                        <button id="rsm-st-details-close" style="background:transparent;border:none;color:#fff;font-size:1.4rem;cursor:pointer;">&times;</button>
+                    </div>
+                    <div id="rsm-st-details-body" style="padding:18px;max-height:60vh;overflow:auto;color:#16324f;"></div>
+                </div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', tpl);
+        document.getElementById('rsm-st-details-close').addEventListener('click', function(){ document.getElementById('rsm-st-details-modal').style.display='none'; try{ document.body.style.overflow=''; }catch(e){} });
+    })();
+} catch(e) {}
+
+window.openRsmStDetailsModal = function(row){
+    function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    const modal = document.getElementById('rsm-st-details-modal');
+    const titleEl = document.getElementById('rsm-st-details-title');
+    const bodyEl = document.getElementById('rsm-st-details-body');
+    if (!modal || !bodyEl) return;
+    if (titleEl) titleEl.textContent = row && row.title ? row.title : 'ST Details';
+    if (!row) { bodyEl.innerHTML = '<p>No details available.</p>'; } else {
+        const attUrl = row.attachment_url || '';
+        const uploadedBy = row.attachment_uploaded_by || '';
+        let html = '';
+        html += '<div class="masterdata-item-head"><div><div class="masterdata-item-title">' + esc(row.title || '-') + '</div>';
+        html += '<div class="masterdata-item-meta">';
+        if (uploadedBy) html += '<span>Uploaded by: ' + esc(uploadedBy) + '</span>';
+        html += '</div></div></div>';
+
+        // attachment panel
+        html += '<div class="masterdata-attachment-panel">';
+        html += '<div><div class="masterdata-stat-label">MOA ATTACHMENT</div><div class="masterdata-item-meta" style="margin-top:8px;">';
+        if (attUrl) {
+            html += '<span>Uploaded PDF available for this item.</span>';
+            if (uploadedBy) html += '<span> Uploaded by: ' + esc(uploadedBy) + '</span>';
+        } else {
+            html += '<span>No PDF attachment uploaded yet.</span>';
+            if (!row.with_moa || !row.year_of_moa) html += '<span> Enable With MOA and set Year of MOA to upload an attachment.</span>';
+        }
+        html += '</div></div>';
+        html += '<div class="masterdata-attachment-actions">';
+        if (attUrl) {
+            html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + esc(attUrl) + '" data-title="' + esc(row.title || '') + '" data-uploader="' + esc(uploadedBy) + '">View PDF</button>';
+            html += '<a href="' + esc(attUrl) + '" class="masterdata-btn" target="_blank" download>Download</a>';
+        }
+        html += '</div></div>';
+
+        // form grid
+        html += '<div class="masterdata-form-grid">';
+        html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + esc(row.region || '-') + '" readonly></div>';
+        html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + esc(row.status || '-') + '" readonly></div>';
+        html += '<div class="masterdata-field full"><label>Social Technology Title</label><input type="text" value="' + esc(row.title || '-') + '" readonly></div>';
+        html += '<div class="masterdata-field"><label>Province</label><input type="text" value="' + esc(row.province || '-') + '" readonly></div>';
+        html += '<div class="masterdata-field"><label>Municipality</label><input type="text" value="' + esc(row.municipality || '-') + '" readonly></div>';
+        html += '<div class="masterdata-field"><label>Adopted / Replicated</label><input type="text" value="' + (row.with_adopted ? 'Adopted' : (row.with_replicated ? 'Replicated' : '-')) + '" readonly></div>';
+        html += '<div class="masterdata-field full"><label>Indicators</label><div class="masterdata-checks">';
+        html += '<label class="masterdata-check"><input type="hidden" name="with_expr" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.with_expr ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Expression of Interest</span></span></label>';
+        html += '<label class="masterdata-check"><input type="hidden" name="with_moa" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.with_moa ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With MOA</span><span class="masterdata-check-note">Enable when a memorandum of agreement exists.</span></span></label>';
+        html += '<label class="masterdata-check"><input type="hidden" name="with_res" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.with_res ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">With Resolution</span><span class="masterdata-check-note">Enable when a formal resolution has been issued.</span></span></label>';
+        html += '<label class="masterdata-check"><input type="hidden" name="included_aip" value="0"><span class="masterdata-check-control"><input type="checkbox" ' + (row.included_aip ? 'checked' : '') + ' disabled><span class="masterdata-check-indicator" aria-hidden="true"></span></span><span class="masterdata-check-text"><span class="masterdata-check-title">Included AIP</span><span class="masterdata-check-note">Use when the item is included in the AIP.</span></span></label>';
+        html += '</div></div>';
+        if (row.with_moa) html += '<div class="masterdata-field"><label>Year of MOA</label><input type="text" value="' + esc(row.year_of_moa || '-') + '" readonly></div>';
+        if (row.with_res) html += '<div class="masterdata-field"><label>Year of Resolution</label><input type="text" value="' + esc(row.year_of_resolution || '-') + '" readonly></div>';
+        html += '</div>';
+        bodyEl.innerHTML = html;
+    }
+    modal.style.display = 'flex';
+    try{ document.body.style.overflow = 'hidden'; } catch(e){}
+    try {
+        setTimeout(function(){
+            const btn = modal.querySelector('.st-attachment-view-btn');
+            if (btn) {
+                btn.addEventListener('click', function(ev){
+                    ev.preventDefault();
+                    const u = btn.getAttribute('data-url');
+                    if (u) {
+                        try { window.open(u, '_blank'); } catch(e){ location.href = u; }
+                    }
+                });
+            }
+        }, 10);
+    } catch(e) {}
+};
+
+// end local modal
+
 if (!window.updateProvinceFilters) {
     window.updateProvinceFilters = function(){
         console.warn('[RSM] updateProvinceFilters placeholder invoked before definition');
@@ -291,10 +383,14 @@ function renderStTitlesFromRows(rows, regionParam) {
                     if (yearMoa !== null) rowObj.year_of_moa = yearMoa || null;
                 } catch (e) {}
                 try {
-                    if (window.parent && window.parent.openStDetailsModal) {
-                        window.parent.openStDetailsModal(rowObj);
-                        return;
-                    }
+                    try {
+                        if (window.parent && window.parent.openStDetailsModal) {
+                            window.parent.openStDetailsModal(rowObj);
+                            return;
+                        }
+                    } catch(e) {}
+                    // fallback to local modal in iframe
+                    if (window.openRsmStDetailsModal) { window.openRsmStDetailsModal(rowObj); return; }
                 } catch(e) {}
                 showReplicateConfirmPopover(detailRow, { title, province, city, row: { title, province, city } });
                 return;
@@ -341,10 +437,13 @@ function renderStTitlesFromRows(rows, regionParam) {
                 }
             } catch(e) {}
             try {
-                if (window.parent && window.parent.openStDetailsModal) {
-                    window.parent.openStDetailsModal(rowObj);
-                    return;
-                }
+                try {
+                    if (window.parent && window.parent.openStDetailsModal) {
+                        window.parent.openStDetailsModal(rowObj);
+                        return;
+                    }
+                } catch(e) {}
+                if (window.openRsmStDetailsModal) { window.openRsmStDetailsModal(rowObj); return; }
             } catch(e) {}
             showReplicateConfirmPopover(row, { title, row: { title } });
         };

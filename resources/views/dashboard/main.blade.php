@@ -4529,6 +4529,30 @@ $('#region-select-modal').on('change', function() {
 					item.addEventListener('click', function() {
 						const idx = parseInt(this.getAttribute('data-idx'));
 						const label = stTitleLabels[idx];
+						// prefer opening the details modal for a matching ST if available
+						try {
+							const allRows = window.fullListingData || [];
+							const normalize = s => (s || '').toString().trim().toLowerCase();
+							const normLabel = normalize(label);
+							const matches = allRows.filter(r => normalize(r.title) === normLabel);
+							if (matches.length === 1 && window.openStDetailsModal) {
+								window.openStDetailsModal(matches[0]);
+								return;
+							}
+							if (matches.length > 1 && window.openStSummaryModal) {
+								// multiple STs share the same title — show a summary listing to pick
+								window.openStSummaryModal({ title: label, filter: function(r){ return normalize(r.title) === normLabel; } });
+								return;
+							}
+							// fallback: try substring match if no exact matches
+							const partial = allRows.find(r => normalize(r.title).includes(normLabel) || normLabel.includes(normalize(r.title)));
+							if (partial && window.openStDetailsModal) {
+								window.openStDetailsModal(partial);
+								return;
+							}
+						} catch (err) {
+							console.error('reference list click: match lookup failed', err);
+						}
 						if (window.openStTitleModal) {
 							window.openStTitleModal(label);
 						}
@@ -4902,24 +4926,7 @@ $('#region-select-modal').on('change', function() {
 				});
 				html += '</tbody></table></div>';
 				bodyEl.innerHTML = html;
-				// add an inline debug panel to inspect the row object when console is unavailable
-				try {
-					bodyEl.insertAdjacentHTML('beforeend', '\n\t\t\t\t<div class="st-details-debug" style="margin-top:12px;">\n\t\t\t\t\t<button type="button" id="st-debug-toggle" class="btn btn-sm btn-outline-secondary">Show debug</button>\n\t\t\t\t\t<pre id="st-debug-pre" style="display:none; white-space:pre-wrap; word-break:break-word; background:#f7fafc; border:1px solid #e6eef5; padding:8px; margin-top:8px; max-height:280px; overflow:auto;"></pre>\n\t\t\t\t</div>');
-					setTimeout(function(){
-						const dbgBtn = bodyEl.querySelector('#st-debug-toggle');
-						const dbgPre = bodyEl.querySelector('#st-debug-pre');
-						if (dbgBtn && dbgPre) {
-							dbgBtn.addEventListener('click', function(){
-								if (dbgPre.style.display === 'none') {
-									try { dbgPre.textContent = JSON.stringify(row, null, 2); } catch(e) { dbgPre.textContent = String(row); }
-									dbgPre.style.display = 'block'; dbgBtn.textContent = 'Hide debug';
-								} else {
-									dbgPre.style.display = 'none'; dbgBtn.textContent = 'Show debug';
-								}
-							});
-						}
-					}, 10);
-				} catch(e) {}
+				// (debug panel removed)
 			}
 			modal.style.display = 'block';
 			if (document.body) {
