@@ -4108,7 +4108,7 @@ document.addEventListener('DOMContentLoaded', function(){
 @media (hover: none) {
   .container-cards:not(.dragging):not(.is-scrolling) .card:hover { transform: none; box-shadow: 0 6px 24px rgba(2,6,23,0.08); flex-basis: 240px; }
 }
-
+@if(Auth::check())
 .slider-wrapper {
     position: relative;
     display: flex;
@@ -4121,7 +4121,22 @@ document.addEventListener('DOMContentLoaded', function(){
     margin-right: -50vw;
     overflow: visible;
     margin-top: 2rem;
-}
+} 
+@else
+.slider-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -55vw;
+    margin-right: -50vw;
+    overflow: visible;
+    margin-top: 2rem;
+} 
+@endif
 
 .gallery-section-label,
 .slider-label,
