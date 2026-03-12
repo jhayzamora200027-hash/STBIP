@@ -92,7 +92,7 @@ MAIL_USERNAME=jayarzamora084@gmail.com
 MAIL_PASSWORD=rhqvpbikcawdotmx
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS="stb-portal@dswd.gov.ph"
-MAIL_FROM_NAME="STB Portal"
+MAIL_FROM_NAME="STB Inventory Portal"
 =======
 >>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 # STBIP
