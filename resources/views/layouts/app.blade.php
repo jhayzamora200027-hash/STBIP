@@ -179,6 +179,21 @@
             flex-shrink: 0;
         }
 
+        /* Mobile-only: remove container side padding and center dashboard wrapper for all users */
+        @media (max-width: 767px) {
+            .container.stb-main-content, .stb-main-content {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            .st-center-outer { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+            html, body { overflow-x: hidden !important; }
+        }
+
         @if(request()->query('embed') || (isset($embed) && $embed))
         nav.navbar,
         .stb-sidebar,

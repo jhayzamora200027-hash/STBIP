@@ -4117,7 +4117,7 @@ document.addEventListener('DOMContentLoaded', function(){
     width: 100vw;
     left: 50%;
     right: 50%;
-    margin-left: -50vw;
+    margin-left: -60vw;
     margin-right: -50vw;
     overflow: visible;
     margin-top: 2rem;
@@ -4153,7 +4153,7 @@ document.addEventListener('DOMContentLoaded', function(){
     display: block;
     width: max-content;
     text-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    left: 140px;
+    left: 100px;
 }
 .section-label::after {
     content: '';

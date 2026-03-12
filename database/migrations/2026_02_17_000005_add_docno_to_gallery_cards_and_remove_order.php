@@ -9,7 +9,6 @@ return new class extends Migration
 {
     public function up()
     {
-        // Add docno to gallery_cards, populate and make unique; remove order from both tables
         if (Schema::hasTable('gallery_cards')) {
             Schema::table('gallery_cards', function (Blueprint $table) {
                 if (!Schema::hasColumn('gallery_cards', 'docno')) {
@@ -17,7 +16,6 @@ return new class extends Migration
                 }
             });
 
-            // populate docno for existing rows (use id as base)
             $cards = DB::table('gallery_cards')->orderBy('id')->get();
             foreach ($cards as $c) {
                 if (empty($c->docno)) {
@@ -25,17 +23,24 @@ return new class extends Migration
                 }
             }
 
-            // add unique index
             Schema::table('gallery_cards', function (Blueprint $table) {
                 if (!Schema::hasColumn('gallery_cards', 'docno')) return;
-                // add unique index if not exists (MySQL)
-                $existing = DB::select("SHOW INDEX FROM gallery_cards WHERE Column_name = 'docno' AND Non_unique = 0");
+                $existing = [];
+                try {
+                    $driver = DB::connection()->getDriverName();
+                } catch (\Throwable $e) {
+                    $driver = null;
+                }
+
+                if ($driver === 'mysql') {
+                    $existing = DB::select("SHOW INDEX FROM gallery_cards WHERE Column_name = 'docno' AND Non_unique = 0");
+                }
+
                 if (empty($existing)) {
                     $table->unique('docno');
                 }
             });
 
-            // drop order column if exists
             Schema::table('gallery_cards', function (Blueprint $table) {
                 if (Schema::hasColumn('gallery_cards', 'order')) {
                     $table->dropColumn('order');
@@ -43,7 +48,6 @@ return new class extends Migration
             });
         }
 
-        // Remove order from gallery_children (children keep docno already)
         if (Schema::hasTable('gallery_children')) {
             Schema::table('gallery_children', function (Blueprint $table) {
                 if (Schema::hasColumn('gallery_children', 'order')) {
@@ -51,7 +55,6 @@ return new class extends Migration
                 }
             });
 
-            // ensure child docno uniqueness (add unique index if no duplicates)
             $duplicates = DB::select(
                 "SELECT docno, COUNT(*) c FROM gallery_children WHERE docno IS NOT NULL GROUP BY docno HAVING c > 1"
             );
@@ -83,7 +86,6 @@ return new class extends Migration
                     $table->integer('order')->default(0);
                 }
                 if (Schema::hasColumn('gallery_children', 'docno')) {
-                    // do not drop docno (children had docno originally)
                 }
             });
         }

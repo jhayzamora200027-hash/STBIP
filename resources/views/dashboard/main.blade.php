@@ -5,6 +5,52 @@
 <style>
     .stb-main-content {
         margin-left: 0 !important;
+@media (max-width: 767px) {
+	/* Force header logo and main containers to fit mobile viewport */
+	.st-dashboard-header .st-header-logo {
+		width: auto !important;
+		max-width: 160px !important;
+		height: auto !important;
+		display: block !important;
+		margin: 0 auto 8px auto !important;
+	}
+
+	.st-dashboard-container, .mobile-dashboard-container, .st-center-outer {
+		box-sizing: border-box !important;
+		max-width: 100vw !important;
+		width: 100vw !important;
+		padding-left: 8px !important;
+		padding-right: 8px !important;
+		margin-left: auto !important;
+		margin-right: auto !important;
+		overflow-x: hidden !important;
+	}
+
+	/* Ensure embedded map and images never overflow */
+	.st-map-figure-wrapper, .st-map-figure-wrapper object#philippines-map, img, svg, object, iframe {
+		max-width: 100% !important;
+		width: 100% !important;
+		height: auto !important;
+	}
+
+	html, body { overflow-x: hidden !important; }
+}
+
+/* Stronger override for any remaining logo stretching on very small viewports */
+@media (max-width: 420px) {
+	.mobile-dashboard-container .st-header-logo,
+	.st-dashboard-header .st-header-logo,
+	.st-center-outer .st-header-logo {
+		width: auto !important;
+		max-width: 140px !important;
+		height: auto !important;
+		object-fit: contain !important;
+		padding: 0 !important;
+		margin-left: auto !important;
+		margin-right: auto !important;
+		display: block !important;
+	}
+}
         margin-right: 0 !important;
         padding-left: 50px !important;
 		padding-right: 430px !important;
@@ -30,10 +76,89 @@
 		}
     }
 </style>
+
+<!-- Final mobile centering and overflow fixes (high-specificity) -->
 <style>
-	/* Blur the main listing when details modal is open */
-	body.st-details-open .st-dashboard-container,
-	body.st-details-open .masterdata-item-list,
+@media (max-width: 767px) {
+	html, body { width:100% !important; max-width:100% !important; overflow-x: hidden !important; }
+
+	/* Force inner content to fit and center inside viewport */
+	.st-center-outer > * {
+		width: calc(100vw - 24px) !important;
+		max-width: calc(100vw - 24px) !important;
+		margin-left: auto !important;
+		margin-right: auto !important;
+		box-sizing: border-box !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+		transform: none !important;
+	}
+
+	.mobile-dashboard-container,
+	.st-dashboard-container,
+	.container.stb-main-content,
+	.stb-main-content {
+		width: calc(100vw - 24px) !important;
+		max-width: calc(100vw - 24px) !important;
+		margin: 0 auto !important;
+		padding-left: 12px !important;
+		padding-right: 12px !important;
+		overflow-x: hidden !important;
+	}
+
+	/* Ensure map and images never overflow their container */
+	.st-map-figure-wrapper,
+	.st-map-figure-wrapper object#philippines-map,
+	.st-map-figure-wrapper svg,
+	.st-map-figure-wrapper img,
+	#philippines-map,
+	#philippines-map svg {
+		width: 100% !important;
+		max-width: 100% !important;
+		height: auto !important;
+		display: block !important;
+		margin: 0 auto !important;
+		transform: none !important;
+	}
+
+	/* Remove decorative pseudo-elements that expand visual bounds */
+	.ph-frame::before,
+	.st-dashboard-container::before,
+	.st-dashboard-container::after {
+		display: none !important;
+		content: none !important;
+	}
+
+	/* If there is still a tiny visual overflow, clip it strictly */
+	.mobile-dashboard-container { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
+}
+</style>
+
+<!-- Mobile floating filter button (visible only on mobile) -->
+<style>
+	#mobile-filter-fab { display:none; }
+	@media (max-width: 767px) {
+		#mobile-filter-fab {
+			display: flex;
+			position: fixed;
+			right: 14px;
+			top: 14px; /* near header/logout */
+			z-index: 2200;
+			align-items: center;
+			gap: 8px;
+			background: #fff;
+			border: 0; border-radius: 999px;
+			padding: 8px 12px;
+			box-shadow: 0 8px 24px rgba(8,43,81,0.12);
+			color: #06306e;
+			font-weight:700;
+			cursor: pointer;
+		}
+		#mobile-filter-fab .fab-icon { width:20px; height:20px; display:inline-block; }
+		#mobile-filter-panel { display:none; }
+	}
+
+	/* Ensure blur behavior for details modal (not displayed as text) */
 	body.st-details-open .st-summary-table-wrap,
 	body.st-details-open .social-listing,
 	body.st-details-open .slider-modal-content {
@@ -54,6 +179,48 @@
 </style>
 @endguest
 <style>
+@media (max-width: 767px) {
+	/* Force layout resets for logged-in mobile views */
+	.container.stb-main-content, .stb-main-content {
+		margin-left: 0 !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+	}
+	body.sidebar-open .stb-main-content { margin-left: 0 !important; }
+	.st-center-outer { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+	.mobile-dashboard-container { margin: 12px auto !important; left: 0 !important; right: 0 !important; }
+	html, body { overflow-x: hidden !important; }
+}
+</style>
+
+<!-- Extra mobile fixes for map/logo overflow -->
+<style>
+@media (max-width: 767px) {
+	/* Ensure the embedded Philippines SVG/object never exceeds viewport */
+	.st-map-figure-wrapper,
+	.st-map-figure-wrapper object#philippines-map,
+	.st-map-figure-wrapper svg,
+	.st-map-figure-wrapper img {
+		max-width: 100% !important;
+		width: 100% !important;
+		height: auto !important;
+		transform: none !important;
+		margin: 0 auto !important;
+		display: block !important;
+	}
+
+	/* Remove decorative pseudo-element overflow on small screens */
+	.ph-frame::before { inset: 0 !important; border: none !important; box-shadow: none !important; }
+
+	/* Prevent any inner element from visually overflowing container */
+	.mobile-dashboard-container, .st-center-outer, .st-dashboard-container { overflow-x: hidden !important; }
+
+	/* If any element still slightly overflows due to borders/margins, clip it */
+	.mobile-dashboard-container { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
+}
 </style>
 <link href="/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
@@ -917,8 +1084,8 @@
 		padding: 28px 0 16px 0;
 	}
 	.st-dashboard-card h1 {
-		font-size: 2.7rem;
-		font-weight: bold;
+		font-size: clamp(1.8rem, 6vw, 4rem);
+		font-weight: 800;
 		margin: 0;
 		color: #06306e;
 		text-shadow: 0 1px 0 #fff, 0 2px 8px #e2edf8;
@@ -968,7 +1135,8 @@
 			font-size: 1rem;
 		}
 		.st-dashboard-card h1 {
-			font-size: 1.5rem;
+			font-size: 2.6rem !important;
+			line-height: 1 !important;
 		}
 		.st-dashboard-select-card select {
 			width: 100%;
@@ -977,6 +1145,21 @@
 			max-width: 99vw;
 			padding: 8px 2vw 8px 2vw;
 		}
+		/* Make cards and map responsive on small screens */
+		.st-dashboard-card {
+			min-width: 0 !important;
+			max-width: none !important;
+			width: 100% !important;
+		}
+		.st-map-card-body { grid-template-columns: 1fr !important; }
+		/* Responsive iframe for embedded report */
+		#streportFrame {
+			height: 50vh !important;
+			min-height: 320px !important;
+			max-height: 80vh !important;
+		}
+		/* Logo sizing for mobile */
+		.st-header-logo { height: auto !important; max-width: 140px !important; }
 	}
 	@media print {
 		body {
@@ -1187,6 +1370,30 @@
 
 <style>
 		.st-dashboard-header .st-header-logo { width:600px !important; max-width:600px !important; height:140px !important; }
+		@media (max-width: 767px) {
+			/* Ensure logged-in header logo scales down on small screens (override later large rule) */
+			@if(Auth::check())
+			.st-dashboard-header .st-header-logo {
+				width: auto !important;
+				min-width: 300px !important;
+				max-width: 300px !important;
+				height: auto !important;
+				object-fit: contain !important;
+				display: block !important;
+				margin: 0 auto 8px !important;
+			}
+			@else
+			.st-dashboard-header .st-header-logo {
+				width: auto !important;
+				min-width: 300px !important;
+				max-width: 600px !important;
+				height: auto !important;
+				object-fit: contain !important;
+				display: block !important;
+				margin: 0 auto 8px !important;
+			}
+			@endif
+		}
 	.st-map-card-body {
 		display: grid !important;
 		grid-template-columns: minmax(210px, 260px) minmax(430px, 1.35fr) minmax(250px, 320px);
@@ -1247,7 +1454,7 @@
 		white-space: normal;
 		line-height: 1;
 	}
-	.map-overlay-totals .st-dashboard-card h1 { font-size: 3.2rem; margin: 8px 0 0 0; color: #1e90ff; line-height:1; font-weight:700; white-space:nowrap; display:block; transition: font-size 140ms ease; max-width: 100%; box-sizing: border-box; padding: 0 6px; overflow: hidden; text-overflow: clip; visibility: hidden; }
+	.map-overlay-totals .st-dashboard-card h1 { font-size: 3.2rem; margin: 8px 0 0 0; color: #1e90ff; line-height:1; font-weight:800; white-space:nowrap; display:block; transition: font-size 140ms ease; max-width: 100%; box-sizing: border-box; padding: 0 6px; overflow: hidden; text-overflow: clip; visibility: hidden; }
 	.st-map-region-list {
 		width: 100% !important;
 		max-width: none !important;
@@ -1302,15 +1509,126 @@
 	}
 	@media (max-width: 767px) {
 		.mobile-dashboard-container { display: block; }
-		.st-center-outer, .st-dashboard-container { display: none !important; }
+		.st-dashboard-container { display: none !important; }
 	}
 </style>
 
-<div class="st-center-outer" style="justify-content:flex-start;">
-	 <div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:1500px; min-width:300px; max-width:1500px !important; flex-shrink:0; margin:40px 0 40px 0 !important;">
-	<div class="mobile-dashboard-container">
+<!-- Additional responsive tweaks -->
+<style>
+	/* Global box-sizing and media-friendly images/iframes */
+	html, body { box-sizing: border-box; }
+	*, *::before, *::after { box-sizing: inherit; }
+	img, svg, object, iframe { max-width: 100%; height: auto; display: block; }
+
+	/* Make main container padding comfortable on small devices */
+	.st-center-outer { padding: 8px; }
+	.st-dashboard-container { padding-left: 12px; padding-right: 12px; }
+
+	/* Ensure embedded report and other iframes are responsive */
+	#streportFrame { width: 100%; border: none; }
+
+	/* Table responsiveness */
+	.masterdata-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.masterdata-table { min-width: 0 !important; width: 100% !important; }
+
+	/* Small cards grid for compact screens */
+	.small-cards-grid, .formal-st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+
+	/* Make dashboard cards fill width and remove fixed min-widths */
+	.st-dashboard-card { width: 100% !important; min-width: 0 !important; max-width: none !important; }
+
+	/* Ensure map overlay totals show on small screens even before interactive map loads */
+	.map-overlay-totals .st-dashboard-card h1 { visibility: visible !important; }
+
+	/* Masterdata list: stack rows on narrow screens */
+	@media (max-width: 820px) {
+		.masterdata-item-list-head { display: none !important; }
+		.masterdata-item-row { grid-template-columns: 1fr !important; gap: 8px; padding: 12px !important; }
+		.masterdata-item-row-cell { display: block; width: 100%; }
+	}
+
+	/* Tighter layout for phones */
+	@media (max-width: 560px) {
+		.st-dashboard-header { font-size: 1.0rem !important; padding: 10px 6px !important; }
+		.st-dashboard-card .card-header { font-size: 0.95rem !important; }
+		.st-dashboard-card h1 { font-size: 2.4rem !important; }
+		.st-dashboard-select-card { padding: 18px 12px 12px 12px !important; }
+		.st-map-card-body { grid-template-columns: 1fr !important; padding: 8px !important; }
+		#streportFrame { height: 45vh !important; min-height: 260px !important; }
+	}
+
+	@media (max-width: 420px) {
+		.st-dashboard-header { font-size: .95rem !important; }
+		.st-header-logo { max-width: 120px !important; height: auto !important; }
+		.small-cards-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+		.masterdata-card-body, .masterdata-card-header { padding-left: 12px; padding-right: 12px; }
+	}
+</style>
+
+<!-- Prevent horizontal overflow on narrow viewports -->
+<style>
+	@media (max-width: 420px) {
+		/* prevent any horizontal scrolling */
+		html, body { max-width: 100%; overflow-x: hidden; }
+
+		/* ensure outer wrappers fit exactly the viewport and use border-box */
+		.st-center-outer, .mobile-dashboard-container, .st-dashboard-container {
+			box-sizing: border-box !important;
+			width: 100vw !important;
+			max-width: 100vw !important;
+			margin: 0 auto !important;
+			padding-left: 8px !important;
+			padding-right: 8px !important;
+			left: 0 !important;
+			transform: none !important;
+		}
+
+		/* make sure map and iframe never exceed viewport width */
+		object#philippines-map, #streportFrame, iframe, img {
+			width: 100% !important;
+			max-width: 100% !important;
+			box-sizing: border-box !important;
+		}
+
+		/* reduce any large shadows/paddings that may add width */
+		.st-dashboard-card, .map-overlay-card, .mobile-dashboard-container {
+			margin-left: 0 !important;
+			margin-right: 0 !important;
+			padding-left: 10px !important;
+			padding-right: 10px !important;
+		}
+
+		/* Center the dashboard on small screens (moved out) */
+	}
+</style>
+
+<style>
+@media (max-width: 767px) {
+	/* Force full-width page container to have no side padding on phones */
+	.container.stb-main-content, .stb-main-content {
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+	}
+
+	/* Center the outer wrapper and ensure mobile dashboard is centered */
+	.st-center-outer { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; margin: 0 auto !important; }
+	.mobile-dashboard-container { width: calc(100% - 24px) !important; max-width: calc(100% - 24px) !important; margin: 12px auto !important; border-radius: 16px !important; padding: 12px !important; left: 0 !important; right: 0 !important; }
+	.mobile-dashboard-container, .st-center-outer > * { margin-left: auto !important; margin-right: auto !important; }
+	.st-dashboard-container { display: none !important; }
+
+	/* Ensure viewport has no horizontal overflow on phones */
+	html, body { overflow-x: hidden !important; }
+}
+</style>
+
+<div class="st-center-outer">
+	<!-- Mobile-first summary shown above the main container on small screens -->
+
+    <div class="mobile-dashboard-container">
 		<div class="st-dashboard-header" style="font-size:1.1rem; padding:12px 0; text-align:center; border-radius:14px 14px 0 0; margin-bottom:12px;">
-			<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:80px; max-width:120px; background:transparent; display:block; margin:0 auto 8px auto;">
+			<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD white logo.png') }}" alt="DSWD Logo" style="background:transparent; display:block; margin:0 auto 8px auto; max-width:140px; height:auto; object-fit:contain;">
 			Adopted & Replicated Social Technologies
 		</div>
 		<div style="padding:0;">
@@ -1343,12 +1661,13 @@
 		</div>
 	</div>
 
-	   {{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
+	{{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
 		   <button type="button" class="btn btn-sm btn-primary" onclick="window.print()" style="background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%); border: none; border-radius: 999px; padding: 6px 18px; font-weight: 600; box-shadow: 0 2px 6px rgba(16,174,181,0.35);">
 			   Print / Save as PDF
 		   </button>
 	   </div> --}}
-	   	<div class="st-dashboard-header st-dashboard-header-fullwidth">
+	    	<div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:100%; min-width:0; max-width:1400px !important; margin:40px auto !important; box-sizing:border-box;">
+	    	<div class="st-dashboard-header st-dashboard-header-fullwidth">
 	   		<div style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; min-height:100px; padding:10px 10px 10px 10px;">
 	   			<div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap;">
 					<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:200px; max-width:200px; background:transparent;">
@@ -1431,7 +1750,7 @@
 
 			<div class="row mt-4">
 			    <div class="col-12">
-			        <iframe id="streportFrame" src="{{ route('streport') }}?embed=1" style="width:100%; height:720px; max-height:720px Te; border:none; transition: height 0.3s ease;" title="STsReport"></iframe>
+					<iframe id="streportFrame" src="{{ route('streport') }}?embed=1" style="width:100%; height:60vh; min-height:360px; border:none; transition: height 0.3s ease;" title="STsReport"></iframe>
 			    </div>
 			</div>
 <script>
@@ -1747,6 +2066,79 @@ if (!document.getElementById('catListTooltip')) {
 		</div>
 	</div>
 </div>
+
+<div id="mobile-filter-panel" role="dialog" aria-modal="true" aria-hidden="true">
+	<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+		<strong>Filter Titles</strong>
+		<button id="mobile-filter-close" style="background:none;border:0;font-size:18px;cursor:pointer;">✕</button>
+	</div>
+	<div class="mf-row">
+		<input id="mf-search" type="search" placeholder="Search title" style="flex:1;padding:8px;border:1px solid #e6eef6;border-radius:8px;" />
+	</div>
+	<div class="mf-row" style="margin-top:8px;">
+		<select id="mf-status" style="flex:1;padding:8px;border:1px solid #e6eef6;border-radius:8px;">
+			<option value="">All statuses</option>
+			<option value="ongoing">Ongoing STs</option>
+			<option value="dissolved">Dissolved / Inactive STs</option>
+		</select>
+		<select id="mf-adopt" style="flex:1;padding:8px;border:1px solid #e6eef6;border-radius:8px;">
+			<option value="">All types</option>
+			<option value="replicated">With Replicated</option>
+			<option value="adopted">With Adopted</option>
+		</select>
+	</div>
+	<div class="mf-actions">
+		<button id="mobile-filter-apply" class="btn btn-primary" style="padding:6px 12px;border-radius:8px;">Apply</button>
+		<button id="mobile-filter-reset" class="btn btn-outline-secondary" style="padding:6px 12px;border-radius:8px;">Reset</button>
+	</div>
+</div>
+
+<script>
+// Mobile FAB behavior: clone/sync filter inputs with desktop listing controls
+(function(){
+	var fab = document.getElementById('mobile-filter-fab');
+	var panel = document.getElementById('mobile-filter-panel');
+	if(!fab || !panel) return;
+
+	var desktopSearch = document.getElementById('title-listing-search');
+	var desktopStatus = document.getElementById('title-listing-status-filter');
+	var desktopAdopt = document.getElementById('title-listing-adopt-filter');
+	var mfSearch = document.getElementById('mf-search');
+	var mfStatus = document.getElementById('mf-status');
+	var mfAdopt = document.getElementById('mf-adopt');
+
+	function openPanel(){
+		// copy values from desktop
+		try{ if(desktopSearch) mfSearch.value = desktopSearch.value || ''; }catch(e){}
+		try{ if(desktopStatus) mfStatus.value = desktopStatus.value || ''; }catch(e){}
+		try{ if(desktopAdopt) mfAdopt.value = desktopAdopt.value || ''; }catch(e){}
+		panel.style.display = 'block'; panel.setAttribute('aria-hidden','false');
+	}
+	function closePanel(){ panel.style.display = 'none'; panel.setAttribute('aria-hidden','true'); }
+
+	fab.addEventListener('click', function(){ openPanel(); });
+	document.getElementById('mobile-filter-close').addEventListener('click', closePanel);
+
+	document.getElementById('mobile-filter-reset').addEventListener('click', function(){
+		mfSearch.value = '';
+		mfStatus.value = '';
+		mfAdopt.value = '';
+		// sync to desktop
+		try{ if(desktopSearch){ desktopSearch.value=''; desktopSearch.dispatchEvent(new Event('input')); } }catch(e){}
+		try{ if(desktopStatus){ desktopStatus.value=''; desktopStatus.dispatchEvent(new Event('change')); } }catch(e){}
+		try{ if(desktopAdopt){ desktopAdopt.value=''; desktopAdopt.dispatchEvent(new Event('change')); } }catch(e){}
+		closePanel();
+	});
+
+	document.getElementById('mobile-filter-apply').addEventListener('click', function(){
+		try{ if(desktopSearch){ desktopSearch.value = mfSearch.value || ''; desktopSearch.dispatchEvent(new Event('input')); } }catch(e){}
+		try{ if(desktopStatus){ desktopStatus.value = mfStatus.value || ''; desktopStatus.dispatchEvent(new Event('change')); } }catch(e){}
+		try{ if(desktopAdopt){ desktopAdopt.value = mfAdopt.value || ''; desktopAdopt.dispatchEvent(new Event('change')); } }catch(e){}
+		closePanel();
+	});
+
+})();
+</script>
 
 <div class="st-third-row formal-dashboard-row">
 	<div class="formal-third-row-grid">
@@ -5163,7 +5555,7 @@ $('#region-select-modal').on('change', function() {
 				// expected order: total adopted/replicated, expr, sb resolution, moa
 				overlayCards.forEach(function(el, idx) {
 					let cfg = null;
-					if (idx === 0) cfg = cardBindings['card1'] || null; // adopted+replicated total - show all titles
+					if (idx === 0) cfg = { title: 'All ST Titles', filter: function(r){ return true; } }; // adopted+replicated total - show all titles
 					if (idx === 1) cfg = { title: 'Expression of Interest', filter: function(r){ return parseFlag(r.with_expr); } };
 					if (idx === 2) cfg = { title: 'SB Resolution', filter: function(r){ return parseFlag(r.with_res); } };
 					if (idx === 3) cfg = { title: 'MOA', filter: function(r){ return parseFlag(r.with_moa); } };
