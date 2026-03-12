@@ -74,45 +74,15 @@ class UserApprovalController extends Controller
         
         try {
             if ($request->approval_status === 'A') {
-                Mail::raw(
-                    "Dear {$user->name},\n\n" .
-                    "Good news! Your registration has been approved by the administrator.\n\n" .
-                    "You can now log in to your account using your email and password.\n\n" .
-                    "Email: {$user->email}\n" .
-                    "User Group: {$user->usergroup}\n\n" .
-                    "Thank you for registering with STB Inventory Portal!\n\n" .
-                    "Best regards,\n\n" .
-                    "STB Inventory Portal Team\n" .
-                    "Social Technology Bureau\n" .
-                    "Department of Social Welfare and Development - Central Office\n" .
-                    "Batasan Pambansa, Constitution Hills, Quezon City 1126\n" .
-                    "☎️ (632) 89517124 / 89318144\n" .
-                    "Please do not reply this is automated email.",
-                    function ($message) use ($user) {
-                        $message->to($user->email)
-                                ->subject('Registration Approved - STB Inventory Portal');
-                    }
-                );
+                Mail::send('emails.approval_success', ['user' => $user], function ($message) use ($user) {
+                    $message->to($user->email)
+                            ->subject('Registration Approved - STB Inventory Portal');
+                });
             } else {
-                $reasonText = $rejectionReason ? "Reason for rejection: {$rejectionReason}\n\n" : "";
-                Mail::raw(
-                    "Dear {$user->name},\n\n" .
-                    "We regret to inform you that your registration has been rejected by the administrator.\n\n" .
-                    $reasonText .
-                    "If you believe this is an error or would like more information, please contact support.\n\n" .
-                    "Email: " . Auth::user()->email . "\n\n" .
-                    "Best regards,\n\n" .
-                    "STB Inventory Portal Team\n" .
-                    "Social Technology Bureau\n" .
-                    "Department of Social Welfare and Development - Central Office\n" .
-                    "Batasan Pambansa, Constitution Hills, Quezon City 1126\n" .
-                    "☎️ (632) 89517124 / 89318144\n" .
-                    "Please do not reply this is automated email.",
-                    function ($message) use ($user) {
-                        $message->to($user->email)
-                                ->subject('Registration Status - STB Inventory Portal');
-                    }
-                );
+                Mail::send('emails.approval_rejected', ['user' => $user, 'reason' => $rejectionReason, 'adminEmail' => Auth::user() ? Auth::user()->email : null], function ($message) use ($user) {
+                    $message->to($user->email)
+                            ->subject('Registration Status - STB Inventory Portal');
+                });
             }
         } catch (\Exception $e) {
             Log::error('Failed to send approval email: ' . $e->getMessage());

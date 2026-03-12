@@ -299,7 +299,7 @@ class UserController extends Controller
                 ->withInput();
         }
 
-        // Notify specific admin about pending registrations
+        // Notify specific admin about pending registrations (HTML email)
         try {
             $pendingCount = User::where(function($q) {
                 $q->whereNull('approvalstatus')
@@ -307,16 +307,10 @@ class UserController extends Controller
             })->count();
 
             $subject = $pendingCount . ' Pending for approval account';
-            $body = 'Greetings!
 
-            This is to inform you about the current number 
-            of accounts that are pending for approval. 
-            Kindly review the pending approval at your earliest 
-            convenience so they can be processed accordingly.';
-
-            Mail::raw($body, function ($message) use ($subject) {
+            Mail::send('emails.pending_registration', ['pendingCount' => $pendingCount], function ($message) use ($subject) {
                 $message->to('jpscarullo@dswd.gov.ph')
-                        ->subject("STB Inventory Portal - " . $subject);
+                        ->subject('STB Inventory Portal - ' . $subject);
             });
         } catch (\Exception $mailEx) {
             Log::error('Failed sending new registration notification: ' . $mailEx->getMessage());
