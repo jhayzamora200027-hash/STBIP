@@ -86,7 +86,7 @@ php artisan db:seed
 ## IMPORTANT to add in env
 MAIL_MAILER=smtp
 MAIL_SCHEME=null
-MAIN_HOST=smtp.gmail.com
+MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=jayarzamora084@gmail.com
 MAIL_PASSWORD=rhqvpbikcawdotmx

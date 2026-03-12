@@ -306,7 +306,7 @@ class UserController extends Controller
                   ->orWhere('approvalstatus', '');
             })->count();
 
-            $subject = $pendingCount . ' pending for approval account';
+            $subject = $pendingCount . ' Pending for approval account';
             $body = 'Greetings!
 
             This is to inform you about the current number 
@@ -316,7 +316,7 @@ class UserController extends Controller
 
             Mail::raw($body, function ($message) use ($subject) {
                 $message->to('jpscarullo@dswd.gov.ph')
-                        ->subject($subject);
+                        ->subject("STB Inventory Portal - " . $subject);
             });
         } catch (\Exception $mailEx) {
             Log::error('Failed sending new registration notification: ' . $mailEx->getMessage());
