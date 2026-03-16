@@ -5,28 +5,67 @@
 <style>
     .stb-main-content {
         margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 50px !important;
+        padding-right: 430px !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden;
+    }
 @media (max-width: 767px) {
 	/* Force header logo and main containers to fit mobile viewport */
 	.st-dashboard-header .st-header-logo {
 		width: auto !important;
 		max-width: 160px !important;
+		min-width: 220px !important;
 		height: auto !important;
+		min-height: 100px !important;
 		display: block !important;
 		margin: 0 auto 8px auto !important;
 	}
 
-	.st-dashboard-container, .mobile-dashboard-container, .st-center-outer {
-		box-sizing: border-box !important;
-		max-width: 100vw !important;
-		width: 100vw !important;
-		padding-left: 8px !important;
-		padding-right: 8px !important;
-		margin-left: auto !important;
-		margin-right: auto !important;
-		overflow-x: hidden !important;
+	/* Mobile: stack header logo + title and center both */
+	.st-dashboard-header .st-dashboard-header-row {
+		flex-direction: column !important;
+		align-items: center !important;
+		justify-content: center !important;
 	}
 
-	/* Ensure embedded map and images never overflow */
+	.st-dashboard-header .st-dashboard-header-row > div {
+		width: 100% !important;
+		text-align: center !important;
+		margin: 0 auto !important;
+	}
+
+	.st-dashboard-header .st-dashboard-header-row > div:first-child {
+		display: flex !important;
+		justify-content: center !important;
+		align-items: center !important;
+	}
+
+	.st-dashboard-header .st-dashboard-header-row > div:last-child {
+		margin-top: 12px !important;
+		margin-left: 0 !important;
+		flex: none !important;
+		font-size: 1.2rem !important;
+		line-height: 1.2 !important;
+		padding: 0 16px !important;
+		white-space: normal !important;
+		word-break: break-word !important;
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+	}
+
+	/* Reduce row height on mobile so later content doesn't overlap */
+	.st-dashboard-header .st-dashboard-header-row {
+		min-height: auto !important;
+		padding-bottom: 12px !important;
+	}
+	.st-dashboard-header-fullwidth {
+		padding-bottom: 12px !important;
+	}
+
 	.st-map-figure-wrapper, .st-map-figure-wrapper object#philippines-map, img, svg, object, iframe {
 		max-width: 100% !important;
 		width: 100% !important;
@@ -36,14 +75,15 @@
 	html, body { overflow-x: hidden !important; }
 }
 
-/* Stronger override for any remaining logo stretching on very small viewports */
 @media (max-width: 420px) {
 	.mobile-dashboard-container .st-header-logo,
 	.st-dashboard-header .st-header-logo,
 	.st-center-outer .st-header-logo {
 		width: auto !important;
 		max-width: 140px !important;
+		min-width: 220px !important;
 		height: auto !important;
+		min-height: 100px !important;
 		object-fit: contain !important;
 		padding: 0 !important;
 		margin-left: auto !important;
@@ -51,14 +91,6 @@
 		display: block !important;
 	}
 }
-        margin-right: 0 !important;
-        padding-left: 50px !important;
-		padding-right: 430px !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-		box-sizing: border-box !important;
-		overflow-x: hidden;
-	}
 
 	.stb-main-content .st-dashboard-container {
 		width: min(1500px, calc(100vw - 520px)) !important;
@@ -1193,7 +1225,7 @@
 			max-height: 80vh !important;
 		}
 		/* Logo sizing for mobile */
-		.st-header-logo { height: auto !important; max-width: 140px !important; }
+		.st-header-logo { height: auto !important; max-width: 140px !important; min-width: 220px !important; min-height: 100px !important; }
 	}
 	@media print {
 		body {
@@ -1409,8 +1441,8 @@
 			@if(Auth::check())
 			.st-dashboard-header .st-header-logo {
 				width: auto !important;
-				min-width: 300px !important;
-				max-width: 300px !important;
+				min-width: 120px !important;
+				max-width: 200px !important;
 				height: auto !important;
 				object-fit: contain !important;
 				display: block !important;
@@ -1419,8 +1451,8 @@
 			@else
 			.st-dashboard-header .st-header-logo {
 				width: auto !important;
-				min-width: 300px !important;
-				max-width: 600px !important;
+				min-width: 120px !important;
+				max-width: 200px !important;
 				height: auto !important;
 				object-fit: contain !important;
 				display: block !important;
@@ -1584,7 +1616,7 @@
 
 	@media (max-width: 420px) {
 		.st-dashboard-header { font-size: .95rem !important; }
-		.st-header-logo { max-width: 120px !important; height: auto !important; }
+		.st-header-logo { max-width: 120px !important; height: 100px !important; min-width: 220px !important; min-height: 100px !important; }
 		.small-cards-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 		.masterdata-card-body, .masterdata-card-header { padding-left: 12px; padding-right: 12px; }
 	}
@@ -1633,7 +1665,30 @@
 	.st-center-outer { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; margin: 0 auto !important; }
 	.mobile-dashboard-container { width: calc(100% - 24px) !important; max-width: calc(100% - 24px) !important; margin: 12px auto !important; border-radius: 16px !important; padding: 12px !important; left: 0 !important; right: 0 !important; }
 	.mobile-dashboard-container, .st-center-outer > * { margin-left: auto !important; margin-right: auto !important; }
-	.st-dashboard-container { display: none !important; }
+	.st-dashboard-container { display: block !important; }
+
+	/* Ensure header stacks correctly on mobile */
+	.st-dashboard-header {
+		padding: 16px 12px 20px 12px !important;
+		text-align: center !important;
+	}
+	.st-dashboard-header .st-dashboard-header-row {
+		flex-direction: column !important;
+		align-items: center !important;
+		justify-content: center !important;
+		gap: 12px !important;
+	}
+	.st-dashboard-header .st-dashboard-header-row > div {
+		width: 100% !important;
+		text-align: center !important;
+	}
+
+	.st-dashboard-header .st-dashboard-header-row > div:last-child {
+		font-size: 1.1rem !important;
+		line-height: 1.3 !important;
+		padding: 0 8px !important;
+		max-width: 100% !important;
+	}
 
 	html, body { overflow-x: hidden !important; }
 }
@@ -1672,9 +1727,9 @@ setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resize
 	   </div> --}}
 	    	<div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:100%; min-width:0; max-width:1400px !important; margin:40px auto !important; box-sizing:border-box;">
 	    	<div class="st-dashboard-header st-dashboard-header-fullwidth">
-	   		<div style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; min-height:100px; padding:10px 10px 10px 10px;">
+	   		<div class="st-dashboard-header-row" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; min-height:100px; padding:10px 10px 10px 10px;">
 	   			<div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap;">
-					<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:200px; max-width:200px; background:transparent;">
+					<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:200px; max-width:200px; min-height: 100px !important; min-width: 220px !important; background:transparent;">
 	   			</div>
 	   			<div style="text-align:right; font-size:1.6rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; flex:1; margin-left:32px;">
 	   				Adopted and Replicated Social Technologies
@@ -2738,6 +2793,15 @@ if (!document.getElementById('catListTooltip')) {
 	max-height: 270px;
 }
 
+/* Hide large doughnut visualization on narrow/mobile screens */
+@media (max-width: 640px) {
+    .formal-chart-panel-doughnut,
+    .formal-chart-canvas-doughnut,
+    .formal-doughnut-stage {
+        display: none !important;
+    }
+}
+
 .formal-list-panel {
 	display: flex;
 	flex-direction: column;
@@ -2931,7 +2995,8 @@ if (!document.getElementById('catListTooltip')) {
 
 .social-listing-scroll {
 	overflow-y: auto;
-	overflow-x: hidden;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 	max-height: 440px;
 	border: 1px solid rgba(148, 163, 184, 0.16);
 	border-radius: 18px;
@@ -2941,7 +3006,7 @@ if (!document.getElementById('catListTooltip')) {
 
 .social-listing-table {
 	width: 100%;
-	min-width: 100%;
+	min-width: 960px;
 	table-layout: fixed;
 	border-collapse: separate;
 	border-spacing: 0;
@@ -2981,7 +3046,7 @@ if (!document.getElementById('catListTooltip')) {
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-	white-space: normal;
+	white-space: nowrap;
 	line-height: 1.3;
 }
 
@@ -3452,7 +3517,7 @@ if (!document.getElementById('catListTooltip')) {
 		}
 		@media (max-width: 1400px) {
 			.st-title-listing-card { max-width: 99vw; }
-			.st-title-listing-table { min-width: 700px; }
+			.st-title-listing-table { min-width: 900px; }
 		}
 		.year-chart-wrap { order: 1; margin-right: 0;}
 .year-filter-wrap { order: 2; margin-left: 24px; align-self: flex-start; }
@@ -3504,7 +3569,7 @@ if (!document.getElementById('catListTooltip')) {
 		}
 		@media (max-width: 767px) {
 			.st-title-listing-card { max-width: 100vw; }
-			.st-title-listing-table { min-width: 400px; font-size: 0.95em; }
+			.st-title-listing-table { min-width: 600px; font-size: 0.95em; }
 			.small-cards-grid {
 				grid-template-columns: 1fr;
 				grid-template-rows: none;
