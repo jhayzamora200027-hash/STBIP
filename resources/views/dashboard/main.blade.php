@@ -197,8 +197,6 @@
 		#mobile-filter-panel { display:none; }
 		/* Hide guest filter card on mobile for logged-out/guest sessions */
 		.guest-filter-card { display: none !important; }
-		/* Ensure guest view container is wider on mobile so it doesn't collapse too small */
-		.st-dashboard-container { width: 350px !important; max-width: 350px !important; min-width: 350px !important; }
 	}
 
 	/* Ensure blur behavior for details modal (not displayed as text) */
@@ -7166,6 +7164,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 <style>
 @media (max-width: 767px) {
 	.st-dashboard-container { display: block !important; max-width: 100% !important; width: 100% !important; padding-top: 0 !important; overflow: visible !important; }
+	.stb-main-content .st-dashboard-container { width: min(350px, calc(100vw - 24px)) !important; max-width: min(350px, calc(100vw - 24px)) !important; }
 	.mobile-dashboard-container { display: block !important; }
 	.st-dashboard-header-fullwidth { position: static !important; z-index: auto !important; }
 
@@ -7226,10 +7225,12 @@ document.addEventListener('DOMContentLoaded', function(){
 }
 </style>
 
+	@if(auth()->check())
 	<button id="floatingBtn" class="btn" aria-label="Open filters" data-bs-toggle="modal" data-bs-target="#filterModal">
 		<img src="/images/dattachments/filtering%20icon.png" class="floating-btn-icon" alt="Filter" />
         <span class="filter-label">Filter</span>
     </button>
+	@endif
 
 	@auth
 	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
@@ -7312,7 +7313,7 @@ document.addEventListener('DOMContentLoaded', function(){
             border: 3px solid #06306e;
             border-radius: 18px;
             color: #06306e;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
@@ -7352,7 +7353,6 @@ document.addEventListener('DOMContentLoaded', function(){
 				min-height: 64px;
 				padding: 12px 14px;
 				gap: 8px;
-				display: flex;
 			}
 			#floatingBtn .filter-label {
 				font-size: 0.98rem;
@@ -7369,6 +7369,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			z-index: auto;
 			max-width: none;
 			width: min(388px, calc(100vw - 1rem));
+			padding-right: 20px;
 		}
 		#guestFilterDock {
 			position: fixed;
@@ -7444,6 +7445,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			letter-spacing: 0.08em;
 			text-transform: uppercase;
 			color: #0a548a;
+			padding-right: 20px;
 		}
 		#guestFloatingFilter .select2-container {
 			width: 100% !important;
