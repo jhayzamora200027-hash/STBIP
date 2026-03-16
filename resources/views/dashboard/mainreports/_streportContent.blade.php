@@ -7,6 +7,32 @@ function fetchEl(id) {
     }
     return document.getElementById(id);
 }
+
+/* Responsive styles to make ST report content mobile-friendly */
+<style>
+    #rsm-st-details-modal > div { max-width:920px; width:calc(100% - 40px) !important; margin:20px auto !important; }
+    #rsm-st-details-modal { padding:12px !important; }
+    .masterdata-form-grid { display:flex; flex-wrap:wrap; gap:12px; }
+    .masterdata-field { flex:1 1 45%; min-width:140px; box-sizing:border-box; }
+    .masterdata-field.full { flex:1 1 100%; }
+    .masterdata-field label { display:block; margin-bottom:6px; font-weight:600; }
+    .masterdata-field input { width:100%; box-sizing:border-box; }
+
+    .rsm-st-summary-row { align-items:center; }
+    .rsm-st-summary-row > div:first-child { min-width:44px; }
+
+    @media (max-width: 760px) {
+        #rsm-st-details-modal > div { margin:12px auto !important; border-radius:8px !important; }
+        .rsm-st-summary-row { flex-direction:column; align-items:flex-start; gap:6px; padding:10px; }
+        .rsm-st-summary-row > div:first-child { min-width:0; text-align:left; }
+        .rsm-st-details { margin-left:0 !important; border-left:none !important; padding-left:0 !important; }
+        .rsm-st-detail-row { flex-direction:column; align-items:flex-start; gap:6px; }
+        .masterdata-item-head .masterdata-item-title { font-size:1rem; }
+        .masterdata-btn, .masterdata-attachment-actions a, .masterdata-attachment-actions button { display:block; width:100%; margin-top:8px; }
+        .rsm-prov-item { display:flex; justify-content:space-between; padding:8px; }
+        .rsm-empty { padding:12px; text-align:center; }
+    }
+</style>
 function rsmEl(id) { return fetchEl(id); }
 function getCurrentRegion(){
     let region = null;
@@ -3754,7 +3780,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <h2 class="section-label slider-label">Regional Overview</h2>
 <div class="slider-wrapper">
-    <div class="swiper mySwiper">
+    <div class="swiper mySwiper" >
 
         <div class="swiper-wrapper">
             @php

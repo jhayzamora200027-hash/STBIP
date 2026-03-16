@@ -121,6 +121,13 @@
 		transform: none !important;
 	}
 
+		/* Mobile: hide the object embed and show the static img fallback for reliability */
+		.ph-mobile-fallback { display: none !important; }
+		@media (max-width: 767px) {
+			object#philippines-map { display: none !important; }
+			.ph-mobile-fallback { display: block !important; }
+		}
+
 	/* Remove decorative pseudo-elements that expand visual bounds */
 	.ph-frame::before,
 	.st-dashboard-container::before,
@@ -222,6 +229,33 @@
 	.mobile-dashboard-container { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
 }
 </style>
+
+<!-- Make chart panels visible on small screens and ensure canvases are responsive -->
+<style>
+@media (max-width: 767px) {
+	/* Only un-hide chart panels that were intentionally hidden using d-none */
+	.formal-chart-panel.d-none, .formal-chart-panel .d-none { display: block !important; }
+
+	/* Ensure chart canvases size to their container without revealing overlays */
+	.formal-chart-panel canvas, .mobile-dashboard-container canvas { width: 100% !important; height: auto !important; max-height: 640px !important; }
+
+	/* Avoid clipping chart panels */
+	.formal-chart-panel, .map-overlay-card, .mobile-dashboard-container { overflow: visible !important; }
+
+	 /* Ensure both dashboard containers are visible on mobile so cards remain accessible
+		 and prevent the absolute header from covering content */
+	 .st-dashboard-container { display: block !important; overflow: visible !important; max-width: 100% !important; width: 100% !important; padding: 12px !important; }
+	 .mobile-dashboard-container { display: block !important; }
+
+	 /* Avoid header overlapping content on mobile */
+	 .st-dashboard-header-fullwidth { position: static !important; z-index: auto !important; }
+	 .st-dashboard-container { padding-top: 0 !important; }
+
+	/* Ensure page is scrollable on small screens */
+	html, body { overflow-y: auto !important; height: auto !important; -webkit-overflow-scrolling: touch; }
+}
+</style>
+
 <link href="/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
 <!-- Masterdata styles copied to ensure the ST details modal matches masterdata UI -->
@@ -1515,39 +1549,30 @@
 
 <!-- Additional responsive tweaks -->
 <style>
-	/* Global box-sizing and media-friendly images/iframes */
 	html, body { box-sizing: border-box; }
 	*, *::before, *::after { box-sizing: inherit; }
 	img, svg, object, iframe { max-width: 100%; height: auto; display: block; }
 
-	/* Make main container padding comfortable on small devices */
 	.st-center-outer { padding: 8px; }
 	.st-dashboard-container { padding-left: 12px; padding-right: 12px; }
 
-	/* Ensure embedded report and other iframes are responsive */
 	#streportFrame { width: 100%; border: none; }
 
-	/* Table responsiveness */
 	.masterdata-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 	.masterdata-table { min-width: 0 !important; width: 100% !important; }
 
-	/* Small cards grid for compact screens */
 	.small-cards-grid, .formal-st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 
-	/* Make dashboard cards fill width and remove fixed min-widths */
 	.st-dashboard-card { width: 100% !important; min-width: 0 !important; max-width: none !important; }
 
-	/* Ensure map overlay totals show on small screens even before interactive map loads */
 	.map-overlay-totals .st-dashboard-card h1 { visibility: visible !important; }
 
-	/* Masterdata list: stack rows on narrow screens */
 	@media (max-width: 820px) {
 		.masterdata-item-list-head { display: none !important; }
 		.masterdata-item-row { grid-template-columns: 1fr !important; gap: 8px; padding: 12px !important; }
 		.masterdata-item-row-cell { display: block; width: 100%; }
 	}
 
-	/* Tighter layout for phones */
 	@media (max-width: 560px) {
 		.st-dashboard-header { font-size: 1.0rem !important; padding: 10px 6px !important; }
 		.st-dashboard-card .card-header { font-size: 0.95rem !important; }
@@ -1565,13 +1590,10 @@
 	}
 </style>
 
-<!-- Prevent horizontal overflow on narrow viewports -->
 <style>
 	@media (max-width: 420px) {
-		/* prevent any horizontal scrolling */
 		html, body { max-width: 100%; overflow-x: hidden; }
 
-		/* ensure outer wrappers fit exactly the viewport and use border-box */
 		.st-center-outer, .mobile-dashboard-container, .st-dashboard-container {
 			box-sizing: border-box !important;
 			width: 100vw !important;
@@ -1583,14 +1605,12 @@
 			transform: none !important;
 		}
 
-		/* make sure map and iframe never exceed viewport width */
 		object#philippines-map, #streportFrame, iframe, img {
 			width: 100% !important;
 			max-width: 100% !important;
 			box-sizing: border-box !important;
 		}
 
-		/* reduce any large shadows/paddings that may add width */
 		.st-dashboard-card, .map-overlay-card, .mobile-dashboard-container {
 			margin-left: 0 !important;
 			margin-right: 0 !important;
@@ -1598,13 +1618,11 @@
 			padding-right: 10px !important;
 		}
 
-		/* Center the dashboard on small screens (moved out) */
 	}
 </style>
 
 <style>
 @media (max-width: 767px) {
-	/* Force full-width page container to have no side padding on phones */
 	.container.stb-main-content, .stb-main-content {
 		padding-left: 0 !important;
 		padding-right: 0 !important;
@@ -1612,54 +1630,40 @@
 		margin-right: 0 !important;
 	}
 
-	/* Center the outer wrapper and ensure mobile dashboard is centered */
 	.st-center-outer { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; margin: 0 auto !important; }
 	.mobile-dashboard-container { width: calc(100% - 24px) !important; max-width: calc(100% - 24px) !important; margin: 12px auto !important; border-radius: 16px !important; padding: 12px !important; left: 0 !important; right: 0 !important; }
 	.mobile-dashboard-container, .st-center-outer > * { margin-left: auto !important; margin-right: auto !important; }
 	.st-dashboard-container { display: none !important; }
 
-	/* Ensure viewport has no horizontal overflow on phones */
 	html, body { overflow-x: hidden !important; }
 }
 </style>
 
-<div class="st-center-outer">
-	<!-- Mobile-first summary shown above the main container on small screens -->
+<!-- Enforce larger height for the main trend chart and ensure responsive resizing -->
+<style>
+/* Desktop: make the main trend chart tall and responsive */
+canvas#onGoing {
+	width: 100% !important;
+	height: 56vh !important;
+	max-height: 760px !important;
+	display: block !important;
+}
 
-    <div class="mobile-dashboard-container">
-		<div class="st-dashboard-header" style="font-size:1.1rem; padding:12px 0; text-align:center; border-radius:14px 14px 0 0; margin-bottom:12px;">
-			<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD white logo.png') }}" alt="DSWD Logo" style="background:transparent; display:block; margin:0 auto 8px auto; max-width:140px; height:auto; object-fit:contain;">
-			Adopted & Replicated Social Technologies
-		</div>
-		<div style="padding:0;">
-			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
-				<div class="card-header">TOTAL ADOPTED AND REPLICATED</div>
-				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ collect($data)->filter(function($row){
-						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
-					})->count() }}</h1>
-				</div>
-			</div>
-			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
-				<div class="card-header">TOTAL EXPRESSION OF INTEREST</div>
-				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalExpr ?? 0 }}</h1>
-				</div>
-			</div>
-			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
-				<div class="card-header">TOTAL SB RESOLUTION</div>
-				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalRes ?? 0 }}</h1>
-				</div>
-			</div>
-			<div class="card st-dashboard-card text-center" style="margin-bottom:12px;">
-				<div class="card-header">TOTAL MEMORANDUM OF AGREEMENT</div>
-				<div class="card-body">
-					<h1 class="js-total-count" style="font-size:2rem;">{{ $totalMoa ?? 0 }}</h1>
-				</div>
-			</div>
-		</div>
-	</div>
+/* Mobile: slightly shorter but still roomy */
+@media (max-width: 767px) {
+	canvas#onGoing { height: 44vh !important; max-height: none !important; }
+	.formal-chart-canvas { min-height: 320px !important; }
+}
+</style>
+
+<script>
+// Ensure Chart.js instances reflow after CSS changes
+setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resizeAllCharts(); }catch(e){} }, 250);
+</script>
+
+<div class="st-center-outer">
+
+	<!-- mobile-dashboard-container removed per request -->
 
 	{{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
 		   <button type="button" class="btn btn-sm btn-primary" onclick="window.print()" style="background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%); border: none; border-radius: 999px; padding: 6px 18px; font-weight: 600; box-shadow: 0 2px 6px rgba(16,174,181,0.35);">
@@ -1733,6 +1737,83 @@
 											<div style="color:#10aeb5;font-weight:700;margin-top:6px;font-size:0.95rem;">Loading map…</div>
 										</div>
 										<object id="philippines-map" data="{{ asset('images/philippines.svg') }}" type="image/svg+xml"></object>
+										<!-- Static image fallback for mobile devices (shown via CSS) -->
+										<img id="philippines-map-static" class="ph-mobile-fallback" src="{{ asset('images/philippines.svg') }}" alt="Philippines map" style="display:none; width:100%; height:auto;" />
+										<!-- Inline mobile SVG: server-side include to avoid fetch/CSP issues on mobile -->
+										<div id="philippines-map-inline-mobile" style="display:none; width:100%; height:auto; position:relative;">
+											{!! preg_replace('/<\?xml.*\?>/','', file_get_contents(public_path('images/philippines.svg'))) !!}
+										</div>
+										<script src="{{ asset('js/philippines-map-mobile.js') }}"></script>
+										<style>
+											@media (max-width: 767px) {
+												/* On mobile we remove/hide all svg embeds to avoid alignment/click issues. */
+												#philippines-map { display: none !important; }
+												#philippines-map-static { display: none !important; }
+												/* hide the inline-server-included svg on mobile */
+												#philippines-map-inline-mobile { display: none !important; z-index: auto !important; }
+												/* hide loading overlay on mobile to avoid covering the map */
+												#ph-map-loading { display: none !important; }
+											}
+										</style>
+										<script>
+											// Debug + attach handlers for inline SVG. Always log presence so user can report.
+											document.addEventListener('DOMContentLoaded', function () {
+												try {
+													const container = document.getElementById('philippines-map-inline-mobile');
+													console.log('philippines: inline container present?', !!container);
+													if (!container) return;
+													const svg = container.querySelector('svg');
+													console.log('philippines: inline svg present?', !!svg);
+													if (!svg) return;
+													svg.id = svg.id || 'philippines-map-inline-svg';
+													const pathSelector = 'path, polygon, rect, circle, g';
+													const paths = svg.querySelectorAll(pathSelector);
+													console.log('philippines: inline svg path count =', paths.length);
+
+													// Force container visible on small screens (debug + safety)
+													if (window.matchMedia && window.matchMedia('(max-width: 767px)').matches) {
+														container.style.display = 'block';
+														container.style.zIndex = 1000;
+													}
+
+													paths.forEach(p => {
+														try {
+															p.style.cursor = 'pointer';
+															p.addEventListener('click', function (e) {
+																e.preventDefault();
+																const title = p.getAttribute('title') || (p.querySelector('title') ? p.querySelector('title').textContent : '') || '';
+																let regionName = null;
+																try {
+																	const norm = typeof normalizeProvinceName === 'function' ? normalizeProvinceName(title || '') : null;
+																	if (norm && typeof provinceRegionIndex !== 'undefined') {
+																		regionName = provinceRegionIndex[norm] || null;
+																	}
+																} catch (err) { /* ignore */ }
+																if (typeof handleRegionClick === 'function') {
+																	handleRegionClick({ regionName: regionName, path: p });
+																} else if (typeof openRegionTitlesModal === 'function') {
+																	openRegionTitlesModal(regionName || ('Province: ' + (title || '')), []);
+																}
+															});
+															// Touch handlers for taps
+															let touchStart = 0, moved = false;
+															p.addEventListener('touchstart', function () { touchStart = Date.now(); moved = false; });
+															p.addEventListener('touchmove', function () { moved = true; });
+															p.addEventListener('touchend', function (e) {
+																if (!moved && (Date.now() - touchStart) < 500) {
+																	e.preventDefault();
+																	p.dispatchEvent(new Event('click'));
+																}
+															});
+														} catch (innerErr) {
+															console.warn('philippines: path attach failed', innerErr);
+														}
+													});
+												} catch (ex) {
+													console.warn('philippines inline init failed', ex);
+												}
+											});
+										</script>
 										<div id="map-region-label" style="margin-top:10px; font-size:0.95rem; font-weight:600; color:#10aeb5; text-align:center; min-height:22px;">
 											Hover a region on the map
 										</div>
@@ -1775,7 +1856,6 @@ if (!document.getElementById('catListTooltip')) {
 </script>
 
 <script>
-// Fallback periodic checker: if SVG or visible map area appears, ensure global loader is removed.
 (function(){
 	var checks = 0;
 	var maxChecks = 50; // ~15s (50 * 300ms)
@@ -1788,7 +1868,6 @@ if (!document.getElementById('catListTooltip')) {
 			if(obj && obj.contentDocument){
 				svgPresent = !!obj.contentDocument.querySelector('svg');
 			}
-			// also check for visible map by bounding rect of object element itself
 			var objRectVisible = false;
 			if(obj){
 				var r = obj.getBoundingClientRect();
@@ -1798,7 +1877,6 @@ if (!document.getElementById('catListTooltip')) {
 			if(svgPresent || objRectVisible){
 				console.debug('map-checker: map detected, hiding loader (svgPresent=' + svgPresent + ', rectVisible=' + objRectVisible + ')');
 				try{ if(typeof hideOverlay === 'function'){ hideOverlay(); } else { /* call internal hideOverlay via global */ window.hideOverlay && window.hideOverlay(); } }catch(e){}
-				// also attempt direct hide of global loader
 				try{ var g = document.getElementById('loading-overlay'); if(g){ g.classList.add('hidden'); g.style.display='none'; g.hidden=true; if(g.parentNode){ g.parentNode.removeChild(g); } } }catch(e){}
 				clearInterval(id);
 				return;
@@ -1809,7 +1887,6 @@ if (!document.getElementById('catListTooltip')) {
 				clearInterval(id);
 			}
 		}catch(e){
-			// swallow errors
 			if(checks >= maxChecks) clearInterval(id);
 		}
 	}, interval);
@@ -1822,7 +1899,6 @@ if (!document.getElementById('catListTooltip')) {
 </style>
 
 <script>
-// Show a loading overlay until the Philippines SVG is ready.
 (function(){
 	var obj = document.getElementById('philippines-map');
 	var overlay = document.getElementById('ph-map-loading');
@@ -1832,12 +1908,10 @@ if (!document.getElementById('catListTooltip')) {
 	function hideOverlay(){
 		console.debug('map: hideOverlay called');
 		try{ if(overlay) overlay.style.display = 'none'; }catch(e){}
-		// reveal totals which are hidden by default until map loads
 		try{
 			var cards = document.querySelectorAll('.map-overlay-totals .st-dashboard-card h1');
 			cards.forEach(function(h){ h.style.visibility = 'visible'; });
 		}catch(e){}
-		// also hide the global page loader if present; try helper, class toggle, style hide, attribute, and removal as fallback
 		try{ if(typeof hideLoader === 'function'){ try{ hideLoader(); }catch(e){} } }catch(e){}
 		try{
 			var global = document.getElementById('loading-overlay');
@@ -1846,7 +1920,6 @@ if (!document.getElementById('catListTooltip')) {
 				global.style.display = 'none';
 				global.setAttribute('aria-hidden','true');
 				try{ global.hidden = true; }catch(e){}
-				// remove from DOM after short delay to avoid lingering z-index issues
 				setTimeout(function(){ try{ if(global && global.parentNode){ global.parentNode.removeChild(global); console.debug('map: removed global loader from DOM'); } }catch(e){} }, 600);
 			}
 		}catch(e){}
@@ -1854,30 +1927,26 @@ if (!document.getElementById('catListTooltip')) {
 
 	function showOverlay(){ if(overlay) overlay.style.display = 'flex'; }
 
-	// Start with overlay visible
 	showOverlay();
 
 	if(!obj){
-		// no object found - remove overlay after short delay
 		setTimeout(hideOverlay, 800);
 		return;
 	}
 
-	// If the object has already loaded by the time this script runs, hide immediately
 	try{
 		var alreadySvg = obj.contentDocument && obj.contentDocument.querySelector('svg');
 		if(alreadySvg){
 			hideOverlay();
 			return;
 		}
-	}catch(e){ /* ignore cross-origin or other errors */ }
+	}catch(e){  }
 
 	var timedOut = false;
 	var timeoutId = setTimeout(function(){ timedOut = true; hideOverlay(); }, maxWait + 100);
 
 	obj.addEventListener('load', function(){
 		try{
-			// If contentDocument and svg root are ready, hide overlay immediately
 			var svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
 			if(svg){
 				clearTimeout(timeoutId);
@@ -1885,7 +1954,6 @@ if (!document.getElementById('catListTooltip')) {
 				return;
 			}
 
-			// otherwise poll for readiness until timeout
 			var waited = 0;
 			var id = setInterval(function(){
 				svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
@@ -1897,7 +1965,6 @@ if (!document.getElementById('catListTooltip')) {
 				}
 			}, pollInterval);
 		}catch(e){
-			// If any error (rare), remove overlay so UI becomes usable
 			clearTimeout(timeoutId);
 			hideOverlay();
 		}
@@ -1953,17 +2020,7 @@ if (!document.getElementById('catListTooltip')) {
                 </div>
             </div>
 
-            <div class="formal-chart-panel formal-chart-panel-compact d-none">
-                <div class="formal-panel-header">
-					<div>
-						<div class="formal-panel-eyebrow">Reference</div>
-						<div class="formal-panel-title">Inactive Trend Snapshot</div>
-					</div>
-				</div>
-                <div class="formal-chart-canvas">
-                    <canvas id="dissolved" style="width: 300px; height: 200px;"></canvas>
-                </div>
-            </div>
+			<!-- Inactive Trend Snapshot removed -->
         </div>
 	</div>
 
@@ -2067,78 +2124,7 @@ if (!document.getElementById('catListTooltip')) {
 	</div>
 </div>
 
-<div id="mobile-filter-panel" role="dialog" aria-modal="true" aria-hidden="true">
-	<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-		<strong>Filter Titles</strong>
-		<button id="mobile-filter-close" style="background:none;border:0;font-size:18px;cursor:pointer;">✕</button>
-	</div>
-	<div class="mf-row">
-		<input id="mf-search" type="search" placeholder="Search title" style="flex:1;padding:8px;border:1px solid #e6eef6;border-radius:8px;" />
-	</div>
-	<div class="mf-row" style="margin-top:8px;">
-		<select id="mf-status" style="flex:1;padding:8px;border:1px solid #e6eef6;border-radius:8px;">
-			<option value="">All statuses</option>
-			<option value="ongoing">Ongoing STs</option>
-			<option value="dissolved">Dissolved / Inactive STs</option>
-		</select>
-		<select id="mf-adopt" style="flex:1;padding:8px;border:1px solid #e6eef6;border-radius:8px;">
-			<option value="">All types</option>
-			<option value="replicated">With Replicated</option>
-			<option value="adopted">With Adopted</option>
-		</select>
-	</div>
-	<div class="mf-actions">
-		<button id="mobile-filter-apply" class="btn btn-primary" style="padding:6px 12px;border-radius:8px;">Apply</button>
-		<button id="mobile-filter-reset" class="btn btn-outline-secondary" style="padding:6px 12px;border-radius:8px;">Reset</button>
-	</div>
-</div>
-
-<script>
-// Mobile FAB behavior: clone/sync filter inputs with desktop listing controls
-(function(){
-	var fab = document.getElementById('mobile-filter-fab');
-	var panel = document.getElementById('mobile-filter-panel');
-	if(!fab || !panel) return;
-
-	var desktopSearch = document.getElementById('title-listing-search');
-	var desktopStatus = document.getElementById('title-listing-status-filter');
-	var desktopAdopt = document.getElementById('title-listing-adopt-filter');
-	var mfSearch = document.getElementById('mf-search');
-	var mfStatus = document.getElementById('mf-status');
-	var mfAdopt = document.getElementById('mf-adopt');
-
-	function openPanel(){
-		// copy values from desktop
-		try{ if(desktopSearch) mfSearch.value = desktopSearch.value || ''; }catch(e){}
-		try{ if(desktopStatus) mfStatus.value = desktopStatus.value || ''; }catch(e){}
-		try{ if(desktopAdopt) mfAdopt.value = desktopAdopt.value || ''; }catch(e){}
-		panel.style.display = 'block'; panel.setAttribute('aria-hidden','false');
-	}
-	function closePanel(){ panel.style.display = 'none'; panel.setAttribute('aria-hidden','true'); }
-
-	fab.addEventListener('click', function(){ openPanel(); });
-	document.getElementById('mobile-filter-close').addEventListener('click', closePanel);
-
-	document.getElementById('mobile-filter-reset').addEventListener('click', function(){
-		mfSearch.value = '';
-		mfStatus.value = '';
-		mfAdopt.value = '';
-		// sync to desktop
-		try{ if(desktopSearch){ desktopSearch.value=''; desktopSearch.dispatchEvent(new Event('input')); } }catch(e){}
-		try{ if(desktopStatus){ desktopStatus.value=''; desktopStatus.dispatchEvent(new Event('change')); } }catch(e){}
-		try{ if(desktopAdopt){ desktopAdopt.value=''; desktopAdopt.dispatchEvent(new Event('change')); } }catch(e){}
-		closePanel();
-	});
-
-	document.getElementById('mobile-filter-apply').addEventListener('click', function(){
-		try{ if(desktopSearch){ desktopSearch.value = mfSearch.value || ''; desktopSearch.dispatchEvent(new Event('input')); } }catch(e){}
-		try{ if(desktopStatus){ desktopStatus.value = mfStatus.value || ''; desktopStatus.dispatchEvent(new Event('change')); } }catch(e){}
-		try{ if(desktopAdopt){ desktopAdopt.value = mfAdopt.value || ''; desktopAdopt.dispatchEvent(new Event('change')); } }catch(e){}
-		closePanel();
-	});
-
-})();
-</script>
+<!-- mobile filter panel removed -->
 
 <div class="st-third-row formal-dashboard-row">
 	<div class="formal-third-row-grid">
@@ -3943,6 +3929,50 @@ if (!document.getElementById('catListTooltip')) {
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.3.0/dist/chartjs-chart-matrix.min.js"></script>
 	<script>
+	/* Make canvases responsive and force-resize charts after loaders removed */
+	(function(){
+		window.__stb_resizeAllCharts = function resizeAllCharts(){
+			try{
+				// Un-hide chart panels intentionally hidden with d-none on mobile
+				document.querySelectorAll('.formal-chart-panel.d-none').forEach(function(el){ el.classList.remove('d-none'); el.style.display = 'block'; });
+				// Normalize canvas sizing and trigger Chart.js resize/update
+				document.querySelectorAll('canvas').forEach(function(c){
+					try{ c.removeAttribute('width'); c.removeAttribute('height'); }catch(e){}
+					try{ c.style.width = '100%'; c.style.height = 'auto'; }catch(e){}
+					try{
+						if(window.Chart){
+							var chart = (Chart.getChart ? Chart.getChart(c) : (Chart.instances && Object.values(Chart.instances).find(function(i){ return i && i.canvas === c; })));
+							if(chart && typeof chart.resize === 'function') chart.resize();
+							if(chart && typeof chart.update === 'function') chart.update();
+						}
+					}catch(e){}
+				});
+			}catch(e){}
+		}
+
+		document.addEventListener('DOMContentLoaded', function(){
+			// Run once shortly after load and a couple more times to catch late chart inits
+			setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 600);
+			setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 1400);
+			setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 2600);
+
+			// Watch for loader removal and re-run resize when that happens
+			var observer = new MutationObserver(function(mutations){
+				mutations.forEach(function(m){
+					if(m.removedNodes && m.removedNodes.length){
+						m.removedNodes.forEach(function(n){
+							if(n && (n.id === 'loading-overlay' || n.id === 'ph-map-loading')){
+								setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 250);
+							}
+						});
+					}
+				});
+			});
+			observer.observe(document.body, { childList: true, subtree: true });
+		});
+	})();
+	</script>
+	<script>
 	(function() {
 		const perPage = 10;
 		let currentPage = 1;
@@ -4234,6 +4264,30 @@ window.allYears = @json($allYears ?? $years);
 
 		$('#filterModal').on('shown.bs.modal', function() {
 			initDashboardSelect2();
+			// ensure focus is moved into the modal for accessibility
+			try{
+				const modal = this;
+				// focus the first focusable element inside the modal
+				const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+				if (firstFocusable) {
+					firstFocusable.focus();
+				} else {
+					modal.setAttribute('tabindex', '-1');
+					modal.focus();
+				}
+			} catch(e) {}
+		});
+
+		// before hiding the modal, move focus out so aria-hidden doesn't hide a focused element
+		$('#filterModal').on('hide.bs.modal', function() {
+			try{
+				const active = document.activeElement;
+				if (active && this.contains(active)) {
+					// try to focus the opener button or a sensible fallback
+					const opener = document.getElementById('floatingBtn') || document.querySelector('[data-bs-target="#filterModal"]') || document.body;
+					if (opener && typeof opener.focus === 'function') opener.focus();
+				}
+			} catch(e) {}
 		});
 
 		document.addEventListener('click', function(e) {
@@ -7038,6 +7092,70 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	window.addEventListener('resize', debounce(adjustOverlayTotalsNumbers, 120));
 
 	</script>
+
+<!-- Final mobile display override and one-time chart resize (applies last) -->
+<style>
+@media (max-width: 767px) {
+	.st-dashboard-container { display: block !important; max-width: 100% !important; width: 100% !important; padding-top: 0 !important; overflow: visible !important; }
+	.mobile-dashboard-container { display: block !important; }
+	.st-dashboard-header-fullwidth { position: static !important; z-index: auto !important; }
+
+	/* Hide potential blocking overlays */
+	#ph-map-loading, #loading-overlay, .slider-modal-overlay, .slider-modal { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+
+	/* Ensure map overlays & cards remain visible */
+	.map-overlay-totals .st-dashboard-card h1 { visibility: visible !important; }
+
+	/* Force canvases to be visible and responsive */
+	.formal-chart-panel canvas, canvas { display: block !important; width: 100% !important; height: auto !important; max-height: 720px !important; }
+
+	html, body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
+}
+</style>
+
+<script>
+// final resize pass after all chart inits
+document.addEventListener('DOMContentLoaded', function(){
+	setTimeout(function(){ try{ if(window.__stb_resizeAllCharts) window.__stb_resizeAllCharts(); }catch(e){} }, 800);
+});
+</script>
+
+<!-- Compact mobile layout fixes: make main container fluid and grids stack cleanly -->
+<style>
+@media (max-width: 767px) {
+	html, body { overflow-x: hidden !important; }
+	.st-center-outer { padding: 0 !important; }
+	.st-dashboard-container, .mobile-dashboard-container {
+		width: calc(100vw - 24px) !important;
+		max-width: calc(100vw - 24px) !important;
+		margin: 12px auto !important;
+		padding: 12px !important;
+		box-sizing: border-box !important;
+		transform: none !important;
+	}
+	.st-dashboard-header-fullwidth { position: static !important; margin-bottom: 12px !important; }
+	.st-dashboard-container { padding-top: 0 !important; }
+
+	/* Stack grids into single column and remove fixed min-heights */
+	.formal-st-top-grid, .formal-second-row-wrap, .formal-third-row-grid, .formal-mini-panel-group, .formal-linked-st-panels {
+		grid-template-columns: 1fr !important;
+		gap: 12px !important;
+	}
+	.formal-chart-canvas, .formal-chart-canvas-large, .formal-chart-canvas-medium, .formal-chart-canvas-region, .formal-chart-canvas-docflow {
+		min-height: auto !important;
+		padding: 8px !important;
+	}
+	.formal-chart-canvas-large { min-height: 300px !important; }
+	.formal-chart-canvas-medium, .formal-chart-canvas-docflow { min-height: 240px !important; }
+	.formal-chart-canvas-region { min-height: 260px !important; }
+
+	/* Ensure cards don't overflow and are fully visible */
+	.st-dashboard-card, .map-overlay-card { width: 100% !important; margin: 0 0 12px 0 !important; }
+
+	/* Floating elements adjust */
+	#floatingBtn { right: 12px !important; top: 92px !important; }
+}
+</style>
 
 	@if(auth()->check())
 	<button id="floatingBtn" class="btn" aria-label="Open filters" data-bs-toggle="modal" data-bs-target="#filterModal">
