@@ -195,6 +195,10 @@
 		}
 		#mobile-filter-fab .fab-icon { width:20px; height:20px; display:inline-block; }
 		#mobile-filter-panel { display:none; }
+		/* Hide guest filter card on mobile for logged-out/guest sessions */
+		.guest-filter-card { display: none !important; }
+		/* Ensure guest view container is wider on mobile so it doesn't collapse too small */
+		.st-dashboard-container { width: 350px !important; max-width: 350px !important; min-width: 350px !important; }
 	}
 
 	/* Ensure blur behavior for details modal (not displayed as text) */
@@ -7222,12 +7226,10 @@ document.addEventListener('DOMContentLoaded', function(){
 }
 </style>
 
-	@if(auth()->check())
 	<button id="floatingBtn" class="btn" aria-label="Open filters" data-bs-toggle="modal" data-bs-target="#filterModal">
 		<img src="/images/dattachments/filtering%20icon.png" class="floating-btn-icon" alt="Filter" />
         <span class="filter-label">Filter</span>
     </button>
-	@endif
 
 	@auth
 	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
@@ -7310,7 +7312,7 @@ document.addEventListener('DOMContentLoaded', function(){
             border: 3px solid #06306e;
             border-radius: 18px;
             color: #06306e;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             gap: 10px;
@@ -7350,6 +7352,7 @@ document.addEventListener('DOMContentLoaded', function(){
 				min-height: 64px;
 				padding: 12px 14px;
 				gap: 8px;
+				display: flex;
 			}
 			#floatingBtn .filter-label {
 				font-size: 0.98rem;
