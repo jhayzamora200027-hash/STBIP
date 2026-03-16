@@ -7,58 +7,6 @@ function fetchEl(id) {
     }
     return document.getElementById(id);
 }
-
-/* Responsive styles to make ST report content mobile-friendly */
-<style>
-    #rsm-st-details-modal > div { max-width:920px; width:calc(100% - 40px) !important; margin:20px auto !important; }
-    #rsm-st-details-modal { padding:12px !important; }
-    .masterdata-form-grid { display:flex; flex-wrap:wrap; gap:12px; }
-    .masterdata-field { flex:1 1 45%; min-width:140px; box-sizing:border-box; }
-    .masterdata-field.full { flex:1 1 100%; }
-    .masterdata-field label { display:block; margin-bottom:6px; font-weight:600; }
-    .masterdata-field input { width:100%; box-sizing:border-box; }
-
-    .rsm-st-summary-row { align-items:center; }
-    .rsm-st-summary-row > div:first-child { min-width:44px; }
-
-    @media (max-width: 760px) {
-        #rsm-st-details-modal > div { margin:12px auto !important; border-radius:8px !important; }
-        .rsm-st-summary-row { flex-direction:column; align-items:flex-start; gap:6px; padding:10px; }
-        .rsm-st-summary-row > div:first-child { min-width:0; text-align:left; }
-        .rsm-st-details { margin-left:0 !important; border-left:none !important; padding-left:0 !important; }
-        .rsm-st-detail-row { flex-direction:column; align-items:flex-start; gap:6px; }
-        .masterdata-item-head .masterdata-item-title { font-size:1rem; }
-        .masterdata-btn, .masterdata-attachment-actions a, .masterdata-attachment-actions button { display:block; width:100%; margin-top:8px; }
-        .rsm-prov-item { display:flex; justify-content:space-between; padding:8px; }
-        .rsm-empty { padding:12px; text-align:center; }
-    }
-</style>
-
-<style>
-    /* Stronger mobile overrides to remove wide gutters and force stacked cards */
-    @media (max-width: 420px) {
-        body, html { -webkit-text-size-adjust:100%; }
-        /* make list container use full width inside any parent */
-        #rsm-st-list, .rsm-st-summary-row, .rsm-st-details, .rsm-prov-item { width:100% !important; max-width:100% !important; }
-        /* shrink header and badges */
-        #rsm-st-listing-header { font-size:1rem !important; }
-        .rsm-st-summary-row { padding:8px !important; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); }
-        .rsm-st-summary-row > div:nth-child(2) { font-size:0.95rem !important; }
-        .rsm-st-summary-row > div:first-child { font-size:0.95rem !important; padding:6px 8px; }
-        .rsm-st-details { margin-top:6px !important; }
-        /* make modal take nearly full height and allow inner scroll */
-        #rsm-st-details-modal { align-items:flex-start !important; padding:8px !important; }
-        #rsm-st-details-modal > div { height:calc(100vh - 24px) !important; max-height:calc(100vh - 24px) !important; overflow:hidden !important; }
-        #rsm-st-details-body { max-height:calc(100vh - 160px) !important; overflow:auto !important; }
-        /* reduce spacing from surrounding layout */
-        .masterdata-form-grid { gap:8px; }
-        .masterdata-field { min-width:0; }
-        /* ensure buttons fit */
-        .masterdata-btn, .masterdata-attachment-actions a, .masterdata-attachment-actions button { box-sizing:border-box; }
-        /* avoid horizontal scroll from long text */
-        .rsm-st-summary-row, .rsm-st-detail-row { word-break:break-word; }
-    }
-</style>
 function rsmEl(id) { return fetchEl(id); }
 function getCurrentRegion(){
     let region = null;
