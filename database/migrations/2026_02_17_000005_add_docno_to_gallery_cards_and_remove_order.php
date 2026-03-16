@@ -23,7 +23,6 @@ return new class extends Migration
                 }
             }
 
-            // Determine whether a unique index on `docno` already exists.
             $hasUniqueDocno = false;
             try {
                 $driver = DB::connection()->getDriverName();
@@ -38,7 +37,6 @@ return new class extends Migration
                         $hasUniqueDocno = true;
                     }
                 } elseif ($driver === 'sqlite' || $driver === 'sqlite3') {
-                    // SQLite: inspect PRAGMA index_list and index_info
                     $indexes = DB::select("PRAGMA index_list('gallery_cards')");
                     foreach ($indexes as $idx) {
                         $indexName = null;
@@ -65,18 +63,15 @@ return new class extends Migration
                         }
                     }
                 } elseif ($driver === 'pgsql' || $driver === 'postgres' || $driver === 'postgresql') {
-                    // Postgres: check pg_indexes / pg_constraint for unique constraints
                     $existing = DB::select("SELECT conname FROM pg_constraint c JOIN pg_class t ON c.conrelid = t.oid JOIN pg_attribute a ON a.attrelid = t.oid WHERE t.relname = 'gallery_cards' AND c.contype = 'u' AND a.attname = 'docno'");
                     if (!empty($existing)) {
                         $hasUniqueDocno = true;
                     }
                 }
             } catch (\Throwable $e) {
-                // If any inspection fails, don't block the migration; attempt to add the constraint below inside try/catch.
                 $hasUniqueDocno = false;
             }
 
-            // Add unique index if it doesn't exist. Wrap in try/catch so migration can continue if DB-specific issues occur.
             Schema::table('gallery_cards', function (Blueprint $table) use ($hasUniqueDocno) {
                 if (!Schema::hasColumn('gallery_cards', 'docno')) return;
                 if ($hasUniqueDocno) return;
@@ -84,7 +79,6 @@ return new class extends Migration
                 try {
                     $table->unique('docno');
                 } catch (\Throwable $e) {
-                    // swallow errors to avoid failing the whole migration in edge cases
                 }
             });
 
