@@ -33,6 +33,32 @@ function fetchEl(id) {
         .rsm-empty { padding:12px; text-align:center; }
     }
 </style>
+
+<style>
+    /* Stronger mobile overrides to remove wide gutters and force stacked cards */
+    @media (max-width: 420px) {
+        body, html { -webkit-text-size-adjust:100%; }
+        /* make list container use full width inside any parent */
+        #rsm-st-list, .rsm-st-summary-row, .rsm-st-details, .rsm-prov-item { width:100% !important; max-width:100% !important; }
+        /* shrink header and badges */
+        #rsm-st-listing-header { font-size:1rem !important; }
+        .rsm-st-summary-row { padding:8px !important; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); }
+        .rsm-st-summary-row > div:nth-child(2) { font-size:0.95rem !important; }
+        .rsm-st-summary-row > div:first-child { font-size:0.95rem !important; padding:6px 8px; }
+        .rsm-st-details { margin-top:6px !important; }
+        /* make modal take nearly full height and allow inner scroll */
+        #rsm-st-details-modal { align-items:flex-start !important; padding:8px !important; }
+        #rsm-st-details-modal > div { height:calc(100vh - 24px) !important; max-height:calc(100vh - 24px) !important; overflow:hidden !important; }
+        #rsm-st-details-body { max-height:calc(100vh - 160px) !important; overflow:auto !important; }
+        /* reduce spacing from surrounding layout */
+        .masterdata-form-grid { gap:8px; }
+        .masterdata-field { min-width:0; }
+        /* ensure buttons fit */
+        .masterdata-btn, .masterdata-attachment-actions a, .masterdata-attachment-actions button { box-sizing:border-box; }
+        /* avoid horizontal scroll from long text */
+        .rsm-st-summary-row, .rsm-st-detail-row { word-break:break-word; }
+    }
+</style>
 function rsmEl(id) { return fetchEl(id); }
 function getCurrentRegion(){
     let region = null;
