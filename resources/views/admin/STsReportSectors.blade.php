@@ -163,7 +163,7 @@
                     </div>
 
                     <div class="col-12 mt-2">
-                        <label class="form-label">Description (optional)</label>
+                        <label class="form-label">Description</label>
                         <textarea name="description" class="form-control" rows="2">{{ old('description') }}</textarea>
                     </div>
 
@@ -607,6 +607,24 @@ function ajaxSubmit(form, successCb, errorCb){
     });
 }
 
+// Safely hide a modal and remove any leftover backdrops that can block the UI
+function safeHideModal(mod){
+  try {
+    var bs = bootstrap.Modal.getInstance(mod);
+    if(bs) bs.hide();
+  } catch(e){ console.error('safeHideModal hide error', e); }
+
+  // small delay to allow Bootstrap to remove its backdrop; if it didn't, clean up manually
+  setTimeout(function(){
+    try {
+      // remove any stray backdrops
+      document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
+      // ensure body no longer has modal-open
+      document.body.classList.remove('modal-open');
+    } catch(e){}
+  }, 120);
+}
+
 // display validation errors on a form (expects Laravel-style errors object)
 function showFormErrors(form, errors){
     // clear previous state
@@ -897,36 +915,35 @@ document.addEventListener('DOMContentLoaded', function(){
     initChildControlListeners();
 
 
-    // handle child add/edit/sub forms specifically
+    // handle child add/edit/sub forms specifically (use same ajax-bound flag to avoid double-binding)
     ['addChildForm','editChildForm','addSubChildForm','manageSub_inlineAddForm'].forEach(function(id){
-        var form = document.getElementById(id);
-        if(form && !form.dataset.bound){
-            form.dataset.bound = '1';
-            form.addEventListener('submit', function(e){
-                e.preventDefault();
-                ajaxSubmit(form, function(json){
-                    if(json.rowHtml){
-                        replaceCardRow(json.card_id, json.rowHtml);
-                        if (currentManageState && document.getElementById('manageSubChildrenModal').classList.contains('show')) {
-                            var btn = document.querySelector('.btn-manage-subchildren[data-card-id="'+currentManageState.cardId+'"][data-child-id="'+currentManageState.childId+'"]');
-                            if(btn){
-                                try { currentManageState.subs = JSON.parse(btn.getAttribute('data-subchildren')||'[]'); } catch(e){currentManageState.subs = [];}                                
-                            }
-                            populateManageSubModal(currentManageState);
-                        }
-                    }
-                    var mod = form.closest('.modal');
-                    if(mod){
-                        var bs = bootstrap.Modal.getInstance(mod);
-                        if(bs) bs.hide();
-                    }
-                }, function(err){
-                    if(err && err.errors){
-                        showFormErrors(form, err.errors);
-                    }
-                });
-            });
-        }
+      var form = document.getElementById(id);
+      if(form && !form.dataset.ajaxBound){
+        form.dataset.ajaxBound = '1';
+        form.addEventListener('submit', function(e){
+          e.preventDefault();
+          ajaxSubmit(form, function(json){
+            if(json.rowHtml){
+              replaceCardRow(json.card_id, json.rowHtml);
+              if (currentManageState && document.getElementById('manageSubChildrenModal').classList.contains('show')) {
+                var btn = document.querySelector('.btn-manage-subchildren[data-card-id="'+currentManageState.cardId+'"][data-child-id="'+currentManageState.childId+'"]');
+                if(btn){
+                  try { currentManageState.subs = JSON.parse(btn.getAttribute('data-subchildren')||'[]'); } catch(e){currentManageState.subs = [];}                                
+                }
+                populateManageSubModal(currentManageState);
+              }
+            }
+            var mod = form.closest('.modal');
+            if(mod){
+              try { safeHideModal(mod); } catch(e){ console.error(e); }
+            }
+          }, function(err){
+            if(err && err.errors){
+              showFormErrors(form, err.errors);
+            }
+          });
+        });
+      }
     });
 
     // state for currently open manage modal (used for refresh)
@@ -1007,7 +1024,53 @@ document.addEventListener('DOMContentLoaded', function(){
             });
         });
         initAjaxForms();
+
+        // ensure header Add button always opens inline add for this state
+        try {
+          var headerBtn = document.getElementById('manageSub_addSubchildBtn');
+          if (headerBtn) {
+            headerBtn.onclick = function(){
+              console.log('manageSub header Add clicked', cardId, childId);
+              showManageSubInlineAdd(cardId, childId);
+            };
+          }
+        } catch(e){ console.error('bind header add error', e); }
     }
+
+      // expose populate function so a fallback click (e.g. inline onclick) can trigger the modal
+      window.populateManageSubModal = populateManageSubModal;
+
+      // global trigger fallback - accepts the button element and opens the modal
+      window.triggerManageSubchildren = function(btn){
+        try {
+          var b = btn;
+          var cardId = b.getAttribute('data-card-id');
+          var childId = b.getAttribute('data-child-id');
+          var childTitle = b.getAttribute('data-child-title') || 'Sub-children';
+          var subs = [];
+          try { subs = JSON.parse(b.getAttribute('data-subchildren') || '[]'); } catch(e){ subs = []; }
+          var parentHistories = [];
+          try { parentHistories = JSON.parse(b.getAttribute('data-child-histories') || '[]'); } catch(e){ parentHistories = []; }
+
+          var state = {
+            cardId: cardId,
+            childId: childId,
+            childTitle: childTitle,
+            subs: subs,
+            parentHistories: parentHistories,
+            docno: b.getAttribute('data-child-docno') || '-',
+            url: b.getAttribute('data-child-url') || '',
+            is_active: parseInt(b.getAttribute('data-child-is-active') || '0',10),
+            status: b.getAttribute('data-child-status') || 'On going',
+            created_by: b.getAttribute('data-child-created-by') || ''
+          };
+
+          if(window.populateManageSubModal) window.populateManageSubModal(state);
+          var modal = document.getElementById('manageSubChildrenModal');
+          if(modal){ var bs = new bootstrap.Modal(modal); bs.show(); }
+        } catch(e) { console.error('triggerManageSubchildren error', e); }
+        return false;
+      };
 
     // open Manage Sub-children modal (populates list)
     document.querySelectorAll('.btn-manage-subchildren').forEach(function(btn){
@@ -1099,7 +1162,23 @@ document.addEventListener('DOMContentLoaded', function(){
 
             // wire Add Sub-child button inside modal (shows inline add form)
             var addBtn = document.getElementById('manageSub_addSubchildBtn');
-            addBtn.onclick = function(){ showManageSubInlineAdd(cardId, childId); };
+            if (addBtn) {
+              addBtn.onclick = function(){
+                // use currentManageState (set when opening the manage modal) so card/child ids are correct
+                try {
+                  if (currentManageState && currentManageState.cardId) {
+                    showManageSubInlineAdd(currentManageState.cardId, currentManageState.childId);
+                  } else {
+                    // fallback: use hidden inputs in the inline form if available
+                    var fallbackCard = document.getElementById('manageSub_add_parent_card_id') ? document.getElementById('manageSub_add_parent_card_id').value : '';
+                    var fallbackChild = document.getElementById('manageSub_add_parent_child_id') ? document.getElementById('manageSub_add_parent_child_id').value : '';
+                    showManageSubInlineAdd(fallbackCard, fallbackChild);
+                  }
+                } catch(e){
+                  console.error('manageSub add button error', e);
+                }
+              };
+            }
 
             // function to show inline add form inside Manage modal
             function showManageSubInlineAdd(cardIdParam, parentChildIdParam, prefill){

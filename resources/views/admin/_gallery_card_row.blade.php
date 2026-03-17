@@ -125,9 +125,8 @@
                                             data-child-status="{{ $child->status ?? 'On going' }}"
                                             data-child-created-by="{{ $child->creator ? $child->creator->name : ($child->created_by ?? '') }}"
                                             data-child-histories='{{ $childHistoriesJson }}'
-                                            data-subchildren='{{ $subChildrenJson }}'>
-                                            Manage Sub-children
-                                        </button>
+                                            data-subchildren='{{ $subChildrenJson }}'
+                                            onclick="if(window.triggerManageSubchildren) return triggerManageSubchildren(this);">Manage Sub-children</button>
                                     @endif
 
                                     <form action="{{ route('admin.gallery.children.destroy', $child->id) }}" method="POST" class="m-0 ajax-form">
