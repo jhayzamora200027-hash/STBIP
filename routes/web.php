@@ -24,7 +24,6 @@ Route::get('/', function () {
     return view('dashboard.main', $view->getData());
 })->name('main')->middleware('guest');
 
-// drag-drop editor removed; routes retired
 
 
 // Profile (authenticated users)
@@ -83,18 +82,13 @@ Route::post('/excel/refresh-google-sheet', [ExcelController::class, 'refreshFrom
 Route::post('/admin/add-user', [UserController::class, 'addUser'])->name('admin.addUser');
 
 // Public route to view ST attachments (PDFs) even when not logged in
-// constrain parameter to numbers so literal paths (like "logs") won't match
 Route::get('/sts-attachments/{attachment}', [StsAttachmentController::class, 'show'])
     ->where('attachment', '[0-9]+')
     ->name('sts.attachments.show');
 
-// temporary debug endpoint removed - routing order and constraints now
-// allow the real logs route to be reached even when defined later.
-
 // ==================== PROTECTED ROUTES (Require Authentication) ====================
 
 Route::middleware(['auth'])->group(function () {
-    // Uploading page (with logs)
     Route::get('/upload', [ExcelController::class, 'uploadLogs'])->name('upload');
     Route::get('/masterdata', [MasterDataController::class, 'index'])
         ->name('masterdata.index');
@@ -122,10 +116,6 @@ Route::middleware(['auth'])->group(function () {
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');
 
-    // Logs for attachments (admin/sysadmin only)
-    // temporarily bypass auth middleware so we can see whether request actually
-    // reaches the controller (cookie/session issues).  The controller itself
-    // still contains its own check/logging.
     Route::get('/sts-attachments/logs', [StsAttachmentController::class, 'logs'])
         ->name('sts.attachments.logs')
         ->withoutMiddleware('auth');
@@ -150,10 +140,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/gallery-cards/{galleryCard}', [GalleryCardController::class, 'update'])->name('admin.gallery.update');
     Route::delete('/admin/gallery-cards/{galleryCard}', [GalleryCardController::class, 'destroy'])->name('admin.gallery.destroy');
 
-    // Child entries for gallery cards (children of a "mother" card)
     Route::post('/admin/gallery-cards/{galleryCard}/children', [\App\Http\Controllers\GalleryChildController::class, 'store'])
         ->name('admin.gallery.children.store');
-    // utility route for ajax-refreshing a single card row
     Route::get('/admin/gallery-cards/{galleryCard}/row', [GalleryCardController::class, 'rowPartial']);
     Route::put('/admin/gallery-children/{galleryChild}', [\App\Http\Controllers\GalleryChildController::class, 'update'])
         ->name('admin.gallery.children.update');
