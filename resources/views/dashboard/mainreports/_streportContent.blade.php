@@ -84,7 +84,6 @@ function getRowYear(r){
     try { window.fetchRegionHierarchy = fetchRegionHierarchy; } catch(e) {}
 })();
 
-/* Local details modal for ST Titles inside the ST report iframe. */
 try {
     (function(){
         const tpl = `
@@ -118,7 +117,6 @@ window.openRsmStDetailsModal = function(row){
         if (uploadedBy) html += '<span>Uploaded by: ' + esc(uploadedBy) + '</span>';
         html += '</div></div></div>';
 
-        // attachment panel
         html += '<div class="masterdata-attachment-panel">';
         html += '<div><div class="masterdata-stat-label">MOA ATTACHMENT</div><div class="masterdata-item-meta" style="margin-top:8px;">';
         if (attUrl) {
@@ -136,7 +134,6 @@ window.openRsmStDetailsModal = function(row){
         }
         html += '</div></div>';
 
-        // form grid
         html += '<div class="masterdata-form-grid">';
         html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + esc(row.region || '-') + '" readonly></div>';
         html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + esc(row.status || '-') + '" readonly></div>';
@@ -173,7 +170,6 @@ window.openRsmStDetailsModal = function(row){
     } catch(e) {}
 };
 
-// end local modal
 
 if (!window.updateProvinceFilters) {
     window.updateProvinceFilters = function(){
@@ -194,7 +190,6 @@ function renderStTitlesFromRows(rows, regionParam) {
         }
         const titleCounts = {};
         const titleLocations = {};
-        // Representative original row lookup by title|province|city and by title
         const originalRowByKey = {};
         rows.forEach(r => {
             const t = (r && r.title) ? String(r.title).trim() : '';
@@ -360,7 +355,6 @@ function renderStTitlesFromRows(rows, regionParam) {
                 const province = detailRow.getAttribute('data-province') || '';
                 const city = detailRow.getAttribute('data-city') || '';
                 const rowObj = { title: title, province: province, municipality: city, region: getCurrentRegion() };
-                // attach indicator/status fields if present on the detail row
                 try {
                     const parseFlag = v => (v === '1' || v === 1 || v === true || String(v || '').toLowerCase() === 'true');
                     const withExpr = detailRow.getAttribute('data-with-expr');
@@ -389,7 +383,6 @@ function renderStTitlesFromRows(rows, regionParam) {
                             return;
                         }
                     } catch(e) {}
-                    // fallback to local modal in iframe
                     if (window.openRsmStDetailsModal) { window.openRsmStDetailsModal(rowObj); return; }
                 } catch(e) {}
                 showReplicateConfirmPopover(detailRow, { title, province, city, row: { title, province, city } });
@@ -421,7 +414,6 @@ function renderStTitlesFromRows(rows, regionParam) {
 
             const title = row.getAttribute('data-title') || '';
             const rowObj = { title: title, region: getCurrentRegion() };
-            // try to attach representative original row fields if available
             try {
                 const rep = originalRowByKey[title.toLowerCase()];
                 if (rep) {

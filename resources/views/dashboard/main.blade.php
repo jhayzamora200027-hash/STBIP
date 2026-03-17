@@ -14,7 +14,6 @@
         overflow-x: hidden;
     }
 @media (max-width: 767px) {
-	/* Force header logo and main containers to fit mobile viewport */
 	.st-dashboard-header .st-header-logo {
 		width: auto !important;
 		max-width: 160px !important;
@@ -25,7 +24,6 @@
 		margin: 0 auto 8px auto !important;
 	}
 
-	/* Mobile: stack header logo + title and center both */
 	.st-dashboard-header .st-dashboard-header-row {
 		flex-direction: column !important;
 		align-items: center !important;
@@ -57,7 +55,6 @@
 		box-sizing: border-box !important;
 	}
 
-	/* Reduce row height on mobile so later content doesn't overlap */
 	.st-dashboard-header .st-dashboard-header-row {
 		min-height: auto !important;
 		padding-bottom: 12px !important;
@@ -108,13 +105,33 @@
 		}
     }
 </style>
+<style>
+	/* Mobile guest filter bottom-sheet */
+	.guest-mobile-filter-panel { display: none; }
+	.guest-mobile-filter-panel .filter-modal-panel { box-shadow: 0 -12px 28px rgba(11,37,64,0.12); }
+	.filter-modal-panel.mobile { width: 100%; max-width: 640px; border-radius: 12px 12px 0 0; }
+	@media (max-width: 767px) {
+		.guest-mobile-filter-panel { display: flex !important; align-items: flex-end; justify-content: center; }
+		.filter-modal-panel.mobile .st-dashboard-card { width: calc(100% - 16px); margin: 0 8px 12px 8px; }
+		.filter-modal-panel.mobile .card-body { max-height: 72vh; overflow-y: auto; }
+	}
+</style>
+<style>
+	/* Stronger rules so cloned mobile panel is visible despite earlier global hide rules */
+	.guest-mobile-filter-panel .filter-modal-panel,
+	.guest-mobile-filter-panel .guest-filter-card,
+	.guest-mobile-filter-panel .guest-filter-panel {
+		display: block !important;
+		visibility: visible !important;
+		opacity: 1 !important;
+	}
+	.guest-mobile-filter-panel { background: rgba(6,48,110,0.12) !important; }
+</style>
 
-<!-- Final mobile centering and overflow fixes (high-specificity) -->
 <style>
 @media (max-width: 767px) {
 	html, body { width:100% !important; max-width:100% !important; overflow-x: hidden !important; }
 
-	/* Force inner content to fit and center inside viewport */
 	.st-center-outer > * {
 		width: calc(100vw - 24px) !important;
 		max-width: calc(100vw - 24px) !important;
@@ -138,7 +155,6 @@
 		overflow-x: hidden !important;
 	}
 
-	/* Ensure map and images never overflow their container */
 	.st-map-figure-wrapper,
 	.st-map-figure-wrapper object#philippines-map,
 	.st-map-figure-wrapper svg,
@@ -153,14 +169,12 @@
 		transform: none !important;
 	}
 
-		/* Mobile: hide the object embed and show the static img fallback for reliability */
 		.ph-mobile-fallback { display: none !important; }
 		@media (max-width: 767px) {
 			object#philippines-map { display: none !important; }
 			.ph-mobile-fallback { display: block !important; }
 		}
 
-	/* Remove decorative pseudo-elements that expand visual bounds */
 	.ph-frame::before,
 	.st-dashboard-container::before,
 	.st-dashboard-container::after {
@@ -168,12 +182,10 @@
 		content: none !important;
 	}
 
-	/* If there is still a tiny visual overflow, clip it strictly */
 	.mobile-dashboard-container { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
 }
 </style>
 
-<!-- Mobile floating filter button (visible only on mobile) -->
 <style>
 	#mobile-filter-fab { display:none; }
 	@media (max-width: 767px) {
@@ -181,7 +193,7 @@
 			display: flex;
 			position: fixed;
 			right: 14px;
-			top: 14px; /* near header/logout */
+			top: 14px; 
 			z-index: 2200;
 			align-items: center;
 			gap: 8px;
@@ -195,11 +207,9 @@
 		}
 		#mobile-filter-fab .fab-icon { width:20px; height:20px; display:inline-block; }
 		#mobile-filter-panel { display:none; }
-		/* Hide guest filter card on mobile for logged-out/guest sessions */
-		.guest-filter-card { display: none !important; }
+		.guest-filter-card, .filter-modal-panel { display: none !important; }
 	}
 
-	/* Ensure blur behavior for details modal (not displayed as text) */
 	body.st-details-open .st-summary-table-wrap,
 	body.st-details-open .social-listing,
 	body.st-details-open .slider-modal-content {
@@ -208,7 +218,6 @@
 		pointer-events: none;
 		user-select: none;
 	}
-	/* Ensure modals and overlays are not blurred */
 	body.st-details-open #st-details-modal,
 	body.st-details-open #st-attachment-modal,
 	body.st-details-open .st-region-modal-dialog,
@@ -221,7 +230,6 @@
 @endguest
 <style>
 @media (max-width: 767px) {
-	/* Force layout resets for logged-in mobile views */
 	.container.stb-main-content, .stb-main-content {
 		margin-left: 0 !important;
 		padding-left: 0 !important;
@@ -237,10 +245,8 @@
 }
 </style>
 
-<!-- Extra mobile fixes for map/logo overflow -->
 <style>
 @media (max-width: 767px) {
-	/* Ensure the embedded Philippines SVG/object never exceeds viewport */
 	.st-map-figure-wrapper,
 	.st-map-figure-wrapper object#philippines-map,
 	.st-map-figure-wrapper svg,
@@ -253,46 +259,34 @@
 		display: block !important;
 	}
 
-	/* Remove decorative pseudo-element overflow on small screens */
 	.ph-frame::before { inset: 0 !important; border: none !important; box-shadow: none !important; }
 
-	/* Prevent any inner element from visually overflowing container */
 	.mobile-dashboard-container, .st-center-outer, .st-dashboard-container { overflow-x: hidden !important; }
 
-	/* If any element still slightly overflows due to borders/margins, clip it */
 	.mobile-dashboard-container { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
 }
 </style>
 
-<!-- Make chart panels visible on small screens and ensure canvases are responsive -->
 <style>
 @media (max-width: 767px) {
-	/* Only un-hide chart panels that were intentionally hidden using d-none */
 	.formal-chart-panel.d-none, .formal-chart-panel .d-none { display: block !important; }
 
-	/* Ensure chart canvases size to their container without revealing overlays */
 	.formal-chart-panel canvas, .mobile-dashboard-container canvas { width: 100% !important; height: auto !important; max-height: 640px !important; }
 
-	/* Avoid clipping chart panels */
 	.formal-chart-panel, .map-overlay-card, .mobile-dashboard-container { overflow: visible !important; }
 
-	 /* Ensure both dashboard containers are visible on mobile so cards remain accessible
-		 and prevent the absolute header from covering content */
 	 .st-dashboard-container { display: block !important; overflow: visible !important; max-width: 100% !important; width: 100% !important; padding: 12px !important; }
 	 .mobile-dashboard-container { display: block !important; }
 
-	 /* Avoid header overlapping content on mobile */
 	 .st-dashboard-header-fullwidth { position: static !important; z-index: auto !important; }
 	 .st-dashboard-container { padding-top: 0 !important; }
 
-	/* Ensure page is scrollable on small screens */
 	html, body { overflow-y: auto !important; height: auto !important; -webkit-overflow-scrolling: touch; }
 }
 </style>
 
 <link href="/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
-<!-- Masterdata styles copied to ensure the ST details modal matches masterdata UI -->
 <style>
 	.masterdata-shell {
 		width: min(100%, 1920px);
@@ -991,7 +985,6 @@
 	}
 </style>
 <style>
-	/* Ensure Bootstrap attachment viewer appears above masterdata/dashboard modals */
 	.modal-backdrop {
 		z-index: 1990 !important;
 	}
@@ -999,8 +992,6 @@
 		z-index: 2000 !important;
 	}
 
-/* Keep next style block for Select2 */
-/* (Inserted to ensure PDF iframe modal stacks above custom modals) */
 </style>
 <style>
 .select2-container--default .select2-selection--multiple {
@@ -1081,7 +1072,7 @@
 		justify-content: flex-start; 
 		background: none;
 		margin-left: 0 !important;
-		margin-right: auto;   /* optional */
+		margin-right: auto;   
 	}
 		.st-center-outer > * {
 		margin-left: 0 !important;
@@ -1128,7 +1119,6 @@
 		box-shadow: 0 8px 24px rgba(16, 174, 181, 0.18);
 	}
 
-/* Disable hover effect for dashboard cards that use flexible fill layout */
 .st-dashboard-card.flex-fill:hover {
     transform: none !important;
     box-shadow: none !important;
@@ -1213,20 +1203,17 @@
 			max-width: 99vw;
 			padding: 8px 2vw 8px 2vw;
 		}
-		/* Make cards and map responsive on small screens */
 		.st-dashboard-card {
 			min-width: 0 !important;
 			max-width: none !important;
 			width: 100% !important;
 		}
 		.st-map-card-body { grid-template-columns: 1fr !important; }
-		/* Responsive iframe for embedded report */
 		#streportFrame {
 			height: 50vh !important;
 			min-height: 320px !important;
 			max-height: 80vh !important;
 		}
-		/* Logo sizing for mobile */
 		.st-header-logo { height: auto !important; max-width: 140px !important; min-width: 220px !important; min-height: 100px !important; }
 	}
 	@media print {
@@ -1439,7 +1426,6 @@
 <style>
 		.st-dashboard-header .st-header-logo { width:600px !important; max-width:600px !important; height:140px !important; }
 		@media (max-width: 767px) {
-			/* Ensure logged-in header logo scales down on small screens (override later large rule) */
 			@if(Auth::check())
 			.st-dashboard-header .st-header-logo {
 				width: auto !important;
@@ -1581,7 +1567,6 @@
 	}
 </style>
 
-<!-- Additional responsive tweaks -->
 <style>
 	html, body { box-sizing: border-box; }
 	*, *::before, *::after { box-sizing: inherit; }
@@ -1669,7 +1654,6 @@
 	.mobile-dashboard-container, .st-center-outer > * { margin-left: auto !important; margin-right: auto !important; }
 	.st-dashboard-container { display: block !important; }
 
-	/* Ensure header stacks correctly on mobile */
 	.st-dashboard-header {
 		padding: 16px 12px 20px 12px !important;
 		text-align: center !important;
@@ -1696,9 +1680,7 @@
 }
 </style>
 
-<!-- Enforce larger height for the main trend chart and ensure responsive resizing -->
 <style>
-/* Desktop: make the main trend chart tall and responsive */
 canvas#onGoing {
 	width: 100% !important;
 	height: 56vh !important;
@@ -1706,7 +1688,6 @@ canvas#onGoing {
 	display: block !important;
 }
 
-/* Mobile: slightly shorter but still roomy */
 @media (max-width: 767px) {
 	canvas#onGoing { height: 44vh !important; max-height: none !important; }
 	.formal-chart-canvas { min-height: 320px !important; }
@@ -1714,13 +1695,11 @@ canvas#onGoing {
 </style>
 
 <script>
-// Ensure Chart.js instances reflow after CSS changes
 setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resizeAllCharts(); }catch(e){} }, 250);
 </script>
 
 <div class="st-center-outer">
 
-	<!-- mobile-dashboard-container removed per request -->
 
 	{{-- <div class="no-print" style="position:absolute; top:12px; right:24px; z-index:5;">
 		   <button type="button" class="btn btn-sm btn-primary" onclick="window.print()" style="background: linear-gradient(90deg, #10aeb5 60%, #1de9b6 100%); border: none; border-radius: 999px; padding: 6px 18px; font-weight: 600; box-shadow: 0 2px 6px rgba(16,174,181,0.35);">
@@ -1789,31 +1768,21 @@ setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resize
 							</div>
 
 									<div class="st-map-figure-wrapper ph-frame" style="position:relative;">
-										<div id="ph-map-loading" class="ph-map-loading" aria-hidden="false" role="status" style="">
-											<div class="spinner" aria-hidden="true" style="width:48px;height:48px;border:6px solid rgba(16,174,181,0.12);border-top-color:#10aeb5;border-radius:50%;animation:spin 1s linear infinite"></div>
-											<div style="color:#10aeb5;font-weight:700;margin-top:6px;font-size:0.95rem;">Loading map…</div>
-										</div>
 										<object id="philippines-map" data="{{ asset('images/philippines.svg') }}" type="image/svg+xml"></object>
-										<!-- Static image fallback for mobile devices (shown via CSS) -->
 										<img id="philippines-map-static" class="ph-mobile-fallback" src="{{ asset('images/philippines.svg') }}" alt="Philippines map" style="display:none; width:100%; height:auto;" />
-										<!-- Inline mobile SVG: server-side include to avoid fetch/CSP issues on mobile -->
 										<div id="philippines-map-inline-mobile" style="display:none; width:100%; height:auto; position:relative;">
 											{!! preg_replace('/<\?xml.*\?>/','', file_get_contents(public_path('images/philippines.svg'))) !!}
 										</div>
 										<script src="{{ asset('js/philippines-map-mobile.js') }}"></script>
 										<style>
 											@media (max-width: 767px) {
-												/* On mobile we remove/hide all svg embeds to avoid alignment/click issues. */
 												#philippines-map { display: none !important; }
 												#philippines-map-static { display: none !important; }
-												/* hide the inline-server-included svg on mobile */
 												#philippines-map-inline-mobile { display: none !important; z-index: auto !important; }
-												/* hide loading overlay on mobile to avoid covering the map */
 												#ph-map-loading { display: none !important; }
 											}
 										</style>
 										<script>
-											// Debug + attach handlers for inline SVG. Always log presence so user can report.
 											document.addEventListener('DOMContentLoaded', function () {
 												try {
 													const container = document.getElementById('philippines-map-inline-mobile');
@@ -1827,7 +1796,6 @@ setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resize
 													const paths = svg.querySelectorAll(pathSelector);
 													console.log('philippines: inline svg path count =', paths.length);
 
-													// Force container visible on small screens (debug + safety)
 													if (window.matchMedia && window.matchMedia('(max-width: 767px)').matches) {
 														container.style.display = 'block';
 														container.style.zIndex = 1000;
@@ -1845,14 +1813,13 @@ setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resize
 																	if (norm && typeof provinceRegionIndex !== 'undefined') {
 																		regionName = provinceRegionIndex[norm] || null;
 																	}
-																} catch (err) { /* ignore */ }
+																} catch (err) { }
 																if (typeof handleRegionClick === 'function') {
 																	handleRegionClick({ regionName: regionName, path: p });
 																} else if (typeof openRegionTitlesModal === 'function') {
 																	openRegionTitlesModal(regionName || ('Province: ' + (title || '')), []);
 																}
 															});
-															// Touch handlers for taps
 															let touchStart = 0, moved = false;
 															p.addEventListener('touchstart', function () { touchStart = Date.now(); moved = false; });
 															p.addEventListener('touchmove', function () { moved = true; });
@@ -1915,7 +1882,7 @@ if (!document.getElementById('catListTooltip')) {
 <script>
 (function(){
 	var checks = 0;
-	var maxChecks = 50; // ~15s (50 * 300ms)
+	var maxChecks = 50; 
 	var interval = 300;
 	var id = setInterval(function(){
 		checks++;
@@ -1933,7 +1900,7 @@ if (!document.getElementById('catListTooltip')) {
 
 			if(svgPresent || objRectVisible){
 				console.debug('map-checker: map detected, hiding loader (svgPresent=' + svgPresent + ', rectVisible=' + objRectVisible + ')');
-				try{ if(typeof hideOverlay === 'function'){ hideOverlay(); } else { /* call internal hideOverlay via global */ window.hideOverlay && window.hideOverlay(); } }catch(e){}
+				try{ if(typeof hideOverlay === 'function'){ hideOverlay(); } else {  window.hideOverlay && window.hideOverlay(); } }catch(e){}
 				try{ var g = document.getElementById('loading-overlay'); if(g){ g.classList.add('hidden'); g.style.display='none'; g.hidden=true; if(g.parentNode){ g.parentNode.removeChild(g); } } }catch(e){}
 				clearInterval(id);
 				return;
@@ -1986,22 +1953,145 @@ if (!document.getElementById('catListTooltip')) {
 
 	showOverlay();
 
-	if(!obj){
-		setTimeout(hideOverlay, 800);
-		return;
-	}
+			if (!dock) {
+				if (window.innerWidth <= 767) {
+					const authModal = document.getElementById('filterModal');
+					if (authModal) {
+						const modalBody = authModal.querySelector('#filterModalBody');
+						if (modalBody) {
+							const mobile = document.createElement('div');
+							mobile.id = 'guestMobileFilterPanel';
+							mobile.className = 'guest-mobile-filter-panel open';
+							mobile.style.position = 'fixed';
+							mobile.style.inset = '0';
+							mobile.style.zIndex = '2200';
+							mobile.style.display = 'flex';
+							mobile.style.alignItems = 'flex-end';
+							mobile.style.justifyContent = 'center';
+							mobile.style.background = 'rgba(6,48,110,0.12)';
+							const wrapper = document.createElement('div');
+							wrapper.className = 'filter-modal-panel mobile';
+							wrapper.style.width = '100%';
+							wrapper.style.maxWidth = '640px';
+							wrapper.style.borderRadius = '12px 12px 0 0';
+							wrapper.style.margin = '0';
+							wrapper.style.padding = '0.5rem';
+							wrapper.innerHTML = modalBody.innerHTML;
+							try{ wrapper.style.setProperty('display','block','important'); }catch(e){}
+							mobile.appendChild(wrapper);
+							document.body.appendChild(mobile);
+							document.body.classList.add('modal-open');
+							try{
+								var mobileWrapper = mobile.querySelector('.filter-modal-panel') || mobile.firstElementChild;
+								if(mobileWrapper) mobileWrapper.addEventListener('click', function(e){ e.stopPropagation(); });
+								function _closeGuestMobile(){ try{ var el = document.getElementById('guestMobileFilterPanel'); if(el && el.parentNode){ el.parentNode.removeChild(el); } }catch(e){} try{ document.body.classList.remove('modal-open'); }catch(e){} document.removeEventListener('keydown', _escGuestMobile); }
+								function _escGuestMobile(ev){ if(ev && ev.key === 'Escape') _closeGuestMobile(); }
+								mobile.addEventListener('click', function(e){ if(e.target === mobile){ _closeGuestMobile(); } });
+								document.addEventListener('keydown', _escGuestMobile);
+							}catch(e){}
+							console.debug('[guestFloatingBtn] created guestMobileFilterPanel by cloning filterModalBody');
+							return;
+						}
+					}
+					const mobileSimple = document.createElement('div');
+					mobileSimple.id = 'guestMobileFilterPanel';
+					mobileSimple.className = 'guest-mobile-filter-panel open';
+					mobileSimple.style.position = 'fixed';
+					mobileSimple.style.inset = '0';
+					mobileSimple.style.zIndex = '2200';
+					mobileSimple.style.display = 'flex';
+					mobileSimple.style.alignItems = 'flex-end';
+					mobileSimple.style.justifyContent = 'center';
+					mobileSimple.style.background = 'rgba(6,48,110,0.12)';
+					mobileSimple.innerHTML = `
+						<div class="filter-modal-panel mobile" style="display:block!important;">
+							<div class="card st-dashboard-card guest-filter-card">
+								<div class="guest-filter-header">
+									<div class="guest-filter-kicker">Dashboard Filters</div>
+									<div class="guest-filter-title">Filters (guest)</div>
+								</div>
+								<div class="card-body guest-filter-body">
+									<p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p>
+								</div>
+							</div>
+						</div>`;
+					document.body.appendChild(mobileSimple);
+					document.body.classList.add('modal-open');
+					try{
+						var mobileWrapper2 = mobileSimple.querySelector('.filter-modal-panel') || mobileSimple.firstElementChild;
+						if(mobileWrapper2) mobileWrapper2.addEventListener('click', function(e){ e.stopPropagation(); });
+						function _closeGuestMobile2(){ try{ var el = document.getElementById('guestMobileFilterPanel'); if(el && el.parentNode){ el.parentNode.removeChild(el); } }catch(e){} try{ document.body.classList.remove('modal-open'); }catch(e){} document.removeEventListener('keydown', _escGuestMobile2); }
+						function _escGuestMobile2(ev){ if(ev && ev.key === 'Escape') _closeGuestMobile2(); }
+						mobileSimple.addEventListener('click', function(e){ if(e.target === mobileSimple){ _closeGuestMobile2(); } });
+						document.addEventListener('keydown', _escGuestMobile2);
+					}catch(e){}
+					console.debug('[guestFloatingBtn] created simple guestMobileFilterPanel fallback');
+					return;
+				}
 
-	try{
-		var alreadySvg = obj.contentDocument && obj.contentDocument.querySelector('svg');
-		if(alreadySvg){
-			hideOverlay();
-			return;
-		}
-	}catch(e){  }
+				const authModal = document.getElementById('filterModal');
+				if (authModal) {
+					if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+						try {
+							const m = window.bootstrap.Modal.getOrCreateInstance(authModal);
+							m.show();
+							console.debug('[guestFloatingBtn] fallback: showed auth filterModal via bootstrap');
+						} catch (e) {
+							console.warn('Could not show auth filter modal', e);
+						}
+						return;
+					}
 
-	var timedOut = false;
-	var timeoutId = setTimeout(function(){ timedOut = true; hideOverlay(); }, maxWait + 100);
+					const modalBody = authModal.querySelector('#filterModalBody');
+					if (modalBody) {
+						const newDock = document.createElement('div');
+						newDock.id = 'guestFilterDock';
+						newDock.className = 'guest-filter-dock open';
+						newDock.style.display = 'flex';
+						newDock.style.position = 'fixed';
+						newDock.style.inset = '0';
+						newDock.style.background = 'rgba(6,48,110,0.28)';
+						newDock.style.alignItems = 'center';
+						newDock.style.justifyContent = 'center';
+						newDock.style.padding = '1rem';
+						const wrapper = document.createElement('div');
+						wrapper.className = 'guest-filter-panel';
+						wrapper.innerHTML = modalBody.innerHTML;
+						newDock.appendChild(wrapper);
+						document.body.appendChild(newDock);
+						document.body.classList.add('modal-open');
+						console.debug('[guestFloatingBtn] created guestFilterDock by cloning filterModalBody');
+						return;
+					}
+				}
 
+				const simpleDock = document.createElement('div');
+				simpleDock.id = 'guestFilterDock';
+				simpleDock.className = 'guest-filter-dock open';
+				simpleDock.style.display = 'flex';
+				simpleDock.style.position = 'fixed';
+				simpleDock.style.inset = '0';
+				simpleDock.style.background = 'rgba(6,48,110,0.28)';
+				simpleDock.style.alignItems = 'center';
+				simpleDock.style.justifyContent = 'center';
+				simpleDock.style.padding = '1rem';
+				simpleDock.innerHTML = `
+						<div class="guest-filter-panel">
+							<div class="card st-dashboard-card guest-filter-card">
+								<div class="guest-filter-header">
+									<div class="guest-filter-kicker">Dashboard Filters</div>
+									<div class="guest-filter-title">Filters (guest)</div>
+								</div>
+								<div class="card-body guest-filter-body">
+									<p>Please <a href=\"/login\">log in</a> to access full filters, or reload the page.</p>
+								</div>
+							</div>
+						</div>`;
+				document.body.appendChild(simpleDock);
+				document.body.classList.add('modal-open');
+				console.debug('[guestFloatingBtn] created simple guestFilterDock fallback');
+				return;
+			}
 	obj.addEventListener('load', function(){
 		try{
 			var svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
@@ -2077,7 +2167,6 @@ if (!document.getElementById('catListTooltip')) {
                 </div>
             </div>
 
-			<!-- Inactive Trend Snapshot removed -->
         </div>
 	</div>
 
@@ -2181,7 +2270,6 @@ if (!document.getElementById('catListTooltip')) {
 	</div>
 </div>
 
-<!-- mobile filter panel removed -->
 
 <div class="st-third-row formal-dashboard-row">
 	<div class="formal-third-row-grid">
@@ -2329,7 +2417,6 @@ if (!document.getElementById('catListTooltip')) {
 	padding: 28px 20px 24px 20px !important;
 }
 
-/* Disable hover transform/box-shadow for cards marked no-hover */
 .st-dashboard-card.no-hover:hover {
 	transform: none !important;
 	box-shadow: none !important;
@@ -2415,7 +2502,6 @@ if (!document.getElementById('catListTooltip')) {
 	font-size: 0.86rem;
 	line-height: 1.45;
 }
-/* make dissolved count red */
 #card2 .card-value {
     color: #ff4d4f;
 }
@@ -2795,7 +2881,6 @@ if (!document.getElementById('catListTooltip')) {
 	max-height: 270px;
 }
 
-/* Hide large doughnut visualization on narrow/mobile screens */
 @media (max-width: 640px) {
     .formal-chart-panel-doughnut,
     .formal-chart-canvas-doughnut,
@@ -3170,7 +3255,7 @@ if (!document.getElementById('catListTooltip')) {
 }
 
 .social-listing-pagination {
-	display: inline-flex; /* shrink to contents */
+	display: inline-flex; 
 	justify-content: center;
 	align-items: center;
 	gap: 14px;
@@ -3376,7 +3461,6 @@ if (!document.getElementById('catListTooltip')) {
 }
 
 </style>
-						<!-- Filter (moved OUTSIDE the chart wrapper) -->
 						{{-- <div class="year-filter-wrap" style="position:absolute; top:50%; transform:translateY(-50%); z-index:6; flex:0 0 320px; max-width:320px; width:320px;">
 							<div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
 								<div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
@@ -3431,7 +3515,7 @@ if (!document.getElementById('catListTooltip')) {
 										if (yearRow && summaryRow && summaryRow.parentNode) {
 											summaryRow.parentNode.insertBefore(yearRow, summaryRow);
 										}
-									} catch (e) { /* noop */ }
+									} catch (e) {  }
 								});
 							</script>
 
@@ -3653,7 +3737,6 @@ if (!document.getElementById('catListTooltip')) {
 			background: rgba(15, 23, 42, 0.52);
 			backdrop-filter: blur(5px);
 			-webkit-backdrop-filter: blur(5px);
-			/* place the details modal backdrop above page content but below Bootstrap modals */
 			z-index: 1980;
 		}
 		.st-region-modal-dialog {
@@ -3668,7 +3751,6 @@ if (!document.getElementById('catListTooltip')) {
 			overflow: hidden;
 			box-shadow: 0 28px 90px rgba(15, 23, 42, 0.28);
 			border: 1px solid rgba(148, 163, 184, 0.16);
-			/* modal dialog above its backdrop but below Bootstrap modals */
 			z-index: 1985;
 			display: flex;
 			flex-direction: column;
@@ -3825,7 +3907,7 @@ if (!document.getElementById('catListTooltip')) {
 			@if(!auth()->check())
 			<div id="guestFilterDock" class="guest-filter-dock">
 				<div id="guestFloatingFilter" class="year-filter-wrap guest-filter-panel">
-					<div class="card st-dashboard-card guest-filter-card">
+					<div class="card st-dashboard-card filter-modal-panel">
 						<div class="guest-filter-header">
 							<div class="guest-filter-kicker">Dashboard Filters</div>
 							<div class="guest-filter-title">Filter By Location &amp; Year</div>
@@ -3945,7 +4027,6 @@ if (!document.getElementById('catListTooltip')) {
 		</div>
 
 		<style>
-		/* When details modal is open, hard-blur other listing modals (region listing) */
 		body.st-details-open #region-titles-modal .st-region-modal-dialog,
 		body.st-details-open #st-summary-modal .st-region-modal-dialog,
 		body.st-details-open #st-title-modal .st-region-modal-dialog {
@@ -3956,7 +4037,6 @@ if (!document.getElementById('catListTooltip')) {
 			opacity: 0.98 !important;
 		}
 
-		/* Slightly dim the backdrop of those listing modals so the details modal stands out */
 		body.st-details-open #region-titles-modal .st-region-modal-backdrop,
 		body.st-details-open #st-summary-modal .st-region-modal-backdrop,
 		body.st-details-open #st-title-modal .st-region-modal-backdrop {
@@ -3996,13 +4076,10 @@ if (!document.getElementById('catListTooltip')) {
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.3.0/dist/chartjs-chart-matrix.min.js"></script>
 	<script>
-	/* Make canvases responsive and force-resize charts after loaders removed */
 	(function(){
 		window.__stb_resizeAllCharts = function resizeAllCharts(){
 			try{
-				// Un-hide chart panels intentionally hidden with d-none on mobile
 				document.querySelectorAll('.formal-chart-panel.d-none').forEach(function(el){ el.classList.remove('d-none'); el.style.display = 'block'; });
-				// Normalize canvas sizing and trigger Chart.js resize/update
 				document.querySelectorAll('canvas').forEach(function(c){
 					try{ c.removeAttribute('width'); c.removeAttribute('height'); }catch(e){}
 					try{ c.style.width = '100%'; c.style.height = 'auto'; }catch(e){}
@@ -4018,12 +4095,10 @@ if (!document.getElementById('catListTooltip')) {
 		}
 
 		document.addEventListener('DOMContentLoaded', function(){
-			// Run once shortly after load and a couple more times to catch late chart inits
 			setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 600);
 			setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 1400);
 			setTimeout(function(){ try{ window.__stb_resizeAllCharts(); }catch(e){} }, 2600);
 
-			// Watch for loader removal and re-run resize when that happens
 			var observer = new MutationObserver(function(mutations){
 				mutations.forEach(function(m){
 					if(m.removedNodes && m.removedNodes.length){
@@ -4248,7 +4323,6 @@ if (!document.getElementById('catListTooltip')) {
 					html += '</div>';
 
 			document.getElementById('title-listing-table-container').innerHTML = html;
-			// attach click handlers to table rows so they open the details modal
 			try {
 				const container = document.getElementById('title-listing-table-container');
 				const table = container.querySelector('.social-listing-table');
@@ -4257,11 +4331,9 @@ if (!document.getElementById('catListTooltip')) {
 					if (tbody) {
 						const trs = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('social-listing-empty'));
 						trs.forEach(function(tr, i) {
-							// compute index within pageData by counting only real rows
 							const idx = i;
 							tr.tabIndex = 0;
 							tr.addEventListener('click', function(e) {
-								// ignore clicks on attachment controls
 								if (e.target.closest('.social-listing-action') || e.target.closest('.st-attachment-view-btn') || e.target.closest('a')) return;
 								const row = pageData[idx] || null;
 								if (row && window.openStDetailsModal) {
@@ -4331,10 +4403,8 @@ window.allYears = @json($allYears ?? $years);
 
 		$('#filterModal').on('shown.bs.modal', function() {
 			initDashboardSelect2();
-			// ensure focus is moved into the modal for accessibility
 			try{
 				const modal = this;
-				// focus the first focusable element inside the modal
 				const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
 				if (firstFocusable) {
 					firstFocusable.focus();
@@ -4345,12 +4415,10 @@ window.allYears = @json($allYears ?? $years);
 			} catch(e) {}
 		});
 
-		// before hiding the modal, move focus out so aria-hidden doesn't hide a focused element
 		$('#filterModal').on('hide.bs.modal', function() {
 			try{
 				const active = document.activeElement;
 				if (active && this.contains(active)) {
-					// try to focus the opener button or a sensible fallback
 					const opener = document.getElementById('floatingBtn') || document.querySelector('[data-bs-target="#filterModal"]') || document.body;
 					if (opener && typeof opener.focus === 'function') opener.focus();
 				}
@@ -4674,7 +4742,7 @@ $('#region-select-modal').on('change', function() {
 						const url = new URL(window.location.href);
 						const currentYear = url.searchParams.get('year_of_moa');
 						if (currentYear === selectedYear) {
-							url.searchParams.delete('year_of_moa'); // Remove filter if clicking same year
+							url.searchParams.delete('year_of_moa'); 
 						} else {
 							url.searchParams.set('year_of_moa', selectedYear);
 						}
@@ -4713,7 +4781,7 @@ $('#region-select-modal').on('change', function() {
 		}
 	}
 
-	const stTitleEntries = Object.entries(stTitleCounts).sort((a, b) => b[1] - a[1]); // [title, count]
+	const stTitleEntries = Object.entries(stTitleCounts).sort((a, b) => b[1] - a[1]); 
 	const stTitleLabels = stTitleEntries.map(e => e[0]);
 	const stTitleData = stTitleEntries.map(e => e[1]);
 	const stTitleColors = [
@@ -5054,7 +5122,6 @@ $('#region-select-modal').on('change', function() {
 					item.addEventListener('click', function() {
 						const idx = parseInt(this.getAttribute('data-idx'));
 						const label = stTitleLabels[idx];
-						// prefer opening the details modal for a matching ST if available
 						try {
 							const allRows = window.fullListingData || [];
 							const normalize = s => (s || '').toString().trim().toLowerCase();
@@ -5065,11 +5132,9 @@ $('#region-select-modal').on('change', function() {
 								return;
 							}
 							if (matches.length > 1 && window.openStSummaryModal) {
-								// multiple STs share the same title — show a summary listing to pick
 								window.openStSummaryModal({ title: label, filter: function(r){ return normalize(r.title) === normLabel; } });
 								return;
 							}
-							// fallback: try substring match if no exact matches
 							const partial = allRows.find(r => normalize(r.title).includes(normLabel) || normLabel.includes(normalize(r.title)));
 							if (partial && window.openStDetailsModal) {
 								window.openStDetailsModal(partial);
@@ -5451,7 +5516,6 @@ $('#region-select-modal').on('change', function() {
 				});
 				html += '</tbody></table></div>';
 				bodyEl.innerHTML = html;
-				// (debug panel removed)
 			}
 			modal.style.display = 'block';
 			if (document.body) {
@@ -5474,7 +5538,6 @@ $('#region-select-modal').on('change', function() {
 			const titleEl = document.getElementById('st-details-modal-title');
 			const bodyEl = document.getElementById('st-details-modal-body');
 			if (!modal || !bodyEl) return;
-			// Debug: log row object to help trace missing year_of_resolution
 			try {
 				console.log('openStDetailsModal row:', row);
 				console.log('openStDetailsModal year_of_resolution:', row ? row.year_of_resolution : undefined);
@@ -5500,7 +5563,6 @@ $('#region-select-modal').on('change', function() {
 				if (row.updated_at) html += '<span>Updated at: ' + escapeHtml(row.updated_at) + '</span>';
 				html += '</div></div></div>';
 
-				// attachment panel (MOA)
 				const attUrl = row.attachment_url || '';
 				html += '<div class="masterdata-attachment-panel">';
 				html += '<div>';
@@ -5523,7 +5585,6 @@ $('#region-select-modal').on('change', function() {
 				html += '</div>';
 				html += '</div>';
 
-				// readonly form fields
 				html += '<div class="masterdata-form-grid">';
 				html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + escapeHtml(row.region || '-') + '" readonly></div>';
 				html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + escapeHtml(status ? (status.charAt(0).toUpperCase() + status.slice(1)) : '-') + '" readonly></div>';
@@ -5547,7 +5608,6 @@ $('#region-select-modal').on('change', function() {
 
 				bodyEl.innerHTML = html;
 			}
-			// add blur class to body so underlying listing is blurred
 			if (document.body) {
 				document.body.classList.add('st-details-open');
 				document.body.style.overflow = 'hidden';
@@ -5598,9 +5658,7 @@ $('#region-select-modal').on('change', function() {
 				});
 				html += '</tbody></table></div>';
 				bodyEl.innerHTML = html;
-				// save rows so clicks can open details modal
 				modal._rows = rows;
-				// attach click handler to table rows to open details modal
 				setTimeout(function(){
 					try {
 						const table = bodyEl.querySelector('.st-summary-table');
@@ -5641,7 +5699,6 @@ $('#region-select-modal').on('change', function() {
 		window.openStSummaryModal = openStSummaryModal;
 		window.closeStSummaryModal = closeStSummaryModal;
 
-	// Wire total cards to open the ST summary modal with matching filters
 	function initTotalCardsToSummary() {
 		const parseFlag = function(v) {
 			if (typeof v === 'boolean') return v;
@@ -5652,7 +5709,6 @@ $('#region-select-modal').on('change', function() {
 			return s === 'true' || s === 'yes' || s === 'y';
 		};
 
-		// mapping for small metric cards (#card1..#card4)
 		const cardBindings = {
 			'card1': { title: 'Ongoing STs', filter: function(r) { return ((r.status||'').toString().toLowerCase().includes('ongoing')) || false; } },
 			'card2': { title: 'Dissolved STs', filter: function(r) { const s=(r.status||'').toString().toLowerCase(); return s.includes('dissolved') || s.includes('inactive') || s.includes('completed'); } },
@@ -5669,14 +5725,12 @@ $('#region-select-modal').on('change', function() {
 			el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
 		});
 
-		// map overlay cards (order-based)
 		try {
 			const overlayCards = Array.from(document.querySelectorAll('.map-overlay-totals .map-overlay-card'));
 			if (overlayCards && overlayCards.length) {
-				// expected order: total adopted/replicated, expr, sb resolution, moa
 				overlayCards.forEach(function(el, idx) {
 					let cfg = null;
-					if (idx === 0) cfg = { title: 'All ST Titles', filter: function(r){ return true; } }; // adopted+replicated total - show all titles
+					if (idx === 0) cfg = { title: 'All ST Titles', filter: function(r){ return true; } }; 
 					if (idx === 1) cfg = { title: 'Expression of Interest', filter: function(r){ return parseFlag(r.with_expr); } };
 					if (idx === 2) cfg = { title: 'SB Resolution', filter: function(r){ return parseFlag(r.with_res); } };
 					if (idx === 3) cfg = { title: 'MOA', filter: function(r){ return parseFlag(r.with_moa); } };
@@ -5717,16 +5771,13 @@ $('#region-select-modal').on('change', function() {
 					uploaderEl.style.display = 'none';
 				}
 			}
-			// Ensure this attachment modal stacks above any open ST details modal
 			try {
 				const localBackdrop = modal.querySelector('.st-region-modal-backdrop');
 				const localDialog = modal.querySelector('.st-region-modal-dialog');
 				if (localBackdrop) localBackdrop.style.zIndex = 1990;
 				if (localDialog) localDialog.style.zIndex = 1995;
-				// also set wrapper z-index just in case
 				modal.style.zIndex = 1995;
 			} catch (e) {
-				// ignore
 			}
 			modal.style.display = 'block';
 			if (document.body) {
@@ -5798,15 +5849,12 @@ $('#region-select-modal').on('change', function() {
 								html += '</div>';
 							});
 							bodyEl.innerHTML = html;
-							// save rows for details modal lookup
 							modal._rows = rows;
-							// attach click handlers for items to open details modal
 							setTimeout(function(){
 								const items = bodyEl.querySelectorAll('.st-region-title-item');
 								items.forEach(function(it){
 									it.addEventListener('click', function(e){
 										if (e.target.closest('.st-attachment-view-btn') || e.target.closest('a')) {
-											// allow attachment buttons to work without opening details
 											return;
 										}
 										const idx = parseInt(this.getAttribute('data-idx'), 10);
@@ -6266,7 +6314,6 @@ $('#region-select-modal').on('change', function() {
 						info.path.style.stroke = highlightStroke;
 						info.path.style.strokeWidth = '1.5';
 					} else {
-						// Debug: log rows and find entries with with_res but missing year_of_resolution
 						try {
 							console.log('openRegionTitlesModal rows count:', rows.length);
 							console.log('openRegionTitlesModal sample rows:', (rows || []).slice(0,5));
@@ -6369,7 +6416,6 @@ $('#region-select-modal').on('change', function() {
 							if (!row || !row.province) return false;
 							return normalizeProvinceName(row.province) === targetProvNorm;
 						});
-                // add blank rows to reach perPage when there are fewer entries
                 if (pageData.length < perPage) {
                     for (let i = pageData.length; i < perPage; i++) {
                         html += '<tr><td colspan="5" class="social-listing-empty">&nbsp;</td></tr>';
@@ -6469,7 +6515,7 @@ $('#region-select-modal').on('change', function() {
 
 	document.addEventListener('DOMContentLoaded', function(){
 		adjustOverlayTotalsNumbers();
-		window.adjustOverlayTotalsNumbers = adjustOverlayTotalsNumbers; // expose for manual calls
+		window.adjustOverlayTotalsNumbers = adjustOverlayTotalsNumbers;
 
 		const observer = new MutationObserver(debounce(adjustOverlayTotalsNumbers, 80));
 		document.querySelectorAll('.map-overlay-card h1').forEach(h => observer.observe(h, { childList: true, characterData: true, subtree: true }));
@@ -7160,7 +7206,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 
 	</script>
 
-<!-- Final mobile display override and one-time chart resize (applies last) -->
 <style>
 @media (max-width: 767px) {
 	.st-dashboard-container { display: block !important; max-width: 100% !important; width: 100% !important; padding-top: 0 !important; overflow: visible !important; }
@@ -7168,13 +7213,10 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	.mobile-dashboard-container { display: block !important; }
 	.st-dashboard-header-fullwidth { position: static !important; z-index: auto !important; }
 
-	/* Hide potential blocking overlays */
 	#ph-map-loading, #loading-overlay, .slider-modal-overlay, .slider-modal { display: none !important; visibility: hidden !important; pointer-events: none !important; }
 
-	/* Ensure map overlays & cards remain visible */
 	.map-overlay-totals .st-dashboard-card h1 { visibility: visible !important; }
 
-	/* Force canvases to be visible and responsive */
 	.formal-chart-panel canvas, canvas { display: block !important; width: 100% !important; height: auto !important; max-height: 720px !important; }
 
 	html, body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
@@ -7182,13 +7224,11 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 </style>
 
 <script>
-// final resize pass after all chart inits
 document.addEventListener('DOMContentLoaded', function(){
 	setTimeout(function(){ try{ if(window.__stb_resizeAllCharts) window.__stb_resizeAllCharts(); }catch(e){} }, 800);
 });
 </script>
 
-<!-- Compact mobile layout fixes: make main container fluid and grids stack cleanly -->
 <style>
 @media (max-width: 767px) {
 	html, body { overflow-x: hidden !important; }
@@ -7204,7 +7244,6 @@ document.addEventListener('DOMContentLoaded', function(){
 	.st-dashboard-header-fullwidth { position: static !important; margin-bottom: 12px !important; }
 	.st-dashboard-container { padding-top: 0 !important; }
 
-	/* Stack grids into single column and remove fixed min-heights */
 	.formal-st-top-grid, .formal-second-row-wrap, .formal-third-row-grid, .formal-mini-panel-group, .formal-linked-st-panels {
 		grid-template-columns: 1fr !important;
 		gap: 12px !important;
@@ -7217,10 +7256,8 @@ document.addEventListener('DOMContentLoaded', function(){
 	.formal-chart-canvas-medium, .formal-chart-canvas-docflow { min-height: 240px !important; }
 	.formal-chart-canvas-region { min-height: 260px !important; }
 
-	/* Ensure cards don't overflow and are fully visible */
 	.st-dashboard-card, .map-overlay-card { width: 100% !important; margin: 0 0 12px 0 !important; }
 
-	/* Floating elements adjust */
 	#floatingBtn { right: 12px !important; top: 92px !important; }
 }
 </style>
@@ -7231,8 +7268,71 @@ document.addEventListener('DOMContentLoaded', function(){
         <span class="filter-label">Filter</span>
     </button>
 	@endif
+	@guest
+	<button id="guestFloatingBtn" class="btn" aria-label="Open filters for guests" onclick="return window.showGuestFilterDock && window.showGuestFilterDock(event)">
+		<img src="/images/dattachments/filtering%20icon.png" class="floating-btn-icon" alt="Filter" />
+		<span class="filter-label">Filter</span>
+	</button>
+	@endguest
 
-	@auth
+<script>
+// Global handler for guest floating button to show filter panel (mobile + desktop)
+window.showGuestFilterDock = function(ev){
+	try{
+		console.debug('[showGuestFilterDock] invoked');
+		// if mobile, show mobile panel we create earlier
+		if(window.innerWidth <= 767){
+			if(document.getElementById('guestMobileFilterPanel')){ console.debug('[showGuestFilterDock] mobile panel already open'); return false; }
+			// Prefer cloning existing guestFilterDock content if present
+			var existingDock = document.getElementById('guestFilterDock');
+			if(existingDock){
+				var wrapper = document.createElement('div');
+				wrapper.id = 'guestMobileFilterPanel';
+				wrapper.className = 'guest-mobile-filter-panel open';
+				wrapper.style.position = 'fixed'; wrapper.style.inset='0'; wrapper.style.zIndex='2200'; wrapper.style.display='flex'; wrapper.style.alignItems='flex-end'; wrapper.style.justifyContent='center'; wrapper.style.background='rgba(6,48,110,0.12)';
+				var inner = document.createElement('div');
+				inner.className = 'filter-modal-panel mobile'; inner.style.display='block'; inner.style.width='100%'; inner.style.maxWidth='640px'; inner.style.borderRadius='12px 12px 0 0'; inner.style.margin='0'; inner.style.padding='0.5rem';
+				inner.innerHTML = existingDock.innerHTML;
+				wrapper.appendChild(inner);
+				document.body.appendChild(wrapper);
+				document.body.classList.add('modal-open');
+				// basic close handlers
+				wrapper.addEventListener('click', function(e){ if(e.target === wrapper){ wrapper.remove(); document.body.classList.remove('modal-open'); } });
+				document.addEventListener('keydown', function _esc(e){ if(e.key === 'Escape'){ try{ wrapper.remove(); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc); } });
+				console.debug('[showGuestFilterDock] opened mobile panel by cloning guestFilterDock');
+				return false;
+			}
+			// fallback simple mobile panel
+			var mobile = document.createElement('div');
+			mobile.id = 'guestMobileFilterPanel'; mobile.className='guest-mobile-filter-panel open'; mobile.style.position='fixed'; mobile.style.inset='0'; mobile.style.zIndex='2200'; mobile.style.display='flex'; mobile.style.alignItems='flex-end'; mobile.style.justifyContent='center'; mobile.style.background='rgba(6,48,110,0.12)';
+			mobile.innerHTML = '<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>';
+			document.body.appendChild(mobile); document.body.classList.add('modal-open');
+			mobile.addEventListener('click', function(e){ if(e.target === mobile){ mobile.remove(); document.body.classList.remove('modal-open'); } });
+			document.addEventListener('keydown', function _esc2(e){ if(e.key === 'Escape'){ try{ mobile.remove(); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc2); } });
+			console.debug('[showGuestFilterDock] opened simple mobile fallback');
+			return false;
+		}
+
+		// Desktop / larger screens: if a guestFilterDock element exists, show it
+		var dock = document.getElementById('guestFilterDock');
+		if(dock){
+			if(dock.classList.contains('open')){ console.debug('[showGuestFilterDock] dock already open'); return false; }
+			dock.style.display = 'flex'; dock.style.position='fixed'; dock.style.inset='0'; dock.style.background='rgba(6,48,110,0.28)'; dock.style.alignItems='center'; dock.style.justifyContent='center'; dock.classList.add('open'); document.body.classList.add('modal-open');
+			// attach close on backdrop
+			dock.addEventListener('click', function _dockClose(e){ if(e.target === dock){ try{ dock.style.display='none'; dock.classList.remove('open'); document.body.classList.remove('modal-open'); }catch(_){} dock.removeEventListener('click', _dockClose); } });
+			document.addEventListener('keydown', function _esc3(e){ if(e.key === 'Escape'){ try{ dock.style.display='none'; dock.classList.remove('open'); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc3); } });
+			console.debug('[showGuestFilterDock] showed guestFilterDock');
+			return false;
+		}
+
+		console.debug('[showGuestFilterDock] no dock element found, nothing to show');
+		return false;
+	}catch(err){ console.error('showGuestFilterDock error', err); return false; }
+};
+</script>
+	
+@auth
+	
 	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
 	  <div class="modal-dialog modal-dialog-centered filter-modal-dialog" style="width:min(1280px, calc(100vw - 1.5rem)); max-width:none;">
         <div class="modal-content">
@@ -7335,33 +7435,68 @@ document.addEventListener('DOMContentLoaded', function(){
 			object-fit: contain;
 			filter: none;
 		}
+
+		button#floatingBtn img.floating-btn-icon,
+		button#guestFloatingBtn img.floating-btn-icon,
+		#floatingBtn .floating-btn-icon,
+		#guestFloatingBtn .floating-btn-icon {
+			width: 28px !important;
+			height: 28px !important;
+			max-width: 28px !important;
+			max-height: 28px !important;
+			display: inline-block !important;
+			object-fit: contain !important;
+		}
+
+		@media (max-width: 480px) {
+			#guestFloatingBtn, #floatingBtn {
+				padding: 8px 10px !important;
+				min-width: 46px !important;
+				min-height: 46px !important;
+				border-radius: 12px !important;
+			}
+			#guestFloatingBtn .filter-label, #floatingBtn .filter-label {
+				display: none !important;
+			}
+		}
 		#floatingBtn:hover,
-		#floatingBtn:focus-visible {
+		#floatingBtn:focus-visible,
+		#guestFloatingBtn:hover,
+		#guestFloatingBtn:focus-visible {
 			transform: translateY(-4px) scale(1.03);
 			background: linear-gradient(135deg, #ffffff 0%, #dff6f7 100%) !important;
 			border-color: #10aeb5;
 			outline: none;
 		}
-		#floatingBtn:active {
+		#floatingBtn:active,
+		#guestFloatingBtn:active {
 			transform: translateY(-1px) scale(0.99);
 		}
-		@media (max-width: 767px) {
-			#floatingBtn {
-				top: 96px;
-				right: 12px;
-				min-width: 116px;
-				min-height: 64px;
-				padding: 12px 14px;
-				gap: 8px;
-			}
-			#floatingBtn .filter-label {
-				font-size: 0.98rem;
-			}
-			#floatingBtn .floating-btn-icon {
-				width: 26px;
-				height: 26px;
-			}
-        }
+#floatingBtn {
+    display: none;
+}
+
+@auth
+@media (min-width: 768px) {
+    #floatingBtn {
+        display: flex;
+        position: fixed;
+        top: 96px;
+        right: 20px;
+        z-index: 9999;
+    }
+}
+@endauth
+
+@media (max-width: 767px) {
+    #floatingBtn {
+        display: flex;
+        position: fixed;
+        top: 96px;
+        right: 12px;
+        z-index: 9999;
+    }
+}
 		#guestFloatingFilter {
 			position: relative;
 			top: auto;
@@ -7370,6 +7505,61 @@ document.addEventListener('DOMContentLoaded', function(){
 			max-width: none;
 			width: min(388px, calc(100vw - 1rem));
 			padding-right: 20px;
+		}
+
+		#guestFloatingBtn {
+			display: none !important;
+			position: fixed;
+			top: 96px;
+			right: 20px;
+			z-index: 9999;
+			min-width: 60px;
+			width:60px !important;
+			min-height: 72px;
+			background: linear-gradient(135deg, #ffffff 0%, #eef6ff 100%) !important;
+			border: 3px solid #06306e;
+			border-radius: 18px;
+			color: #06306e;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			padding: 14px 18px;
+			box-shadow: none;
+			transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+			will-change: transform;
+		}
+
+		#guestFloatingBtn .floating-btn-icon {
+			width: 30px;
+			height: 30px;
+			object-fit: contain;
+			display: block;
+		}
+
+		@media (max-width: 420px) {
+			#guestFloatingBtn .filter-label { display: none; }
+		}
+
+		@media (max-width: 767px) {
+			#guestFloatingBtn { display: flex !important; }
+			#guestFilterDock { display: none; }
+			#guestFilterDock.open {
+				display: flex;
+				position: fixed;
+				inset: 0;
+				background: rgba(6,48,110,0.28);
+				align-items: center;
+				justify-content: center;
+				padding: 1rem;
+			}
+			#guestFilterDock.open .guest-filter-panel {
+				width: min(1220px, calc(100vw - 2rem));
+				max-width: none;
+				min-width: 0;
+			}
+
+			/* Ensure guest filter card is visible when the mobile guest dock is opened */
+			#guestFilterDock.open .guest-filter-card { display: block !important; }
 		}
 		#guestFilterDock {
 			position: fixed;
@@ -7797,6 +7987,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const movers = [];
 	const btn = document.getElementById('floatingBtn');
 	const guestDock = document.getElementById('guestFilterDock');
+	const guestBtn = document.getElementById('guestFloatingBtn');
 	if (btn && !btn.dataset.initialized) {
 		btn.dataset.initialized = "true";
 		movers.push(btn);
@@ -7804,6 +7995,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	if (guestDock && !guestDock.dataset.initialized) {
 		guestDock.dataset.initialized = "true";
 		movers.push(guestDock);
+	}
+	if (guestBtn && !guestBtn.dataset.initialized) {
+		guestBtn.dataset.initialized = "true";
+		movers.push(guestBtn);
 	}
 
 	if (!movers.length) return; 
@@ -7816,31 +8011,137 @@ document.addEventListener('DOMContentLoaded', function () {
     const delayBeforeReturn = 400;
     let cumulative = 0;
 
-    window.addEventListener('scroll', () => {
+	const states = new WeakMap();
+	movers.forEach(function(el){
+		states.set(el, { scrollOffset: 0, targetX: 0, targetY: 0, currentX: 0, currentY: 0 });
+	});
 
-        let currentScroll = window.scrollY;
-        let delta = currentScroll - lastScrollTop;
+	function applyTransforms(el) {
+		const s = states.get(el) || { scrollOffset:0, currentX:0, currentY:0 };
+		el.style.transform = `translate(${s.currentX}px, ${s.scrollOffset + s.currentY}px)`;
+	}
 
-        cumulative += Math.abs(delta);
-        let lag = Math.min(cumulative * scrollFactor, maxLag);
+	window.addEventListener('scroll', () => {
+		let currentScroll = window.scrollY;
+		let delta = currentScroll - lastScrollTop;
+
+		cumulative += Math.abs(delta);
+		let lag = Math.min(cumulative * scrollFactor, maxLag);
+
 		movers.forEach(function(el) {
+			const s = states.get(el);
+			if (!s) return;
 			if (delta > 0) {
-				el.style.transform = `translateY(-${lag}px)`; // scrolling down pushes up
+				s.scrollOffset = -lag; 
 			} else if (delta < 0) {
-				el.style.transform = `translateY(${lag}px)`;  // scrolling up pushes down
+				s.scrollOffset = lag;  
 			}
 		});
 
-        clearTimeout(timeout);
+		clearTimeout(timeout);
 		timeout = setTimeout(() => {
 			movers.forEach(function(el) {
-				el.style.transform = 'translateY(0)';
+				const s = states.get(el);
+				if (s) s.scrollOffset = 0;
 			});
-			cumulative = 0; // reset for next round
+			cumulative = 0; 
 		}, delayBeforeReturn);
 
-        lastScrollTop = currentScroll;
-    });
+		lastScrollTop = currentScroll;
+	});
+
+	let pointerX = window.innerWidth / 2;
+	let pointerY = window.innerHeight / 2;
+
+	function onPointerMove(e) {
+		const point = e.touches && e.touches[0] ? e.touches[0] : e;
+		pointerX = point.clientX;
+		pointerY = point.clientY;
+		movers.forEach(function(el){
+			if (!el.id || (el.id !== 'floatingBtn' && el.id !== 'guestFloatingBtn')) return;
+			const rect = el.getBoundingClientRect();
+			const cx = rect.left + rect.width / 2;
+			const cy = rect.top + rect.height / 2;
+			const dx = pointerX - cx;
+			const dy = pointerY - cy;
+			const targetX = Math.max(-18, Math.min(18, dx * 0.06));
+			const targetY = Math.max(-18, Math.min(18, dy * 0.06));
+			const s = states.get(el);
+			if (s) { s.targetX = targetX; s.targetY = targetY; }
+		});
+	}
+
+	window.addEventListener('mousemove', onPointerMove, { passive: true });
+	window.addEventListener('touchmove', onPointerMove, { passive: true });
+
+	function animate() {
+		movers.forEach(function(el){
+			const s = states.get(el);
+			if (!s) return;
+			s.currentX += (s.targetX - s.currentX) * 0.12;
+			s.currentY += (s.targetY - s.currentY) * 0.12;
+			if (Math.abs(s.scrollOffset) < 0.5) s.scrollOffset = 0;
+			applyTransforms(el);
+		});
+		requestAnimationFrame(animate);
+	}
+	requestAnimationFrame(animate);
+
+	document.addEventListener('click', function (ev) {
+		const btnEl = (ev.target && typeof ev.target.closest === 'function') ? ev.target.closest('#guestFloatingBtn') : null;
+		if (btnEl) {
+			ev.stopPropagation();
+			console.debug('[guestFloatingBtn] click detected on', btnEl);
+			const dock = document.getElementById('guestFilterDock');
+			if (!dock) {
+				console.debug('[guestFloatingBtn] guestFilterDock not found');
+				const authModal = document.getElementById('filterModal');
+				if (authModal && window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+					try {
+						const m = window.bootstrap.Modal.getOrCreateInstance(authModal);
+						m.show();
+						console.debug('[guestFloatingBtn] fallback: showed auth filterModal via bootstrap');
+					} catch (e) {
+						console.warn('Could not show auth filter modal', e);
+					}
+					return;
+				}
+				console.warn('guestFilterDock not found and no auth modal fallback');
+				return;
+			}
+			if (!movers.includes(btnEl)) {
+				movers.push(btnEl);
+				states.set(btnEl, { scrollOffset: 0, targetX: 0, targetY: 0, currentX: 0, currentY: 0 });
+			}
+			const opened = dock.classList.toggle('open');
+			console.debug('[guestFloatingBtn] toggled guestFilterDock, opened=', opened);
+			if (opened) {
+				document.body.classList.add('modal-open');
+			} else {
+				document.body.classList.remove('modal-open');
+			}
+			return;
+		}
+
+		const openDock = document.getElementById('guestFilterDock');
+		if (openDock && openDock.classList.contains('open')) {
+			const target = ev.target;
+			if (!openDock.contains(target) && !target.closest || !target.closest('#guestFloatingBtn')) {
+				openDock.classList.remove('open');
+				document.body.classList.remove('modal-open');
+			}
+		}
+	});
+
+	document.addEventListener('keydown', function (ev) {
+		if (ev.key === 'Escape') {
+			const openDock = document.getElementById('guestFilterDock');
+			if (openDock && openDock.classList.contains('open')) {
+				openDock.classList.remove('open');
+				document.body.classList.remove('modal-open');
+			}
+		}
+	});
 
 
 
