@@ -15,14 +15,6 @@ use App\Http\Controllers\GalleryCardController;
 
 // ==================== AUTHENTICATION ROUTES ====================
 
-// Home / Login entry (shown to guests)
-Route::get('/demo', function () {
-    return view('demo');
-});
-
-Route::get('/demo2', function () {
-    return view('demo2');
-});
 
 
 // Home / Login entry (dashboard front page) — render `dashboard.main` but reuse MainReportController data
@@ -49,10 +41,6 @@ Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/register', [UserController::class, 'register'])->name('register');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 
-// Demo routes
-Route::get('/loading-demo', function () {
-    return view('loading-demo');
-})->name('loading.demo');
 
 // ==================== DASHBOARD ROUTES ====================
 
@@ -62,6 +50,11 @@ Route::get('/main', function () {
     $view = $controller->index(request());
     return view('dashboard.main', $view->getData());
 });
+Route::get('/stbmain', function () {
+    $controller = app(\App\Http\Controllers\MainReportController::class);
+    $view = $controller->index(request());
+    return view('dashboard.stbmain', $view->getData());
+})->name('stbmain');
 Route::get('/streport', [MainReportController::class, 'index'])->name('streport');
 Route::post('/streport/prewarm', [MainReportController::class, 'prewarm'])->name('streport.prewarm');
 

@@ -7558,7 +7558,6 @@ window.showGuestFilterDock = function(ev){
 				min-width: 0;
 			}
 
-			/* Ensure guest filter card is visible when the mobile guest dock is opened */
 			#guestFilterDock.open .guest-filter-card { display: block !important; }
 		}
 		#guestFilterDock {
