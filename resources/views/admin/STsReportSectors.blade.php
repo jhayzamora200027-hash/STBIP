@@ -4,58 +4,45 @@
 @section('content')
 <div class="container py-4">
     <style>
-      /* 🔧 Outer-only visible frame for expanded gallery row + children (no per-column separators) */
-
-      /* horizontal top line across the expanded parent row */
       .gallery-row.expanded > td {
-        /* no top border on the parent TD — top edge is drawn by the inner panel for perfect alignment */
         border-top: none;
         border-left: none;
         border-right: none;
         background: #ffffff;
         box-shadow: 0 6px 18px rgba(16,24,32,0.04);
       }
-
-      /* only the outer vertical edges (first and last cell) — prevents per-column separators */
       .gallery-row.expanded > td:first-child { border-left: 3px solid #9aa0a6; border-top-left-radius: .25rem; }
       .gallery-row.expanded > td:last-child  { border-right: 3px solid #9aa0a6; border-top-right-radius: .25rem; }
-
-      /* child-row TD should be borderless when collapsed — the visible frame is on the inner panel */
       .children-row > td {
         border: none;
-        padding: 0; /* panel provides the spacing when open */
+        padding: 0;
         background: transparent;
       }
-
-      /* the actual visible container when expanded — animate using max-height + opacity */
       .children-panel {
-        display: block; /* collapse JS will toggle classes; bootstrap animates height, we add transitions for smoothness */
-        padding: 0; /* spacing provided when open */
+        display: block;
+        padding: 0;
         background: transparent;
         max-height: 0;
         overflow: hidden;
         opacity: 0;
         transition: height .36s cubic-bezier(.2,.9,.2,1), max-height .36s cubic-bezier(.2,.9,.2,1), opacity .22s ease, border-color .18s ease;
       }
-
-      /* card inside panel: slide + fade (works when panel receives .show) */
       .children-panel .card {
         transform: translateY(-8px);
         opacity: 0;
         transition: transform .32s cubic-bezier(.2,.9,.2,1), opacity .22s ease;
         will-change: transform, opacity;
       }
-
       .children-panel.show {
-        border-top: 3px solid #9aa0a6; /* draw the full frame from here for perfect alignment */
+        border-top: 3px solid #9aa0a6;
         border-left: 3px solid #9aa0a6;
         border-right: 3px solid #9aa0a6;
         border-bottom: 3px solid #9aa0a6;
-        background: #fbfcfd; /* subtle tint */
+        background: #fbfcfd;
         border-radius: .35rem;
         box-sizing: border-box;
         width: 100%;
-        margin-top: -3px; /* overlap the table separator so the frame is a single straight line */
+        margin-top: -3px;
 
         /* allow the panel to expand via max-height (large enough for content) */
         max-height: 1400px;
@@ -68,15 +55,9 @@
         transition-delay: .02s;
       }
 
-      /* keep inner table/card content visually unchanged */
       .children-row > td .card { border: none; box-shadow: none; margin-bottom: 0; }
       .children-row > td .table { margin-bottom: 0; }
-
-      /* ---------------------- ANIMATIONS ---------------------- */
-      /* icon rotation should animate smoothly */
       .expand-icon { transition: transform .22s ease; }
-
-      /* fade + slide content when collapse/show toggles (collapse now targets an inner DIV) */
       .children-panel.collapse .card {
         transform: translateY(-8px);
         opacity: 0;
@@ -86,25 +67,15 @@
       .children-panel.collapse.show .card {
         transform: translateY(0);
         opacity: 1;
-        transition-delay: .03s; /* slight delay so height begins opening first */
+        transition-delay: .03s;
       }
-
-      /* subtle frame transition */
       .gallery-row.expanded > td { transition: border-color .22s ease, box-shadow .28s ease, background-color .18s ease; }
       .gallery-row.animating > td { box-shadow: 0 8px 26px rgba(16,24,32,0.06); }
-
-      /* preserve transitions (no effect on inner cell borders) */
       .gallery-row td { transition: background-color .12s ease; }
-
-      /* ensure table cells align precisely with the panel's border */
       .table { border-collapse: collapse; }
       .table td, .table th { border-spacing: 0; }
-
-      /* when a gallery row is expanded, hide its bottom separator so the panel's top border appears as a single continuous line */
       .gallery-row.expanded > td { border-bottom: 0 !important; }
       .gallery-row.expanded + .children-row > td { border-top: 0 !important; }
-
-      /* nudge the panel above the thin table row line and make it sit on top */
       .children-panel { margin-top: -4px; position: relative; z-index: 2; }
       .gallery-row > td { position: relative; z-index: 1; }
     </style>
@@ -216,7 +187,7 @@
     </div>
 </div>
 
-<!-- Edit Child modal (keeps children table compact) -->
+ 
 <div class="modal fade" id="editChildModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -286,7 +257,7 @@
   </div>
 </div>
 
-<!-- Add Child modal -->
+ 
 <div class="modal fade" id="addChildModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -336,7 +307,7 @@
   </div>
 </div>
 
-<!-- Add Sub-child modal -->
+ 
 <div class="modal fade" id="addSubChildModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -387,7 +358,7 @@
   </div>
 </div>
 
-<!-- Manage Sub-children modal -->
+ 
 <div class="modal fade" id="manageSubChildrenModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
@@ -464,7 +435,7 @@
   </div>
 </div>
 
-<!-- Edit Gallery Card modal -->
+ 
 <div class="modal fade" id="editCardModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -516,7 +487,6 @@
               <label class="form-label"></label>
               <div id="card_modal_preview" class="mt-1"></div>
               <style>
-                /* small thumbnail in table */
                 .gallery-thumb { display:inline-block; vertical-align:middle; }
               </style>
             </div>
@@ -642,7 +612,6 @@ function showFormErrors(form, errors){
     });
 }
 
-// make initAjaxForms globally available
 function initAjaxForms(){
     document.querySelectorAll('form.ajax-form').forEach(function(f){
         if (f.dataset.ajaxBound) return;
@@ -656,7 +625,6 @@ function initAjaxForms(){
     });
 }
 
-// Helper: populate and show Edit Child modal
 function openEditChildModal(data){
     var id = data.id;
     var modal = document.getElementById('editChildModal');
@@ -681,7 +649,6 @@ function openEditChildModal(data){
         histEl.appendChild(li);
     });
 
-    // Ensure this modal stacks above any already-open modal (fixes "appears behind" issue)
     try {
         var visibleModals = document.querySelectorAll('.modal.show');
         if (visibleModals.length > 0) {
@@ -695,12 +662,11 @@ function openEditChildModal(data){
         } else {
             modal.style.zIndex = '';
         }
-    } catch (e) { /* defensive - ignore stacking calc errors */ }
+    } catch (e) {  }
 
     var bsModal = new bootstrap.Modal(modal);
     bsModal.show();
 
-    // adjust the newly-created backdrop so it sits beneath this modal
     setTimeout(function(){
         try {
             var backdrops = document.querySelectorAll('.modal-backdrop.show');
@@ -709,10 +675,9 @@ function openEditChildModal(data){
                 var modalZ = parseInt(modal.style.zIndex || window.getComputedStyle(modal).zIndex, 10) || 1070;
                 topBackdrop.style.zIndex = (modalZ - 10);
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {  }
     }, 0);
 
-    // cleanup inline styles when modal closes
     modal.addEventListener('hidden.bs.modal', function cleanupStacking(){
         modal.style.zIndex = '';
         try {
@@ -726,7 +691,6 @@ function openEditChildModal(data){
     });
 }
 
-// Helper: open Add Child modal and populate fields
 function openAddChildModal(data){
     var cardId = data.cardId || data.parent_card_id || null;
     var modal = document.getElementById('addChildModal');
@@ -741,7 +705,6 @@ function openAddChildModal(data){
     bs.show();
 }
 
-// Helper: open Add Sub-child modal and populate fields
 function openAddSubChildModal(data){
     var cardId = data.cardId || data.parent_card_id || null;
     var parentChildId = data.parentChildId || data.parent_child_id || null;
@@ -758,7 +721,6 @@ function openAddSubChildModal(data){
     bs.show();
 }
 
-// Helper: populate and show Edit Gallery Card modal
 function openEditCardModal(data){
     var id = data.id;
     var modal = document.getElementById('editCardModal');
@@ -862,7 +824,6 @@ function initGalleryRowEvents(){
 }
 
 function initChildControlListeners(){
-    // open edit modal when Edit button is clicked
     document.querySelectorAll('.btn-edit-child').forEach(function(btn){
         btn.addEventListener('click', function(){
             var data = {
@@ -880,7 +841,6 @@ function initChildControlListeners(){
         });
     });
 
-    // open edit modal for gallery card (make edit action uniform)
     document.querySelectorAll('.btn-edit-card').forEach(function(btn){
         btn.addEventListener('click', function(e){
             e.stopPropagation();
@@ -915,7 +875,6 @@ document.addEventListener('DOMContentLoaded', function(){
     initChildControlListeners();
 
 
-    // handle child add/edit/sub forms specifically (use same ajax-bound flag to avoid double-binding)
     ['addChildForm','editChildForm','addSubChildForm','manageSub_inlineAddForm'].forEach(function(id){
       var form = document.getElementById(id);
       if(form && !form.dataset.ajaxBound){
@@ -946,7 +905,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
 
-    // state for currently open manage modal (used for refresh)
     var currentManageState = null;
 
     function populateManageSubModal(state){
@@ -1025,7 +983,6 @@ document.addEventListener('DOMContentLoaded', function(){
         });
         initAjaxForms();
 
-        // ensure header Add button always opens inline add for this state
         try {
           var headerBtn = document.getElementById('manageSub_addSubchildBtn');
           if (headerBtn) {
@@ -1037,10 +994,8 @@ document.addEventListener('DOMContentLoaded', function(){
         } catch(e){ console.error('bind header add error', e); }
     }
 
-      // expose populate function so a fallback click (e.g. inline onclick) can trigger the modal
       window.populateManageSubModal = populateManageSubModal;
 
-      // global trigger fallback - accepts the button element and opens the modal
       window.triggerManageSubchildren = function(btn){
         try {
           var b = btn;
@@ -1072,7 +1027,6 @@ document.addEventListener('DOMContentLoaded', function(){
         return false;
       };
 
-    // open Manage Sub-children modal (populates list)
     document.querySelectorAll('.btn-manage-subchildren').forEach(function(btn){
         btn.addEventListener('click', function(){
             var cardId = btn.getAttribute('data-card-id');
@@ -1099,7 +1053,6 @@ document.addEventListener('DOMContentLoaded', function(){
             bs.show();
         });
 
-        // helper to expose inline add for JS outside this handler
         window.showManageSubInlineAdd = function(a,b,c){ showManageSubInlineAdd(a,b,c); };
     });
 
@@ -1132,10 +1085,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 });
             }
 
-            // render only the parent's children (do NOT show the parent as a table row)
             renderSubRows(parentNode.children || [], 0);
 
-            // attach edit listeners for the dynamically created edit buttons (use data-histories if present)
             tbody.querySelectorAll('.btn-edit-subchild').forEach(function(b){
                 b.addEventListener('click', function(){
                     var data = {
@@ -1152,24 +1103,17 @@ document.addEventListener('DOMContentLoaded', function(){
                     openEditChildModal(data);
                 });
             });
-            // attach ajax submit to any new forms inside the subchildren table
             initAjaxForms();
-            // hook up delete forms that were just injected
             initAjaxForms();
-
-            // newly added delete forms need ajax binding as well
             initAjaxForms();
 
-            // wire Add Sub-child button inside modal (shows inline add form)
             var addBtn = document.getElementById('manageSub_addSubchildBtn');
             if (addBtn) {
               addBtn.onclick = function(){
-                // use currentManageState (set when opening the manage modal) so card/child ids are correct
                 try {
                   if (currentManageState && currentManageState.cardId) {
                     showManageSubInlineAdd(currentManageState.cardId, currentManageState.childId);
                   } else {
-                    // fallback: use hidden inputs in the inline form if available
                     var fallbackCard = document.getElementById('manageSub_add_parent_card_id') ? document.getElementById('manageSub_add_parent_card_id').value : '';
                     var fallbackChild = document.getElementById('manageSub_add_parent_child_id') ? document.getElementById('manageSub_add_parent_child_id').value : '';
                     showManageSubInlineAdd(fallbackCard, fallbackChild);
@@ -1180,7 +1124,6 @@ document.addEventListener('DOMContentLoaded', function(){
               };
             }
 
-            // function to show inline add form inside Manage modal
             function showManageSubInlineAdd(cardIdParam, parentChildIdParam, prefill){
                 var form = document.getElementById('manageSub_inlineAddForm');
                 form.action = '/admin/gallery-cards/' + (cardIdParam || cardId) + '/children';
