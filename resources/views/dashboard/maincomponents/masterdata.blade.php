@@ -749,7 +749,7 @@
 				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['total_regions'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
-				<div class="masterdata-stat-label">Total Region Items</div>
+				<div class="masterdata-stat-label">Total number of institutionalizing LGUs and stakeholders</div>
 				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['total_items'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
