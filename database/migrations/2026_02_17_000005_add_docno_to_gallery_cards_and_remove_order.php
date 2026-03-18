@@ -30,16 +30,12 @@ return new class extends Migration
                 $driver = null;
             }
 
-            // Skip DB-specific index checks — migration runs once in production.
-            // We'll attempt to create the unique index below and ignore errors if it already exists.
-
             try {
                 Schema::table('gallery_cards', function (Blueprint $table) {
                     if (!Schema::hasColumn('gallery_cards', 'docno')) return;
                     $table->unique('docno');
                 });
             } catch (\Throwable $e) {
-                // ignore errors (index already exists or not supported)
             }
 
             Schema::table('gallery_cards', function (Blueprint $table) {

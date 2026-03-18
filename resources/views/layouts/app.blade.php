@@ -735,6 +735,12 @@
                                                     Sector Utilities
                                                 </a>
                                             </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('socialtech.index') }}">
+                                                    <i class="bi bi-upload me-2"></i>
+                                                    Social Technologies Titles
+                                                </a>
+                                            </li>
                                         </ul>
                                     </li>
                                 @endif

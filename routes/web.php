@@ -112,6 +112,12 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/masterdata/region-items/{regionItem}', [MasterDataController::class, 'destroyRegionItem'])
         ->name('masterdata.region-items.destroy')
         ->middleware(\App\Http\Middleware\MasterDataDeleteAccess::class);
+
+    // Social technologies titles upload and listing
+    Route::get('/social-technologies', [\App\Http\Controllers\SocialTechnologyController::class, 'index'])
+        ->name('socialtech.index');
+    Route::post('/social-technologies/import', [\App\Http\Controllers\SocialTechnologyController::class, 'import'])
+        ->name('socialtech.import');
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');
