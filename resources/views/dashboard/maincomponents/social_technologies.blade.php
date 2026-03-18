@@ -51,7 +51,26 @@
                 <div style="display:flex; gap:12px; align-items:center;">
                     <button class="st-btn st-btn-primary" type="submit">Upload and Import</button>
                     <a href="{{ route('masterdata.index') }}" class="st-btn" style="background:#f1f5f9; border:1px solid #dbeafe;">Open Masterdata</a>
+                    <button type="button" id="toggle-add-title" class="st-btn" style="background:#f8fafc; border:1px solid #d1fae5;">Add Title</button>
                 </div>
+            </div>
+        </form>
+    </section>
+
+    <section id="add-title-panel" class="st-card" style="margin-top:12px; display:none">
+        <h3 style="margin-top:0">Add Title(s)</h3>
+        <form method="POST" action="{{ route('socialtech.add') }}">
+            @csrf
+            <div id="titles-list" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input name="titles[]" type="text" placeholder="Enter social technology title" style="flex:1; padding:8px; border:1px solid #e6eef7; border-radius:8px;" required>
+                    <button type="button" class="st-btn remove-title" style="display:none;">Remove</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button type="button" id="add-more-title" class="st-btn" style="background:#f8fafc; border:1px solid #dbeafe;">Add another</button>
+                <button class="st-btn st-btn-primary" type="submit">Add</button>
+                <button type="button" id="cancel-add" class="st-btn" style="background:#f1f5f9; border:1px solid #dbeafe;">Cancel</button>
             </div>
         </form>
     </section>
@@ -80,4 +99,50 @@
     </section>
 </div>
 
+@endsection
+
+@section('scripts')
+<script>
+    (function(){
+        const toggle = document.getElementById('toggle-add-title');
+        const panel = document.getElementById('add-title-panel');
+        const cancel = document.getElementById('cancel-add');
+        if (toggle && panel) {
+            toggle.addEventListener('click', () => panel.style.display = panel.style.display === 'none' ? 'block' : 'none');
+        }
+        if (cancel && panel) {
+            cancel.addEventListener('click', () => panel.style.display = 'none');
+        }
+        // Dynamic add/remove inputs
+        const addMore = document.getElementById('add-more-title');
+        const titlesList = document.getElementById('titles-list');
+        if (addMore && titlesList) {
+            addMore.addEventListener('click', () => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.gap = '8px';
+                row.style.alignItems = 'center';
+
+                const input = document.createElement('input');
+                input.name = 'titles[]';
+                input.type = 'text';
+                input.placeholder = 'Enter social technology title';
+                input.style.flex = '1';
+                input.style.padding = '8px';
+                input.style.border = '1px solid #e6eef7';
+                input.style.borderRadius = '8px';
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'st-btn';
+                remove.textContent = 'Remove';
+                remove.addEventListener('click', () => row.remove());
+
+                row.appendChild(input);
+                row.appendChild(remove);
+                titlesList.appendChild(row);
+            });
+        }
+    })();
+</script>
 @endsection

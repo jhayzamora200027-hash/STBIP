@@ -410,7 +410,7 @@ class MainReportController extends Controller
             ])->where('is_active', 1)->orderBy('docno','asc')->get();
 
             
-            return view('dashboard.mainreports.STsreport', [
+            return view('dashboard.mainreports.STsReport', [
                 'regions' => [],
                 'titles' => [],
                 'provinces' => [],
@@ -621,7 +621,7 @@ class MainReportController extends Controller
             'children.children' => function($q){ $q->orderBy('docno','asc'); }
         ])->where('is_active', 1)->orderBy('docno','asc')->get();
 
-        return view('dashboard.mainreports.STsreport', [
+        return view('dashboard.mainreports.STsReport', [
             'regions' => $regions,
             'titles' => array_keys($titles),
             'provinces' => array_keys($provinces),

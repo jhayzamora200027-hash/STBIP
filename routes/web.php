@@ -118,6 +118,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('socialtech.index');
     Route::post('/social-technologies/import', [\App\Http\Controllers\SocialTechnologyController::class, 'import'])
         ->name('socialtech.import');
+    Route::post('/social-technologies/add', [\App\Http\Controllers\SocialTechnologyController::class, 'add'])
+        ->name('socialtech.add');
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');

@@ -150,4 +150,43 @@ class SocialTechnologyController extends Controller
             return redirect()->route('socialtech.index')->with('error', $e->getMessage());
         }
     }
+
+    public function add(Request $request)
+    {
+        $request->validate([
+            'titles' => ['nullable', 'array'],
+            'titles.*' => ['required', 'string', 'max:1000'],
+            'title' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $submitted = [];
+        if ($request->filled('titles')) {
+            $submitted = array_map(fn($v) => trim((string) $v), $request->input('titles'));
+        } elseif ($request->filled('title')) {
+            $submitted = [trim($request->input('title'))];
+        }
+
+        $submitted = array_values(array_filter(array_unique($submitted), fn($v) => $v !== ''));
+        if (count($submitted) === 0) {
+            return redirect()->route('socialtech.index')->with('error', 'No title provided.');
+        }
+
+        $added = 0;
+        foreach ($submitted as $title) {
+            $exists = SocialTechnologyTitle::query()->where('title', $title)->exists();
+            if ($exists) continue;
+            SocialTechnologyTitle::create([
+                'title' => $title,
+                'createdby' => Auth::check() ? Auth::user()->name : null,
+                'updatedby' => Auth::check() ? Auth::user()->name : null,
+            ]);
+            $added++;
+        }
+
+        if ($added === 0) {
+            return redirect()->route('socialtech.index')->with('status', 'No new titles were added (all existed already).');
+        }
+
+        return redirect()->route('socialtech.index')->with('status', "Added $added title(s).");
+    }
 }
