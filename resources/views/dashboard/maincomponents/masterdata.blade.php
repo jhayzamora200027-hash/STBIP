@@ -215,6 +215,26 @@
 		font-weight: 700;
 		color: #244865;
 	}
+	.masterdata-field-error {
+		display: none;
+		color: #7f1d1d;
+		background: #fff2f2;
+		border-left: 4px solid #fca5a5;
+		padding: 10px 12px;
+		margin-top: 8px;
+		border-radius: 8px;
+		font-weight: 700;
+		font-size: 0.95rem;
+	}
+	.masterdata-field-error:not(:empty) {
+		display: block;
+	}
+	input.is-invalid,
+	select.is-invalid,
+	textarea.is-invalid {
+		border-color: #ef4444 !important;
+		box-shadow: 0 0 0 4px rgba(239,68,68,0.06);
+	}
 	.masterdata-field input,
 	.masterdata-field select {
 		width: 100%;
@@ -712,7 +732,8 @@
 		<div class="masterdata-alert masterdata-alert-error">{{ session('error') }}</div>
 	@endif
 
-	@if($errors->any())
+	@php($errorFormOrigin = old('form_origin'))
+	@if($errors->any() && !in_array($errorFormOrigin, ['region_item_create', 'region_item_update'], true))
 		<div class="masterdata-alert masterdata-alert-error">
 			<strong>Unable to save master data.</strong>
 			<ul class="mb-0 mt-2">
@@ -805,8 +826,52 @@
 							<div class="masterdata-item-actions" style="justify-content:flex-start; margin-top: 18px;">
 								<button type="submit" class="masterdata-btn masterdata-btn-primary">Add or Update STs from Sheet</button>
 								<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('upload') }}">Open Uploading Document</a>
+								<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('masterdata.region-items.export') }}">Export Region Items (Excel)</a>
 							</div>
 						</form>
+
+						@if($isSysadmin)
+							<form method="POST" action="{{ route('masterdata.region-items.import-excel') }}" enctype="multipart/form-data" style="margin-top:16px;">
+								@csrf
+								<div class="masterdata-form-grid">
+									<div class="masterdata-field full">
+										<label for="region-items-file">Excel File</label>
+										<input id="region-items-file" type="file" name="region_items_excel" accept=".xlsx,.xls" required>
+										<div class="masterdata-field-note">Upload an Excel file with the header columns matching the exported template.</div>
+									</div>
+								</div>
+								<div class="masterdata-item-actions" style="justify-content:flex-start; margin-top: 12px; gap:8px;">
+									<button type="submit" class="masterdata-btn masterdata-btn-primary">Upload Excel and Import (strict)</button>
+									<button type="submit" formaction="{{ route('masterdata.region-items.import-excel-force') }}" formmethod="post" class="masterdata-btn masterdata-btn-danger">Force Import (create/update)</button>
+									<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('masterdata.region-items.export') }}">Download Template / Export</a>
+								</div>
+							</form>
+
+							@if(session('masterdata_import_warnings'))
+								<div class="masterdata-alert masterdata-alert-warning" style="margin-top:12px;">
+									<strong>Import warnings:</strong>
+									<ul style="margin:6px 0 0 18px;">
+										@foreach(session('masterdata_import_warnings') as $warning)
+											<li>{{ $warning }}</li>
+										@endforeach
+									</ul>
+								</div>
+							@endif
+
+							@if(session('masterdata_import_debug'))
+								<div class="masterdata-alert" style="margin-top:12px; background:#f8f9fc; border:1px solid #e3e6f0;">
+									<strong>Import debug (first rows):</strong>
+									<div style="font-size:0.9rem; margin-top:6px;">
+										Header row detected: {{ session('masterdata_import_debug.header_index') }}
+										<ul style="margin:6px 0 0 18px;">
+											@foreach(session('masterdata_import_debug.rows') as $r)
+												<li>Row {{ $r['sheet_row'] }} — Region cell: "{{ $r['region_raw'] }}"; Title cell: "{{ $r['title_raw'] }}"</li>
+											@endforeach
+										</ul>
+									</div>
+								</div>
+							@endif
+						@endif
 					</div>
 				</section>
 			@endif
@@ -1363,6 +1428,8 @@
 
 		async function submitUpdatesForm(form) {
 			const formData = new FormData(form);
+			// clear previous inline errors for this form
+			form.querySelectorAll('[data-error-for]').forEach(function (el) { el.textContent = ''; el.style.display = 'none'; var input = form.querySelector('[name="' + el.getAttribute('data-error-for') + '"]'); if (input) { input.classList.remove('is-invalid'); } });
 			setFormBusy(form, true);
 			try {
 				const response = await fetch(form.action, {
@@ -1383,6 +1450,31 @@
 							errorMessage = errorPayload.message;
 						}
 						if (errorPayload.errors) {
+							let placedInline = false;
+							for (const [fieldName, messages] of Object.entries(errorPayload.errors)) {
+								const container = form.querySelector('[data-error-for="' + fieldName + '"]');
+								const inputEl = form.querySelector('[name="' + fieldName + '"]');
+								const message = (messages && messages.length) ? messages[0] : messages.join(', ');
+								if (container) {
+									container.textContent = message || '';
+									container.style.display = message ? 'block' : 'none';
+									if (inputEl) {
+										inputEl.classList.add('is-invalid');
+									}
+									placedInline = true;
+									continue;
+								}
+								// if no container but an input exists, mark input and set a small aria message
+								if (inputEl) {
+									inputEl.classList.add('is-invalid');
+									placedInline = true;
+								}
+							}
+							if (placedInline) {
+								setFormBusy(form, false);
+								return; // errors shown inline, avoid global error
+							}
+							// fallback to the first error for global feedback
 							const firstError = Object.values(errorPayload.errors).flat()[0];
 							if (firstError) {
 								errorMessage = firstError;

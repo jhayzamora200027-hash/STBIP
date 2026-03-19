@@ -25,6 +25,14 @@
 	</div>
 </div>
 
+@if(!empty($socialTechnologyTitles))
+	<datalist id="st-titles-list">
+		@foreach($socialTechnologyTitles as $stTitle)
+			<option value="{{ $stTitle }}"></option>
+		@endforeach
+	</datalist>
+@endif
+
 @unless($canWriteMasterData)
 	<div class="masterdata-fixed-note" style="margin-bottom: 22px;">
 		You currently have read-only access to Region Item Management.
@@ -39,6 +47,17 @@
 	<div class="masterdata-card-body">
 		<form method="POST" action="{{ route('masterdata.region-items.store') }}" data-masterdata-updates-form="create">
 			@csrf
+			<input type="hidden" name="form_origin" value="region_item_create">
+			@if($errors->any() && old('form_origin') === 'region_item_create')
+				<div class="masterdata-alert masterdata-alert-error" style="margin-bottom:12px;">
+					<strong>Unable to save new item.</strong>
+					<ul class="mb-0 mt-2">
+						@foreach($errors->all() as $error)
+							<li>{{ $error }}</li>
+						@endforeach
+					</ul>
+				</div>
+			@endif
 			<div class="masterdata-form-grid">
 				<div class="masterdata-field">
 					<label for="new-region-name">Regional Office</label>
@@ -53,10 +72,15 @@
 						<option value="dissolved" @selected(old('status') === 'dissolved')>Dissolved</option>
 					</select>
 				</div>
-				<div class="masterdata-field full">
-					<label for="new-title">Social Technology Title</label>
-					<input id="new-title" type="text" name="title" value="{{ old('title') }}" required>
-				</div>
+                	<div class="masterdata-field full">
+                		<label for="new-title">Social Technology Title</label>
+                		<input id="new-title" list="st-titles-list" type="text" name="title" value="{{ old('title') }}" required>
+                		@if($errors->has('title') && old('form_origin') === 'region_item_create')
+                			<div class="masterdata-field-error" data-error-for="title">{{ $errors->first('title') }}</div>
+                		@else
+                			<div class="masterdata-field-error" data-error-for="title" style="display:none"></div>
+                		@endif
+                	</div>
 				<div class="masterdata-field">
 					<label for="new-province">Province</label>
 					<input id="new-province" type="text" name="province" value="{{ old('province') }}">
@@ -248,6 +272,8 @@
 						<form method="POST" action="{{ route('masterdata.region-items.update', $item) }}" data-masterdata-updates-form="update">
 							@csrf
 							@method('PATCH')
+							<input type="hidden" name="form_origin" value="region_item_update">
+							<input type="hidden" name="region_item_id" value="{{ $item->id }}">
 							<input type="hidden" name="return_province_filter" value="{{ $selectedProvince }}">
 							<input type="hidden" name="return_municipality_filter" value="{{ $selectedMunicipality }}">
 							<input type="hidden" name="return_page" value="{{ $regionItems->currentPage() }}">
@@ -267,7 +293,12 @@
 								</div>
 								<div class="masterdata-field full">
 									<label>Social Technology Title</label>
-									<input type="text" name="title" value="{{ $item->title }}" required>
+									<input list="st-titles-list" type="text" name="title" value="{{ old('region_item_id') == $item->id ? old('title', $item->title) : $item->title }}" required>
+									@if($errors->any() && old('form_origin') === 'region_item_update' && (string) old('region_item_id') === (string) $item->id)
+										<div class="masterdata-field-error" data-error-for="title">{{ $errors->first('title') }}</div>
+									@else
+										<div class="masterdata-field-error" data-error-for="title" style="display:none"></div>
+									@endif
 								</div>
 								<div class="masterdata-field">
 									<label>Province</label>

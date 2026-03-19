@@ -943,7 +943,7 @@
     <div class="container py-5 stb-main-content" style="margin-top: 70px;">
         @yield('content')
     </div>
-    <footer style="width:100%; background:linear-gradient(90deg,#e0e7ff 60%,#f8fafc 100%); color:#2c3e50; text-align:center; padding: 0.5rem 0 0.4rem 0; font-size:0.92rem; margin-top:1.2rem; box-shadow:0 -2px 12px rgba(44,62,80,0.05);">
+    <footer style="width:100%; background:linear-gradient(90deg,#e0e7ff 60%,#f8fafc 100%); color:#2c3e50; text-align:center;  font-size:0.92rem; margin-top:1.2rem; margin-bottom: -10.2rem; margin-left: -40px; box-shadow:0 -2px 12px rgba(44,62,80,0.05);">
         <div style="max-width:700px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:0.15rem; line-height:1.3;">
             <div>Department of Social Welfare and Development, Social Technology Bureau</div>
             <div>3RD Floor, Matapat Building Department Of Social Welfare And Development - Central Office IBP Road, Constitution Hills, Batasan Complex, Quezon City</div>

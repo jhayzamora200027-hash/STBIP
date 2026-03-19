@@ -1,12 +1,4 @@
-<#
-PowerShell helper to perform a safe Composer install on Windows
-- stops Windows Search (optional)
-- optionally adds Windows Defender exclusion (requires Admin)
-- clears Composer cache, removes partially-extracted folders, runs `composer install` safely
-Usage (run in project root):
-  PowerShell -ExecutionPolicy Bypass -File .\scripts\setup-windows.ps1
-  Or (recommended for Defender exclusion / stop/start of WSearch): Run PowerShell as Administrator
-#>
+
 
 param(
     [string]$ProjectPath = (Get-Location).Path,
@@ -22,7 +14,6 @@ function Is-Admin {
 
 Write-Host "Project path: $ProjectPath"
 
-# Stop Windows Search to avoid file-locks during extraction (if possible)
 if (Is-Admin) {
     try {
         Write-Host "Stopping Windows Search (WSearch) to reduce file-lock conflicts..." -ForegroundColor Yellow
@@ -34,7 +25,6 @@ if (Is-Admin) {
     Write-Host "Not running as Administrator — skipping WSearch stop. (Run as Admin to stop it)" -ForegroundColor Yellow
 }
 
-# Optionally add Windows Defender exclusion
 if ($AddDefenderExclusion) {
     if (-not (Is-Admin)) {
         Write-Host "Adding Defender exclusion requires Admin rights. Rerun the script as Administrator with -AddDefenderExclusion." -ForegroundColor Yellow
@@ -49,7 +39,6 @@ if ($AddDefenderExclusion) {
     }
 }
 
-# Remove partially extracted composer temp folders (safe)
 $composerTemp = Join-Path $ProjectPath 'vendor\composer' 
 if (Test-Path $composerTemp) {
     Get-ChildItem -Path $composerTemp -Force -Directory | Where-Object { $_.Name -match '^[a-f0-9]{8,}$' -or $_.Name -match '^[A-Za-z0-9-]+$' } | ForEach-Object {
@@ -62,11 +51,9 @@ if (Test-Path $composerTemp) {
     }
 }
 
-# Clear composer cache (helpful after interrupted downloads)
 Write-Host "Clearing Composer cache..." -ForegroundColor Yellow
 composer clear-cache 2>$null
 
-# Run safe composer install sequence
 Write-Host "Installing Composer dependencies (no scripts) -- prefer-dist..." -ForegroundColor Yellow
 composer install --no-scripts --prefer-dist
 if ($LASTEXITCODE -ne 0) {
@@ -78,11 +65,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Generating optimized autoload (skip scripts)..." -ForegroundColor Yellow
 composer dump-autoload -o --no-scripts
 
-# Run package discovery / post-install scripts safely
 Write-Host "Running post-install discovery (artisan package:discover)..." -ForegroundColor Yellow
 php artisan package:discover --ansi
 
-# Restart Windows Search if we stopped it earlier
 if (-not $SkipRestartSearch -and (Is-Admin)) {
     try {
         Write-Host "Starting Windows Search back up..." -ForegroundColor Yellow

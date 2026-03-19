@@ -10,12 +10,23 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class SocialTechnologyController extends Controller
 {
     public function index(Request $request)
     {
-        $titles = SocialTechnologyTitle::query()->latest('updated_at')->get();
+        $query = SocialTechnologyTitle::query();
+
+        if ($request->filled('title')) {
+            $term = trim((string) $request->input('title'));
+            if ($term !== '') {
+                $query->where('title', 'like', '%' . $term . '%');
+            }
+        }
+
+        $titles = $query->latest('updated_at')->paginate(10)->withQueryString();
 
         return view('dashboard.maincomponents.social_technologies', [
             'titles' => $titles,
@@ -188,5 +199,88 @@ class SocialTechnologyController extends Controller
         }
 
         return redirect()->route('socialtech.index')->with('status', "Added $added title(s).");
+    }
+
+    public function export(Request $request)
+    {
+        $titles = SocialTechnologyTitle::query()->latest('updated_at')->get();
+
+        $data = [];
+        // Header: Title only
+        $data[] = ['Title'];
+        foreach ($titles as $t) {
+            $data[] = [$t->title];
+        }
+
+        $fileName = 'social_technology_titles_' . date('Ymd_His') . '.xlsx';
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $row = 1;
+        foreach ($data as $r) {
+            $sheet->fromArray($r, null, 'A' . $row, true);
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'title' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $title = trim($request->input('title'));
+        $item = SocialTechnologyTitle::find($id);
+        if (!$item) {
+            if ($request->ajax()) {
+                return response()->json(['message' => 'Title not found.'], 404);
+            }
+            return redirect()->route('socialtech.index')->with('error', 'Title not found.');
+        }
+
+        $exists = SocialTechnologyTitle::where('title', $title)->where('id', '!=', $id)->exists();
+        if ($exists) {
+            if ($request->ajax()) {
+                return response()->json(['message' => 'A title with that value already exists.'], 422);
+            }
+            return redirect()->route('socialtech.index')->with('error', 'A title with that value already exists.');
+        }
+
+        $item->title = $title;
+        $item->updatedby = Auth::check() ? Auth::user()->name : null;
+        $item->save();
+
+        if ($request->ajax()) {
+            return response()->json(['message' => 'Updated.']);
+        }
+
+        return redirect()->route('socialtech.index')->with('status', 'Title updated.');
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $item = SocialTechnologyTitle::find($id);
+        if (!$item) {
+            if ($request->ajax()) {
+                return response()->json(['message' => 'Title not found.'], 404);
+            }
+            return redirect()->route('socialtech.index')->with('error', 'Title not found.');
+        }
+
+        $item->delete();
+
+        if ($request->ajax()) {
+            return response()->json(['message' => 'Deleted.']);
+        }
+
+        return redirect()->route('socialtech.index')->with('status', 'Title deleted.');
     }
 }

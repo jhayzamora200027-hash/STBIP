@@ -109,6 +109,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/masterdata/import-google-sheet', [MasterDataController::class, 'importGoogleSheet'])
         ->name('masterdata.import-google-sheet')
         ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::get('/masterdata/region-items/export', [MasterDataController::class, 'exportRegionItems'])
+        ->name('masterdata.region-items.export')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::post('/masterdata/region-items/import-excel', [MasterDataController::class, 'importRegionItemsExcel'])
+        ->name('masterdata.region-items.import-excel')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::post('/masterdata/region-items/import-excel-force', [MasterDataController::class, 'importRegionItemsExcelForce'])
+        ->name('masterdata.region-items.import-excel-force')
+        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
     Route::delete('/masterdata/region-items/{regionItem}', [MasterDataController::class, 'destroyRegionItem'])
         ->name('masterdata.region-items.destroy')
         ->middleware(\App\Http\Middleware\MasterDataDeleteAccess::class);
@@ -120,6 +129,12 @@ Route::middleware(['auth'])->group(function () {
         ->name('socialtech.import');
     Route::post('/social-technologies/add', [\App\Http\Controllers\SocialTechnologyController::class, 'add'])
         ->name('socialtech.add');
+    Route::get('/social-technologies/export', [\App\Http\Controllers\SocialTechnologyController::class, 'export'])
+        ->name('socialtech.export');
+    Route::patch('/social-technologies/{id}', [\App\Http\Controllers\SocialTechnologyController::class, 'update'])
+        ->name('socialtech.update');
+    Route::delete('/social-technologies/{id}', [\App\Http\Controllers\SocialTechnologyController::class, 'destroy'])
+        ->name('socialtech.destroy');
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');

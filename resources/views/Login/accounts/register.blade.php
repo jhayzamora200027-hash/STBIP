@@ -109,13 +109,13 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group-compact">
-                                    <label for="registerFirstName" class="register-form-label">First Name</label>
+                                    <label for="registerFirstName" class="register-form-label">First Name *</label>
                                     <input type="text" id="registerFirstName" name="firstname" placeholder="First Name" value="{{ old('firstname') }}" class="register-form-input">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group-compact">
-                                    <label for="registerMiddleName" class="register-form-label">Middle Name</label>
+                                    <label for="registerMiddleName" class="register-form-label">Middle Name *</label>
                                     <input type="text" id="registerMiddleName" name="middlename" placeholder="Middle Name" value="{{ old('middlename') }}" class="register-form-input">
                                 </div>
                             </div>
@@ -130,7 +130,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group-compact">
-                                    <label for="registerEmail" class="register-form-label">Email Address</label>
+                                    <label for="registerEmail" class="register-form-label">Email Address *</label>
                                     <input type="email" id="registerEmail" name="email" placeholder="Email address" value="{{ old('email') }}" class="register-form-input">
                                 </div>
                             </div>
@@ -150,6 +150,7 @@
                                         <option value="">Select Gender</option>
                                         <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>Male</option>
                                         <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
+                                        <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>Prefer not to say</option>
                                     </select>
                                 </div>
                             </div>

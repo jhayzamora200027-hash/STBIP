@@ -20,6 +20,10 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Illuminate\View\View as ViewContract;
 use Illuminate\View\View;
+use App\Models\SocialTechnologyTitle;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class MasterDataController extends Controller
 {
@@ -66,6 +70,547 @@ class MasterDataController extends Controller
             'activeTab' => $request->query('tab', 'overview') === 'updates' ? 'updates' : 'overview',
             ...$updatePanel,
         ]);
+    }
+
+    public function exportRegionItems()
+    {
+        $items = RegionItem::query()
+            ->with('region:id,name')
+            ->orderBy('region_id')
+            ->orderBy('title')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = [
+            'Region Number',
+            'ST Title',
+            'Status',
+            'Province',
+            'Municipality',
+            'Adopted/Replicated',
+            'With Expression of Interest',
+            'With MOA',
+            'With Resolution',
+            'Included AIP',
+            'Year of MOA',
+            'Year of Resolution',
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        $row = 2;
+        foreach ($items as $item) {
+            $status = Str::lower((string) $item->status);
+            if ($status === 'ongoing') {
+                $statusLabel = 'Ongoing';
+            } elseif ($status === 'dissolved') {
+                $statusLabel = 'Dissolved';
+            } else {
+                $statusLabel = 'Unspecified';
+            }
+
+            $adoption = $item->with_adopted ? 'Adopted' : ($item->with_replicated ? 'Replicated' : 'None');
+
+            $sheet->setCellValue('A' . $row, $item->region?->name ?? '');
+            $sheet->setCellValue('B' . $row, $item->title ?? '');
+            $sheet->setCellValue('C' . $row, $statusLabel);
+            $sheet->setCellValue('D' . $row, $item->province ?? '');
+            $sheet->setCellValue('E' . $row, $item->municipality ?? '');
+            $sheet->setCellValue('F' . $row, $adoption);
+            $sheet->setCellValue('G' . $row, $item->with_expr ? 'TRUE' : 'FALSE');
+            $sheet->setCellValue('H' . $row, $item->with_moa ? 'TRUE' : 'FALSE');
+            $sheet->setCellValue('I' . $row, $item->with_res ? 'TRUE' : 'FALSE');
+            $sheet->setCellValue('J' . $row, $item->included_aip ? 'TRUE' : 'FALSE');
+            $sheet->setCellValue('K' . $row, $item->year_of_moa ?? '');
+            $sheet->setCellValue('L' . $row, $item->year_of_resolution ?? '');
+
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $fileName = 'region_items_export_' . date('Ymd_His') . '.xlsx';
+
+        $callback = function () use ($writer) {
+            $writer->save('php://output');
+        };
+
+        return response()->streamDownload($callback, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function importRegionItemsExcel(Request $request)
+    {
+        $request->validate([
+            'region_items_excel' => ['required', 'file', 'mimes:xlsx,xls'],
+        ]);
+
+        $actorName = $this->resolveActorName();
+
+        $file = $request->file('region_items_excel');
+        $path = $file->getRealPath();
+
+        $reader = IOFactory::createReaderForFile($path);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($path);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true);
+
+        if (empty($rows) || count($rows) < 2) {
+            return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('error', 'Uploaded file contains no data.');
+        }
+
+            // Detect header row (header may not always be in row 1). Search first 5 rows for a row containing 'title'.
+            $headerIndex = 1;
+            $headerRow = array_map('trim', (array) $rows[$headerIndex]);
+
+            // Map header names to column letters
+            $map = [];
+            foreach ($headerRow as $col => $val) {
+                $norm = strtolower($val);
+                if (str_contains($norm, 'region')) {
+                    $map['region'] = strtoupper($col);
+                } elseif (str_contains($norm, 'title')) {
+                    $map['title'] = strtoupper($col);
+                } elseif (str_contains($norm, 'status')) {
+                    $map['status'] = strtoupper($col);
+                } elseif (str_contains($norm, 'province')) {
+                    $map['province'] = strtoupper($col);
+                } elseif (str_contains($norm, 'municipality')) {
+                    $map['municipality'] = strtoupper($col);
+                } elseif (str_contains($norm, 'adopt')) {
+                    $map['adoption'] = strtoupper($col);
+                } elseif (str_contains($norm, 'expression') || str_contains($norm, 'expr')) {
+                    $map['with_expr'] = strtoupper($col);
+                } elseif (str_contains($norm, 'moa') && str_contains($norm, 'year')) {
+                    $map['year_of_moa'] = strtoupper($col);
+                } elseif (str_contains($norm, 'moa')) {
+                    $map['with_moa'] = strtoupper($col);
+                } elseif (str_contains($norm, 'resolution') || str_contains($norm, 'res')) {
+                    if (str_contains($norm, 'year')) {
+                        $map['year_of_resolution'] = strtoupper($col);
+                    } else {
+                        $map['with_res'] = strtoupper($col);
+                    }
+                } elseif (str_contains($norm, 'aip')) {
+                    $map['included_aip'] = strtoupper($col);
+                }
+            }
+
+        // If title column wasn't found, try searching the first 5 rows for the header row
+        if (!isset($map['title'])) {
+            $maxCheck = min(5, count($rows));
+            for ($i = 1; $i <= $maxCheck; $i++) {
+                $candidate = array_map('trim', (array) $rows[$i]);
+                $foundTitle = false;
+                foreach ($candidate as $c) {
+                    if (is_string($c) && str_contains(strtolower($c), 'title')) {
+                        $foundTitle = true;
+                        break;
+                    }
+                }
+                if ($foundTitle) {
+                    $headerIndex = $i;
+                    $headerRow = $candidate;
+                    $map = [];
+                    foreach ($headerRow as $col => $val) {
+                        $norm = strtolower($val);
+                        if (str_contains($norm, 'region')) {
+                            $map['region'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'title')) {
+                            $map['title'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'status')) {
+                            $map['status'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'province')) {
+                            $map['province'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'municipality')) {
+                            $map['municipality'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'adopt')) {
+                            $map['adoption'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'expression') || str_contains($norm, 'expr')) {
+                            $map['with_expr'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'moa') && str_contains($norm, 'year')) {
+                            $map['year_of_moa'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'moa')) {
+                            $map['with_moa'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'resolution') || str_contains($norm, 'res')) {
+                            if (str_contains($norm, 'year')) {
+                                $map['year_of_resolution'] = strtoupper($col);
+                            } else {
+                                $map['with_res'] = strtoupper($col);
+                            }
+                        } elseif (str_contains($norm, 'aip')) {
+                            $map['included_aip'] = strtoupper($col);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $warnings = [];
+
+        // Prepare a small debug sample of first 10 rows (after detected header)
+        $sampleRows = array_slice($rows, $headerIndex, 10);
+        $debugSample = ['header_index' => $headerIndex, 'map' => $map, 'rows' => []];
+        foreach ($sampleRows as $i => $r) {
+            $rowNum = $headerIndex + $i + 1;
+            $debugSample['rows'][] = [
+                'sheet_row' => $rowNum,
+                'region_raw' => isset($map['region']) ? ($r[$map['region']] ?? '') : null,
+                'title_raw' => isset($map['title']) ? ($r[$map['title']] ?? '') : null,
+            ];
+        }
+        session()->flash('masterdata_import_debug', $debugSample);
+
+        foreach (array_slice($rows, $headerIndex) as $idx => $row) {
+            $sheetRowNumber = $headerIndex + $idx + 1; // headerIndex + 1 is first data row
+            // Using associative access by column letter
+            $regionName = isset($map['region']) ? trim((string) ($row[$map['region']] ?? '')) : '';
+            $title = isset($map['title']) ? trim((string) ($row[$map['title']] ?? '')) : '';
+
+            if ($title === '') {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: title empty, skipped.";
+                continue;
+            }
+
+            $province = isset($map['province']) ? trim((string) ($row[$map['province']] ?? '')) : null;
+            $municipality = isset($map['municipality']) ? trim((string) ($row[$map['municipality']] ?? '')) : null;
+
+            // Robust region lookup: try exact, case-insensitive, strip common prefixes like 'FO ', then contains match
+            $region = null;
+            if ($regionName !== '') {
+                $candidate = trim((string) $regionName);
+                $candidateNormalized = preg_replace('/^fo\s+[-_:]?\s*/i', '', $candidate);
+                $candidateNormalized = trim($candidateNormalized);
+
+                $region = Region::query()->where('name', $candidate)->first();
+                if (!$region) {
+                    $region = Region::query()->whereRaw('LOWER(name) = ?', [strtolower($candidate)])->first();
+                }
+                if (!$region && $candidateNormalized !== $candidate) {
+                    $region = Region::query()->whereRaw('LOWER(name) = ?', [strtolower($candidateNormalized)])->first();
+                }
+                if (!$region) {
+                    $allRegions = Region::query()->get();
+                    $region = $allRegions->firstWhere(fn ($r) => str_contains(strtolower($candidate), strtolower($r->name)) || str_contains(strtolower($r->name), strtolower($candidate)));
+                }
+            }
+
+            if (!$region) {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: region not found ('{$regionName}')";
+                continue;
+            }
+
+            // Ensure social technology title exists (case-insensitive)
+            $titleExists = SocialTechnologyTitle::query()->whereRaw('LOWER(title) = ?', [strtolower($title)])->exists();
+            if (!$titleExists) {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: title not found ('{$title}')";
+                continue;
+            }
+
+            $statusRaw = isset($map['status']) ? strtolower(trim((string) ($row[$map['status']] ?? ''))) : '';
+            $status = null;
+            if ($statusRaw === 'ongoing') {
+                $status = 'ongoing';
+            } elseif ($statusRaw === 'dissolved') {
+                $status = 'dissolved';
+            }
+
+            $adoptionRaw = isset($map['adoption']) ? strtolower(trim((string) ($row[$map['adoption']] ?? ''))) : '';
+            $with_adopted = false;
+            $with_replicated = false;
+            if (str_contains($adoptionRaw, 'adopt')) {
+                $with_adopted = true;
+            } elseif (str_contains($adoptionRaw, 'replic')) {
+                $with_replicated = true;
+            }
+
+            $toBool = function ($v) {
+                $v = strtolower(trim((string) ($v ?? '')));
+                if ($v === 'true' || $v === '1' || $v === 'yes') {
+                    return true;
+                }
+                return false;
+            };
+
+            $with_expr = isset($map['with_expr']) ? $toBool($row[$map['with_expr']]) : false;
+            $with_moa = isset($map['with_moa']) ? $toBool($row[$map['with_moa']]) : false;
+            $with_res = isset($map['with_res']) ? $toBool($row[$map['with_res']]) : false;
+            $included_aip = isset($map['included_aip']) ? $toBool($row[$map['included_aip']]) : false;
+
+            $identity = [
+                'region_id' => $region->id,
+                'title' => $title,
+                'province' => $province ?: null,
+                'municipality' => $municipality ?: null,
+            ];
+
+            $payload = [
+                'status' => $status,
+                'with_expr' => $with_expr,
+                'with_moa' => $with_moa,
+                'with_res' => $with_res,
+                'included_aip' => $included_aip,
+                'with_adopted' => $with_adopted,
+                'with_replicated' => $with_replicated,
+                'updatedby' => $actorName,
+            ];
+
+            $existing = RegionItem::query()->where($identity)->first();
+            if ($existing) {
+                $existing->update($payload);
+                $updated++;
+            } else {
+                $payload = array_merge($identity, $payload, ['createdby' => $actorName]);
+                RegionItem::query()->create($payload);
+                $created++;
+            }
+        }
+
+        $message = "Imported file: created={$created}, updated={$updated}, skipped={$skipped}.";
+        if ($warnings) {
+            session()->flash('masterdata_import_warnings', $warnings);
+        }
+
+        return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('status', $message);
+    }
+
+    /**
+     * Force-import region items from an uploaded Excel file.
+     * This will create or update RegionItem rows directly, mapping the region name
+     * from the sheet to the `regions.id`. Unlike the other importer, this will
+     * not require the title to exist in `social_technology_titles`.
+     */
+    public function importRegionItemsExcelForce(Request $request)
+    {
+        $request->validate([
+            'region_items_excel' => ['required', 'file', 'mimes:xlsx,xls'],
+        ]);
+
+        $actorName = $this->resolveActorName();
+
+        $file = $request->file('region_items_excel');
+        $path = $file->getRealPath();
+
+        $reader = IOFactory::createReaderForFile($path);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($path);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true);
+
+        if (empty($rows) || count($rows) < 2) {
+            return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('error', 'Uploaded file contains no data.');
+        }
+
+        // Detect header row (header may not always be in row 1). Search first 5 rows for a row containing 'title'.
+        $headerIndex = 1;
+        $headerRow = array_map('trim', (array) $rows[$headerIndex]);
+
+        // Map header names to column letters (including years)
+        $map = [];
+        foreach ($headerRow as $col => $val) {
+            $norm = strtolower($val);
+            if (str_contains($norm, 'region')) {
+                $map['region'] = strtoupper($col);
+            } elseif (str_contains($norm, 'title')) {
+                $map['title'] = strtoupper($col);
+            } elseif (str_contains($norm, 'status')) {
+                $map['status'] = strtoupper($col);
+            } elseif (str_contains($norm, 'province')) {
+                $map['province'] = strtoupper($col);
+            } elseif (str_contains($norm, 'municipality')) {
+                $map['municipality'] = strtoupper($col);
+            } elseif (str_contains($norm, 'adopt')) {
+                $map['adoption'] = strtoupper($col);
+            } elseif (str_contains($norm, 'expression') || str_contains($norm, 'expr')) {
+                $map['with_expr'] = strtoupper($col);
+            } elseif (str_contains($norm, 'moa') && str_contains($norm, 'year')) {
+                $map['year_of_moa'] = strtoupper($col);
+            } elseif (str_contains($norm, 'moa')) {
+                $map['with_moa'] = strtoupper($col);
+            } elseif (str_contains($norm, 'resolution') || str_contains($norm, 'res')) {
+                if (str_contains($norm, 'year')) {
+                    $map['year_of_resolution'] = strtoupper($col);
+                } else {
+                    $map['with_res'] = strtoupper($col);
+                }
+            } elseif (str_contains($norm, 'aip')) {
+                $map['included_aip'] = strtoupper($col);
+            }
+        }
+
+        // If title column wasn't found, try searching the first 5 rows for the header row
+        if (!isset($map['title'])) {
+            $maxCheck = min(5, count($rows));
+            for ($i = 1; $i <= $maxCheck; $i++) {
+                $candidate = array_map('trim', (array) $rows[$i]);
+                $foundTitle = false;
+                foreach ($candidate as $c) {
+                    if (is_string($c) && str_contains(strtolower($c), 'title')) {
+                        $foundTitle = true;
+                        break;
+                    }
+                }
+                if ($foundTitle) {
+                    $headerIndex = $i;
+                    $headerRow = $candidate;
+                    $map = [];
+                    foreach ($headerRow as $col => $val) {
+                        $norm = strtolower($val);
+                        if (str_contains($norm, 'region')) {
+                            $map['region'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'title')) {
+                            $map['title'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'status')) {
+                            $map['status'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'province')) {
+                            $map['province'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'municipality')) {
+                            $map['municipality'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'adopt')) {
+                            $map['adoption'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'expression') || str_contains($norm, 'expr')) {
+                            $map['with_expr'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'moa') && str_contains($norm, 'year')) {
+                            $map['year_of_moa'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'moa')) {
+                            $map['with_moa'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'resolution') || str_contains($norm, 'res')) {
+                            if (str_contains($norm, 'year')) {
+                                $map['year_of_resolution'] = strtoupper($col);
+                            } else {
+                                $map['with_res'] = strtoupper($col);
+                            }
+                        } elseif (str_contains($norm, 'aip')) {
+                            $map['included_aip'] = strtoupper($col);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $warnings = [];
+
+        // iterate starting from detected header row
+        $dataRows = array_slice($rows, $headerIndex);
+        foreach ($dataRows as $idx => $row) {
+            $sheetRowNumber = $idx + $headerIndex + 1; // account for header at $headerIndex
+
+            $regionName = isset($map['region']) ? trim((string) ($row[$map['region']] ?? '')) : '';
+            $title = isset($map['title']) ? trim((string) ($row[$map['title']] ?? '')) : '';
+
+            if ($title === '') {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: title empty, skipped.";
+                continue;
+            }
+
+            $province = isset($map['province']) ? trim((string) ($row[$map['province']] ?? '')) : null;
+            $municipality = isset($map['municipality']) ? trim((string) ($row[$map['municipality']] ?? '')) : null;
+
+            $region = null;
+            if ($regionName !== '') {
+                $region = Region::query()->where('name', $regionName)->first();
+            }
+
+            if (!$region) {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: region not found ('{$regionName}'), skipped.";
+                continue;
+            }
+
+            $statusRaw = isset($map['status']) ? strtolower(trim((string) ($row[$map['status']] ?? ''))) : '';
+            $status = null;
+            if ($statusRaw === 'ongoing') {
+                $status = 'ongoing';
+            } elseif ($statusRaw === 'dissolved') {
+                $status = 'dissolved';
+            }
+
+            $adoptionRaw = isset($map['adoption']) ? strtolower(trim((string) ($row[$map['adoption']] ?? ''))) : '';
+            $with_adopted = false;
+            $with_replicated = false;
+            if (str_contains($adoptionRaw, 'adopt')) {
+                $with_adopted = true;
+            } elseif (str_contains($adoptionRaw, 'replic')) {
+                $with_replicated = true;
+            }
+
+            $toBool = function ($v) {
+                $v = strtolower(trim((string) ($v ?? '')));
+                if ($v === 'true' || $v === '1' || $v === 'yes') {
+                    return true;
+                }
+                return false;
+            };
+
+            $with_expr = isset($map['with_expr']) ? $toBool($row[$map['with_expr']]) : false;
+            $with_moa = isset($map['with_moa']) ? $toBool($row[$map['with_moa']]) : false;
+            $with_res = isset($map['with_res']) ? $toBool($row[$map['with_res']]) : false;
+            $included_aip = isset($map['included_aip']) ? $toBool($row[$map['included_aip']]) : false;
+
+            $year_of_moa = null;
+            if (isset($map['year_of_moa'])) {
+                $val = trim((string) ($row[$map['year_of_moa']] ?? ''));
+                $year_of_moa = $val !== '' ? (int) $val : null;
+            }
+
+            $year_of_resolution = null;
+            if (isset($map['year_of_resolution'])) {
+                $val = trim((string) ($row[$map['year_of_resolution']] ?? ''));
+                $year_of_resolution = $val !== '' ? (int) $val : null;
+            }
+
+            $identity = [
+                'region_id' => $region->id,
+                'title' => $title,
+                'province' => $province ?: null,
+                'municipality' => $municipality ?: null,
+            ];
+
+            $payload = [
+                'status' => $status,
+                'with_expr' => $with_expr,
+                'with_moa' => $with_moa,
+                'year_of_moa' => $with_moa ? $year_of_moa : null,
+                'with_res' => $with_res,
+                'year_of_resolution' => $with_res ? $year_of_resolution : null,
+                'included_aip' => $included_aip,
+                'with_adopted' => $with_adopted,
+                'with_replicated' => $with_replicated,
+                'updatedby' => $actorName,
+            ];
+
+            $existing = RegionItem::query()->where($identity)->first();
+            if ($existing) {
+                $existing->update($payload);
+                $updated++;
+            } else {
+                $payload = array_merge($identity, $payload, ['createdby' => $actorName]);
+                RegionItem::query()->create($payload);
+                $created++;
+            }
+        }
+
+        $message = "Force-imported file: created={$created}, updated={$updated}, skipped={$skipped}.";
+        if ($warnings) {
+            session()->flash('masterdata_import_warnings', $warnings);
+        }
+
+        return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('status', $message);
     }
 
     public function updatesPanel(Request $request): ViewContract
@@ -293,6 +838,11 @@ class MasterDataController extends Controller
 
         $attachmentsByItem = $this->buildAttachmentMapForRegionItems($pagedItems);
 
+        $socialTechnologyTitles = SocialTechnologyTitle::query()
+            ->orderBy('title')
+            ->pluck('title')
+            ->values();
+
         return [
             'regionItems' => $regionItems,
             'attachmentsByItem' => $attachmentsByItem,
@@ -302,6 +852,7 @@ class MasterDataController extends Controller
             'selectedMunicipality' => $selectedMunicipality,
             'provinceOptions' => $provinceOptions,
             'municipalityOptions' => $municipalityOptions,
+            'socialTechnologyTitles' => $socialTechnologyTitles,
         ];
     }
 
@@ -514,7 +1065,7 @@ class MasterDataController extends Controller
     {
         return $request->validate([
             'region_id' => ['required', 'exists:regions,id'],
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255', 'exists:social_technology_titles,title'],
             'province' => ['nullable', 'string', 'max:255'],
             'municipality' => ['nullable', 'string', 'max:255'],
             'with_expr' => ['nullable', 'boolean'],

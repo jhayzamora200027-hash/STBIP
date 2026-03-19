@@ -7483,7 +7483,7 @@ window.showGuestFilterDock = function(ev){
         position: fixed;
         top: 96px;
         right: 20px;
-        z-index: 9999;
+        z-index: 100;
     }
 }
 @endauth
