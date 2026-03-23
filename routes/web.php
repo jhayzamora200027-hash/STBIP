@@ -124,7 +124,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Social technologies titles upload and listing
     Route::get('/social-technologies', [\App\Http\Controllers\SocialTechnologyController::class, 'index'])
-        ->name('socialtech.index');
+        ->name('STDashboard');
     Route::post('/social-technologies/import', [\App\Http\Controllers\SocialTechnologyController::class, 'import'])
         ->name('socialtech.import');
     Route::post('/social-technologies/add', [\App\Http\Controllers\SocialTechnologyController::class, 'add'])
@@ -138,6 +138,10 @@ Route::middleware(['auth'])->group(function () {
     // Simple module showing all titles (no pagination)
     Route::get('/st-titles/all', [\App\Http\Controllers\SocialTechnologyTitleModuleController::class, 'index'])
         ->name('sttitles.all');
+    // Compatibility redirect for legacy named route references in cached views
+    Route::get('/social-technologies/legacy-redirect', function () {
+        return redirect()->route('STDashboard');
+    })->name('socialtech.index');
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');

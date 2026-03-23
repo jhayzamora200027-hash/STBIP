@@ -131,7 +131,7 @@ class SocialTechnologyController extends Controller
 
             if (count($inputRows) === 0) {
                 DB::commit();
-                return redirect()->route('socialtech.index')->with('status', 'No rows found in uploaded file.');
+                    return redirect()->route('STDashboard')->with('status', 'No rows found in uploaded file.');
             }
 
             // Determine header and map columns to model fields
@@ -218,10 +218,10 @@ class SocialTechnologyController extends Controller
             DB::commit();
             $msg = "Imported $added new title(s)";
             if ($updated) $msg .= ", updated $updated existing";
-            return redirect()->route('socialtech.index')->with('status', $msg . '.');
+            return redirect()->route('STDashboard')->with('status', $msg . '.');
         } catch (\Throwable $e) {
             DB::rollBack();
-            return redirect()->route('socialtech.index')->with('error', $e->getMessage());
+            return redirect()->route('STDashboard')->with('error', $e->getMessage());
         }
     }
 
@@ -242,7 +242,7 @@ class SocialTechnologyController extends Controller
 
         $submitted = array_values(array_filter(array_unique($submitted), fn($v) => $v !== ''));
         if (count($submitted) === 0) {
-            return redirect()->route('socialtech.index')->with('error', 'No title provided.');
+            return redirect()->route('STDashboard')->with('error', 'No title provided.');
         }
 
         $added = 0;
@@ -258,10 +258,10 @@ class SocialTechnologyController extends Controller
         }
 
         if ($added === 0) {
-            return redirect()->route('socialtech.index')->with('status', 'No new titles were added (all existed already).');
+            return redirect()->route('STDashboard')->with('status', 'No new titles were added (all existed already).');
         }
 
-        return redirect()->route('socialtech.index')->with('status', "Added $added title(s).");
+        return redirect()->route('STDashboard')->with('status', "Added $added title(s).");
     }
 
     public function export(Request $request)
@@ -352,7 +352,7 @@ class SocialTechnologyController extends Controller
             if ($request->ajax()) {
                 return response()->json(['message' => 'Title not found.'], 404);
             }
-            return redirect()->route('socialtech.index')->with('error', 'Title not found.');
+            return redirect()->route('STDashboard')->with('error', 'Title not found.');
         }
 
         Log::info('SocialTechnology update request', [
@@ -366,7 +366,7 @@ class SocialTechnologyController extends Controller
             if ($request->ajax()) {
                 return response()->json(['message' => 'A social technology with that value already exists.'], 422);
             }
-            return redirect()->route('socialtech.index')->with('error', 'A social technology with that value already exists.');
+            return redirect()->route('STDashboard')->with('error', 'A social technology with that value already exists.');
         }
 
         $data = $request->only([
@@ -397,7 +397,7 @@ class SocialTechnologyController extends Controller
             return response()->json(['message' => 'Updated.']);
         }
 
-        return redirect()->route('socialtech.index')->with('status', 'Title updated.');
+        return redirect()->route('STDashboard')->with('status', 'Title updated.');
     }
 
     public function destroy(Request $request, $id)
@@ -407,7 +407,7 @@ class SocialTechnologyController extends Controller
             if ($request->ajax()) {
                 return response()->json(['message' => 'Title not found.'], 404);
             }
-            return redirect()->route('socialtech.index')->with('error', 'Title not found.');
+            return redirect()->route('STDashboard')->with('error', 'Title not found.');
         }
 
         $item->delete();
@@ -416,6 +416,6 @@ class SocialTechnologyController extends Controller
             return response()->json(['message' => 'Deleted.']);
         }
 
-        return redirect()->route('socialtech.index')->with('status', 'Title deleted.');
+        return redirect()->route('STDashboard')->with('status', 'Title deleted.');
     }
 }

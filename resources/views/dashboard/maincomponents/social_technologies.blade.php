@@ -81,11 +81,11 @@
 
     <section class="st-card" style="margin-top:18px">
         <h3 style="margin-top:0">Social Technologies</h3>
-        <form method="GET" action="{{ route('socialtech.index') }}" style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <form method="GET" action="{{ route('STDashboard') }}" style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
             <input type="text" name="social_technology" placeholder="Filter by social technology" value="{{ request('social_technology') }}" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; flex:1">
             <div style="display:flex; gap:8px;">
                 <button type="submit" class="st-btn" style="background:#eef2ff; border:1px solid #d1d5db;">Filter</button>
-                <a href="{{ route('socialtech.index') }}" class="st-btn" style="background:#f1f5f9; border:1px solid #dbeafe;">Clear</a>
+                <a href="{{ route('STDashboard') }}" class="st-btn" style="background:#f1f5f9; border:1px solid #dbeafe;">Clear</a>
             </div>
         </form>
         <div style="overflow:auto">

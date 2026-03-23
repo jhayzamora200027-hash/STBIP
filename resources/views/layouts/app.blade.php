@@ -744,7 +744,7 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item" href="{{ route('socialtech.index') }}">
+                                                <a class="dropdown-item" href="{{ route('STDashboard') }}">
                                                     <i class="bi bi-upload me-2"></i>
                                                     Social Technologies Titles
                                                 </a>
@@ -901,6 +901,7 @@
             <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
             @if(Auth::check() && in_array(Auth::user()->usergroup, ['user', 'admin', 'sysadmin']))
             <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}"><i class="bi bi-database-gear me-2"></i>Master Data</a>
+            <a class="nav-link {{ request()->routeIs('sttitles.all') ? 'active' : '' }}" href="{{ route('sttitles.all') }}"><i class="bi bi-journal-text me-2"></i>ST Titles</a>
             @endif
         </nav>
         <style>
