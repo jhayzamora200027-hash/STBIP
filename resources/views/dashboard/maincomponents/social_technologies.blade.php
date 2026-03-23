@@ -158,7 +158,7 @@
                 <input id="edit-pilot-areas-input" type="text" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%" />
 
                 <label>Year Implemented</label>
-                <input id="edit-year-implemented-input" type="number" min="0" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%" />
+                <input id="edit-year-implemented-input" type="text" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%" />
 
                 <label>Status / Remarks</label>
                 <textarea id="edit-status-remarks-input" rows="2" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%"></textarea>
@@ -342,7 +342,7 @@
                 objectives: document.getElementById('edit-objectives-input').value.trim(),
                 components: document.getElementById('edit-components-input').value.trim(),
                 pilot_areas: document.getElementById('edit-pilot-areas-input').value.trim(),
-                year_implemented: document.getElementById('edit-year-implemented-input').value ? parseInt(document.getElementById('edit-year-implemented-input').value, 10) : null,
+                year_implemented: document.getElementById('edit-year-implemented-input').value.trim() || null,
                 status_remarks: document.getElementById('edit-status-remarks-input').value.trim(),
                 resolution: document.getElementById('edit-resolution-input').value.trim(),
                 guidelines: document.getElementById('edit-guidelines-input').value.trim(),
