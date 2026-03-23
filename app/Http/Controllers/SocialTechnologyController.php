@@ -185,16 +185,13 @@ class SocialTechnologyController extends Controller
                 $titleVal = trim((string) ($rowData['social_technology'] ?? ''));
                 if ($titleVal === '') continue;
 
-                // normalize year_implemented: convert numeric to int, empty -> null
+                // normalize year_implemented: keep trimmed string or null (allow ranges like "2019-2022")
                 if (array_key_exists('year_implemented', $rowData)) {
                     $y = trim((string) $rowData['year_implemented']);
                     if ($y === '') {
                         $rowData['year_implemented'] = null;
-                    } elseif (is_numeric($y)) {
-                        $rowData['year_implemented'] = (int) $y;
                     } else {
-                        // non-numeric text -> leave null to avoid DB errors
-                        $rowData['year_implemented'] = null;
+                        $rowData['year_implemented'] = $y;
                     }
                 }
 
@@ -336,7 +333,7 @@ class SocialTechnologyController extends Controller
             'objectives' => ['nullable', 'string', 'max:5000'],
             'components' => ['nullable', 'string', 'max:2000'],
             'pilot_areas' => ['nullable', 'string', 'max:1000'],
-            'year_implemented' => ['nullable', 'integer'],
+            'year_implemented' => ['nullable', 'regex:/^\d{4}(?:\s*-\s*\d{4})?$/'],
             'status_remarks' => ['nullable', 'string', 'max:2000'],
             'resolution' => ['nullable', 'string', 'max:2000'],
             'guidelines' => ['nullable', 'string', 'max:2000'],
