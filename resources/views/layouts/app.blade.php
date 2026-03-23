@@ -61,7 +61,15 @@
             }
         </style>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{{ asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
+    @php
+        $favFile = public_path('images/dattachments/social technology bureau innovating solution logo.png');
+        $favData = null;
+        if (file_exists($favFile) && is_readable($favFile)) {
+            $favData = 'data:image/png;base64,' . base64_encode(file_get_contents($favFile));
+        }
+    @endphp
+    <link rel="icon" href="{{ $favData ?? asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
+    <link rel="shortcut icon" href="{{ $favData ?? asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">

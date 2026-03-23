@@ -12,8 +12,22 @@ class SocialTechnologyTitle extends Model
     protected $table = 'social_technology_titles';
 
     protected $fillable = [
-        'title',
         'createdby',
         'updatedby',
+        'sector',
+        'laws_and_issuances',
+        'social_technology',
+        'description',
+        'objectives',
+        'components',
+        'pilot_areas',
+        'year_implemented',
+        'status_remarks',
+        'resolution',
+        'guidelines',
+        'program_manual_outline',
+        'information_systems_developed',
+        'session_guide_key_topics',
+        'training_manual_outline',
     ];
 }

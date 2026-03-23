@@ -310,7 +310,7 @@ class MasterDataController extends Controller
             }
 
             // Ensure social technology title exists (case-insensitive)
-            $titleExists = SocialTechnologyTitle::query()->whereRaw('LOWER(title) = ?', [strtolower($title)])->exists();
+            $titleExists = SocialTechnologyTitle::query()->whereRaw('LOWER(social_technology) = ?', [strtolower($title)])->exists();
             if (!$titleExists) {
                 $skipped++;
                 $warnings[] = "Row {$sheetRowNumber}: title not found ('{$title}')";
@@ -839,8 +839,8 @@ class MasterDataController extends Controller
         $attachmentsByItem = $this->buildAttachmentMapForRegionItems($pagedItems);
 
         $socialTechnologyTitles = SocialTechnologyTitle::query()
-            ->orderBy('title')
-            ->pluck('title')
+            ->orderBy('social_technology')
+            ->pluck('social_technology')
             ->values();
 
         return [
@@ -1065,7 +1065,7 @@ class MasterDataController extends Controller
     {
         return $request->validate([
             'region_id' => ['required', 'exists:regions,id'],
-            'title' => ['required', 'string', 'max:255', 'exists:social_technology_titles,title'],
+            'title' => ['required', 'string', 'max:255', 'exists:social_technology_titles,social_technology'],
             'province' => ['nullable', 'string', 'max:255'],
             'municipality' => ['nullable', 'string', 'max:255'],
             'with_expr' => ['nullable', 'boolean'],

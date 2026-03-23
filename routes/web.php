@@ -135,6 +135,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('socialtech.update');
     Route::delete('/social-technologies/{id}', [\App\Http\Controllers\SocialTechnologyController::class, 'destroy'])
         ->name('socialtech.destroy');
+    // Simple module showing all titles (no pagination)
+    Route::get('/st-titles/all', [\App\Http\Controllers\SocialTechnologyTitleModuleController::class, 'index'])
+        ->name('sttitles.all');
     
     // STs MOA Attachment listing (only rows with Year of MOA and With MOA = true)
     Route::get('/uploadmoasts', [StsMoaListingwithUploadingController::class, 'index'])->name('uploadmoasts');

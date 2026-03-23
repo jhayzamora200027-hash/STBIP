@@ -2731,8 +2731,8 @@ function createChartHitZones(chart) {
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 @if(isset($galleryCards) && $galleryCards->count())
-    <h2 class="section-label gallery-section-label">Sectors</h2>
-<section class="card-gallery" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
+    <h2 class="section-label gallery-section-label d-none d-md-block">Sectors</h2>
+<section class="card-gallery d-none d-md-block" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
     <div class="container-cards" style="pointer-events:auto;">
         @foreach($galleryCards as $card)
             @php
