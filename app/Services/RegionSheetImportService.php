@@ -6,6 +6,7 @@ use App\Models\Region;
 use App\Models\RegionItem;
 use App\Support\MasterDataRegionCatalog;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as SpreadsheetDate;
 use Illuminate\Support\Facades\DB;
 
 class RegionSheetImportService
@@ -93,6 +94,21 @@ class RegionSheetImportService
             throw new \RuntimeException('No region data rows were found in the selected Google Sheet file.');
         }
 
+        // Debug: write a JSON snapshot of header detection and first parsed rows
+        try {
+            $debug = [
+                'source' => $sourceName ?: basename($fullPath),
+                'headers' => $headers ?? [],
+                'start_slice' => $startSlice ?? null,
+                'indexes' => $indexes ?? [],
+                'sample_rows' => array_slice($rowsToInsert, 0, 8),
+            ];
+            $debugPath = storage_path('app/excels/import_debug_' . time() . '.json');
+            file_put_contents($debugPath, json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        } catch (\Throwable $e) {
+            // do not fail import for debug write errors
+        }
+
         $stats = DB::transaction(function () use ($actorName, $regionNames, $rowsToInsert) {
             $regionIdMap = [];
             foreach (MasterDataRegionCatalog::all() as $regionName) {
@@ -145,7 +161,7 @@ class RegionSheetImportService
                     'with_moa' => $row['with_moa'],
                     'year_of_moa' => $row['year_of_moa'],
                     'with_res' => $row['with_res'],
-                    'year_of_resolution' => $row['with_res'] ? $row['year_of_resolution'] : null,
+                    'year_of_resolution' => $row['year_of_resolution'],
                     'included_aip' => $row['included_aip'],
                     'with_adopted' => $row['with_adopted'],
                     'with_replicated' => $row['with_replicated'],
@@ -212,13 +228,27 @@ class RegionSheetImportService
     private function extractHeaders(array $rows): array
     {
         $headerRowIdx = null;
-        foreach (range(0, min(4, count($rows) - 1)) as $i) {
+        $maxCheck = min(9, count($rows) - 1);
+        for ($i = 0; $i <= $maxCheck; $i++) {
             $trial = array_map(fn ($value) => strtolower(trim((string) $value)), $rows[$i]);
-            if (
-                array_search('title of st', $trial, true) !== false &&
-                array_search('province', $trial, true) !== false &&
-                array_search('name of municipality', $trial, true) !== false
-            ) {
+
+            $hasTitle = false;
+            $hasProvince = false;
+            $hasMunicipality = false;
+
+            foreach ($trial as $cell) {
+                if (!$hasTitle && stripos($cell, 'title') !== false) {
+                    $hasTitle = true;
+                }
+                if (!$hasProvince && stripos($cell, 'province') !== false) {
+                    $hasProvince = true;
+                }
+                if (!$hasMunicipality && (stripos($cell, 'municipality') !== false || stripos($cell, 'name of municipality') !== false || stripos($cell, 'city') !== false)) {
+                    $hasMunicipality = true;
+                }
+            }
+
+            if ($hasTitle && $hasProvince && $hasMunicipality) {
                 $headerRowIdx = $i;
                 break;
             }
@@ -403,9 +433,25 @@ class RegionSheetImportService
             return null;
         }
 
+        if ($value instanceof \DateTimeInterface) {
+            $year = (int) $value->format('Y');
+            return ($year >= 1900 && $year <= 2100) ? $year : null;
+        }
+
         if (is_numeric($value)) {
             $year = (int) $value;
-            return ($year >= 1900 && $year <= 2100) ? $year : null;
+            if ($year >= 1900 && $year <= 2100) {
+                return $year;
+            }
+            // Excel may store dates as serial numbers; try converting
+            try {
+                $dt = SpreadsheetDate::excelToDateTimeObject($value);
+                $y = (int) $dt->format('Y');
+                return ($y >= 1900 && $y <= 2100) ? $y : null;
+            } catch (\Throwable $e) {
+                // fall through
+            }
+            return null;
         }
 
         if (preg_match('/\b(19|20)\d{2}\b/', (string) $value, $matches)) {

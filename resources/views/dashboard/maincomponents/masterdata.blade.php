@@ -454,7 +454,7 @@
 		background: #ecfdf3;
 		color: #047857;
 	}
-	.masterdata-status-dissolved {
+	.masterdata-status-inactive {
 		background: #fef2f2;
 		color: #b91c1c;
 	}
@@ -891,7 +891,7 @@
 			<section class="masterdata-card masterdata-chart-card">
 				<div class="masterdata-card-header">
 					<h3>Status Distribution</h3>
-					<p>Ongoing, dissolved, and unspecified items in the current DB source.</p>
+					<p>Ongoing, inactive, and unspecified items in the current DB source.</p>
 				</div>
 				<div class="masterdata-card-body">
 					<canvas id="masterdataStatusChart"></canvas>
@@ -968,8 +968,8 @@
 									<td>
 										@if($item->status === 'ongoing')
 											<span class="masterdata-pill masterdata-status-ongoing">Ongoing</span>
-										@elseif($item->status === 'dissolved')
-											<span class="masterdata-pill masterdata-status-dissolved">Dissolved</span>
+										@elseif(in_array($item->status, ['inactive'], true))
+											<span class="masterdata-pill masterdata-status-inactive">Inactive</span>
 										@else
 											<span class="masterdata-pill">Unspecified</span>
 										@endif

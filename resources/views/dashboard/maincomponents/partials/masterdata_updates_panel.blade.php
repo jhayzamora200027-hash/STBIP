@@ -64,14 +64,14 @@
 					<input id="new-region-name" type="text" value="{{ $selectedRegionName }}" readonly>
 					<input type="hidden" name="region_id" value="{{ old('region_id', $selectedRegion?->id) }}">
 				</div>
-				<div class="masterdata-field">
-					<label for="new-status">Status</label>
-					<select id="new-status" name="status">
-						<option value="">Select status</option>
-						<option value="ongoing" @selected(old('status') === 'ongoing')>Ongoing</option>
-						<option value="dissolved" @selected(old('status') === 'dissolved')>Dissolved</option>
-					</select>
-				</div>
+					<div class="masterdata-field">
+						<label for="new-status">Status</label>
+						<select id="new-status" name="status">
+							<option value="">Select status</option>
+							<option value="ongoing" @selected(old('status') === 'ongoing')>Ongoing</option>
+							<option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
+						</select>
+					</div>
                 	<div class="masterdata-field full">
                 		<label for="new-title">Social Technology Title</label>
                 		<input id="new-title" list="st-titles-list" type="text" name="title" value="{{ old('title') }}" required>
@@ -190,8 +190,8 @@
 						<div>
 							@if($item->status === 'ongoing')
 								<span class="masterdata-pill masterdata-status-ongoing">Ongoing</span>
-							@elseif($item->status === 'dissolved')
-								<span class="masterdata-pill masterdata-status-dissolved">Dissolved</span>
+							@elseif($item->status === 'inactive')
+								<span class="masterdata-pill masterdata-status-inactive">Inactive</span>
 							@else
 								<span class="masterdata-pill">Unspecified</span>
 							@endif
@@ -288,7 +288,7 @@
 									<select name="status">
 										<option value="">Select status</option>
 										<option value="ongoing" @selected($item->status === 'ongoing')>Ongoing</option>
-										<option value="dissolved" @selected($item->status === 'dissolved')>Dissolved</option>
+										<option value="inactive" @selected($item->status === 'inactive')>Inactive</option>
 									</select>
 								</div>
 								<div class="masterdata-field full">
@@ -357,7 +357,7 @@
 							</div>
 							<div class="masterdata-field">
 								<label>Status</label>
-								<input type="text" value="{{ $item->status ? ucfirst($item->status) : 'Unspecified' }}" readonly>
+								<input type="text" value="{{ $item->status ? ($item->status === 'inactive' ? 'Inactive' : ucfirst($item->status)) : 'Unspecified' }}" readonly>
 							</div>
 							<div class="masterdata-field full">
 								<label>Social Technology Title</label>

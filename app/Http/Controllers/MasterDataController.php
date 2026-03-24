@@ -24,6 +24,7 @@ use App\Models\SocialTechnologyTitle;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as SpreadsheetDate;
 
 class MasterDataController extends Controller
 {
@@ -105,8 +106,8 @@ class MasterDataController extends Controller
             $status = Str::lower((string) $item->status);
             if ($status === 'ongoing') {
                 $statusLabel = 'Ongoing';
-            } elseif ($status === 'dissolved') {
-                $statusLabel = 'Dissolved';
+            } elseif (in_array($status, ['inactive'], true)) {
+                $statusLabel = 'Inactive';
             } else {
                 $statusLabel = 'Unspecified';
             }
@@ -321,7 +322,7 @@ class MasterDataController extends Controller
             $status = null;
             if ($statusRaw === 'ongoing') {
                 $status = 'ongoing';
-            } elseif ($statusRaw === 'dissolved') {
+            } elseif ($statusRaw === 'dissolved' || $statusRaw === 'inactive') {
                 $status = 'dissolved';
             }
 
@@ -347,6 +348,67 @@ class MasterDataController extends Controller
             $with_res = isset($map['with_res']) ? $toBool($row[$map['with_res']]) : false;
             $included_aip = isset($map['included_aip']) ? $toBool($row[$map['included_aip']]) : false;
 
+            $year_of_moa = null;
+            if (isset($map['year_of_moa'])) {
+                $raw = $row[$map['year_of_moa']] ?? null;
+                $year_of_moa = null;
+                if ($raw !== null && $raw !== '') {
+                    if ($raw instanceof \DateTimeInterface) {
+                        $y = (int) $raw->format('Y');
+                        $year_of_moa = ($y >= 1900 && $y <= 2100) ? $y : null;
+                    } elseif (is_numeric($raw)) {
+                        $n = (int) $raw;
+                        if ($n >= 1900 && $n <= 2100) {
+                            $year_of_moa = $n;
+                        } else {
+                            try {
+                                $dt = SpreadsheetDate::excelToDateTimeObject($raw);
+                                $y = (int) $dt->format('Y');
+                                $year_of_moa = ($y >= 1900 && $y <= 2100) ? $y : null;
+                            } catch (\Throwable $e) {
+                                if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                                    $year_of_moa = (int) $m[0];
+                                }
+                            }
+                        }
+                    } else {
+                        if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                            $year_of_moa = (int) $m[0];
+                        }
+                    }
+                }
+            }
+
+            $year_of_resolution = null;
+            if (isset($map['year_of_resolution'])) {
+                $raw = $row[$map['year_of_resolution']] ?? null;
+                if ($raw !== null && $raw !== '') {
+                    if ($raw instanceof \DateTimeInterface) {
+                        $y = (int) $raw->format('Y');
+                        $year_of_resolution = ($y >= 1900 && $y <= 2100) ? $y : null;
+                    } elseif (is_numeric($raw)) {
+                        $n = (int) $raw;
+                        if ($n >= 1900 && $n <= 2100) {
+                            $year_of_resolution = $n;
+                        } else {
+                            try {
+                                $dt = SpreadsheetDate::excelToDateTimeObject($raw);
+                                $y = (int) $dt->format('Y');
+                                $year_of_resolution = ($y >= 1900 && $y <= 2100) ? $y : null;
+                            } catch (\Throwable $e) {
+                                if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                                    $year_of_resolution = (int) $m[0];
+                                }
+                            }
+                        }
+                    } else {
+                        if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                            $year_of_resolution = (int) $m[0];
+                        }
+                    }
+                }
+            }
+
             $identity = [
                 'region_id' => $region->id,
                 'title' => $title,
@@ -358,7 +420,9 @@ class MasterDataController extends Controller
                 'status' => $status,
                 'with_expr' => $with_expr,
                 'with_moa' => $with_moa,
+                'year_of_moa' => $year_of_moa,
                 'with_res' => $with_res,
+                'year_of_resolution' => $year_of_resolution,
                 'included_aip' => $included_aip,
                 'with_adopted' => $with_adopted,
                 'with_replicated' => $with_replicated,
@@ -536,8 +600,8 @@ class MasterDataController extends Controller
             $status = null;
             if ($statusRaw === 'ongoing') {
                 $status = 'ongoing';
-            } elseif ($statusRaw === 'dissolved') {
-                $status = 'dissolved';
+            } elseif ($statusRaw === 'dissolved' || $statusRaw === 'inactive') {
+                $status = 'inactive';
             }
 
             $adoptionRaw = isset($map['adoption']) ? strtolower(trim((string) ($row[$map['adoption']] ?? ''))) : '';
@@ -564,14 +628,63 @@ class MasterDataController extends Controller
 
             $year_of_moa = null;
             if (isset($map['year_of_moa'])) {
-                $val = trim((string) ($row[$map['year_of_moa']] ?? ''));
-                $year_of_moa = $val !== '' ? (int) $val : null;
+                $raw = $row[$map['year_of_moa']] ?? null;
+                $year_of_moa = null;
+                if ($raw !== null && $raw !== '') {
+                    if ($raw instanceof \DateTimeInterface) {
+                        $y = (int) $raw->format('Y');
+                        $year_of_moa = ($y >= 1900 && $y <= 2100) ? $y : null;
+                    } elseif (is_numeric($raw)) {
+                        $n = (int) $raw;
+                        if ($n >= 1900 && $n <= 2100) {
+                            $year_of_moa = $n;
+                        } else {
+                            try {
+                                $dt = SpreadsheetDate::excelToDateTimeObject($raw);
+                                $y = (int) $dt->format('Y');
+                                $year_of_moa = ($y >= 1900 && $y <= 2100) ? $y : null;
+                            } catch (\Throwable $e) {
+                                if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                                    $year_of_moa = (int) $m[0];
+                                }
+                            }
+                        }
+                    } else {
+                        if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                            $year_of_moa = (int) $m[0];
+                        }
+                    }
+                }
             }
 
             $year_of_resolution = null;
             if (isset($map['year_of_resolution'])) {
-                $val = trim((string) ($row[$map['year_of_resolution']] ?? ''));
-                $year_of_resolution = $val !== '' ? (int) $val : null;
+                $raw = $row[$map['year_of_resolution']] ?? null;
+                if ($raw !== null && $raw !== '') {
+                    if ($raw instanceof \DateTimeInterface) {
+                        $y = (int) $raw->format('Y');
+                        $year_of_resolution = ($y >= 1900 && $y <= 2100) ? $y : null;
+                    } elseif (is_numeric($raw)) {
+                        $n = (int) $raw;
+                        if ($n >= 1900 && $n <= 2100) {
+                            $year_of_resolution = $n;
+                        } else {
+                            try {
+                                $dt = SpreadsheetDate::excelToDateTimeObject($raw);
+                                $y = (int) $dt->format('Y');
+                                $year_of_resolution = ($y >= 1900 && $y <= 2100) ? $y : null;
+                            } catch (\Throwable $e) {
+                                if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                                    $year_of_resolution = (int) $m[0];
+                                }
+                            }
+                        }
+                    } else {
+                        if (preg_match('/\b(19|20)\d{2}\b/', (string) $raw, $m)) {
+                            $year_of_resolution = (int) $m[0];
+                        }
+                    }
+                }
             }
 
             $identity = [
@@ -585,9 +698,9 @@ class MasterDataController extends Controller
                 'status' => $status,
                 'with_expr' => $with_expr,
                 'with_moa' => $with_moa,
-                'year_of_moa' => $with_moa ? $year_of_moa : null,
+                'year_of_moa' => $year_of_moa,
                 'with_res' => $with_res,
-                'year_of_resolution' => $with_res ? $year_of_resolution : null,
+                'year_of_resolution' => $year_of_resolution,
                 'included_aip' => $included_aip,
                 'with_adopted' => $with_adopted,
                 'with_replicated' => $with_replicated,
@@ -1075,7 +1188,7 @@ class MasterDataController extends Controller
             'year_of_resolution' => ['nullable', 'integer', 'digits:4', 'min:1900', 'max:2100'],
             'included_aip' => ['nullable', 'boolean'],
             'adoption_status' => ['nullable', 'in:none,adopted,replicated'],
-            'status' => ['nullable', 'in:ongoing,dissolved'],
+            'status' => ['nullable', 'in:ongoing,inactive'],
         ]);
     }
 
@@ -1085,6 +1198,12 @@ class MasterDataController extends Controller
 
         $withMoa = (bool) ($validated['with_moa'] ?? false);
         $withResolution = (bool) ($validated['with_res'] ?? false);
+
+        $statusVal = $validated['status'] ?? null;
+        // Normalize UI-facing 'inactive' back to the legacy DB value 'dissolved'
+        if ($statusVal === 'inactive') {
+            $statusVal = 'dissolved';
+        }
 
         return [
             'region_id' => $validated['region_id'],
@@ -1099,7 +1218,7 @@ class MasterDataController extends Controller
             'included_aip' => (bool) ($validated['included_aip'] ?? false),
             'with_adopted' => $adoptionStatus === 'adopted',
             'with_replicated' => $adoptionStatus === 'replicated',
-            'status' => $validated['status'] ?? null,
+            'status' => $statusVal ?? null,
             'createdby' => $existingItem?->createdby ?: $actorName,
             'updatedby' => $actorName,
         ];
@@ -1109,7 +1228,7 @@ class MasterDataController extends Controller
     {
         $statusCounts = [
             'Ongoing' => 0,
-            'Dissolved' => 0,
+            'Inactive' => 0,
             'Unspecified' => 0,
         ];
 
@@ -1117,8 +1236,8 @@ class MasterDataController extends Controller
             $status = Str::lower((string) $item->status);
             if ($status === 'ongoing') {
                 $statusCounts['Ongoing']++;
-            } elseif ($status === 'dissolved') {
-                $statusCounts['Dissolved']++;
+            } elseif (in_array($status, ['inactive'], true)) {
+                $statusCounts['Inactive']++;
             } else {
                 $statusCounts['Unspecified']++;
             }

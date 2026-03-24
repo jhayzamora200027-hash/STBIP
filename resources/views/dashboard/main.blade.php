@@ -720,7 +720,7 @@
 		background: #ecfdf3;
 		color: #047857;
 	}
-	.masterdata-status-dissolved {
+	.masterdata-status-inactive {
 		background: #fef2f2;
 		color: #b91c1c;
 	}
