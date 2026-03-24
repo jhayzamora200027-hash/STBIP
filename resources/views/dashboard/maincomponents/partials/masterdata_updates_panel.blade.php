@@ -72,6 +72,33 @@
 							<option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
 						</select>
 					</div>
+
+					<div class="masterdata-field">
+						<label>Inactive Status</label>
+						<div style="display:flex;gap:18px;align-items:flex-start;">
+							<label style="display:flex;flex-direction:column;gap:4px;">
+								<span><input type="radio" name="inactive_status" value="dissolved" @checked(old('inactive_status') === 'dissolved') @if(old('status') !== 'inactive') disabled @endif> <strong>Dissolved</strong></span>
+								<small class="text-muted">Permanent closure - no further action.</small>
+							</label>
+							<label style="display:flex;flex-direction:column;gap:4px;">
+								<span><input type="radio" name="inactive_status" value="pending_document" @checked(old('inactive_status') === 'pending_document') @if(old('status') !== 'inactive') disabled @endif> <strong>With document but still pending</strong></span>
+								<small class="text-muted">Document exists but finalization is pending.</small>
+							</label>
+						</div>
+						<div class="masterdata-field-note small text-muted">Enable when Status is set to Inactive.</div>
+					</div>
+
+
+					<div class="masterdata-field">
+						<label for="new-inactive-remarks">Inactive Remarks</label>
+						<div style="position:relative">
+							<textarea id="new-inactive-remarks" name="inactive_remarks" rows="3" maxlength="2000" placeholder="Optional: brief explanation why this item is inactive (max 2000 chars)" style="width:100%;min-height:80px;max-height:240px;resize:vertical;" aria-describedby="new-inactive-remarks-counter" @if(old('status') !== 'inactive') disabled aria-disabled="true" @endif>{{ old('inactive_remarks') }}</textarea>
+							<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+								<div class="masterdata-field-note small text-muted">Explain why this item is inactive (optional).</div>
+								<div id="new-inactive-remarks-counter" class="small text-muted">0 / 2000</div>
+							</div>
+						</div>
+					</div>
                 	<div class="masterdata-field full">
                 		<label for="new-title">Social Technology Title</label>
                 		<input id="new-title" list="st-titles-list" type="text" name="title" value="{{ old('title') }}" required>
@@ -190,7 +217,7 @@
 						<div>
 							@if($item->status === 'ongoing')
 								<span class="masterdata-pill masterdata-status-ongoing">Ongoing</span>
-							@elseif($item->status === 'inactive')
+							@elseif(in_array($item->status, ['inactive', 'dissolved'], true))
 								<span class="masterdata-pill masterdata-status-inactive">Inactive</span>
 							@else
 								<span class="masterdata-pill">Unspecified</span>
@@ -288,8 +315,34 @@
 									<select name="status">
 										<option value="">Select status</option>
 										<option value="ongoing" @selected($item->status === 'ongoing')>Ongoing</option>
-										<option value="inactive" @selected($item->status === 'inactive')>Inactive</option>
+										<option value="inactive" @selected(in_array($item->status, ['inactive', 'dissolved'], true))>Inactive</option>
 									</select>
+								</div>
+
+								<div class="masterdata-field">
+									<label>Inactive Status</label>
+									@php($disabled = !in_array($item->status, ['inactive', 'dissolved'], true))
+									<div style="display:flex;gap:18px;align-items:flex-start;">
+										<label style="display:flex;flex-direction:column;gap:4px;">
+											<span><input type="radio" name="inactive_status" value="dissolved" @if(old('region_item_id') == $item->id) @checked(old('inactive_status') === 'dissolved') @else @checked($item->inactive_status === 'dissolved') @endif @if($disabled) disabled @endif> <strong>Dissolved</strong></span>
+											<small class="text-muted">Permanent closure - no further action.</small>
+										</label>
+										<label style="display:flex;flex-direction:column;gap:4px;">
+											<span><input type="radio" name="inactive_status" value="pending_document" @if(old('region_item_id') == $item->id) @checked(old('inactive_status') === 'pending_document') @else @checked($item->inactive_status === 'pending_document') @endif @if($disabled) disabled @endif> <strong>With document but still pending</strong></span>
+											<small class="text-muted">Document exists but finalization is pending.</small>
+										</label>
+									</div>
+									<div class="masterdata-field-note small text-muted">Enable when Status is set to Inactive.</div>
+								</div>
+								<div class="masterdata-field">
+									<label for="item-{{ $item->id }}-inactive-remarks">Inactive Remarks</label>
+									<div style="position:relative">
+										<textarea id="item-{{ $item->id }}-inactive-remarks" name="inactive_remarks" rows="3" maxlength="2000" placeholder="Optional: brief explanation why this item is inactive (max 2000 chars)" style="width:100%;min-height:80px;max-height:240px;resize:vertical;" aria-describedby="item-{{ $item->id }}-inactive-remarks-counter" @if($disabled) disabled @endif>@if(old('region_item_id') == $item->id){{ old('inactive_remarks') }}@else{{ $item->inactive_remarks }}@endif</textarea>
+										<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+											<div class="masterdata-field-note small text-muted">Explain why this item is inactive (optional).</div>
+											<div id="item-{{ $item->id }}-inactive-remarks-counter" class="small text-muted">0 / 2000</div>
+										</div>
+									</div>
 								</div>
 								<div class="masterdata-field full">
 									<label>Social Technology Title</label>
@@ -357,8 +410,20 @@
 							</div>
 							<div class="masterdata-field">
 								<label>Status</label>
-								<input type="text" value="{{ $item->status ? ($item->status === 'inactive' ? 'Inactive' : ucfirst($item->status)) : 'Unspecified' }}" readonly>
+								<input type="text" value="{{ $item->status ? (in_array($item->status, ['inactive', 'dissolved'], true) ? 'Inactive' : ucfirst($item->status)) : 'Unspecified' }}" readonly>
 							</div>
+							@if($item->inactive_status)
+								<div class="masterdata-field">
+									<label>Inactive Status</label>
+									<input type="text" value="{{ $item->inactive_status === 'pending_document' ? 'With document but still pending' : ucfirst($item->inactive_status) }}" readonly>
+								</div>
+							@endif
+							@if($item->inactive_remarks)
+								<div class="masterdata-field">
+									<label>Inactive Remarks</label>
+									<textarea rows="3" style="width:100%;" readonly>{{ $item->inactive_remarks }}</textarea>
+								</div>
+							@endif
 							<div class="masterdata-field full">
 								<label>Social Technology Title</label>
 								<input type="text" value="{{ $item->title }}" readonly>
@@ -414,6 +479,38 @@
 		@endif
 	</div>
 </section>
+
+	@if($canWriteMasterData)
+	<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		// initialize radio enable/disable based on current select value
+		document.querySelectorAll('form[data-masterdata-updates-form] select[name="status"]').forEach(function (sel) {
+			const form = sel.closest('form');
+			if (!form) return;
+			const radios = form.querySelectorAll('input[name="inactive_status"]');
+						const remarks = form.querySelectorAll('textarea[name="inactive_remarks"]');
+			if (!radios) return;
+			const enabled = sel.value === 'inactive';
+			radios.forEach(function (r) { r.disabled = !enabled; });
+						remarks.forEach(function (r) { r.disabled = !enabled; });
+		});
+
+		// delegate change events to toggle radios when status changes
+		document.addEventListener('change', function (ev) {
+			const t = ev.target;
+			if (t && t.matches && t.matches('select[name="status"]')) {
+				const form = t.closest('form');
+				if (!form) return;
+				const radios = form.querySelectorAll('input[name="inactive_status"]');
+						const remarks = form.querySelectorAll('textarea[name="inactive_remarks"]');
+				const enabled = t.value === 'inactive';
+				radios.forEach(function (r) { r.disabled = !enabled; });
+						remarks.forEach(function (r) { r.disabled = !enabled; });
+			}
+		});
+	});
+	</script>
+	@endif
 
 @if($canWriteMasterData)
 <div class="modal fade" id="masterdataAttachmentUploadModal" tabindex="-1" aria-labelledby="masterdataAttachmentUploadModalLabel" aria-hidden="true">

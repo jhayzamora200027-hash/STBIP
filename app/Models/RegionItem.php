@@ -24,6 +24,8 @@ class RegionItem extends Model
         'with_adopted',
         'with_replicated',
         'status',
+        'inactive_status',
+        'inactive_remarks',
         'createdby',
         'updatedby',
     ];
@@ -37,6 +39,7 @@ class RegionItem extends Model
         'with_replicated' => 'boolean',
         'year_of_moa' => 'integer',
         'year_of_resolution' => 'integer',
+        'inactive_remarks' => 'string',
     ];
 
     public function region(): BelongsTo

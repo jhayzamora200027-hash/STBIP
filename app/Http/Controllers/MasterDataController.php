@@ -106,7 +106,7 @@ class MasterDataController extends Controller
             $status = Str::lower((string) $item->status);
             if ($status === 'ongoing') {
                 $statusLabel = 'Ongoing';
-            } elseif (in_array($status, ['inactive'], true)) {
+            } elseif (in_array($status, ['inactive', 'dissolved'], true)) {
                 $statusLabel = 'Inactive';
             } else {
                 $statusLabel = 'Unspecified';
@@ -1189,6 +1189,8 @@ class MasterDataController extends Controller
             'included_aip' => ['nullable', 'boolean'],
             'adoption_status' => ['nullable', 'in:none,adopted,replicated'],
             'status' => ['nullable', 'in:ongoing,inactive'],
+            'inactive_status' => ['nullable', 'in:pending_document,dissolved'],
+            'inactive_remarks' => ['nullable', 'string', 'max:2000'],
         ]);
     }
 
@@ -1219,6 +1221,8 @@ class MasterDataController extends Controller
             'with_adopted' => $adoptionStatus === 'adopted',
             'with_replicated' => $adoptionStatus === 'replicated',
             'status' => $statusVal ?? null,
+            'inactive_status' => $validated['inactive_status'] ?? null,
+            'inactive_remarks' => isset($validated['inactive_remarks']) ? trim($validated['inactive_remarks']) : null,
             'createdby' => $existingItem?->createdby ?: $actorName,
             'updatedby' => $actorName,
         ];
@@ -1236,7 +1240,7 @@ class MasterDataController extends Controller
             $status = Str::lower((string) $item->status);
             if ($status === 'ongoing') {
                 $statusCounts['Ongoing']++;
-            } elseif (in_array($status, ['inactive'], true)) {
+            } elseif (in_array($status, ['inactive', 'dissolved'], true)) {
                 $statusCounts['Inactive']++;
             } else {
                 $statusCounts['Unspecified']++;
