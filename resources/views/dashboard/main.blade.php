@@ -2212,7 +2212,7 @@ if (!document.getElementById('catListTooltip')) {
 				<div class="formal-panel-header formal-panel-header-centered">
 					<div>
 						<div class="formal-panel-eyebrow">Share Analysis</div>
-						<div class="formal-panel-title">Ongoing vs Dissolved</div>
+						<div class="formal-panel-title">Ongoing vs Inactive</div>
 					</div>
 				</div>
 				<div class="formal-chart-canvas formal-chart-canvas-mini">
@@ -2226,7 +2226,7 @@ if (!document.getElementById('catListTooltip')) {
 							<div class="formal-share-stat-meta" id="ongoingSharePercent">0%</div>
 						</div>
 						<div class="formal-share-stat formal-share-stat-rose">
-							<div class="formal-share-stat-label">Dissolved</div>
+							<div class="formal-share-stat-label">Inactive</div>
 							<div class="formal-share-stat-value" id="dissolvedShareCount">{{ $totalDissolvedStatus ?? 0 }}</div>
 							<div class="formal-share-stat-meta" id="dissolvedSharePercent">0%</div>
 						</div>
@@ -5711,7 +5711,7 @@ $('#region-select-modal').on('change', function() {
 
 		const cardBindings = {
 			'card1': { title: 'Ongoing STs', filter: function(r) { return ((r.status||'').toString().toLowerCase().includes('ongoing')) || false; } },
-			'card2': { title: 'Dissolved STs', filter: function(r) { const s=(r.status||'').toString().toLowerCase(); return s.includes('dissolved') || s.includes('inactive') || s.includes('completed'); } },
+			'card2': { title: 'Inactive STs', filter: function(r) { const s=(r.status||'').toString().toLowerCase(); return s.includes('dissolved') || s.includes('inactive') || s.includes('completed'); } },
 			'card3': { title: 'Replicated STs', filter: function(r) { return parseFlag(r.with_replicated); } },
 			'card4': { title: 'Adopted STs', filter: function(r) { return parseFlag(r.with_adopted); } },
 		};
@@ -6741,7 +6741,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		} else if (totalOngoing > totalDissolved) {
 			ongoingLeadEl.textContent = 'Ongoing STs lead by ' + (totalOngoing - totalDissolved) + ' records.';
 		} else {
-			ongoingLeadEl.textContent = 'Dissolved STs lead by ' + (totalDissolved - totalOngoing) + ' records.';
+			ongoingLeadEl.textContent = 'Inactive STs lead by ' + (totalDissolved - totalOngoing) + ' records.';
 		}
 	}
 
