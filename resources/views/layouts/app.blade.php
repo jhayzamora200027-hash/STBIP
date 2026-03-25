@@ -68,8 +68,11 @@
             $favData = 'data:image/png;base64,' . base64_encode(file_get_contents($favFile));
         }
     @endphp
-    <link rel="icon" href="{{ $favData ?? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
-    <link rel="shortcut icon" href="{{ $favData ?? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
+    @php
+        $favAsset = request()->isSecure() ? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') : asset('images/dattachments/social technology bureau innovating solution logo.png');
+    @endphp
+    <link rel="icon" href="{{ $favData ?? $favAsset }}">
+    <link rel="shortcut icon" href="{{ $favData ?? $favAsset }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -304,7 +307,7 @@
         }
 
         body {
-            background: url('{{ secure_asset('images/dattachments/STBIP cover white.png') }}') no-repeat center center fixed;
+            background: url('{{ request()->isSecure() ? secure_asset('images/dattachments/STBIP cover white.png') : asset('images/dattachments/STBIP cover white.png') }}') no-repeat center center fixed;
             background-size: cover;
             background-attachment: fixed;
         }
@@ -599,7 +602,7 @@
             } catch (e) {
             }
 
-            var bgUrl = '{{ asset('images/dattachments/STBIP cover white.png') }}';
+            var bgUrl = '{{ request()->isSecure() ? secure_asset('images/dattachments/STBIP cover white.png') : asset('images/dattachments/STBIP cover white.png') }}';
             var img = new window.Image();
             img.src = bgUrl;
 
