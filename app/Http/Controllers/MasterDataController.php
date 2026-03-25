@@ -114,6 +114,7 @@ class MasterDataController extends Controller
                 $statusLabel = 'Unspecified';
             }
 
+            
             $adoption = $item->with_adopted ? 'Adopted' : ($item->with_replicated ? 'Replicated' : 'None');
 
             $sheet->setCellValue('A' . $row, $item->region?->name ?? '');
@@ -179,6 +180,15 @@ class MasterDataController extends Controller
                     $map['region'] = strtoupper($col);
                 } elseif (str_contains($norm, 'title')) {
                     $map['title'] = strtoupper($col);
+                // Prefer detecting remarks specifically first, then inactive status; avoid overwriting
+                } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                    if (!isset($map['inactive_remarks'])) {
+                        $map['inactive_remarks'] = strtoupper($col);
+                    }
+                } elseif (str_contains($norm, 'inactive')) {
+                    if (!isset($map['inactive_status'])) {
+                        $map['inactive_status'] = strtoupper($col);
+                    }
                 } elseif (str_contains($norm, 'status')) {
                     $map['status'] = strtoupper($col);
                 } elseif (str_contains($norm, 'province')) {
@@ -201,10 +211,6 @@ class MasterDataController extends Controller
                     }
                 } elseif (str_contains($norm, 'aip')) {
                     $map['included_aip'] = strtoupper($col);
-                } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
-                    $map['inactive_remarks'] = strtoupper($col);
-                } elseif (str_contains($norm, 'inactive')) {
-                    $map['inactive_status'] = strtoupper($col);
                 }
             }
 
@@ -230,6 +236,15 @@ class MasterDataController extends Controller
                             $map['region'] = strtoupper($col);
                         } elseif (str_contains($norm, 'title')) {
                             $map['title'] = strtoupper($col);
+                        // Prefer inactive/remarks before generic status
+                        } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                            if (!isset($map['inactive_remarks'])) {
+                                $map['inactive_remarks'] = strtoupper($col);
+                            }
+                        } elseif (str_contains($norm, 'inactive')) {
+                            if (!isset($map['inactive_status'])) {
+                                $map['inactive_status'] = strtoupper($col);
+                            }
                         } elseif (str_contains($norm, 'status')) {
                             $map['status'] = strtoupper($col);
                         } elseif (str_contains($norm, 'province')) {
@@ -252,10 +267,52 @@ class MasterDataController extends Controller
                             }
                         } elseif (str_contains($norm, 'aip')) {
                             $map['included_aip'] = strtoupper($col);
-                        } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
-                            $map['inactive_remarks'] = strtoupper($col);
-                        } elseif (str_contains($norm, 'inactive')) {
-                            $map['inactive_status'] = strtoupper($col);
+                        }
+                    }
+
+                    // same inactive-columns fallback handling for this header candidate
+                    $inactiveCols = [];
+                    foreach ($headerRow as $col => $val) {
+                        if (is_string($val) && stripos($val, 'inactive') !== false) {
+                            $inactiveCols[] = strtoupper($col);
+                        }
+                    }
+                    if (count($inactiveCols) >= 2) {
+                        if (!isset($map['inactive_status'])) {
+                            $map['inactive_status'] = $inactiveCols[0];
+                        }
+                        if (!isset($map['inactive_remarks'])) {
+                            $map['inactive_remarks'] = $inactiveCols[1];
+                        }
+                    } elseif (count($inactiveCols) === 1) {
+                        if (!isset($map['inactive_status'])) {
+                            $map['inactive_status'] = $inactiveCols[0];
+                        }
+                        if (!isset($map['inactive_remarks'])) {
+                            foreach ($headerRow as $col => $val) {
+                                if (is_string($val) && stripos($val, 'remark') !== false) {
+                                    $map['inactive_remarks'] = strtoupper($col);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    // Fallback for status detection in this header candidate
+                    if (!isset($map['status'])) {
+                        foreach ($headerRow as $col => $val) {
+                            if (is_string($val) && stripos($val, 'status') !== false) {
+                                $map['status'] = strtoupper($col);
+                                break;
+                            }
+                        }
+                    }
+                    // Fallback for status detection in this header candidate
+                    if (!isset($map['status'])) {
+                        foreach ($headerRow as $col => $val) {
+                            if (is_string($val) && stripos($val, 'status') !== false) {
+                                $map['status'] = strtoupper($col);
+                                break;
+                            }
                         }
                     }
                     break;
@@ -267,6 +324,8 @@ class MasterDataController extends Controller
         $updated = 0;
         $skipped = 0;
         $warnings = [];
+        $statusIssues = [];
+        $statusIssues = [];
 
         // Prepare a small debug sample of first 10 rows (after detected header)
         $sampleRows = array_slice($rows, $headerIndex, 10);
@@ -306,14 +365,29 @@ class MasterDataController extends Controller
             $province = isset($map['province']) ? trim((string) ($row[$map['province']] ?? '')) : null;
             $municipality = isset($map['municipality']) ? trim((string) ($row[$map['municipality']] ?? '')) : null;
 
-            $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
-            $inactive_remarks = isset($map['inactive_remarks']) ? trim((string) ($row[$map['inactive_remarks']] ?? '')) : null;
+                // read and normalize inactive fields for force import as well
+                $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
+                $inactive_remarks_raw = isset($map['inactive_remarks']) ? ($row[$map['inactive_remarks']] ?? null) : null;
+                if ($inactive_remarks_raw !== null) {
+                    $inr = is_scalar($inactive_remarks_raw) ? (string) $inactive_remarks_raw : '';
+                    $inr = preg_replace('/[\x00-\x1F\x7F\xA0]+/u', ' ', $inr);
+                    $inr = trim(preg_replace('/\s+/u', ' ', $inr));
+                    $inactive_remarks = $inr === '' ? null : $inr;
+                } else {
+                    $inactive_remarks = null;
+                }
 
             $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
-            $inactive_remarks = isset($map['inactive_remarks']) ? trim((string) ($row[$map['inactive_remarks']] ?? '')) : null;
-
-            $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
-            $inactive_remarks = isset($map['inactive_remarks']) ? trim((string) ($row[$map['inactive_remarks']] ?? '')) : null;
+            // normalize inactive remarks: strip control chars / NBSP and collapse whitespace
+            $inactive_remarks_raw = isset($map['inactive_remarks']) ? ($row[$map['inactive_remarks']] ?? null) : null;
+            if ($inactive_remarks_raw !== null) {
+                $inr = is_scalar($inactive_remarks_raw) ? (string) $inactive_remarks_raw : '';
+                $inr = preg_replace('/[\x00-\x1F\x7F\xA0]+/u', ' ', $inr);
+                $inr = trim(preg_replace('/\s+/u', ' ', $inr));
+                $inactive_remarks = $inr === '' ? null : $inr;
+            } else {
+                $inactive_remarks = null;
+            }
 
             // Robust region lookup: try exact, case-insensitive, strip common prefixes like 'FO ', then contains match
             $region = null;
@@ -349,12 +423,27 @@ class MasterDataController extends Controller
                 continue;
             }
 
-            $statusRaw = isset($map['status']) ? strtolower(trim((string) ($row[$map['status']] ?? ''))) : '';
+            $statusRaw = '';
+            if (isset($map['status'])) {
+                $rawVal = $row[$map['status']] ?? '';
+                $rawStr = is_scalar($rawVal) ? (string) $rawVal : '';
+                // normalize whitespace including NBSP and control chars
+                $rawStr = preg_replace('/[\x00-\x1F\x7F\xA0]+/u', ' ', $rawStr);
+                $statusRaw = trim(preg_replace('/\s+/u', ' ', $rawStr));
+            }
             $status = null;
-            if ($statusRaw === 'ongoing') {
-                $status = 'ongoing';
-            } elseif ($statusRaw === 'dissolved' || $statusRaw === 'inactive') {
-                $status = 'dissolved';
+            if ($statusRaw !== '') {
+                $snorm = strtolower($statusRaw);
+                if (str_contains($snorm, 'ongoing') || $snorm === 'on going') {
+                    $status = 'ongoing';
+                } elseif (str_contains($snorm, 'dissolved') || str_contains($snorm, 'inactive') || str_contains($snorm, 'completed')) {
+                    $status = 'dissolved';
+                } else {
+                    $status = $snorm;
+                }
+            }
+            if ($status === null && $statusRaw !== '') {
+                $statusIssues[] = ['sheet_row' => $sheetRowNumber, 'raw_status' => $statusRaw];
             }
 
             $adoptionRaw = isset($map['adoption']) ? strtolower(trim((string) ($row[$map['adoption']] ?? ''))) : '';
@@ -478,6 +567,17 @@ class MasterDataController extends Controller
             session()->flash('masterdata_import_warnings', $warnings);
         }
 
+        // write debug info including any status parse issues
+        try {
+            $debug = ['source' => $file->getClientOriginalName() ?? null, 'header_index' => $headerIndex, 'map' => $map, 'status_issues' => $statusIssues];
+            $debugPath = storage_path('app/excels/masterdata_import_debug_' . time() . '.json');
+            @mkdir(dirname($debugPath), 0777, true);
+            file_put_contents($debugPath, json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            session()->flash('masterdata_import_debug_file', basename($debugPath));
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
         return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('status', $message);
     }
 
@@ -514,40 +614,156 @@ class MasterDataController extends Controller
 
         // Map header names to column letters (including years)
         $map = [];
-        foreach ($headerRow as $col => $val) {
-            $norm = strtolower($val);
-            if (str_contains($norm, 'region')) {
-                $map['region'] = strtoupper($col);
-            } elseif (str_contains($norm, 'title')) {
-                $map['title'] = strtoupper($col);
-            } elseif (str_contains($norm, 'status')) {
-                $map['status'] = strtoupper($col);
-            } elseif (str_contains($norm, 'province')) {
-                $map['province'] = strtoupper($col);
-            } elseif (str_contains($norm, 'municipality')) {
-                $map['municipality'] = strtoupper($col);
-            } elseif (str_contains($norm, 'adopt')) {
-                $map['adoption'] = strtoupper($col);
-            } elseif (str_contains($norm, 'expression') || str_contains($norm, 'expr')) {
-                $map['with_expr'] = strtoupper($col);
-            } elseif (str_contains($norm, 'moa') && str_contains($norm, 'year')) {
-                $map['year_of_moa'] = strtoupper($col);
-            } elseif (str_contains($norm, 'moa')) {
-                $map['with_moa'] = strtoupper($col);
-            } elseif (str_contains($norm, 'resolution') || str_contains($norm, 'res')) {
-                if (str_contains($norm, 'year')) {
-                    $map['year_of_resolution'] = strtoupper($col);
-                } else {
-                    $map['with_res'] = strtoupper($col);
-                }
+            foreach ($headerRow as $col => $val) {
+                $norm = strtolower($val);
+                if (str_contains($norm, 'region')) {
+                    $map['region'] = strtoupper($col);
+                } elseif (str_contains($norm, 'title')) {
+                    $map['title'] = strtoupper($col);
+                // Prefer detecting remark headers first, then inactive status; avoid overwriting
+                } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                    if (!isset($map['inactive_remarks'])) {
+                        $map['inactive_remarks'] = strtoupper($col);
+                    }
+                } elseif (str_contains($norm, 'inactive')) {
+                    if (!isset($map['inactive_status'])) {
+                        $map['inactive_status'] = strtoupper($col);
+                    }
+                } elseif (str_contains($norm, 'status')) {
+                    $map['status'] = strtoupper($col);
+                } elseif (str_contains($norm, 'province')) {
+                    $map['province'] = strtoupper($col);
+                } elseif (str_contains($norm, 'municipality')) {
+                    $map['municipality'] = strtoupper($col);
+                } elseif (str_contains($norm, 'adopt')) {
+                    $map['adoption'] = strtoupper($col);
+                } elseif (str_contains($norm, 'expression') || str_contains($norm, 'expr')) {
+                    $map['with_expr'] = strtoupper($col);
+                } elseif (str_contains($norm, 'moa') && str_contains($norm, 'year')) {
+                    $map['year_of_moa'] = strtoupper($col);
+                } elseif (str_contains($norm, 'moa')) {
+                    $map['with_moa'] = strtoupper($col);
+                } elseif (str_contains($norm, 'resolution') || str_contains($norm, 'res')) {
+                    if (str_contains($norm, 'year')) {
+                        $map['year_of_resolution'] = strtoupper($col);
+                    } else {
+                        $map['with_res'] = strtoupper($col);
+                    }
                 } elseif (str_contains($norm, 'aip')) {
                     $map['included_aip'] = strtoupper($col);
-                } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
-                    $map['inactive_remarks'] = strtoupper($col);
-                } elseif (str_contains($norm, 'inactive')) {
-                    $map['inactive_status'] = strtoupper($col);
+                }
+            }
+
+        // If multiple header columns mention 'inactive', prefer first as status and second as remarks.
+        $inactiveCols = [];
+        foreach ($headerRow as $col => $val) {
+            if (is_string($val) && stripos($val, 'inactive') !== false) {
+                $inactiveCols[] = strtoupper($col);
             }
         }
+        if (count($inactiveCols) >= 2) {
+            if (!isset($map['inactive_status'])) {
+                $map['inactive_status'] = $inactiveCols[0];
+            }
+            if (!isset($map['inactive_remarks'])) {
+                $map['inactive_remarks'] = $inactiveCols[1];
+            }
+        } elseif (count($inactiveCols) === 1) {
+            if (!isset($map['inactive_status'])) {
+                $map['inactive_status'] = $inactiveCols[0];
+            }
+            // try to find a 'remark' header elsewhere
+            if (!isset($map['inactive_remarks'])) {
+                foreach ($headerRow as $col => $val) {
+                    if (is_string($val) && stripos($val, 'remark') !== false) {
+                        $map['inactive_remarks'] = strtoupper($col);
+                        break;
+                    }
+                }
+            }
+        }
+
+                    // If we still don't have inactive_remarks but we have inactive_status,
+                    // check the next sheet column for data and assume it's remarks when present.
+                    if (isset($map['inactive_status']) && !isset($map['inactive_remarks'])) {
+                        $colToIndex = function ($col) {
+                            $col = strtoupper($col);
+                            $len = strlen($col);
+                            $n = 0;
+                            for ($i = 0; $i < $len; $i++) {
+                                $n = $n * 26 + (ord($col[$i]) - 64);
+                            }
+                            return $n;
+                        };
+                        $indexToCol = function ($n) {
+                            $s = '';
+                            while ($n > 0) {
+                                $mod = ($n - 1) % 26;
+                                $s = chr(65 + $mod) . $s;
+                                $n = (int) (($n - 1) / 26);
+                            }
+                            return $s;
+                        };
+
+                        try {
+                            $right = $indexToCol($colToIndex($map['inactive_status']) + 1);
+                            $has = false;
+                            $maxCheck = min(count($rows), $headerIndex + 20);
+                            for ($r = $headerIndex + 1; $r <= $maxCheck; $r++) {
+                                $cell = $rows[$r][$right] ?? '';
+                                if (is_scalar($cell) && trim((string) $cell) !== '') {
+                                    $has = true;
+                                    break;
+                                }
+                            }
+                            if ($has) {
+                                $map['inactive_remarks'] = $right;
+                            }
+                        } catch (\Throwable $e) {
+                            // ignore
+                        }
+                    }
+
+            // If we still don't have inactive_remarks but we have inactive_status,
+            // check the next sheet column for data and assume it's remarks when present.
+            if (isset($map['inactive_status']) && !isset($map['inactive_remarks'])) {
+                $colToIndex = function ($col) {
+                    $col = strtoupper($col);
+                    $len = strlen($col);
+                    $n = 0;
+                    for ($i = 0; $i < $len; $i++) {
+                        $n = $n * 26 + (ord($col[$i]) - 64);
+                    }
+                    return $n;
+                };
+                $indexToCol = function ($n) {
+                    $s = '';
+                    while ($n > 0) {
+                        $mod = ($n - 1) % 26;
+                        $s = chr(65 + $mod) . $s;
+                        $n = (int) (($n - 1) / 26);
+                    }
+                    return $s;
+                };
+
+                try {
+                    $right = $indexToCol($colToIndex($map['inactive_status']) + 1);
+                    $has = false;
+                    $maxCheck = min(count($rows), $headerIndex + 20);
+                    for ($r = $headerIndex + 1; $r <= $maxCheck; $r++) {
+                        $cell = $rows[$r][$right] ?? '';
+                        if (is_scalar($cell) && trim((string) $cell) !== '') {
+                            $has = true;
+                            break;
+                        }
+                    }
+                    if ($has) {
+                        $map['inactive_remarks'] = $right;
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
 
         // If title column wasn't found, try searching the first 5 rows for the header row
         if (!isset($map['title'])) {
@@ -571,6 +787,11 @@ class MasterDataController extends Controller
                             $map['region'] = strtoupper($col);
                         } elseif (str_contains($norm, 'title')) {
                             $map['title'] = strtoupper($col);
+                        // Prefer inactive/remarks before generic status
+                        } elseif (str_contains($norm, 'inactive')) {
+                            $map['inactive_status'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                            $map['inactive_remarks'] = strtoupper($col);
                         } elseif (str_contains($norm, 'status')) {
                             $map['status'] = strtoupper($col);
                         } elseif (str_contains($norm, 'province')) {
@@ -593,10 +814,6 @@ class MasterDataController extends Controller
                             }
                         } elseif (str_contains($norm, 'aip')) {
                             $map['included_aip'] = strtoupper($col);
-                        } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
-                            $map['inactive_remarks'] = strtoupper($col);
-                        } elseif (str_contains($norm, 'inactive')) {
-                            $map['inactive_status'] = strtoupper($col);
                         }
                     }
                     break;
@@ -642,12 +859,26 @@ class MasterDataController extends Controller
                 continue;
             }
 
-            $statusRaw = isset($map['status']) ? strtolower(trim((string) ($row[$map['status']] ?? ''))) : '';
+            $statusRaw = '';
+            if (isset($map['status'])) {
+                $rawVal = $row[$map['status']] ?? '';
+                $rawStr = is_scalar($rawVal) ? (string) $rawVal : '';
+                $rawStr = preg_replace('/[\x00-\x1F\x7F\xA0]+/u', ' ', $rawStr);
+                $statusRaw = trim(preg_replace('/\s+/u', ' ', $rawStr));
+            }
             $status = null;
-            if ($statusRaw === 'ongoing') {
-                $status = 'ongoing';
-            } elseif ($statusRaw === 'dissolved' || $statusRaw === 'inactive') {
-                $status = 'inactive';
+            if ($statusRaw !== '') {
+                $snorm = strtolower($statusRaw);
+                if (str_contains($snorm, 'ongoing') || $snorm === 'on going') {
+                    $status = 'ongoing';
+                } elseif (str_contains($snorm, 'dissolved') || str_contains($snorm, 'inactive') || str_contains($snorm, 'completed')) {
+                    $status = 'inactive';
+                } else {
+                    $status = $snorm;
+                }
+            }
+            if ($status === null && $statusRaw !== '') {
+                $statusIssues[] = ['sheet_row' => $sheetRowNumber, 'raw_status' => $statusRaw];
             }
 
             $adoptionRaw = isset($map['adoption']) ? strtolower(trim((string) ($row[$map['adoption']] ?? ''))) : '';
@@ -769,6 +1000,17 @@ class MasterDataController extends Controller
         $message = "Force-imported file: created={$created}, updated={$updated}, skipped={$skipped}.";
         if ($warnings) {
             session()->flash('masterdata_import_warnings', $warnings);
+        }
+
+        // write debug info including any status parse issues for force import
+        try {
+            $debug = ['source' => $file->getClientOriginalName() ?? null, 'header_index' => $headerIndex, 'map' => $map, 'status_issues' => $statusIssues];
+            $debugPath = storage_path('app/excels/masterdata_force_import_debug_' . time() . '.json');
+            @mkdir(dirname($debugPath), 0777, true);
+            file_put_contents($debugPath, json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            session()->flash('masterdata_force_import_debug_file', basename($debugPath));
+        } catch (\Throwable $e) {
+            // ignore
         }
 
         return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('status', $message);
