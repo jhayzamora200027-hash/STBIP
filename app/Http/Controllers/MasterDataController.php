@@ -97,6 +97,8 @@ class MasterDataController extends Controller
             'Included AIP',
             'Year of MOA',
             'Year of Resolution',
+            'Inactive Status',
+            'Inactive Remarks',
         ];
 
         $sheet->fromArray($headers, null, 'A1');
@@ -126,6 +128,8 @@ class MasterDataController extends Controller
             $sheet->setCellValue('J' . $row, $item->included_aip ? 'TRUE' : 'FALSE');
             $sheet->setCellValue('K' . $row, $item->year_of_moa ?? '');
             $sheet->setCellValue('L' . $row, $item->year_of_resolution ?? '');
+            $sheet->setCellValue('M' . $row, $item->inactive_status ?? '');
+            $sheet->setCellValue('N' . $row, $item->inactive_remarks ?? '');
 
             $row++;
         }
@@ -197,6 +201,10 @@ class MasterDataController extends Controller
                     }
                 } elseif (str_contains($norm, 'aip')) {
                     $map['included_aip'] = strtoupper($col);
+                } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                    $map['inactive_remarks'] = strtoupper($col);
+                } elseif (str_contains($norm, 'inactive')) {
+                    $map['inactive_status'] = strtoupper($col);
                 }
             }
 
@@ -244,6 +252,10 @@ class MasterDataController extends Controller
                             }
                         } elseif (str_contains($norm, 'aip')) {
                             $map['included_aip'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                            $map['inactive_remarks'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'inactive')) {
+                            $map['inactive_status'] = strtoupper($col);
                         }
                     }
                     break;
@@ -267,7 +279,17 @@ class MasterDataController extends Controller
                 'title_raw' => isset($map['title']) ? ($r[$map['title']] ?? '') : null,
             ];
         }
+        // include inactive columns in debug sample when present
+        foreach ($sampleRows as $i => $r) {
+            $rowNum = $headerIndex + $i + 1;
+            $debugSample['rows'][$i]['inactive_status_raw'] = isset($map['inactive_status']) ? ($r[$map['inactive_status']] ?? '') : null;
+            $debugSample['rows'][$i]['inactive_remarks_raw'] = isset($map['inactive_remarks']) ? ($r[$map['inactive_remarks']] ?? '') : null;
+        }
         session()->flash('masterdata_import_debug', $debugSample);
+
+        // ensure variables exist for static analysis
+        $inactive_status = null;
+        $inactive_remarks = null;
 
         foreach (array_slice($rows, $headerIndex) as $idx => $row) {
             $sheetRowNumber = $headerIndex + $idx + 1; // headerIndex + 1 is first data row
@@ -283,6 +305,15 @@ class MasterDataController extends Controller
 
             $province = isset($map['province']) ? trim((string) ($row[$map['province']] ?? '')) : null;
             $municipality = isset($map['municipality']) ? trim((string) ($row[$map['municipality']] ?? '')) : null;
+
+            $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
+            $inactive_remarks = isset($map['inactive_remarks']) ? trim((string) ($row[$map['inactive_remarks']] ?? '')) : null;
+
+            $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
+            $inactive_remarks = isset($map['inactive_remarks']) ? trim((string) ($row[$map['inactive_remarks']] ?? '')) : null;
+
+            $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
+            $inactive_remarks = isset($map['inactive_remarks']) ? trim((string) ($row[$map['inactive_remarks']] ?? '')) : null;
 
             // Robust region lookup: try exact, case-insensitive, strip common prefixes like 'FO ', then contains match
             $region = null;
@@ -426,6 +457,8 @@ class MasterDataController extends Controller
                 'included_aip' => $included_aip,
                 'with_adopted' => $with_adopted,
                 'with_replicated' => $with_replicated,
+                'inactive_status' => $inactive_status ?: null,
+                'inactive_remarks' => $inactive_remarks ?: null,
                 'updatedby' => $actorName,
             ];
 
@@ -507,8 +540,12 @@ class MasterDataController extends Controller
                 } else {
                     $map['with_res'] = strtoupper($col);
                 }
-            } elseif (str_contains($norm, 'aip')) {
-                $map['included_aip'] = strtoupper($col);
+                } elseif (str_contains($norm, 'aip')) {
+                    $map['included_aip'] = strtoupper($col);
+                } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                    $map['inactive_remarks'] = strtoupper($col);
+                } elseif (str_contains($norm, 'inactive')) {
+                    $map['inactive_status'] = strtoupper($col);
             }
         }
 
@@ -556,6 +593,10 @@ class MasterDataController extends Controller
                             }
                         } elseif (str_contains($norm, 'aip')) {
                             $map['included_aip'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
+                            $map['inactive_remarks'] = strtoupper($col);
+                        } elseif (str_contains($norm, 'inactive')) {
+                            $map['inactive_status'] = strtoupper($col);
                         }
                     }
                     break;
@@ -570,6 +611,11 @@ class MasterDataController extends Controller
 
         // iterate starting from detected header row
         $dataRows = array_slice($rows, $headerIndex);
+
+        // ensure variables exist for static analysis
+        $inactive_status = null;
+        $inactive_remarks = null;
+
         foreach ($dataRows as $idx => $row) {
             $sheetRowNumber = $idx + $headerIndex + 1; // account for header at $headerIndex
 
@@ -704,6 +750,8 @@ class MasterDataController extends Controller
                 'included_aip' => $included_aip,
                 'with_adopted' => $with_adopted,
                 'with_replicated' => $with_replicated,
+                'inactive_status' => $inactive_status ?: null,
+                'inactive_remarks' => $inactive_remarks ?: null,
                 'updatedby' => $actorName,
             ];
 

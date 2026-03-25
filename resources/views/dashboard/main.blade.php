@@ -4272,7 +4272,7 @@ if (!document.getElementById('catListTooltip')) {
 						primaryLabel = 'Ongoing';
 						statusClass = 'social-listing-pill social-listing-pill-status-ongoing';
 					} else if (stStatus === 'dissolved') {
-						primaryLabel = 'Dissolved';
+						primaryLabel = 'Inactive';
 						statusClass = 'social-listing-pill social-listing-pill-status-dissolved';
 					}
 					const extraParts = [];

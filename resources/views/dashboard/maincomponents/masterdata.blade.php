@@ -968,7 +968,7 @@
 									<td>
 										@if($item->status === 'ongoing')
 											<span class="masterdata-pill masterdata-status-ongoing">Ongoing</span>
-										@elseif(in_array($item->status, ['inactive'], true))
+										@elseif(in_array($item->status, ['inactive','dissolved'], true))
 											<span class="masterdata-pill masterdata-status-inactive">Inactive</span>
 										@else
 											<span class="masterdata-pill">Unspecified</span>
