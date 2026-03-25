@@ -19,9 +19,9 @@
 <body>
 	<div class="stat-list">
 		<div class="stat-row">
-			<div class="stat-num">{{ collect($data)->filter(function($row){
+			<div class="stat-num"><span class="counter" data-target="{{ collect($data)->filter(function($row){
 				return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
-			})->count() }}</div>
+			})->count() }}">0</span></div>
 			<div class="stat-text">
 				<div class="stat-heading">Total Adopted and Replicated</div>
 				<div class="stat-desc">Reflects the overall reach and expansion of Social Technologies through actual implementation across multiple LGUs.</div>
@@ -29,11 +29,11 @@
 		</div>
 
 		<div class="stat-row">
-			<div class="stat-num">{{ collect($data)->filter(function($row){
+			<div class="stat-num"><span class="counter" data-target="{{ collect($data)->filter(function($row){
 				$val = $row['with_moa'] ?? null;
 				$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
 				return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
-			})->count() }}</div>
+			})->count() }}">0</span></div>
 			<div class="stat-text">
 				<div class="stat-heading">Total MOA Signed</div>
 				<div class="stat-desc">Represents the number of formal agreements completed, indicating secured partnerships and active collaboration.</div>
@@ -41,11 +41,11 @@
 		</div>
 
 		<div class="stat-row">
-			<div class="stat-num">{{ collect($data)->filter(function($row){
+			<div class="stat-num"><span class="counter" data-target="{{ collect($data)->filter(function($row){
 				$val = $row['with_res'] ?? null;
 				$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
 				return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
-			})->count() }}</div>
+			})->count() }}">0</span></div>
 			<div class="stat-text">
 				<div class="stat-heading">Total SB Resolution</div>
 				<div class="stat-desc">Indicates the extent of local government support through officially approved resolutions.</div>
@@ -53,17 +53,39 @@
 		</div>
 
 		<div class="stat-row">
-			<div class="stat-num">{{ collect($data)->filter(function($row){
+			<div class="stat-num"><span class="counter" data-target="{{ collect($data)->filter(function($row){
 				$val = $row['with_expr'] ?? null;
 				$flag = is_bool($val) ? $val : (strtoupper(trim((string) $val)) === 'TRUE');
 				return stripos($row['region'], 'Data CY 2020-2022') === false && $flag;
-			})->count() }}</div>
+			})->count() }}">0</span></div>
 			<div class="stat-text">
 				<div class="stat-heading">Total Expression of Interest</div>
 				<div class="stat-desc">Shows the level of interest from stakeholders, highlighting potential opportunities for future replication.</div>
 			</div>
 		</div>
 	</div>
+
+	<script>
+	document.addEventListener('DOMContentLoaded', function(){
+		const counters = document.querySelectorAll('.counter');
+		const duration = 1400; // ms for each counter
+		counters.forEach(counter => {
+			const target = parseInt(counter.getAttribute('data-target')) || 0;
+			const startTime = performance.now();
+			function update(now){
+				const progress = Math.min((now - startTime) / duration, 1);
+				const value = Math.floor(progress * target);
+				counter.textContent = value.toLocaleString();
+				if(progress < 1){
+					requestAnimationFrame(update);
+				} else {
+					counter.textContent = target.toLocaleString();
+				}
+			}
+			requestAnimationFrame(update);
+		});
+	});
+	</script>
 </body>
 </html>
 
