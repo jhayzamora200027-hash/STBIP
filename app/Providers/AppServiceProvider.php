@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Http\Request;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,5 +24,16 @@ class AppServiceProvider extends ServiceProvider
     {
         // Use Bootstrap styles for Laravel pagination links
         Paginator::useBootstrap();
+       
+        try {
+            if (!app()->runningInConsole() && request() instanceof Request) {
+                $current = request()->getSchemeAndHttpHost();
+                URL::forceRootUrl($current);
+                if (request()->isSecure()) {
+                    URL::forceScheme('https');
+                }
+            }
+        } catch (\Throwable $e) {
+        }
     }
 }

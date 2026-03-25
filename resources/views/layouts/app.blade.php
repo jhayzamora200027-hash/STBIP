@@ -68,8 +68,8 @@
             $favData = 'data:image/png;base64,' . base64_encode(file_get_contents($favFile));
         }
     @endphp
-    <link rel="icon" href="{{ $favData ?? asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
-    <link rel="shortcut icon" href="{{ $favData ?? asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
+    <link rel="icon" href="{{ $favData ?? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
+    <link rel="shortcut icon" href="{{ $favData ?? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -304,7 +304,7 @@
         }
 
         body {
-            background: url('{{ asset('images/dattachments/STBIP cover white.png') }}') no-repeat center center fixed;
+            background: url('{{ secure_asset('images/dattachments/STBIP cover white.png') }}') no-repeat center center fixed;
             background-size: cover;
             background-attachment: fixed;
         }
