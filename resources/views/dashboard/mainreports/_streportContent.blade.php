@@ -103,6 +103,16 @@ try {
 
 window.openRsmStDetailsModal = function(row){
     function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    let status = (row.status || '').toString();
+    let statusLabel = '-';
+    try {
+        const sLower = status.toLowerCase();
+        if (sLower && (sLower.includes('dissolved') || sLower.includes('inactive') || sLower.includes('completed'))) {
+            statusLabel = 'Inactive';
+        } else if (status && status.trim() !== '') {
+            statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+    } catch (e) { statusLabel = status ? status : '-'; }
     const modal = document.getElementById('rsm-st-details-modal');
     const titleEl = document.getElementById('rsm-st-details-title');
     const bodyEl = document.getElementById('rsm-st-details-body');
@@ -136,7 +146,7 @@ window.openRsmStDetailsModal = function(row){
 
         html += '<div class="masterdata-form-grid">';
         html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + esc(row.region || '-') + '" readonly></div>';
-        html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + esc(row.status || '-') + '" readonly></div>';
+        html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + esc(statusLabel) + '" readonly></div>';
         html += '<div class="masterdata-field full"><label>Social Technology Title</label><input type="text" value="' + esc(row.title || '-') + '" readonly></div>';
         html += '<div class="masterdata-field"><label>Province</label><input type="text" value="' + esc(row.province || '-') + '" readonly></div>';
         html += '<div class="masterdata-field"><label>Municipality</label><input type="text" value="' + esc(row.municipality || '-') + '" readonly></div>';

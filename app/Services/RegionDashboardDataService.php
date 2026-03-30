@@ -84,6 +84,9 @@ class RegionDashboardDataService
                     $item->status,
                     // include year_of_resolution so frontend consumers can display SB resolution year
                     $item->year_of_resolution ?? null,
+                    // include inactive info
+                    $item->inactive_status ?? null,
+                    $item->inactive_remarks ?? null,
                 ];
 
                 $data[] = [
@@ -100,6 +103,8 @@ class RegionDashboardDataService
                     'year_of_moa' => $yearOfMoa,
                     'year_of_resolution' => $item->year_of_resolution ?? null,
                     'status' => $item->status,
+                    'inactive_status' => $item->inactive_status ?? null,
+                    'inactive_remarks' => $item->inactive_remarks ?? null,
                     'row' => $row,
                 ];
 

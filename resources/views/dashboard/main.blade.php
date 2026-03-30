@@ -3461,46 +3461,6 @@ if (!document.getElementById('catListTooltip')) {
 }
 
 </style>
-						{{-- <div class="year-filter-wrap" style="position:absolute; top:50%; transform:translateY(-50%); z-index:6; flex:0 0 320px; max-width:320px; width:320px;">
-							<div class="card st-dashboard-card" style="min-height:360px; box-shadow:none; border:1px solid rgba(16,174,181,0.06);">
-								<div class="card-header">FILTER BY LOCATION &amp; YEAR</div>
-								<div class="card-body" style="padding:12px;">
-									<form method="GET" action="" class="w-100 d-flex flex-column">
-										<label for="region-select-orig" class="st-filter-label">Region</label>
-										<select id="region-select-orig" name="region[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Regions" style="width:100%;">
-											@foreach($regions as $region)
-											@if (stripos($region, 'Data CY 2020-2022') === false)
-											<option value="{{ $region }}" {{ collect(request('region'))->contains($region) ? 'selected' : '' }}>{{ $region }}</option>
-											@endif
-											@endforeach
-										</select>
-
-										<label for="year-select-orig" class="st-filter-label">Year</label>
-										<select id="year-select-orig" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
-											@foreach($years as $year)
-											<option value="{{ $year }}" {{ collect(request('year_of_moa'))->contains($year) ? 'selected' : '' }}>{{ $year }}</option>
-											@endforeach
-										</select>
-
-										<label for="province-select-orig" class="st-filter-label">Province</label>
-										<select id="province-select-orig" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
-											@foreach($provinces as $province)
-											<option value="{{ $province }}" {{ collect(request('province'))->contains($province) ? 'selected' : '' }}>{{ $province }}</option>
-											@endforeach
-										</select>
-
-										<label for="municipality-select-orig" class="st-filter-label">City/Municipality</label>
-										<select id="municipality-select-orig" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
-											@foreach($municipalities as $municipality)
-											<option value="{{ $municipality }}" {{ collect(request('municipality'))->contains($municipality) ? 'selected' : '' }}>{{ $municipality }}</option>
-											@endforeach
-										</select>
-
-										<button type="submit" class="btn st-btn-gradient w-100 mt-2" style="background: linear-gradient(90deg, #06306e 60%, #06306e 100%); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; padding: 10px 0; box-shadow: 0 2px 8px rgba(16, 174, 181, 0.08);">Filter</button>
-									</form>
-								</div>
-							</div>
-						</div> --}}
 					</div>
 				</div>
 			</div>
@@ -5547,6 +5507,15 @@ $('#region-select-modal').on('change', function() {
 				bodyEl.innerHTML = '<p class="st-title-modal-empty">No details available.</p>';
 			} else {
 				const status = (row.status || '').toString();
+				let statusLabel = '-';
+				try {
+					const sLower = status.toLowerCase();
+					if (sLower && (sLower.includes('dissolved') || sLower.includes('inactive') || sLower.includes('completed'))) {
+						statusLabel = 'Inactive';
+					} else if (status && status.trim() !== '') {
+						statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+					}
+				} catch (e) { statusLabel = status ? status : '-'; }
 				const adoption = (row.with_adopted ? 'Adopted' : (row.with_replicated ? 'Replicated' : 'None'));
 				const indicators = [];
 				if (row.with_expr) indicators.push('Expression of Interest');
@@ -5587,7 +5556,10 @@ $('#region-select-modal').on('change', function() {
 
 				html += '<div class="masterdata-form-grid">';
 				html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + escapeHtml(row.region || '-') + '" readonly></div>';
-				html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + escapeHtml(status ? (status.charAt(0).toUpperCase() + status.slice(1)) : '-') + '" readonly></div>';
+				html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + escapeHtml(statusLabel) + '" readonly></div>';
+				// Inactive fields from masterdata
+				html += '<div class="masterdata-field"><label>Inactive Status</label><input type="text" value="' + escapeHtml(row.inactive_status || '-') + '" readonly></div>';
+				html += '<div class="masterdata-field full"><label>Inactive Remarks</label><textarea readonly style="min-height:64px; padding:8px; border-radius:8px; border:1px solid rgba(14,75,131,0.08); background:#fbfdff; color:#16324f; font-weight:600;">' + escapeHtml(row.inactive_remarks || '-') + '</textarea></div>';
 				html += '<div class="masterdata-field full"><label>Social Technology Title</label><input type="text" value="' + escapeHtml(row.title || '-') + '" readonly></div>';
 				html += '<div class="masterdata-field"><label>Province</label><input type="text" value="' + escapeHtml(row.province || '-') + '" readonly></div>';
 				html += '<div class="masterdata-field"><label>Municipality</label><input type="text" value="' + escapeHtml(row.municipality || '-') + '" readonly></div>';

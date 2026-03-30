@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container">
-       
         <div class="card mt-4">
             <div class="card-body">
                 <h6 class="card-title">Create New Table</h6>
