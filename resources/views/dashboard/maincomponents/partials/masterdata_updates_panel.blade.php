@@ -77,7 +77,7 @@
 						<label>Inactive Status</label>
 						<div style="display:flex;gap:18px;align-items:flex-start;">
 							<label style="display:flex;flex-direction:column;gap:4px;">
-								<span><input type="radio" name="inactive_status" value="dissolved" @checked(old('inactive_status') === 'dissolved') @if(old('status') !== 'inactive') disabled @endif> <strong>Dissolved</strong></span>
+								<span><input type="radio" name="inactive_status" value="dissolved" @checked(old('inactive_status') === 'dissolved') @if(old('status') !== 'inactive') disabled @endif> <strong>Inactive</strong></span>
 								<small class="text-muted">Permanent closure - no further action.</small>
 							</label>
 							<label style="display:flex;flex-direction:column;gap:4px;">
@@ -324,7 +324,7 @@
 									@php($disabled = !in_array($item->status, ['inactive', 'dissolved'], true))
 									<div style="display:flex;gap:18px;align-items:flex-start;">
 										<label style="display:flex;flex-direction:column;gap:4px;">
-											<span><input type="radio" name="inactive_status" value="dissolved" @if(old('region_item_id') == $item->id) @checked(old('inactive_status') === 'dissolved') @else @checked($item->inactive_status === 'dissolved') @endif @if($disabled) disabled @endif> <strong>Dissolved</strong></span>
+											<span><input type="radio" name="inactive_status" value="dissolved" @if(old('region_item_id') == $item->id) @checked(old('inactive_status') === 'dissolved') @else @checked($item->inactive_status === 'dissolved') @endif @if($disabled) disabled @endif> <strong>Inactive</strong></span>
 											<small class="text-muted">Permanent closure - no further action.</small>
 										</label>
 										<label style="display:flex;flex-direction:column;gap:4px;">

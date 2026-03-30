@@ -308,11 +308,11 @@ function renderStTitlesFromRows(rows, regionParam) {
 
                         let lifecycleStatus = '';
                         if (loc.dissolved > 0 && loc.ongoing === 0) {
-                            lifecycleStatus = 'Dissolved';
+                            lifecycleStatus = 'Inactive';
                         } else if (loc.ongoing > 0 && loc.dissolved === 0) {
                             lifecycleStatus = 'Ongoing';
                         } else if (loc.dissolved > 0 && loc.ongoing > 0) {
-                            lifecycleStatus = 'Dissolved';
+                            lifecycleStatus = 'Inactive';
                         }
 
                         let adoptionStatus = '';
@@ -329,7 +329,7 @@ function renderStTitlesFromRows(rows, regionParam) {
                         if (adoptionStatus) statusParts.push(adoptionStatus);
                         const statusText = statusParts.join(' · ') || '&nbsp;';
 
-                        const isDissolvedLoc = lifecycleStatus === 'Dissolved' || loc.dissolved > 0;
+                        const isDissolvedLoc = lifecycleStatus === 'Inactive' || loc.dissolved > 0;
                         const rowColor = isDissolvedLoc ? '#b91c1c' : '#0f172a';
                         const statusColor = isDissolvedLoc ? '#b91c1c' : '#2563eb';
 
@@ -3340,7 +3340,7 @@ document.addEventListener('DOMContentLoaded', function(){
                       if (loc.adopted > 0) statusParts.push('Adopted');
                       if (loc.replicated > 0) statusParts.push('Replicated');
                       if (loc.ongoing > 0) statusParts.push('Ongoing');
-                      if (loc.dissolved > 0) statusParts.push('Dissolved');
+                        if (loc.dissolved > 0) statusParts.push('Inactive');
                       const statusText = statusParts.join(' · ') || '&nbsp;';
 
                       html += `<div class="rsm-st-detail-row" data-title="${esc(title)}" data-province="${esc(loc.province || '')}" data-city="${esc(loc.city || '')}" tabindex="0" style="padding:3px 0;font-size:0.8rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:#0f172a;">` +
@@ -3861,7 +3861,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                         <div id="rsm-count-ongoing" class="rsm-stat-value" style="font-size:1.1rem;font-weight:700; color:#10b981;">0</div>
                                     </div>
                                     <div class="rsm-stat" style="flex:1; height:145px; background:#fdf6f6; border-radius:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                        <div class="rsm-stat-label" style="font-size:0.85rem; color:#7f1d1d;">Dissolved</div>
+                                        <div class="rsm-stat-label" style="font-size:0.85rem; color:#7f1d1d;">Inactive</div>
                                         <div id="rsm-count-dissolved" class="rsm-stat-value" style="font-size:1.1rem;font-weight:700; color:#ef4444;">0</div>
                                     </div>
                                 </div>

@@ -2137,7 +2137,7 @@ if (!document.getElementById('catListTooltip')) {
 			<div id="card2" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View dissolved ST listing">
                 <div class="formal-metric-kicker">Operational Status</div>
 				<div class="card-value">{{ $totalDissolvedStatus ?? 0 }}</div>
-                <div class="card-label">Dissolved STs</div>
+				<div class="card-label">Inactive STs</div>
                 <div class="formal-metric-note">Programs tagged as inactive or dissolved.</div>
             </div>
 			<div id="card3" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View replicated ST listing">
@@ -2381,7 +2381,7 @@ if (!document.getElementById('catListTooltip')) {
 								<select id="title-listing-status-filter" class="form-control social-listing-select">
 								<option value="">All statuses</option>
 								<option value="ongoing">Ongoing STs</option>
-								<option value="dissolved">Dissolved / Inactive STs</option>
+								<option value="dissolved">Inactive STs</option>
 							</select>
 							</div>
 							<div class="social-listing-control">
@@ -4196,7 +4196,7 @@ if (!document.getElementById('catListTooltip')) {
 			let html = '<div class="social-listing-summary">';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Filtered Results</div><div class="social-listing-stat-value">' + data.length + '</div></div>';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Ongoing</div><div class="social-listing-stat-value">' + filteredOngoing + '</div></div>';
-			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Dissolved</div><div class="social-listing-stat-value">' + filteredDissolved + '</div></div>';
+			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Inactive</div><div class="social-listing-stat-value">' + filteredDissolved + '</div></div>';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">With Adoption / Replication</div><div class="social-listing-stat-value">' + Math.max(filteredReplicated, filteredAdopted) + '</div></div>';
 			html += '</div>';
 
@@ -6738,7 +6738,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		}
 	});
 	bindSummaryCard(card2, {
-		title: 'Dissolved STs',
+		title: 'Inactive STs',
 		filter: function(row) {
 			const status = String(row.status || '').toLowerCase();
 			return status.includes('dissolved') || status.includes('inactive') || status.includes('completed');
@@ -6785,7 +6785,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		new Chart(doughnutCtx, {
 			type: 'doughnut',
 			data: {
-				labels: ['Ongoing STs', 'Dissolved STs'],
+				labels: ['Ongoing STs', 'Inactive STs'],
 				datasets: [{
 					data: [totalOngoing, totalDissolved],
 					backgroundColor: [
@@ -6907,7 +6907,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		{ label: 'SB Resolution', color: '#38bdf8', value: allData.reduce((count, row) => count + (truthy(row.with_res) ? 1 : 0), 0) },
 		{ label: 'Memorandum of Agreement', color: '#818cf8', value: allData.reduce((count, row) => count + (truthy(row.with_moa) ? 1 : 0), 0) },
 		{ label: 'Ongoing STs', color: '#34d399', value: totalOngoing },
-		{ label: 'Dissolved STs', color: '#fb7185', value: totalDissolved },
+		{ label: 'Inactive STs', color: '#fb7185', value: totalDissolved },
 		{ label: 'Replicated STs', color: '#f472b6', value: totalReplicated },
 		{ label: 'Adopted STs', color: '#fbbf24', value: totalAdopted }
 	];
@@ -7049,7 +7049,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 					tension: 0.1
 				},
 				{
-					label: 'Dissolved STs',
+					label: 'Inactive STs',
 					data: dissolvedCounts,
 					borderColor: 'rgb(255, 99, 132)',
 					backgroundColor: 'rgba(255, 99, 132, 0.2)',
