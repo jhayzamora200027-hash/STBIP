@@ -517,6 +517,49 @@
             color: #8f2038;
         }
 
+        /* Floating toast for JS feedback (success / error) */
+        .approval-toast {
+            position: fixed;
+            right: 1.5rem;
+            top: 1.5rem;
+            min-width: 320px;
+            max-width: calc(100% - 3rem);
+            border-radius: 14px;
+            box-shadow: 0 18px 40px rgba(11, 49, 86, 0.15);
+            z-index: 1080;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.9rem 1rem;
+            color: #fff;
+            transition: transform 0.22s cubic-bezier(.2,.9,.2,1), opacity 0.18s ease;
+            transform: translateY(-8px);
+            opacity: 0;
+            pointer-events: auto;
+        }
+
+        .approval-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .approval-toast .toast-icon {
+            width: 44px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+
+        .approval-toast.success { background: linear-gradient(135deg,#19a464,#0f8a51); }
+        .approval-toast.error { background: linear-gradient(135deg,#d9546b,#ba304a); }
+
+        .approval-toast .toast-body { flex: 1 1 auto; }
+        .approval-toast .toast-close { background: transparent; border: 0; color: rgba(255,255,255,0.95); font-size: 1.05rem; }
+
         .approvals-modal .modal-content {
             border: 0;
             border-radius: 24px;
@@ -909,12 +952,59 @@
         </div>
     </div>
 
+    <!-- Toast container for JS notifications -->
+    <div id="approvalToast" class="approval-toast d-none" role="status" aria-live="polite">
+        <div class="toast-icon" id="approvalToastIcon"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="toast-body" id="approvalToastBody">Message</div>
+        <button type="button" class="toast-close btn-close-white" id="approvalToastClose" aria-label="Close"></button>
+    </div>
+
     <script>
         let currentUserId = null;
         let userDetailsModal = null;
         let rejectionReasonModal = null;
         let approvalActionButtonsHtml = '';
         let rejectionFormHtml = '';
+
+        function showToast(type, message, autoHide = true, delay = 1100) {
+            const toast = document.getElementById('approvalToast');
+            const icon = document.getElementById('approvalToastIcon');
+            const body = document.getElementById('approvalToastBody');
+            const close = document.getElementById('approvalToastClose');
+
+            if (!toast || !icon || !body) return;
+
+            // set content
+            body.textContent = message;
+
+            // set type
+            toast.classList.remove('success', 'error', 'show');
+            if (type === 'success') {
+                toast.classList.add('success');
+                icon.innerHTML = '<i class="bi bi-check-lg"></i>';
+            } else {
+                toast.classList.add('error');
+                icon.innerHTML = '<i class="bi bi-x-lg"></i>';
+            }
+
+            // show
+            toast.classList.remove('d-none');
+            // small reflow to allow transition
+            void toast.offsetWidth;
+            toast.classList.add('show');
+
+            // close handler
+            const hide = () => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.classList.add('d-none'), 220);
+            };
+
+            close.onclick = hide;
+
+            if (autoHide) {
+                setTimeout(hide, delay);
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             const modalElement = document.getElementById('userDetailsModal');
@@ -1023,7 +1113,7 @@
 
         function submitApproval(status) {
             if (!currentUserId) {
-                alert('Error: User ID not found');
+                showToast('error', 'User ID not found');
                 return;
             }
 
@@ -1031,7 +1121,7 @@
             if (status === 'R') {
                 approvalcomment = document.getElementById('rejectionReason').value.trim();
                 if (!approvalcomment) {
-                    alert('Please provide a reason for rejection.');
+                    showToast('error', 'Please provide a reason for rejection.');
                     return;
                 }
             }
@@ -1041,7 +1131,7 @@
                 const usergroupSelect = document.getElementById('detail-usergroup-select');
                 usergroup = usergroupSelect ? usergroupSelect.value : '';
                 if (!usergroup) {
-                    alert('Please select a user group before approval.');
+                    showToast('error', 'Please select a user group before approval.');
                     return;
                 }
             }
@@ -1081,23 +1171,19 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    if (userDetailsModal) {
-                        userDetailsModal.hide();
-                    }
-                    if (rejectionReasonModal) {
-                        rejectionReasonModal.hide();
-                    }
-                    alert(data.message);
-                    window.location.reload();
+                    if (userDetailsModal) userDetailsModal.hide();
+                    if (rejectionReasonModal) rejectionReasonModal.hide();
+                    showToast('success', data.message || 'Approval updated', true, 900);
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to update approval status'));
-                    window.location.reload();
+                    showToast('error', 'Error: ' + (data.message || 'Failed to update approval status'), true, 1400);
+                    setTimeout(() => window.location.reload(), 1500);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while processing the request');
-                window.location.reload();
+                showToast('error', 'An error occurred while processing the request', true, 1600);
+                setTimeout(() => window.location.reload(), 1700);
             });
         }
     </script>
