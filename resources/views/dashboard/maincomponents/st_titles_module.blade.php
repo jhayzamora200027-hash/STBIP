@@ -2,7 +2,8 @@
 
 @section('content')
 <style>
-    .st-shell { max-width:1200px; margin:0 auto; padding:20px; }
+    /* File-scoped: allow this module to use the full horizontal space */
+    .st-shell { max-width: none; width:100%; margin:0; padding:16px 20px; box-sizing:border-box; }
     .st-hero { background: linear-gradient(135deg,#0b2540,#175d8f); color:#fff; padding:20px; border-radius:16px; margin-bottom:18px; }
     .st-card { background:#fff; border:1px solid #e6eef7; border-radius:12px; padding:16px; }
     .st-table { width:100%; border-collapse:collapse; margin-top:12px; }
@@ -13,11 +14,13 @@
         border-radius: 20px;
         overflow: hidden;
         background: #fff;
+        width: calc(100% + 32px);
+        margin: 0 -16px;
     }
     .masterdata-item-list-head,
     .masterdata-item-row {
         display: grid;
-        grid-template-columns: minmax(220px, 1.5fr) minmax(120px, 0.85fr) minmax(140px, 0.9fr) minmax(120px, 0.75fr) minmax(140px, 0.85fr) minmax(160px, 0.9fr) 56px;
+        grid-template-columns: minmax(750px, 1fr) repeat(4, minmax(120px, 1fr)) 56px;
         gap: 12px;
         align-items: center;
         padding: 14px 18px;

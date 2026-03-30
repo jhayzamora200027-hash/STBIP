@@ -9,7 +9,6 @@
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
             <td style="padding:20px;text-align:left;">
-                <img src="{{ asset('images/dattachments/social technology bureau innovating solution logo.png') }}" alt="STB Portal" style="width:64px;height:64px;border-radius:8px;display:block;margin-bottom:12px;">
                 <h2 style="margin:0 0 8px 0;">Registration Approved</h2>
                 <p style="margin:0 0 16px 0;color:#666;">Hello {{ $user->name }},</p>
                 <p style="font-size:15px;line-height:1.5;margin:0 0 12px 0;">Good news! Your registration has been approved by the administrator.</p>
