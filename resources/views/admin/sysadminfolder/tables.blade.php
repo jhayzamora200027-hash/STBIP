@@ -1,27 +1,10 @@
-{{-- Admin Dashboard Page --}}
-{{-- This page allows admin users to manage database tables and columns --}}
+
 
 @extends('layouts.app')
 
 @section('content')
     <div class="container">
-        {{-- Check if user has admin privileges --}}
-        {{-- @if(Auth::user()->usergroup !== 'sysadmin') --}}
-            {{-- Show error message if user is not admin --}}
-            {{-- <div>
-                You do not have permission to access this page.
-                <a href ="{{ route('main') }}" class="btn btn-primary btn-sm ms-3">Go Back</a>
-            </div> --}}
-        {{-- @else --}}
-            {{-- Admin content starts here --}}
-            
-            {{-- Page Header with Back Button --}}
-            {{-- <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>System Define Tables</h1>
-            </div> --}}
-
-            {{-- CREATE TABLE SECTION --}}
-            {{-- Form to create a new table with default columns (id, created_at, updated_at) --}}
+       
         <div class="card mt-4">
             <div class="card-body">
                 <h6 class="card-title">Create New Table</h6>

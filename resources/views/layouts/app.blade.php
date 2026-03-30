@@ -755,13 +755,7 @@
                                         </ul>
                                     </li>
                                 @endif
-                                @if(Auth::user()->usergroup === 'sysadmin')
-                                    <li>
-                                        <a class="dropdown-item" href="{{ route('admin') }}">
-                                            <i class="bi bi-gear me-2"></i>Admin Dashboard
-                                        </a>
-                                    </li>
-                                @endif
+                                {{-- Admin Dashboard removed per request --}}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form action="{{ route('logout') }}" method="POST">
