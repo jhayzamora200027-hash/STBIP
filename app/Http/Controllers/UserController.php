@@ -299,7 +299,6 @@ class UserController extends Controller
                 ->withInput();
         }
 
-        // Notify specific admin about pending registrations (HTML email)
         try {
             $pendingCount = User::where(function($q) {
                 $q->whereNull('approvalstatus')

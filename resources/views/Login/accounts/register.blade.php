@@ -58,7 +58,7 @@
                             background: rgba(20,20,20,0.94);
                             padding: 12px;
                             border-radius: 8px;
-                            display: none; /* hidden by default, shown as popover when active */
+                            display: none; 
                             position: fixed;
                             z-index: 3050;
                             width: 320px;
@@ -224,7 +224,6 @@
 </div>
 
 <script>
-    // Show register modal if there are register errors (server-side fallback)
     document.addEventListener('DOMContentLoaded', function() {
         @if ($errors->register->any())
             let registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
@@ -236,10 +235,8 @@
             successModal.show();
         @endif
 
-        // AJAX registration logic (mirrors AJAX login)
         const registerForm = document.getElementById('ajaxRegisterForm');
         if (registerForm) {
-            // Password UI functions and live updates (setup once, outside submit handler)
             const pwdInputEl = document.getElementById('registerPassword');
             const pwdConfirmEl = document.getElementById('registerPasswordConfirmation');
             const popEl = document.getElementById('pwRequirements');
@@ -283,7 +280,6 @@
                     else if (score >= 4) { bar.style.background = '#28a745'; if (text) text.textContent = 'Strength: Strong'; }
                 }
 
-                // If password is strong, schedule a delayed fade/hide; otherwise cancel any pending auto-fade
                 if (score >= 4) {
                     scheduleAutoFade();
                 } else {
@@ -299,7 +295,6 @@
 
             function hidePopoverWithFade(active) {
                 if (!active) return;
-                // start fade
                 active.classList.remove('show');
                 if (hideAnimationTimeout) clearTimeout(hideAnimationTimeout);
                 hideAnimationTimeout = setTimeout(() => {
@@ -332,12 +327,10 @@
             if (pwdInputEl) pwdInputEl.addEventListener('input', updatePwdUI);
             if (pwdConfirmEl) pwdConfirmEl.addEventListener('input', updatePwdUI);
 
-            // create a clone of the popover and append to body to avoid modal stacking issues
             if (popEl) {
                 try {
                     popClone = popEl.cloneNode(true);
                     popClone.id = 'pwRequirements_clone';
-                    // add helper classes so we can query inside clone without relying on duplicate ids
                     const innerText = popClone.querySelector('#pwStrengthText');
                     if (innerText) innerText.classList.add('pw-strength-text');
                     const innerMatch = popClone.querySelector('#pwMatchMsg');
@@ -353,10 +346,8 @@
                     popClone = null;
                 }
             }
-            // call once in case of prefilled values
             updatePwdUI();
 
-            // Popover show/position/hide logic
             if (popEl) {
                 popEl.style.display = 'none';
                 let inputHovered = false;
@@ -368,7 +359,6 @@
                 function positionPopover() {
                     const active = getActivePop();
                     if (!pwdInputEl || !active) return;
-                    // ensure pop is visible for measurement
                     const wasHidden = active.style.display === 'none';
                     if (wasHidden) {
                         active.style.visibility = 'hidden';
@@ -378,11 +368,9 @@
                     const popRect = active.getBoundingClientRect();
                     let left = rect.left;
                     let top = rect.bottom + 8;
-                    // if not enough space below, place above
                     if (top + popRect.height > window.innerHeight) {
                         top = rect.top - popRect.height - 8;
                     }
-                    // clamp to viewport
                     if (left + popRect.width > window.innerWidth) {
                         left = window.innerWidth - popRect.width - 8;
                     }
@@ -399,22 +387,18 @@
                 function showPopover() {
                     const active = getActivePop();
                     if (!active) return;
-                    // ensure popover is a direct child of document.body to avoid modal stacking/position issues
                     try {
                         if (active.parentElement !== document.body) {
                             document.body.appendChild(active);
                             active.style.position = 'fixed';
                         }
                     } catch (e) {
-                        /* ignore */
                     }
-                    // cancel any pending auto-hide/fade
                     cancelAutoFade();
                     if (hideAnimationTimeout) { clearTimeout(hideAnimationTimeout); hideAnimationTimeout = null; }
                     active.style.display = 'block';
                     active.style.zIndex = 9999;
                     positionPopover();
-                    // trigger opacity transition
                     requestAnimationFrame(() => active.classList.add('show'));
                     if (window.console && console.debug) console.debug('pw popover shown');
                 }
@@ -429,7 +413,6 @@
                     }, 150);
                 }
 
-                // input interactions
                 if (pwdInputEl) {
                     pwdInputEl.addEventListener('focus', showPopover);
                     pwdInputEl.addEventListener('input', showPopover);
@@ -438,7 +421,6 @@
                     pwdInputEl.addEventListener('mouseleave', () => { inputHovered = false; hideIfNotActive(); });
                 }
 
-                // attach pop hover listeners to both original and clone if present
                 popEl.addEventListener('mouseenter', () => { popHovered = true; });
                 popEl.addEventListener('mouseleave', () => { popHovered = false; hideIfNotActive(); });
                 if (popClone) {
@@ -453,13 +435,11 @@
             registerForm.addEventListener('submit', function(e) {
                 e.preventDefault();
 
-                // Clear any existing error list in the alert (server-rendered)
                 const existingAlert = registerForm.closest('.modal-login-content').querySelector('.alert-danger');
                 if (existingAlert) {
                     existingAlert.remove();
                 }
 
-                // Use dedicated inline error container (styled like login)
                 let errorContainer = document.getElementById('registerErrorMsg');
                 if (errorContainer) {
                     errorContainer.style.display = 'none';
@@ -489,7 +469,6 @@
 
                 const formData = new FormData(registerForm);
 
-                // Show loading state on button
                 const submitBtn = registerForm.querySelector('button[type="submit"]');
                 let originalBtnHtml = '';
                 if (submitBtn) {
@@ -516,7 +495,6 @@
                 })
                 .then(async response => {
                     if (response.ok) {
-                        // On success, show success modal and close register modal
                         try {
                             const data = await response.json();
                             if (typeof bootstrap !== 'undefined') {
@@ -580,7 +558,6 @@
                 });
             });
 
-            // Password UI handled above with updatePwdUI()
 
         }
     });

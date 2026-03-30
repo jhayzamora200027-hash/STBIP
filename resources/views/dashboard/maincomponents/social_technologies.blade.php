@@ -18,7 +18,6 @@
         <p style="margin:6px 0 0; opacity:0.9">Upload a CSV file containing one social technology title per row. Existing exact-title duplicates are skipped.</p>
     </div>
 
-    <!-- Inline status banner (also shown on AJAX success for visibility) -->
     <div id="st-inline-status" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-weight:700;"></div>
 
     @if(session('status'))
@@ -193,7 +192,6 @@
 
 @endsection
 
-<!-- Toast container placed outside script so it's available globally -->
 <div id="st-toast" aria-live="polite" aria-atomic="true" style="position:fixed; bottom:20px; right:20px; z-index:70; display:none;"></div>
 
 @section('scripts')
@@ -208,7 +206,6 @@
         if (cancel && panel) {
             cancel.addEventListener('click', () => panel.style.display = 'none');
         }
-        // Dynamic add/remove inputs
         const addMore = document.getElementById('add-more-title');
         const titlesList = document.getElementById('titles-list');
         if (addMore && titlesList) {
@@ -238,7 +235,6 @@
                 titlesList.appendChild(row);
             });
         }
-        // Edit / Delete handlers (modal-based edit)
         const csrfToken = '{{ csrf_token() }}';
         const modal = document.getElementById('editTitleModal');
         const modalInput = document.getElementById('edit-title-input');
@@ -248,10 +244,8 @@
         let editingId = null;
 
         function showModal(btn) {
-            // btn is the edit button element
             editingId = btn.getAttribute('data-id');
             modalError.style.display = 'none';
-            // populate fields
             modalInput.value = btn.getAttribute('data-social_technology') || '';
             document.getElementById('edit-sector-input').value = btn.getAttribute('data-sector') || '';
             document.getElementById('edit-laws-and-issuances-input').value = btn.getAttribute('data-laws_and_issuances') || '';
@@ -299,7 +293,6 @@
                             }
                         });
                         if (res.ok) {
-                            // remove row
                             const row = btn.closest('tr');
                             if (row) row.remove();
                             const deletedLabel = titleForDelete || `ID ${id}`;
@@ -333,7 +326,6 @@
                 return;
             }
 
-            // collect all fields
             const payload = {
                 social_technology: newSocial,
                 sector: document.getElementById('edit-sector-input').value.trim(),
@@ -364,14 +356,12 @@
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                    // update row title cell and edit button data attributes
                     const editBtn = document.querySelector(`button[data-action=edit][data-id="${editingId}"]`);
                     if (editBtn) {
                         const row = editBtn.closest('tr');
                         if (row) {
                             row.querySelectorAll('td')[1].textContent = payload.social_technology;
                         }
-                        // update data attributes so subsequent edits show current values
                         editBtn.setAttribute('data-social_technology', payload.social_technology || '');
                         editBtn.setAttribute('data-sector', payload.sector || '');
                         editBtn.setAttribute('data-laws_and_issuances', payload.laws_and_issuances || '');
@@ -406,7 +396,6 @@
                 showInlineStatus(`Update failed${payload?.social_technology ? ' — ' + payload.social_technology : ''}`, 'error');
             }
         });
-        // Toast helper
         function showToast(message, type) {
             try {
                 let toast = document.getElementById('st-toast');
@@ -433,11 +422,9 @@
                 clearTimeout(window._st_toast_timeout);
                 window._st_toast_timeout = setTimeout(() => { toast.style.display = 'none'; }, 3500);
             } catch (e) {
-                // ignore
             }
         }
 
-        // Inline status banner helper (top of content)
         function showInlineStatus(message, type) {
             try {
                 const banner = document.getElementById('st-inline-status');

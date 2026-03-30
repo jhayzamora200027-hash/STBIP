@@ -150,7 +150,6 @@ Route::middleware(['auth'])->group(function () {
         ->name('sts.attachments.logs')
         ->withoutMiddleware('auth');
 
-    // Per-ST attachment upload & management (upload/delete require auth)
     Route::post('/sts-attachments', [StsAttachmentController::class, 'store'])->name('sts.attachments.store');
     Route::delete('/sts-attachments/{attachment}', [StsAttachmentController::class, 'destroy'])
         ->name('sts.attachments.destroy');
@@ -193,9 +192,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/delete-column', [TableController::class, 'deleteColumnWithMigration']);
 });
 
-// AJAX routes
 Route::get('/sts-report/ajax-region-titles', [STsReportController::class, 'ajaxRegionTitles'])->name('stsreport.ajaxRegionTitles');
-// Hierarchical JSON for modal dropdowns: provinces -> cities -> ST rows
 Route::get('/sts-report/ajax-region-hierarchy', [STsReportController::class, 'ajaxRegionHierarchy'])->name('stsreport.ajaxRegionHierarchy');
 
 
