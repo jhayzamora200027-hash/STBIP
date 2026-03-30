@@ -124,7 +124,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group-compact">
-                                    <label for="registerLastName" class="register-form-label">Last Name</label>
+                                    <label for="registerLastName" class="register-form-label">Last Name *</label>
                                     <input type="text" id="registerLastName" name="lastname" placeholder="Last Name" value="{{ old('lastname') }}" class="register-form-input">
                                 </div>
                             </div>
