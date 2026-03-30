@@ -66,7 +66,15 @@
 		}
 
 		@media (max-width:1024px){ .dashboard-grid { grid-template-columns: 1fr; max-width:920px; padding:0 18px; } .st-map-figure-wrapper { max-width:520px; height:auto; } }
-		@media (max-width:640px){ .stat-num{ font-size:56px; } .stat-list{ grid-template-columns: 1fr; } }
+		@media (max-width:640px){
+			.stat-num{ font-size:56px; }
+			.stat-list{ grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
+			.stat-row { padding: 12px 10px; }
+			/* hide region listing on small screens to focus on totals/map */
+			#map-region-list, .st-map-region-list { display: none !important; }
+			/* allow map wrapper to remain centered and use available space */
+			.st-map-figure-wrapper { max-width: 420px; height: 580px; }
+		}
 	</style>
 </head>
 
