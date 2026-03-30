@@ -5557,7 +5557,6 @@ $('#region-select-modal').on('change', function() {
 				html += '<div class="masterdata-form-grid">';
 				html += '<div class="masterdata-field"><label>Regional Office</label><input type="text" value="' + escapeHtml(row.region || '-') + '" readonly></div>';
 				html += '<div class="masterdata-field"><label>Status</label><input type="text" value="' + escapeHtml(statusLabel) + '" readonly></div>';
-				// Inactive fields from masterdata
 				html += '<div class="masterdata-field"><label>Inactive Status</label><input type="text" value="' + escapeHtml(row.inactive_status || '-') + '" readonly></div>';
 				html += '<div class="masterdata-field full"><label>Inactive Remarks</label><textarea readonly style="min-height:64px; padding:8px; border-radius:8px; border:1px solid rgba(14,75,131,0.08); background:#fbfdff; color:#16324f; font-weight:600;">' + escapeHtml(row.inactive_remarks || '-') + '</textarea></div>';
 				html += '<div class="masterdata-field full"><label>Social Technology Title</label><input type="text" value="' + escapeHtml(row.title || '-') + '" readonly></div>';

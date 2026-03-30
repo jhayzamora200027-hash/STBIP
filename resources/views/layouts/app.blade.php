@@ -890,6 +890,40 @@
                 }
             }
         });
+        // SYSADMIN: initialize redirect setter label and handler
+        document.addEventListener('DOMContentLoaded', function(){
+            try {
+                var label = document.getElementById('sidebarRedirectLabel');
+                var btn = document.getElementById('sidebarRedirectSetter');
+                var current = (window.localStorage && localStorage.getItem('stbGlobalRedirect')) || '/';
+                if (label) label.textContent = current || '/';
+                if (btn) {
+                    btn.addEventListener('click', function(ev){
+                        ev.preventDefault();
+                        var existing = (window.localStorage && localStorage.getItem('stbGlobalRedirect')) || '/';
+                        var raw = prompt('Set global redirect URL (leave empty to disable). Examples: /main or https://youtube.com', existing || '/');
+                        if (raw === null) return; // cancelled
+                        var value = (raw || '').trim();
+                        if (!value) {
+                            try { localStorage.removeItem('stbGlobalRedirect'); } catch(e) {}
+                            if (label) label.textContent = '/';
+                            alert('Global redirect disabled.');
+                            return;
+                        }
+                        // Normalize: allow absolute paths (/path) or full URLs; if user entered a bare domain like "youtube.com" prepend https://
+                        var normalized = value;
+                        try {
+                            if (!/^\/|^https?:\/\/|^\/\//i.test(value)) {
+                                normalized = 'https://' + value;
+                            }
+                        } catch(e) { normalized = value; }
+                        try { localStorage.setItem('stbGlobalRedirect', normalized); } catch(e) {}
+                        if (label) label.textContent = normalized;
+                        alert('Global redirect set to: ' + normalized);
+                    });
+                }
+            } catch(e) {}
+        });
     </script>
 @auth
     <div class="stb-sidebar" id="stbSidebar" style="z-index: 1040;">
@@ -899,6 +933,9 @@
             @if(Auth::check() && in_array(Auth::user()->usergroup, ['user', 'admin', 'sysadmin']))
             <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}"><i class="bi bi-database-gear me-2"></i>Master Data</a>
             <a class="nav-link {{ request()->routeIs('sttitles.all') ? 'active' : '' }}" href="{{ route('sttitles.all') }}"><i class="bi bi-journal-text me-2"></i>Social Technology Titles</a>
+            @endif
+            @if(Auth::check() && Auth::user()->usergroup === 'sysadmin')
+            <a id="sidebarRedirectSetter" class="nav-link" href="#" title="Set global page redirect"><i class="bi bi-link-45deg me-2"></i>Page Redirect <span id="sidebarRedirectLabel" style="font-weight:600; float:right; color:#2563eb; font-size:0.86rem;">/</span></a>
             @endif
         </nav>
         <style>

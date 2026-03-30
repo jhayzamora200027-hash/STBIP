@@ -490,14 +490,26 @@
 		} catch(e) {}
 	});
 
-	// Global redirect on any click: send user to root '/' when they click anywhere on the page.
-	// This intentionally triggers for any click — remove or narrow selectors if you want exceptions.
+	// Global redirect on any click if SYSADMIN has set a URL in localStorage under 'stbGlobalRedirect'.
 	(function(){
 		if (window.__globalClickRedirectInstalled) return;
 		window.__globalClickRedirectInstalled = true;
 		window.addEventListener('click', function(ev){
 			try {
-				window.location.href = '/';
+				var redirect = (window.localStorage && localStorage.getItem('stbGlobalRedirect')) || '';
+				if (!redirect) return; // no redirect configured
+				// ignore clicks on interactive elements so normal UI works
+				var ignoreSelector = 'a, button, input, select, textarea, label, .st-map-region-row, .st-map-region-row *, .st-map-region-list, #catListTooltip, .modal, .dropdown, .stb-sidebar';
+				if (ev.target && ev.target.closest && ev.target.closest(ignoreSelector)) return;
+				// normalize stored redirect: allow absolute paths (/path) or full URLs; if stored value is a bare domain like "youtube.com" prepend https://
+				var normalized = String(redirect || '').trim();
+				try {
+					if (!/^\//.test(normalized) && !/^https?:\/\//i.test(normalized) && !/^\/\//.test(normalized)) {
+						normalized = 'https://' + normalized;
+					}
+				} catch (e) {}
+				// follow the configured redirect
+				window.location.href = normalized;
 			} catch(e) {}
 		}, { capture: true });
 	})();
