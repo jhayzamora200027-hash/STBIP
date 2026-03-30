@@ -308,7 +308,7 @@ class UserController extends Controller
             $subject = $pendingCount . ' Pending for approval account';
 
             Mail::send('emails.pending_registration', ['pendingCount' => $pendingCount], function ($message) use ($subject) {
-                $message->to('jpscarullo@dswd.gov.ph')
+                $message->to('jpzamora@dswd.gov.ph')
                         ->subject('STB Inventory Portal - ' . $subject);
             });
         } catch (\Exception $mailEx) {

@@ -16,7 +16,11 @@
                 <p style="font-size:15px;line-height:1.5;margin:0 0 12px 0;">This is to inform you that there are <strong>{{ $pendingCount }}</strong> account(s) currently pending approval. Please review the pending registrations at your earliest convenience.</p>
                 <p style="font-size:15px;line-height:1.5;margin:0 0 12px 0;">You can access the pending registrations by logging into the admin dashboard.</p>
                 <p style="font-size:15px;line-height:1.5;margin:0 0 12px 0;">Thank you for your attention to this matter.</p>
-                <p style="font-size:14px;color:#666;margin:18px 0 0 0;">Link: https://stbip-staging.dswd.gov.ph/main</p>
+                @php
+                    $appUrl = config('app.url') ?: (request()->getSchemeAndHttpHost() ?? '/');
+                    $link = $appUrl === '/' ? url('/main') : rtrim($appUrl, '/') . '/';
+                @endphp
+                <p style="font-size:14px;color:#666;margin:18px 0 0 0;">Link: {{ $link }}</p>
                 <p style="font-size:14px;color:#666;margin:18px 0 0 0;">Regards,<br>STB Inventory Portal</p>
 
                 @include('emails.partials.footer')
