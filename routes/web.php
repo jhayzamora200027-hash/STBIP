@@ -125,22 +125,22 @@ Route::middleware(['auth'])->group(function () {
     // Social technologies titles upload and listing
     Route::get('/social-technologies', [\App\Http\Controllers\SocialTechnologyController::class, 'index'])
         ->name('STDashboard')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::post('/social-technologies/import', [\App\Http\Controllers\SocialTechnologyController::class, 'import'])
         ->name('socialtech.import')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::post('/social-technologies/add', [\App\Http\Controllers\SocialTechnologyController::class, 'add'])
         ->name('socialtech.add')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::get('/social-technologies/export', [\App\Http\Controllers\SocialTechnologyController::class, 'export'])
         ->name('socialtech.export')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::patch('/social-technologies/{id}', [\App\Http\Controllers\SocialTechnologyController::class, 'update'])
         ->name('socialtech.update')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::delete('/social-technologies/{id}', [\App\Http\Controllers\SocialTechnologyController::class, 'destroy'])
         ->name('socialtech.destroy')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     // Simple module showing all titles (no pagination)
     Route::get('/st-titles/all', [\App\Http\Controllers\SocialTechnologyTitleModuleController::class, 'index'])
         ->name('sttitles.all');
@@ -163,18 +163,18 @@ Route::middleware(['auth'])->group(function () {
     // ==================== USER MANAGEMENT ROUTES ====================
     Route::get('/users', [UserController::class, 'index'])
         ->name('users.index')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::put('/users/{id}', [UserController::class, 'update'])
         ->name('users.update')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
 
     // ==================== USER APPROVAL ROUTES ====================
     Route::get('/approvals', [UserApprovalController::class, 'index'])
         ->name('approvals.index')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::put('/users/{id}/approval', [UserApprovalController::class, 'updateApproval'])
         ->name('users.approval.update')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
 
     // ==================== GALLERY CARD ADMIN ROUTES ====================
     // Manage STsReport gallery cards (add / edit / delete)
@@ -193,7 +193,7 @@ Route::middleware(['auth'])->group(function () {
     // STs Report Sector Utilities (admin view)
     Route::get('/admin/sts-report-sectors', [GalleryCardController::class, 'index'])
         ->name('admin.stsreportsectors')
-        ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
 
     // ==================== TABLE / SCHEMA ADMIN ROUTES (SYSADMIN ONLY) ====================
     Route::get('/admin', [TableController::class, 'index'])

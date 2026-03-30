@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
         // ...existing...
         'auth' => \App\Http\Middleware\Authenticate::class,
         'sysadmin' => \App\Http\Middleware\SysAdminMiddleware::class,
+        'admin' => \App\Http\Middleware\RequireAdminOrSysadmin::class,
         // ...other middleware...
     ];
 }
