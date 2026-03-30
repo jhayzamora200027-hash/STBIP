@@ -472,6 +472,35 @@
 		}
 		setTimeout(initPhilippinesMapHover, 500);
 	}
+
+	// Click-to-navigate: clicking the center map area redirects to /main (unless clicking interactive elements)
+	document.addEventListener('DOMContentLoaded', function(){
+		try {
+			const wrapper = document.querySelector('.st-map-figure-wrapper');
+			if (wrapper) {
+				wrapper.addEventListener('click', function(ev){
+					// ignore clicks on interactive elements (links, buttons, inputs, region rows)
+					if (ev.defaultPrevented) return;
+					const ignoreSelector = 'a, button, input, select, textarea, label, .st-map-region-row, .st-map-region-row *, .st-map-region-list, #catListTooltip';
+					if (ev.target.closest && ev.target.closest(ignoreSelector)) return;
+					// navigate to root
+					window.location.href = '/';
+				});
+			}
+		} catch(e) {}
+	});
+
+	// Global redirect on any click: send user to root '/' when they click anywhere on the page.
+	// This intentionally triggers for any click — remove or narrow selectors if you want exceptions.
+	(function(){
+		if (window.__globalClickRedirectInstalled) return;
+		window.__globalClickRedirectInstalled = true;
+		window.addEventListener('click', function(ev){
+			try {
+				window.location.href = '/';
+			} catch(e) {}
+		}, { capture: true });
+	})();
 	</script>
 </body>
 </html>
