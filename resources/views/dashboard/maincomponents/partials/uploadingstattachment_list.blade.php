@@ -63,7 +63,7 @@
                                 </button>
                                 <form
                                     method="POST"
-                                    action="{{ route('sts.attachments.destroy', $row['attachment_id']) }}"
+                                    action="{{ route('sts.attachments.destroy', ['attachment' => $row['attachment_id']]) }}"
                                     onsubmit="return confirm('Are you sure you want to delete this attachment?');"
                                 >
                                     @csrf

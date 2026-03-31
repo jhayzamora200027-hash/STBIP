@@ -271,7 +271,7 @@
 									@if($isSysadmin)
 										<form
 											method="POST"
-											action="{{ route('sts.attachments.destroy', $itemAttachment['id']) }}"
+											action="{{ route('sts.attachments.destroy', ['attachment' => $itemAttachment['id']]) }}"
 											onsubmit="return confirm('Delete this attachment?');"
 										>
 											@csrf
@@ -483,7 +483,6 @@
 	@if($canWriteMasterData)
 	<script>
 	document.addEventListener('DOMContentLoaded', function () {
-		// initialize radio enable/disable based on current select value
 		document.querySelectorAll('form[data-masterdata-updates-form] select[name="status"]').forEach(function (sel) {
 			const form = sel.closest('form');
 			if (!form) return;
@@ -495,7 +494,6 @@
 						remarks.forEach(function (r) { r.disabled = !enabled; });
 		});
 
-		// delegate change events to toggle radios when status changes
 		document.addEventListener('change', function (ev) {
 			const t = ev.target;
 			if (t && t.matches && t.matches('select[name="status"]')) {

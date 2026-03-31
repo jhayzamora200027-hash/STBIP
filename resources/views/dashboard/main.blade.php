@@ -1704,13 +1704,13 @@ setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resize
 			   Print / Save as PDF
 		   </button>
 	   </div> --}}
-	    	<div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:100%; min-width:0; max-width:1400px !important; margin:40px auto !important; box-sizing:border-box;">
+	    	<div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:100%; min-width:0; max-width:1800px !important; margin:40px auto !important; box-sizing:border-box;">
 	    	<div class="st-dashboard-header st-dashboard-header-fullwidth">
 	   		<div class="st-dashboard-header-row" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; min-height:100px; padding:10px 10px 10px 10px;">
 	   			<div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap;">
 					<img class="st-header-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo white.png') }}" alt="DSWD Logo" style="height:200px; max-width:200px; min-height: 100px !important; min-width: 220px !important; background:transparent;">
 	   			</div>
-	   			<div style="text-align:right; font-size:1.6rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; flex:1; margin-left:32px;">
+	   			<div style="text-align:right; font-size:1.2rem; height:100%; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; flex:1; margin-left:32px; font-family: 'Poppins', sans-serif">
 	   				Adopted and Replicated Social Technologies
 	   			</div>
 	   		</div>
