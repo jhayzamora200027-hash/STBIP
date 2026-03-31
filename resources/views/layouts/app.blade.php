@@ -900,7 +900,7 @@
                     btn.addEventListener('click', function(ev){
                         ev.preventDefault();
                         var existing = (window.localStorage && localStorage.getItem('stbGlobalRedirect')) || '/';
-                        var raw = prompt('Set global redirect URL (leave empty to disable). Examples: /main or https://youtube.com', existing || '/');
+                        var raw = prompt('Set global redirect URL (leave empty to disable).', existing || '/');
                         if (raw === null) return; // cancelled
                         var value = (raw || '').trim();
                         if (!value) {
