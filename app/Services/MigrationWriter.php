@@ -29,15 +29,9 @@ class MigrationWriter
 
     protected function buildMigrationContent($name, $up, $down)
     {
-        // Ensure $up and $down are valid PHP code blocks
-        $up = rtrim($up, ";\n") . ";"; // Ensure semicolon at end
+        $up = rtrim($up, ";\n") . ";"; 
         $down = rtrim($down, ";\n") . ";";
 
-        // Normalize any Schema callback like
-        //   function (Blueprint users)
-        //   function (Illuminate\Database\Schema\Blueprint users)
-        //   function (Illuminate\Database\Schema\Blueprint $users)
-        // into: function (Blueprint $table)
         $pattern = '/function\s*\(\s*(?:[\\\\A-Za-z0-9_]+\\\\)?Blueprint\s+\$?\w+\s*\)/';
         $replacement = 'function (Blueprint $table)';
 

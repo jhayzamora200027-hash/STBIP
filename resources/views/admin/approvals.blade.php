@@ -517,7 +517,6 @@
             color: #8f2038;
         }
 
-        /* Floating toast for JS feedback (success / error) */
         .approval-toast {
             position: fixed;
             right: 1.5rem;
@@ -974,10 +973,8 @@
 
             if (!toast || !icon || !body) return;
 
-            // set content
             body.textContent = message;
 
-            // set type
             toast.classList.remove('success', 'error', 'show');
             if (type === 'success') {
                 toast.classList.add('success');
@@ -987,13 +984,10 @@
                 icon.innerHTML = '<i class="bi bi-x-lg"></i>';
             }
 
-            // show
             toast.classList.remove('d-none');
-            // small reflow to allow transition
             void toast.offsetWidth;
             toast.classList.add('show');
 
-            // close handler
             const hide = () => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.classList.add('d-none'), 220);

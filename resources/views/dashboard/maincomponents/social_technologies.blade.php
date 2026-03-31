@@ -447,7 +447,6 @@
                 clearTimeout(window._st_inline_timeout);
                 window._st_inline_timeout = setTimeout(() => { banner.style.display = 'none'; }, 4000);
             } catch (e) {
-                // ignore
             }
         }
 

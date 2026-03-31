@@ -17,7 +17,6 @@ class GoogleChatService
      */
     public static function sendNoteNotification($title, $content, $createdBy)
     {
-        // Google Chat Webhook URL - you'll need to set this up
         $webhookUrl = env('GOOGLE_CHAT_WEBHOOK_URL');
         
         if (empty($webhookUrl)) {

@@ -116,9 +116,7 @@ class MainReportController extends Controller
         return $rows;
     }
 
-    /**
-     * Locate the most recent or selected Excel path.
-     */
+  
     public function findLatestExcelPath(): ?string
     {
         $excelDir = storage_path('app/excels');
@@ -153,9 +151,6 @@ class MainReportController extends Controller
         return $path && file_exists($path) ? $path : null;
     }
 
-    /**
-     * Parse Excel and cache result (shared by multiple endpoints).
-     */
     public function getParsedData(string $path): array
     {
         $cacheKey = 'stsreport_parsed_v6_' . md5($path . '|' . filemtime($path));
@@ -282,7 +277,6 @@ class MainReportController extends Controller
                 
                     $clean = function($s) {
                         if (!is_string($s)) return '';
-                        // strip ASCII control characters (0x00-0x1F,0x7F)
                         return preg_replace('/[\x00-\x1F\x7F]+/u','',$s);
                     };
                     $title = trim($clean($row[$titleIdx] ?? ''));
@@ -366,8 +360,6 @@ class MainReportController extends Controller
         $path = $this->findLatestExcelPath();
         $parsed = $this->getPrimaryDashboardData($path);
 
-        // Merge DB-backed RegionItem year_of_resolution into parsed spreadsheet rows
-        // This ensures the dashboard modal shows the masterdata SB resolution year immediately.
         try {
             $regionItems = RegionItem::with('region:id,name')
                 ->get(['id', 'region_id', 'title', 'province', 'municipality', 'year_of_resolution', 'with_res']);
@@ -394,13 +386,11 @@ class MainReportController extends Controller
                     ]);
                     if (isset($dbMap[$key])) {
                         $parsed['data'][$i]['year_of_resolution'] = $dbMap[$key]->year_of_resolution;
-                        // also prefer DB's with_res flag when available
                         $parsed['data'][$i]['with_res'] = $dbMap[$key]->with_res ?? ($parsed['data'][$i]['with_res'] ?? null);
                     }
                 }
             }
         } catch (\Throwable $e) {
-            // don't fail page render if DB merge has issues — parsed data remains unchanged
         }
 
         if (empty($parsed['data'])) {
@@ -597,7 +587,6 @@ class MainReportController extends Controller
                     }
                 }
             } else {
-                // no dedicated columns found for this region; use status text
                 if (strpos($st,'ongoing') !== false || $st === 'on going') {
                     $ongoingCount = 1;
                 } elseif (strpos($st,'dissolved') !== false || strpos($st,'inactive') !== false || strpos($st,'completed') !== false) {
@@ -629,8 +618,8 @@ class MainReportController extends Controller
             'years' => $availableYears,
             'allYears' => $allYears,
             'regionMap' => $regionMap,
-            'data' => $filteredData, // fully filtered for all other charts/totals (with attachment info)
-            'regionFilteredData' => $regionFilteredData, // only region/province/municipality filtered for bar chart
+            'data' => $filteredData,  
+            'regionFilteredData' => $regionFilteredData,
             'galleryCards' => $galleryCards,
             'embed' => $embed,
             'headers' => $parsed['headers'] ?? [],
@@ -655,7 +644,6 @@ class MainReportController extends Controller
         }
         $allData = $parsed['data'] ?? [];
 
-        // Apply filters from request (same as index)
         $regionFilteredData = $allData;
         $selectedRegions = $request->input('region', []);
         $selectedProvinces = $request->input('province', []);

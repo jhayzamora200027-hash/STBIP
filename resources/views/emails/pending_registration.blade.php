@@ -21,7 +21,6 @@
                     $link = $appUrl === '/' ? url('/main') : rtrim($appUrl, '/') . '/';
                 @endphp
                 <p style="font-size:14px;color:#666;margin:18px 0 0 0;">Link: {{ $link }}</p>
-                <p style="font-size:14px;color:#666;margin:18px 0 0 0;">Regards,<br>STB Inventory Portal</p>
 
                 @include('emails.partials.footer')
             </td>

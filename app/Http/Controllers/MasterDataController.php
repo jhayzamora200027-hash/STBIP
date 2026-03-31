@@ -168,11 +168,9 @@ class MasterDataController extends Controller
             return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('error', 'Uploaded file contains no data.');
         }
 
-            // Detect header row (header may not always be in row 1). Search first 5 rows for a row containing 'title'.
             $headerIndex = 1;
             $headerRow = array_map('trim', (array) $rows[$headerIndex]);
 
-            // Map header names to column letters
             $map = [];
             foreach ($headerRow as $col => $val) {
                 $norm = strtolower($val);
@@ -180,7 +178,6 @@ class MasterDataController extends Controller
                     $map['region'] = strtoupper($col);
                 } elseif (str_contains($norm, 'title')) {
                     $map['title'] = strtoupper($col);
-                // Prefer detecting remarks specifically first, then inactive status; avoid overwriting
                 } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
                     if (!isset($map['inactive_remarks'])) {
                         $map['inactive_remarks'] = strtoupper($col);
@@ -214,7 +211,6 @@ class MasterDataController extends Controller
                 }
             }
 
-        // If title column wasn't found, try searching the first 5 rows for the header row
         if (!isset($map['title'])) {
             $maxCheck = min(5, count($rows));
             for ($i = 1; $i <= $maxCheck; $i++) {
@@ -236,7 +232,6 @@ class MasterDataController extends Controller
                             $map['region'] = strtoupper($col);
                         } elseif (str_contains($norm, 'title')) {
                             $map['title'] = strtoupper($col);
-                        // Prefer inactive/remarks before generic status
                         } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
                             if (!isset($map['inactive_remarks'])) {
                                 $map['inactive_remarks'] = strtoupper($col);
@@ -270,7 +265,6 @@ class MasterDataController extends Controller
                         }
                     }
 
-                    // same inactive-columns fallback handling for this header candidate
                     $inactiveCols = [];
                     foreach ($headerRow as $col => $val) {
                         if (is_string($val) && stripos($val, 'inactive') !== false) {
@@ -297,7 +291,6 @@ class MasterDataController extends Controller
                             }
                         }
                     }
-                    // Fallback for status detection in this header candidate
                     if (!isset($map['status'])) {
                         foreach ($headerRow as $col => $val) {
                             if (is_string($val) && stripos($val, 'status') !== false) {
@@ -306,7 +299,6 @@ class MasterDataController extends Controller
                             }
                         }
                     }
-                    // Fallback for status detection in this header candidate
                     if (!isset($map['status'])) {
                         foreach ($headerRow as $col => $val) {
                             if (is_string($val) && stripos($val, 'status') !== false) {
@@ -327,7 +319,6 @@ class MasterDataController extends Controller
         $statusIssues = [];
         $statusIssues = [];
 
-        // Prepare a small debug sample of first 10 rows (after detected header)
         $sampleRows = array_slice($rows, $headerIndex, 10);
         $debugSample = ['header_index' => $headerIndex, 'map' => $map, 'rows' => []];
         foreach ($sampleRows as $i => $r) {
@@ -338,7 +329,6 @@ class MasterDataController extends Controller
                 'title_raw' => isset($map['title']) ? ($r[$map['title']] ?? '') : null,
             ];
         }
-        // include inactive columns in debug sample when present
         foreach ($sampleRows as $i => $r) {
             $rowNum = $headerIndex + $i + 1;
             $debugSample['rows'][$i]['inactive_status_raw'] = isset($map['inactive_status']) ? ($r[$map['inactive_status']] ?? '') : null;
@@ -346,13 +336,11 @@ class MasterDataController extends Controller
         }
         session()->flash('masterdata_import_debug', $debugSample);
 
-        // ensure variables exist for static analysis
         $inactive_status = null;
         $inactive_remarks = null;
 
         foreach (array_slice($rows, $headerIndex) as $idx => $row) {
-            $sheetRowNumber = $headerIndex + $idx + 1; // headerIndex + 1 is first data row
-            // Using associative access by column letter
+            $sheetRowNumber = $headerIndex + $idx + 1; 
             $regionName = isset($map['region']) ? trim((string) ($row[$map['region']] ?? '')) : '';
             $title = isset($map['title']) ? trim((string) ($row[$map['title']] ?? '')) : '';
 
@@ -365,7 +353,6 @@ class MasterDataController extends Controller
             $province = isset($map['province']) ? trim((string) ($row[$map['province']] ?? '')) : null;
             $municipality = isset($map['municipality']) ? trim((string) ($row[$map['municipality']] ?? '')) : null;
 
-                // read and normalize inactive fields for force import as well
                 $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
                 $inactive_remarks_raw = isset($map['inactive_remarks']) ? ($row[$map['inactive_remarks']] ?? null) : null;
                 if ($inactive_remarks_raw !== null) {
@@ -378,7 +365,6 @@ class MasterDataController extends Controller
                 }
 
             $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
-            // normalize inactive remarks: strip control chars / NBSP and collapse whitespace
             $inactive_remarks_raw = isset($map['inactive_remarks']) ? ($row[$map['inactive_remarks']] ?? null) : null;
             if ($inactive_remarks_raw !== null) {
                 $inr = is_scalar($inactive_remarks_raw) ? (string) $inactive_remarks_raw : '';
@@ -389,7 +375,6 @@ class MasterDataController extends Controller
                 $inactive_remarks = null;
             }
 
-            // Robust region lookup: try exact, case-insensitive, strip common prefixes like 'FO ', then contains match
             $region = null;
             if ($regionName !== '') {
                 $candidate = trim((string) $regionName);
@@ -415,7 +400,6 @@ class MasterDataController extends Controller
                 continue;
             }
 
-            // Ensure social technology title exists (case-insensitive)
             $titleExists = SocialTechnologyTitle::query()->whereRaw('LOWER(social_technology) = ?', [strtolower($title)])->exists();
             if (!$titleExists) {
                 $skipped++;
@@ -427,7 +411,6 @@ class MasterDataController extends Controller
             if (isset($map['status'])) {
                 $rawVal = $row[$map['status']] ?? '';
                 $rawStr = is_scalar($rawVal) ? (string) $rawVal : '';
-                // normalize whitespace including NBSP and control chars
                 $rawStr = preg_replace('/[\x00-\x1F\x7F\xA0]+/u', ' ', $rawStr);
                 $statusRaw = trim(preg_replace('/\s+/u', ' ', $rawStr));
             }
@@ -567,7 +550,6 @@ class MasterDataController extends Controller
             session()->flash('masterdata_import_warnings', $warnings);
         }
 
-        // write debug info including any status parse issues
         try {
             $debug = ['source' => $file->getClientOriginalName() ?? null, 'header_index' => $headerIndex, 'map' => $map, 'status_issues' => $statusIssues];
             $debugPath = storage_path('app/excels/masterdata_import_debug_' . time() . '.json');
@@ -575,18 +557,11 @@ class MasterDataController extends Controller
             file_put_contents($debugPath, json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             session()->flash('masterdata_import_debug_file', basename($debugPath));
         } catch (\Throwable $e) {
-            // ignore
         }
 
         return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('status', $message);
     }
 
-    /**
-     * Force-import region items from an uploaded Excel file.
-     * This will create or update RegionItem rows directly, mapping the region name
-     * from the sheet to the `regions.id`. Unlike the other importer, this will
-     * not require the title to exist in `social_technology_titles`.
-     */
     public function importRegionItemsExcelForce(Request $request)
     {
         $request->validate([
@@ -608,11 +583,9 @@ class MasterDataController extends Controller
             return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('error', 'Uploaded file contains no data.');
         }
 
-        // Detect header row (header may not always be in row 1). Search first 5 rows for a row containing 'title'.
         $headerIndex = 1;
         $headerRow = array_map('trim', (array) $rows[$headerIndex]);
 
-        // Map header names to column letters (including years)
         $map = [];
             foreach ($headerRow as $col => $val) {
                 $norm = strtolower($val);
@@ -620,7 +593,6 @@ class MasterDataController extends Controller
                     $map['region'] = strtoupper($col);
                 } elseif (str_contains($norm, 'title')) {
                     $map['title'] = strtoupper($col);
-                // Prefer detecting remark headers first, then inactive status; avoid overwriting
                 } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
                     if (!isset($map['inactive_remarks'])) {
                         $map['inactive_remarks'] = strtoupper($col);
@@ -654,7 +626,6 @@ class MasterDataController extends Controller
                 }
             }
 
-        // If multiple header columns mention 'inactive', prefer first as status and second as remarks.
         $inactiveCols = [];
         foreach ($headerRow as $col => $val) {
             if (is_string($val) && stripos($val, 'inactive') !== false) {
@@ -672,7 +643,6 @@ class MasterDataController extends Controller
             if (!isset($map['inactive_status'])) {
                 $map['inactive_status'] = $inactiveCols[0];
             }
-            // try to find a 'remark' header elsewhere
             if (!isset($map['inactive_remarks'])) {
                 foreach ($headerRow as $col => $val) {
                     if (is_string($val) && stripos($val, 'remark') !== false) {
@@ -683,8 +653,6 @@ class MasterDataController extends Controller
             }
         }
 
-                    // If we still don't have inactive_remarks but we have inactive_status,
-                    // check the next sheet column for data and assume it's remarks when present.
                     if (isset($map['inactive_status']) && !isset($map['inactive_remarks'])) {
                         $colToIndex = function ($col) {
                             $col = strtoupper($col);
@@ -720,12 +688,9 @@ class MasterDataController extends Controller
                                 $map['inactive_remarks'] = $right;
                             }
                         } catch (\Throwable $e) {
-                            // ignore
                         }
                     }
 
-            // If we still don't have inactive_remarks but we have inactive_status,
-            // check the next sheet column for data and assume it's remarks when present.
             if (isset($map['inactive_status']) && !isset($map['inactive_remarks'])) {
                 $colToIndex = function ($col) {
                     $col = strtoupper($col);
@@ -761,11 +726,9 @@ class MasterDataController extends Controller
                         $map['inactive_remarks'] = $right;
                     }
                 } catch (\Throwable $e) {
-                    // ignore
                 }
             }
 
-        // If title column wasn't found, try searching the first 5 rows for the header row
         if (!isset($map['title'])) {
             $maxCheck = min(5, count($rows));
             for ($i = 1; $i <= $maxCheck; $i++) {
@@ -787,7 +750,6 @@ class MasterDataController extends Controller
                             $map['region'] = strtoupper($col);
                         } elseif (str_contains($norm, 'title')) {
                             $map['title'] = strtoupper($col);
-                        // Prefer inactive/remarks before generic status
                         } elseif (str_contains($norm, 'inactive')) {
                             $map['inactive_status'] = strtoupper($col);
                         } elseif (str_contains($norm, 'remark') || str_contains($norm, 'remarks')) {
@@ -826,15 +788,13 @@ class MasterDataController extends Controller
         $skipped = 0;
         $warnings = [];
 
-        // iterate starting from detected header row
         $dataRows = array_slice($rows, $headerIndex);
 
-        // ensure variables exist for static analysis
         $inactive_status = null;
         $inactive_remarks = null;
 
         foreach ($dataRows as $idx => $row) {
-            $sheetRowNumber = $idx + $headerIndex + 1; // account for header at $headerIndex
+            $sheetRowNumber = $idx + $headerIndex + 1; 
 
             $regionName = isset($map['region']) ? trim((string) ($row[$map['region']] ?? '')) : '';
             $title = isset($map['title']) ? trim((string) ($row[$map['title']] ?? '')) : '';
@@ -1002,7 +962,6 @@ class MasterDataController extends Controller
             session()->flash('masterdata_import_warnings', $warnings);
         }
 
-        // write debug info including any status parse issues for force import
         try {
             $debug = ['source' => $file->getClientOriginalName() ?? null, 'header_index' => $headerIndex, 'map' => $map, 'status_issues' => $statusIssues];
             $debugPath = storage_path('app/excels/masterdata_force_import_debug_' . time() . '.json');
@@ -1010,7 +969,6 @@ class MasterDataController extends Controller
             file_put_contents($debugPath, json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             session()->flash('masterdata_force_import_debug_file', basename($debugPath));
         } catch (\Throwable $e) {
-            // ignore
         }
 
         return redirect()->route('masterdata.index', ['tab' => 'overview'])->with('status', $message);
@@ -1492,7 +1450,6 @@ class MasterDataController extends Controller
         $withResolution = (bool) ($validated['with_res'] ?? false);
 
         $statusVal = $validated['status'] ?? null;
-        // Normalize UI-facing 'inactive' back to the legacy DB value 'dissolved'
         if ($statusVal === 'inactive') {
             $statusVal = 'dissolved';
         }

@@ -1428,7 +1428,6 @@
 
 		async function submitUpdatesForm(form) {
 			const formData = new FormData(form);
-			// clear previous inline errors for this form
 			form.querySelectorAll('[data-error-for]').forEach(function (el) { el.textContent = ''; el.style.display = 'none'; var input = form.querySelector('[name="' + el.getAttribute('data-error-for') + '"]'); if (input) { input.classList.remove('is-invalid'); } });
 			setFormBusy(form, true);
 			try {
@@ -1464,7 +1463,6 @@
 									placedInline = true;
 									continue;
 								}
-								// if no container but an input exists, mark input and set a small aria message
 								if (inputEl) {
 									inputEl.classList.add('is-invalid');
 									placedInline = true;
@@ -1472,9 +1470,8 @@
 							}
 							if (placedInline) {
 								setFormBusy(form, false);
-								return; // errors shown inline, avoid global error
+								return; 
 							}
-							// fallback to the first error for global feedback
 							const firstError = Object.values(errorPayload.errors).flat()[0];
 							if (firstError) {
 								errorMessage = firstError;

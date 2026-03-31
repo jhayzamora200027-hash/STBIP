@@ -94,7 +94,6 @@ class RegionSheetImportService
             throw new \RuntimeException('No region data rows were found in the selected Google Sheet file.');
         }
 
-        // Debug: write a JSON snapshot of header detection and first parsed rows
         try {
             $debug = [
                 'source' => $sourceName ?: basename($fullPath),
@@ -106,7 +105,6 @@ class RegionSheetImportService
             $debugPath = storage_path('app/excels/import_debug_' . time() . '.json');
             file_put_contents($debugPath, json_encode($debug, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         } catch (\Throwable $e) {
-            // do not fail import for debug write errors
         }
 
         $stats = DB::transaction(function () use ($actorName, $regionNames, $rowsToInsert) {
@@ -443,13 +441,11 @@ class RegionSheetImportService
             if ($year >= 1900 && $year <= 2100) {
                 return $year;
             }
-            // Excel may store dates as serial numbers; try converting
             try {
                 $dt = SpreadsheetDate::excelToDateTimeObject($value);
                 $y = (int) $dt->format('Y');
                 return ($y >= 1900 && $y <= 2100) ? $y : null;
             } catch (\Throwable $e) {
-                // fall through
             }
             return null;
         }

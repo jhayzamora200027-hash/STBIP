@@ -890,7 +890,6 @@
                 }
             }
         });
-        // SYSADMIN: initialize redirect setter label and handler
         document.addEventListener('DOMContentLoaded', function(){
             try {
                 var label = document.getElementById('sidebarRedirectLabel');
@@ -910,7 +909,6 @@
                             alert('Global redirect disabled.');
                             return;
                         }
-                        // Normalize: allow absolute paths (/path) or full URLs; if user entered a bare domain like "youtube.com" prepend https://
                         var normalized = value;
                         try {
                             if (!/^\/|^https?:\/\/|^\/\//i.test(value)) {

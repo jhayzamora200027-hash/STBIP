@@ -10,7 +10,6 @@ class Selectdocslogs extends Model
         'createdby',
         'excelname',
         'actionlogs',
-        // store the document number selected when the base file is set/updated
         'docselected',
         'created_at',
         'updated_at',

@@ -139,7 +139,6 @@
 				try {
 					stsLogsUrl = new URL(stsLogsUrl).pathname;
 				} catch (e) {
-					// if URL constructor fails, leave as-is
 				}
 				document.addEventListener('click', function(e) {
 					var btn = e.target.closest('#viewStsLogsBtn');

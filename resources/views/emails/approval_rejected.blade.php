@@ -6,6 +6,10 @@
     <title>Registration Rejected</title>
 </head>
 <body style="font-family:Arial,Helvetica,sans-serif;color:#333;">
+    @php
+        $appUrl = config('app.url') ?: (request()->getSchemeAndHttpHost() ?? '/');
+        $link = $appUrl === '/' ? url('/main') : rtrim($appUrl, '/') . '/';
+    @endphp
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
             <td style="padding:20px;text-align:left;">
@@ -17,7 +21,7 @@
                 @endif
                 <p style="font-size:14px;color:#666;margin:18px 0 0 0;">If you believe this is an error or would like more information, please contact <strong>{{ $adminEmail ?? 'support' }}</strong>.</p>
                 <p style="font-size:14px;color:#666;margin:6px 0 0 0;">Regards,
-
+                <p style="font-size:14px;color:#666;margin:18px 0 0 0;">Link: {{ $link }}</p>
                 @include('emails.partials.footer')
             </td>
         </tr>

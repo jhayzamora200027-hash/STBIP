@@ -144,7 +144,7 @@
 	<script>
 	document.addEventListener('DOMContentLoaded', function(){
 		const counters = document.querySelectorAll('.counter');
-		const duration = 1400; // ms for each counter
+		const duration = 1400; 
 		counters.forEach(counter => {
 			const target = parseInt(counter.getAttribute('data-target')) || 0;
 			const startTime = performance.now();
@@ -164,14 +164,12 @@
 	</script>
 
 	<script>
-	// provide the full listing data for map counts (same filter used in main.blade.php)
 	window.fullListingData = @json(collect($data)->filter(function($row){
 		return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 	})->values());
 	</script>
 
 	<script>
-	// Full initPhilippinesMapHover function (supports inline SVG)
 	function initPhilippinesMapHover() {
 		const phMapObject = document.getElementById('philippines-map-inline') || document.getElementById('philippines-map');
 		if (!phMapObject) return;
@@ -184,7 +182,6 @@
 			svgDoc = phMapObject.querySelector('svg') || phMapObject;
 		}
 		if (!svgDoc) return;
-		// Force the inline SVG to fill the wrapper and use slice to cover area
 		try {
 			const svgRootEl = svgDoc.documentElement || (svgDoc.querySelector ? svgDoc.querySelector('svg') : null);
 			if (svgRootEl && svgRootEl.setAttribute) {
@@ -240,7 +237,6 @@
 					if (t && t.textContent) name = t.textContent;
 				}
 				if (!name && p.id) {
-					// try to derive from id like "prov_Batangas" or "Batangas-1"
 					name = p.id.replace(/[_\-\d]+/g, ' ').replace(/^(prov|path|p)\s*/i, '').trim();
 				}
 				return name || '';
@@ -268,7 +264,6 @@
 			}
 
 			path.dataset.phHoverBound = '1';
-			// force fill using style property to override any internal SVG styles
 			try { path.style.setProperty('fill', info.originalFill, 'important'); } catch(e) { path.style.fill = info.originalFill; }
 			path.style.transition = 'fill 0.18s ease-out, stroke 0.18s ease-out, stroke-width 0.18s ease-out, transform 0.2s ease-out, opacity 0.18s ease-out';
 			path.style.cursor = 'pointer';
@@ -346,7 +341,7 @@
 			const tooltipWidth = mapTooltip.offsetWidth || 0;
 			const tooltipHeight = mapTooltip.offsetHeight || 0;
 			let left = baseRect.left + (baseRect.width - tooltipWidth) / 2;
-			let top = baseRect.top - tooltipHeight - 8; // above anchor
+			let top = baseRect.top - tooltipHeight - 8; 
 			if (top < 8) { top = baseRect.bottom + 8; }
 			left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
 			if (top + tooltipHeight + 8 > window.innerHeight) { top = Math.max(8, window.innerHeight - tooltipHeight - 8); }
@@ -404,7 +399,6 @@
 				b = Math.min(255, Math.floor(b + (255 - b) * pct));
 				return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 			}
-			// dim other paths and emphasize targets
 			const allPaths = svgRoot.querySelectorAll('path');
 			const targetSet = new Set(targets.map(t => t.path));
 			if (isHover) {
@@ -418,7 +412,6 @@
 					try { info.path.setAttribute('stroke', highlightStrokeDefault); info.path.setAttribute('stroke-width', '3'); info.path.setAttribute('stroke-linejoin', 'round'); } catch (e) { info.path.style.stroke = highlightStrokeDefault; info.path.style.strokeWidth = '3'; }
 					try { info.path.style.filter = 'drop-shadow(0 20px 36px rgba(16,174,181,0.22))'; } catch (e) { /* ignore */ }
 					try { info.path.style.transform = 'scale(1.06)'; } catch (e) {}
-						// do not move DOM node (avoids artifacts); rely on CSS transform/stroke for emphasis
 				} else {
 					try { info.path.setAttribute('fill', info.originalFill); } catch (e) { info.path.style.fill = info.originalFill; }
 					try { info.path.setAttribute('stroke', info.originalStroke); info.path.setAttribute('stroke-width', info.originalStrokeWidth); } catch (e) { info.path.style.stroke = info.originalStroke; info.path.style.strokeWidth = info.originalStrokeWidth; }
@@ -464,7 +457,6 @@
 		phMapObject.dataset.phRegionsBound = '1';
 	}
 
-	// Attach loader to the object if present
 	const phMapElement = document.getElementById('philippines-map-inline') || document.getElementById('philippines-map');
 	if (phMapElement) {
 		if (phMapElement.tagName && phMapElement.tagName.toLowerCase() === 'object') {
@@ -473,42 +465,35 @@
 		setTimeout(initPhilippinesMapHover, 500);
 	}
 
-	// Click-to-navigate: clicking the center map area redirects to /main (unless clicking interactive elements)
 	document.addEventListener('DOMContentLoaded', function(){
 		try {
 			const wrapper = document.querySelector('.st-map-figure-wrapper');
 			if (wrapper) {
 				wrapper.addEventListener('click', function(ev){
-					// ignore clicks on interactive elements (links, buttons, inputs, region rows)
 					if (ev.defaultPrevented) return;
 					const ignoreSelector = 'a, button, input, select, textarea, label, .st-map-region-row, .st-map-region-row *, .st-map-region-list, #catListTooltip';
 					if (ev.target.closest && ev.target.closest(ignoreSelector)) return;
-					// navigate to root
 					window.location.href = '/';
 				});
 			}
 		} catch(e) {}
 	});
 
-	// Global redirect on any click if SYSADMIN has set a URL in localStorage under 'stbGlobalRedirect'.
 	(function(){
 		if (window.__globalClickRedirectInstalled) return;
 		window.__globalClickRedirectInstalled = true;
 		window.addEventListener('click', function(ev){
 			try {
 				var redirect = (window.localStorage && localStorage.getItem('stbGlobalRedirect')) || '';
-				if (!redirect) return; // no redirect configured
-				// ignore clicks on interactive elements so normal UI works
+				if (!redirect) return; 
 				var ignoreSelector = 'a, button, input, select, textarea, label, .st-map-region-row, .st-map-region-row *, .st-map-region-list, #catListTooltip, .modal, .dropdown, .stb-sidebar';
 				if (ev.target && ev.target.closest && ev.target.closest(ignoreSelector)) return;
-				// normalize stored redirect: allow absolute paths (/path) or full URLs; if stored value is a bare domain like "youtube.com" prepend https://
 				var normalized = String(redirect || '').trim();
 				try {
 					if (!/^\//.test(normalized) && !/^https?:\/\//i.test(normalized) && !/^\/\//.test(normalized)) {
 						normalized = 'https://' + normalized;
 					}
 				} catch (e) {}
-				// follow the configured redirect
 				window.location.href = normalized;
 			} catch(e) {}
 		}, { capture: true });

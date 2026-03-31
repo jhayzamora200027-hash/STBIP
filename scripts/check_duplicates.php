@@ -5,7 +5,6 @@ $p = __DIR__ . '/../storage/app/excels/region_items_export_20260319_094434.xlsx'
 if (!file_exists($p)) { echo "MISSING: {$p}\n"; exit(2); }
 $sheet = IOFactory::load($p)->getActiveSheet();
 $rows = $sheet->toArray(null, true, true, true);
-// detect header row
 $headerIndex = 1;
 $map = [];
 $headerRow = array_map('trim',(array)$rows[$headerIndex]);
@@ -55,7 +54,6 @@ foreach ($dataRows as $i => $r) {
     }
 }
 foreach ($seen as $k => $v) if ($v['count'] > 1) $dupes[$k] = $v;
-// output
 echo "File: {$p}\n";
 echo "Detected header row: {$headerIndex}\n";
 echo "Total data rows (after header): {$totalRows}\n";
@@ -69,7 +67,6 @@ $ctr=0; foreach ($perRegion as $region=>$c) { echo "  {$region}: {$c}\n"; $ctr++
 echo "Duplicate identity rows inside file: " . count($dupes) . " entries\n";
 $ctr=0; foreach ($dupes as $k=>$v) { echo "- Duplicate #".($ctr+1)." count={$v['count']} rows=".implode(',', $v['rows'])." region='{$v['region']}' title='{$v['title']}'\n"; $ctr++; if ($ctr>=20) break; }
 
-// summary of top regions where importer may undercount due to skips (empty title)
 echo "\nRegions with empty-title rows (first 20):\n";
 $regionsWithEmpty = [];
 $dataRows = array_slice($rows, $headerIndex);

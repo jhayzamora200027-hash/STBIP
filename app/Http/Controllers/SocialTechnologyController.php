@@ -96,14 +96,12 @@ class SocialTechnologyController extends Controller
             } elseif ($request->file('csv_file')) {
                 $file = $request->file('csv_file');
                 $ext = strtolower($file->getClientOriginalExtension() ?: '');
-                // If an Excel file was uploaded, save it into the excels dir and let IOFactory handle it below
                 if (in_array($ext, ['xlsx', 'xls'])) {
                     $storedFilename = 'upload_' . time() . '.' . $ext;
                     $fullPath = $excelDir . DIRECTORY_SEPARATOR . $storedFilename;
                     $file->move($excelDir, $storedFilename);
                     $filePath = $fullPath;
                 } else {
-                    // treat as CSV
                     $handle = fopen($file->getRealPath(), 'r');
                     if ($handle !== false) {
                         while (($row = fgetcsv($handle)) !== false) {
@@ -134,7 +132,6 @@ class SocialTechnologyController extends Controller
                     return redirect()->route('STDashboard')->with('status', 'No rows found in uploaded file.');
             }
 
-            // Determine header and map columns to model fields
             $rawHeader = array_map(fn($h) => strtolower(trim((string) $h)), $inputRows[0]);
             $fieldMap = [];
             $canonical = [
@@ -162,12 +159,10 @@ class SocialTechnologyController extends Controller
                     $fieldMap[$idx] = 'social_technology';
                     continue;
                 }
-                // normalize keys like "laws and issuances" -> laws_and_issuances
                 if (isset($canonical[$norm])) {
                     $fieldMap[$idx] = $canonical[$norm];
                     continue;
                 }
-                // try replacing spaces/underscores and match
                 $alt = str_replace(' ', '_', $h);
                 $alt = preg_replace('/[^a-z0-9_]/', '', strtolower($alt));
                 if (isset($canonical[$alt])) {
@@ -185,7 +180,6 @@ class SocialTechnologyController extends Controller
                 $titleVal = trim((string) ($rowData['social_technology'] ?? ''));
                 if ($titleVal === '') continue;
 
-                // normalize year_implemented: keep trimmed string or null (allow ranges like "2019-2022")
                 if (array_key_exists('year_implemented', $rowData)) {
                     $y = trim((string) $rowData['year_implemented']);
                     if ($y === '') {

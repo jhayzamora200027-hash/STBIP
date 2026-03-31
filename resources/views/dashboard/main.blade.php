@@ -106,7 +106,6 @@
     }
 </style>
 <style>
-	/* Mobile guest filter bottom-sheet */
 	.guest-mobile-filter-panel { display: none; }
 	.guest-mobile-filter-panel .filter-modal-panel { box-shadow: 0 -12px 28px rgba(11,37,64,0.12); }
 	.filter-modal-panel.mobile { width: 100%; max-width: 640px; border-radius: 12px 12px 0 0; }
@@ -117,7 +116,6 @@
 	}
 </style>
 <style>
-	/* Stronger rules so cloned mobile panel is visible despite earlier global hide rules */
 	.guest-mobile-filter-panel .filter-modal-panel,
 	.guest-mobile-filter-panel .guest-filter-card,
 	.guest-mobile-filter-panel .guest-filter-panel {
@@ -1210,9 +1208,9 @@
 		}
 		.st-map-card-body { grid-template-columns: 1fr !important; }
 		#streportFrame {
-			height: 50vh !important;
-			min-height: 320px !important;
-			max-height: 80vh !important;
+			height: 1000vh !important;
+			min-height: 1000px !important;
+			max-height: 1000vh !important;
 		}
 		.st-header-logo { height: auto !important; max-width: 140px !important; min-width: 220px !important; min-height: 100px !important; }
 	}
@@ -6149,7 +6147,7 @@ $('#region-select-modal').on('change', function() {
 				const tooltipWidth = mapTooltip.offsetWidth || 0;
 				const tooltipHeight = mapTooltip.offsetHeight || 0;
 				let left = baseRect.left + (baseRect.width - tooltipWidth) / 2;
-				let top = baseRect.top - tooltipHeight - 8; // above anchor
+				let top = baseRect.top - tooltipHeight - 8; 
 				if (top < 8) {
 					top = baseRect.bottom + 8;
 				}
@@ -7247,14 +7245,11 @@ document.addEventListener('DOMContentLoaded', function(){
 	@endguest
 
 <script>
-// Global handler for guest floating button to show filter panel (mobile + desktop)
 window.showGuestFilterDock = function(ev){
 	try{
 		console.debug('[showGuestFilterDock] invoked');
-		// if mobile, show mobile panel we create earlier
 		if(window.innerWidth <= 767){
 			if(document.getElementById('guestMobileFilterPanel')){ console.debug('[showGuestFilterDock] mobile panel already open'); return false; }
-			// Prefer cloning existing guestFilterDock content if present
 			var existingDock = document.getElementById('guestFilterDock');
 			if(existingDock){
 				var wrapper = document.createElement('div');
@@ -7267,13 +7262,11 @@ window.showGuestFilterDock = function(ev){
 				wrapper.appendChild(inner);
 				document.body.appendChild(wrapper);
 				document.body.classList.add('modal-open');
-				// basic close handlers
 				wrapper.addEventListener('click', function(e){ if(e.target === wrapper){ wrapper.remove(); document.body.classList.remove('modal-open'); } });
 				document.addEventListener('keydown', function _esc(e){ if(e.key === 'Escape'){ try{ wrapper.remove(); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc); } });
 				console.debug('[showGuestFilterDock] opened mobile panel by cloning guestFilterDock');
 				return false;
 			}
-			// fallback simple mobile panel
 			var mobile = document.createElement('div');
 			mobile.id = 'guestMobileFilterPanel'; mobile.className='guest-mobile-filter-panel open'; mobile.style.position='fixed'; mobile.style.inset='0'; mobile.style.zIndex='2200'; mobile.style.display='flex'; mobile.style.alignItems='flex-end'; mobile.style.justifyContent='center'; mobile.style.background='rgba(6,48,110,0.12)';
 			mobile.innerHTML = '<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>';
@@ -7284,12 +7277,10 @@ window.showGuestFilterDock = function(ev){
 			return false;
 		}
 
-		// Desktop / larger screens: if a guestFilterDock element exists, show it
 		var dock = document.getElementById('guestFilterDock');
 		if(dock){
 			if(dock.classList.contains('open')){ console.debug('[showGuestFilterDock] dock already open'); return false; }
 			dock.style.display = 'flex'; dock.style.position='fixed'; dock.style.inset='0'; dock.style.background='rgba(6,48,110,0.28)'; dock.style.alignItems='center'; dock.style.justifyContent='center'; dock.classList.add('open'); document.body.classList.add('modal-open');
-			// attach close on backdrop
 			dock.addEventListener('click', function _dockClose(e){ if(e.target === dock){ try{ dock.style.display='none'; dock.classList.remove('open'); document.body.classList.remove('modal-open'); }catch(_){} dock.removeEventListener('click', _dockClose); } });
 			document.addEventListener('keydown', function _esc3(e){ if(e.key === 'Escape'){ try{ dock.style.display='none'; dock.classList.remove('open'); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc3); } });
 			console.debug('[showGuestFilterDock] showed guestFilterDock');

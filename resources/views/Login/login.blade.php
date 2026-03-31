@@ -42,14 +42,12 @@
   </div>
 </div>
 <script>
-// Show login modal if there are login errors
-// (requires Bootstrap 5 JS to be loaded globally)
+
 document.addEventListener('DOMContentLoaded', function() {
     if (@json($errors->login->any())) {
         let loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
         loginModal.show();
     }
-  // AJAX login logic
   const loginForm = document.getElementById('ajaxLoginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', function(e) {
@@ -57,13 +55,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const formData = new FormData(loginForm);
       const errorMsg = document.getElementById('loginErrorMsg');
       errorMsg.style.display = 'none';
-      // Show loading state
       const loginBtn = loginForm.querySelector('button[type="submit"]');
       if (loginBtn) {
         loginBtn.disabled = true;
         loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...';
       }
-      // Send AJAX request for login
       fetch(loginForm.action, {
         method: 'POST',
         headers: {
@@ -76,10 +72,8 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(async response => {
         console.log('AJAX login response:', response);
         if (response.ok) {
-          // Login success, reload page
           window.location.reload();
         } else {
-          // Show error message
           let data;
           try {
             data = await response.json();
@@ -88,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
           }
           console.log('AJAX login error data:', data);
           let msg = data.message || 'Login failed.';
-          // Collect all error messages
           let errorSet = new Set();
           if (msg) errorSet.add(msg);
           if (data.errors) {
@@ -98,7 +91,6 @@ document.addEventListener('DOMContentLoaded', function() {
               });
             }
           }
-          // Render only unique messages
           let errorArr = Array.from(errorSet);
           if (errorArr.length > 1) {
             msg = errorArr[0] + '<ul style="margin:0;padding-left:18px;">';
@@ -112,7 +104,6 @@ document.addEventListener('DOMContentLoaded', function() {
           if (errorMsg) {
             errorMsg.innerHTML = msg;
             errorMsg.style.display = 'block';
-            // Show modal if not visible
             if (typeof bootstrap !== 'undefined') {
               let loginModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('loginModal'));
               loginModal.show();
@@ -132,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       })
       .finally(() => {
-        // Always re-enable button and restore text
         if (loginBtn) {
           loginBtn.disabled = false;
           loginBtn.innerHTML = 'Log in';

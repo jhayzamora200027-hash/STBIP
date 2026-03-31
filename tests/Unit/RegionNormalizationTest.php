@@ -20,15 +20,15 @@ class RegionNormalizationTest extends TestCase
 
     public function testCalabarzonAliasMapsToRegion4A()
     {
-        $this->assertSame('Region IV-A', $this->infer('Calabarzon'));   // standard name
-        $this->assertSame('Region IV-A', $this->infer('CALABARZON'));   // uppercase
-        $this->assertSame('Region IV-A', $this->infer('calborazon'));   // common typo
-        $this->assertSame('Region IV-A', $this->infer('CALBORAZON'));   // uppercase typo
+        $this->assertSame('Region IV-A', $this->infer('Calabarzon'));   
+        $this->assertSame('Region IV-A', $this->infer('CALABARZON'));   
+        $this->assertSame('Region IV-A', $this->infer('calborazon'));   
+        $this->assertSame('Region IV-A', $this->infer('CALBORAZON'));   
     }
 
     public function testNumericRomanFallbackStillWorks()
     {
-        $this->assertSame('Region IV-A', $this->infer('4')); // numeric sheet
-        $this->assertSame('Region IV-A', $this->infer('IV-A')); // roman string
+        $this->assertSame('Region IV-A', $this->infer('4')); 
+        $this->assertSame('Region IV-A', $this->infer('IV-A')); 
     }
 }

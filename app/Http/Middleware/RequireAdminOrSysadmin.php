@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Auth;
 
 class RequireAdminOrSysadmin
 {
-    /**
-     * Handle an incoming request.
-     */
     public function handle(Request $request, Closure $next)
     {
         $user = Auth::user();

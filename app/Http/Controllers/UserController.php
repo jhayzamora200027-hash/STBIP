@@ -268,7 +268,7 @@ class UserController extends Controller
             $IncomingFields['password'] = bcrypt($IncomingFields['password']);
             $IncomingFields['active'] = 1; 
             $IncomingFields['name'] = trim($IncomingFields['firstname'] . ' ' . ($IncomingFields['middlename'] ?? '') . ' ' . $IncomingFields['lastname']);
-            $IncomingFields['name'] = preg_replace('/\s+/', ' ', $IncomingFields['name']); // Clean up extra spaces
+            $IncomingFields['name'] = preg_replace('/\s+/', ' ', $IncomingFields['name']); 
             if (!$generatedUserId && isset($IncomingFields['email']) && strpos($IncomingFields['email'], '@') !== false) {
                 $generatedUserId = strstr($IncomingFields['email'], '@', true);
             }
@@ -489,7 +489,6 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         
-        // Validate the request
         $validator = Validator::make($request->all(), [
             'firstname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
@@ -514,7 +513,6 @@ class UserController extends Controller
         }
 
         try {
-            // Prepare update data
             $updateData = [
                 'firstname' => $request->firstname,
                 'middlename' => $request->middlename,

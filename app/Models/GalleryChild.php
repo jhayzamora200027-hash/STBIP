@@ -22,7 +22,6 @@ class GalleryChild extends Model
         'updated_by',
     ];
 
-    // convenience accessors for status
     public function isCompleted()
     {
         return (string) ($this->status ?? '') === 'Completed';
@@ -38,13 +37,11 @@ class GalleryChild extends Model
         return $this->belongsTo(GalleryCard::class, 'gallery_card_id');
     }
 
-    // parent child (self reference)
     public function parentChild()
     {
         return $this->belongsTo(self::class, 'parent_child_id');
     }
 
-    // children of this child (sub-children)
     public function children()
     {
         return $this->hasMany(self::class, 'parent_child_id');

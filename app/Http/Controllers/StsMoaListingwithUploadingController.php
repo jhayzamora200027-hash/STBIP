@@ -79,7 +79,6 @@ class StsMoaListingwithUploadingController extends Controller
                     $municipalityIdx = array_search('name of municipality', $normHeader);
                     $yearIdx = array_search('year of moa', $normHeader);
 
-                    // Attempt to locate a "With MOA" (Yes) column if present
                     $withMoaIdx = null;
                     foreach ($normHeader as $idx => $name) {
                         if ($name === '') {
@@ -103,7 +102,6 @@ class StsMoaListingwithUploadingController extends Controller
 
                         $year = $yearIdx !== false ? trim($row[$yearIdx] ?? '') : '';
 
-                        // Always require a Year of MOA
                         if ($year === '') {
                             continue;
                         }
@@ -325,7 +323,6 @@ class StsMoaListingwithUploadingController extends Controller
             return response()->json(['html' => $html]);
         }
 
-        // Full-page load
         return view('dashboard.maincomponents.uploadingstattachment', [
             'regions' => $regions,
             'selectedRegion' => $selectedRegion,

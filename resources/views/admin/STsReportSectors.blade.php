@@ -44,7 +44,6 @@
         width: 100%;
         margin-top: -3px;
 
-        /* allow the panel to expand via max-height (large enough for content) */
         max-height: 1400px;
         opacity: 1;
       }
@@ -503,7 +502,6 @@
 </div>
 
 <script>
-// utility: replace an existing card row (gallery-row + children-row)
 function replaceCardRow(cardId, html){
     var parser = new DOMParser();
     var doc = parser.parseFromString('<table>' + html + '</table>', 'text/html');
@@ -521,11 +519,9 @@ function replaceCardRow(cardId, html){
         galleryRow.parentNode.replaceChild(newGalleryRow, galleryRow);
         childrenRow.parentNode.replaceChild(newChildrenRow, childrenRow);
     }
-    // re-bind events on newly inserted rows and forms
     initGalleryRowEvents();
     initChildControlListeners();
     initAjaxForms();
-    // restore collapse state if needed
     if(wasOpen){
         var newPanel = document.querySelector('#children-panel-' + cardId);
         if(newPanel){
@@ -536,24 +532,19 @@ function replaceCardRow(cardId, html){
     }
 }
 
-// generic ajax submit helper
 function ajaxSubmit(form, successCb, errorCb){
-    // determine method and ensure Laravel-friendly override behaviour
     var override = (form.querySelector('input[name="_method"]') || {}).value;
     var method = override || form.method || 'POST';
     var url = form.action;
     var data = new FormData(form);
-    // if we have an override, always submit as POST; Laravel will respect the hidden _method
     var fetchMethod = method.toUpperCase();
     if (override) fetchMethod = 'POST';
 
-    // include CSRF token header if available (Laravel expects X-CSRF-TOKEN)
     var headers = {
         'X-Requested-With': 'XMLHttpRequest'
     };
     var meta = document.querySelector('meta[name="csrf-token"]');
     if(meta){ headers['X-CSRF-TOKEN'] = meta.getAttribute('content'); }
-    // debug: log submitted data for troubleshooting
     console.debug('ajaxSubmit', fetchMethod, url);
     data.forEach(function(v,k){ console.debug('  ', k, v); });
     fetch(url, {
@@ -577,27 +568,21 @@ function ajaxSubmit(form, successCb, errorCb){
     });
 }
 
-// Safely hide a modal and remove any leftover backdrops that can block the UI
 function safeHideModal(mod){
   try {
     var bs = bootstrap.Modal.getInstance(mod);
     if(bs) bs.hide();
   } catch(e){ console.error('safeHideModal hide error', e); }
 
-  // small delay to allow Bootstrap to remove its backdrop; if it didn't, clean up manually
   setTimeout(function(){
     try {
-      // remove any stray backdrops
       document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
-      // ensure body no longer has modal-open
       document.body.classList.remove('modal-open');
     } catch(e){}
   }, 120);
 }
 
-// display validation errors on a form (expects Laravel-style errors object)
 function showFormErrors(form, errors){
-    // clear previous state
     form.querySelectorAll('.is-invalid').forEach(function(el){ el.classList.remove('is-invalid'); });
     form.querySelectorAll('.invalid-feedback').forEach(function(el){ el.remove(); });
     if(!errors) return;
@@ -629,7 +614,7 @@ function openEditChildModal(data){
     var id = data.id;
     var modal = document.getElementById('editChildModal');
     var form = document.getElementById('editChildForm');
-    form.action = '/admin/gallery-children/' + id; // route for update (PUT)
+    form.action = '/admin/gallery-children/' + id; 
     document.getElementById('editing_child_id').value = id;
     document.getElementById('modal_title').value = data.title || '';
     document.getElementById('modal_url').value = data.url || '';
@@ -638,7 +623,6 @@ function openEditChildModal(data){
     document.getElementById('modal_is_mother').checked = data.is_mother ? true : false;
     document.getElementById('modal_docno').textContent = data.docno || '-';
 
-    // histories (array)
     var histEl = document.getElementById('modal_docno_history');
     histEl.innerHTML = '';
     (data.histories || []).forEach(function(h){
@@ -657,7 +641,6 @@ function openEditChildModal(data){
                 var z = parseInt(window.getComputedStyle(m).zIndex, 10) || 1050;
                 if (z > highest) highest = z;
             });
-            // place this modal above the highest visible modal
             modal.style.zIndex = (highest + 20);
         } else {
             modal.style.zIndex = '';
@@ -725,7 +708,7 @@ function openEditCardModal(data){
     var id = data.id;
     var modal = document.getElementById('editCardModal');
     var form = document.getElementById('editCardForm');
-    form.action = '/admin/gallery-cards/' + id; // route for update (PUT)
+    form.action = '/admin/gallery-cards/' + id; 
     document.getElementById('editing_gallery_id_card').value = id;
     document.getElementById('card_modal_title').value = data.title || '';
     document.getElementById('card_modal_url').value = data.url || '';
@@ -1133,7 +1116,6 @@ document.addEventListener('DOMContentLoaded', function(){
                 document.getElementById('manageSub_add_url').value = (prefill && prefill.url) ? prefill.url : '';
                 document.getElementById('manageSub_add_is_active').value = (prefill && typeof prefill.is_active !== 'undefined') ? (prefill.is_active ? '1' : '0') : '1';
 
-                // hide header add button and per-row Add buttons while inline form is visible
                 var headerBtn = document.getElementById('manageSub_addSubchildBtn');
                 if (headerBtn) headerBtn.style.display = 'none';
                 document.querySelectorAll('#manageSub_tbody .btn-add-sub-for, .btn-add-sub-for').forEach(function(b){ b.style.display = 'none'; });
@@ -1142,7 +1124,6 @@ document.addEventListener('DOMContentLoaded', function(){
                 document.getElementById('manageSub_add_title').focus();
             }
 
-            // Cancel inline add
             var inlineCancel = document.getElementById('manageSub_inlineCancelBtn');
             if (inlineCancel) inlineCancel.onclick = function(){
                 document.getElementById('manageSub_inlineAddWrap').style.display = 'none';
@@ -1151,13 +1132,11 @@ document.addEventListener('DOMContentLoaded', function(){
                 document.getElementById('manageSub_add_parent_card_id').value = '';
                 document.getElementById('manageSub_add_parent_child_id').value = '';
 
-                // restore header and per-row Add buttons
                 var headerBtn = document.getElementById('manageSub_addSubchildBtn');
                 if (headerBtn) headerBtn.style.display = '';
                 document.querySelectorAll('#manageSub_tbody .btn-add-sub-for, .btn-add-sub-for').forEach(function(b){ b.style.display = ''; });
             };
 
-            // when modal closes, ensure inline form is hidden and header Add is visible
             var manageModalEl = document.getElementById('manageSubChildrenModal');
             if (manageModalEl) manageModalEl.addEventListener('hidden.bs.modal', function(){
                 document.getElementById('manageSub_inlineAddWrap').style.display = 'none';
@@ -1174,11 +1153,9 @@ document.addEventListener('DOMContentLoaded', function(){
             bs.show();
         });
 
-        // helper to expose inline add for JS outside this handler
         window.showManageSubInlineAdd = function(a,b,c){ showManageSubInlineAdd(a,b,c); };
     
 
-    // If server-side validation failed for adding a child, reopen Add Child modal with old() values
     @if(old('parent_card_id') && !old('parent_child_id'))
         openAddChildModal({
             cardId: {{ (int) old('parent_card_id') }},
@@ -1188,9 +1165,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     @endif
 
-    // If server-side validation failed for adding a sub-child, reopen Add Sub-child modal with old() values
     @if(old('parent_card_id') && old('parent_child_id'))
-        // If submission came from the Manage modal, re-open Manage modal and show inline add; otherwise open the standalone Add Sub-child modal
         @if(old('from_manage_modal'))
             (function(){
                 var cardIdOld = {{ (int) old('parent_card_id') }};
@@ -1199,7 +1174,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     if (parseInt(b.getAttribute('data-child-id')) === parentChildIdOld && parseInt(b.getAttribute('data-card-id')) === cardIdOld) {
                         b.click();
                         setTimeout(function(){
-                            // show inline add with old() values
                             if (window.showManageSubInlineAdd) {
                                 window.showManageSubInlineAdd(cardIdOld, parentChildIdOld, {
                                     title: {!! json_encode(old('title')) !!},
@@ -1222,7 +1196,6 @@ document.addEventListener('DOMContentLoaded', function(){
         @endif
     @endif
 
-    // If server-side validation failed for editing child, reopen modal with old() values
     @if(old('editing_child_id'))
         openEditChildModal({
             id: {{ (int) old('editing_child_id') }},
@@ -1236,7 +1209,6 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     @endif
 
-    // If server-side validation failed for editing gallery card, reopen modal with old() values
     @if(old('editing_gallery_id'))
         openEditCardModal({
             id: {{ (int) old('editing_gallery_id') }},

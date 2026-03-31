@@ -12,12 +12,10 @@ class TableController extends Controller
 {
     
 
-    // Display admin dashboard with all database tables
     public function index()
     {
         $tables = [];
         
-        // Get all table names from database
         $tableNames = DB::select('SHOW TABLES');
         $dbName = 'Tables_in_' . env('DB_DATABASE');
         
@@ -34,20 +32,17 @@ class TableController extends Controller
         return view('admin.sysadminfolder.tables', ['tables' => $tables]);
     }
     
-    // Get all columns information for a specific table
     public function getColumns($tableName)
     {
         $columns = DB::select("DESCRIBE {$tableName}");
         return response()->json($columns);
     }
     
-    // Create a new table in the database and generate migration
     public function create(Request $request)
     {
         return $this->createTableWithMigration($request);
     }
 
-    // Actual logic for creating a table and migration
     public function createTableWithMigration(Request $request)
     {
         try {
