@@ -7,12 +7,16 @@
         margin-left: 0 !important;
         margin-right: 0 !important;
         padding-left: 50px !important;
-        padding-right: 430px !important;
+		padding-right: 50px !important;
         width: 100vw !important;
         max-width: 100vw !important;
         box-sizing: border-box !important;
         overflow-x: hidden;
     }
+
+	body.guest-filter-open .stb-main-content {
+		padding-right: 430px !important;
+	}
 @media (max-width: 767px) {
 	.st-dashboard-header .st-header-logo {
 		width: auto !important;
@@ -90,6 +94,11 @@
 }
 
 	.stb-main-content .st-dashboard-container {
+		width: min(1500px, calc(100vw - 100px)) !important;
+		max-width: calc(100vw - 100px) !important;
+	}
+
+	body.guest-filter-open .stb-main-content .st-dashboard-container {
 		width: min(1500px, calc(100vw - 520px)) !important;
 		max-width: calc(100vw - 520px) !important;
 	}
@@ -100,6 +109,15 @@
 		}
 
 		.stb-main-content .st-dashboard-container {
+			width: min(1500px, calc(100vw - 100px)) !important;
+			max-width: calc(100vw - 100px) !important;
+		}
+
+		body.guest-filter-open .stb-main-content {
+			padding-right: 50px !important;
+		}
+
+		body.guest-filter-open .stb-main-content .st-dashboard-container {
 			width: min(1500px, calc(100vw - 100px)) !important;
 			max-width: calc(100vw - 100px) !important;
 		}
@@ -1950,146 +1968,6 @@ if (!document.getElementById('catListTooltip')) {
 	function showOverlay(){ if(overlay) overlay.style.display = 'flex'; }
 
 	showOverlay();
-
-			if (!dock) {
-				if (window.innerWidth <= 767) {
-					const authModal = document.getElementById('filterModal');
-					if (authModal) {
-						const modalBody = authModal.querySelector('#filterModalBody');
-						if (modalBody) {
-							const mobile = document.createElement('div');
-							mobile.id = 'guestMobileFilterPanel';
-							mobile.className = 'guest-mobile-filter-panel open';
-							mobile.style.position = 'fixed';
-							mobile.style.inset = '0';
-							mobile.style.zIndex = '2200';
-							mobile.style.display = 'flex';
-							mobile.style.alignItems = 'flex-end';
-							mobile.style.justifyContent = 'center';
-							mobile.style.background = 'rgba(6,48,110,0.12)';
-							const wrapper = document.createElement('div');
-							wrapper.className = 'filter-modal-panel mobile';
-							wrapper.style.width = '100%';
-							wrapper.style.maxWidth = '640px';
-							wrapper.style.borderRadius = '12px 12px 0 0';
-							wrapper.style.margin = '0';
-							wrapper.style.padding = '0.5rem';
-							wrapper.innerHTML = modalBody.innerHTML;
-							try{ wrapper.style.setProperty('display','block','important'); }catch(e){}
-							mobile.appendChild(wrapper);
-							document.body.appendChild(mobile);
-							document.body.classList.add('modal-open');
-							try{
-								var mobileWrapper = mobile.querySelector('.filter-modal-panel') || mobile.firstElementChild;
-								if(mobileWrapper) mobileWrapper.addEventListener('click', function(e){ e.stopPropagation(); });
-								function _closeGuestMobile(){ try{ var el = document.getElementById('guestMobileFilterPanel'); if(el && el.parentNode){ el.parentNode.removeChild(el); } }catch(e){} try{ document.body.classList.remove('modal-open'); }catch(e){} document.removeEventListener('keydown', _escGuestMobile); }
-								function _escGuestMobile(ev){ if(ev && ev.key === 'Escape') _closeGuestMobile(); }
-								mobile.addEventListener('click', function(e){ if(e.target === mobile){ _closeGuestMobile(); } });
-								document.addEventListener('keydown', _escGuestMobile);
-							}catch(e){}
-							console.debug('[guestFloatingBtn] created guestMobileFilterPanel by cloning filterModalBody');
-							return;
-						}
-					}
-					const mobileSimple = document.createElement('div');
-					mobileSimple.id = 'guestMobileFilterPanel';
-					mobileSimple.className = 'guest-mobile-filter-panel open';
-					mobileSimple.style.position = 'fixed';
-					mobileSimple.style.inset = '0';
-					mobileSimple.style.zIndex = '2200';
-					mobileSimple.style.display = 'flex';
-					mobileSimple.style.alignItems = 'flex-end';
-					mobileSimple.style.justifyContent = 'center';
-					mobileSimple.style.background = 'rgba(6,48,110,0.12)';
-					mobileSimple.innerHTML = `
-						<div class="filter-modal-panel mobile" style="display:block!important;">
-							<div class="card st-dashboard-card guest-filter-card">
-								<div class="guest-filter-header">
-									<div class="guest-filter-kicker">Dashboard Filters</div>
-									<div class="guest-filter-title">Filters (guest)</div>
-								</div>
-								<div class="card-body guest-filter-body">
-									<p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p>
-								</div>
-							</div>
-						</div>`;
-					document.body.appendChild(mobileSimple);
-					document.body.classList.add('modal-open');
-					try{
-						var mobileWrapper2 = mobileSimple.querySelector('.filter-modal-panel') || mobileSimple.firstElementChild;
-						if(mobileWrapper2) mobileWrapper2.addEventListener('click', function(e){ e.stopPropagation(); });
-						function _closeGuestMobile2(){ try{ var el = document.getElementById('guestMobileFilterPanel'); if(el && el.parentNode){ el.parentNode.removeChild(el); } }catch(e){} try{ document.body.classList.remove('modal-open'); }catch(e){} document.removeEventListener('keydown', _escGuestMobile2); }
-						function _escGuestMobile2(ev){ if(ev && ev.key === 'Escape') _closeGuestMobile2(); }
-						mobileSimple.addEventListener('click', function(e){ if(e.target === mobileSimple){ _closeGuestMobile2(); } });
-						document.addEventListener('keydown', _escGuestMobile2);
-					}catch(e){}
-					console.debug('[guestFloatingBtn] created simple guestMobileFilterPanel fallback');
-					return;
-				}
-
-				const authModal = document.getElementById('filterModal');
-				if (authModal) {
-					if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
-						try {
-							const m = window.bootstrap.Modal.getOrCreateInstance(authModal);
-							m.show();
-							console.debug('[guestFloatingBtn] fallback: showed auth filterModal via bootstrap');
-						} catch (e) {
-							console.warn('Could not show auth filter modal', e);
-						}
-						return;
-					}
-
-					const modalBody = authModal.querySelector('#filterModalBody');
-					if (modalBody) {
-						const newDock = document.createElement('div');
-						newDock.id = 'guestFilterDock';
-						newDock.className = 'guest-filter-dock open';
-						newDock.style.display = 'flex';
-						newDock.style.position = 'fixed';
-						newDock.style.inset = '0';
-						newDock.style.background = 'rgba(6,48,110,0.28)';
-						newDock.style.alignItems = 'center';
-						newDock.style.justifyContent = 'center';
-						newDock.style.padding = '1rem';
-						const wrapper = document.createElement('div');
-						wrapper.className = 'guest-filter-panel';
-						wrapper.innerHTML = modalBody.innerHTML;
-						newDock.appendChild(wrapper);
-						document.body.appendChild(newDock);
-						document.body.classList.add('modal-open');
-						console.debug('[guestFloatingBtn] created guestFilterDock by cloning filterModalBody');
-						return;
-					}
-				}
-
-				const simpleDock = document.createElement('div');
-				simpleDock.id = 'guestFilterDock';
-				simpleDock.className = 'guest-filter-dock open';
-				simpleDock.style.display = 'flex';
-				simpleDock.style.position = 'fixed';
-				simpleDock.style.inset = '0';
-				simpleDock.style.background = 'rgba(6,48,110,0.28)';
-				simpleDock.style.alignItems = 'center';
-				simpleDock.style.justifyContent = 'center';
-				simpleDock.style.padding = '1rem';
-				simpleDock.innerHTML = `
-						<div class="guest-filter-panel">
-							<div class="card st-dashboard-card guest-filter-card">
-								<div class="guest-filter-header">
-									<div class="guest-filter-kicker">Dashboard Filters</div>
-									<div class="guest-filter-title">Filters (guest)</div>
-								</div>
-								<div class="card-body guest-filter-body">
-									<p>Please <a href=\"/login\">log in</a> to access full filters, or reload the page.</p>
-								</div>
-							</div>
-						</div>`;
-				document.body.appendChild(simpleDock);
-				document.body.classList.add('modal-open');
-				console.debug('[guestFloatingBtn] created simple guestFilterDock fallback');
-				return;
-			}
 	obj.addEventListener('load', function(){
 		try{
 			var svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
@@ -3863,12 +3741,17 @@ if (!document.getElementById('catListTooltip')) {
 		}
 		</style>
 			@if(!auth()->check())
-			<div id="guestFilterDock" class="guest-filter-dock">
+			<div id="guestFilterDock" class="guest-filter-dock open guest-filter-initial-open">
 				<div id="guestFloatingFilter" class="year-filter-wrap guest-filter-panel">
 					<div class="card st-dashboard-card filter-modal-panel">
 						<div class="guest-filter-header">
-							<div class="guest-filter-kicker">Dashboard Filters</div>
-							<div class="guest-filter-title">Filter By Location &amp; Year</div>
+							<div class="guest-filter-header-top">
+								<div>
+									<div class="guest-filter-kicker">Dashboard Filters</div>
+									<div class="guest-filter-title">Filter By Location &amp; Year</div>
+								</div>
+								<button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button>
+							</div>
 							<div class="guest-filter-subtitle">Refine the dashboard by region, year, province, and city or municipality.</div>
 						</div>
 						<div class="card-body guest-filter-body">
@@ -3885,7 +3768,7 @@ if (!document.getElementById('catListTooltip')) {
 										</select>
 									</div>
 
-									<div class="guest-filter-field">
+									<div class="guest-filter-field guest-filter-field-wide">
 										<label for="year-select-modal" class="st-filter-label">Year</label>
 										<select id="year-select-modal" name="year_of_moa[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Years" style="width:100%;">
 											@foreach($years as $year)
@@ -3894,7 +3777,7 @@ if (!document.getElementById('catListTooltip')) {
 										</select>
 									</div>
 
-									<div class="guest-filter-field">
+									<div class="guest-filter-field guest-filter-field-wide">
 										<label for="province-select-modal" class="st-filter-label">Province</label>
 										<select id="province-select-modal" name="province[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Provinces" style="width:100%;">
 											@foreach($provinces as $province)
@@ -3903,7 +3786,7 @@ if (!document.getElementById('catListTooltip')) {
 										</select>
 									</div>
 
-									<div class="guest-filter-field">
+									<div class="guest-filter-field guest-filter-field-wide">
 										<label for="municipality-select-modal" class="st-filter-label">City/Municipality</label>
 										<select id="municipality-select-modal" name="municipality[]" class="form-control mb-2 st-select2" multiple data-placeholder="Select Cities/Municipalities" style="width:100%;">
 											@foreach($municipalities as $municipality)
@@ -4350,6 +4233,9 @@ window.allYears = @json($allYears ?? $years);
 					templateSelection: function (data) { return data.text; },
 					escapeMarkup: function (markup) { return markup; }
 				};
+				if ($el.closest('#guestFilterDock, #guestMobileFilterPanel, #guestFloatingFilter').length) {
+					opts.dropdownCssClass = 'guest-filter-select2-dropdown';
+				}
 				if ($el.closest('#filterModal').length) {
 					opts.dropdownParent = $('#filterModal');
 				}
@@ -7249,13 +7135,69 @@ document.addEventListener('DOMContentLoaded', function(){
     </button>
 	@endif
 	@guest
-	<button id="guestFloatingBtn" class="btn" aria-label="Open filters for guests" onclick="return window.showGuestFilterDock && window.showGuestFilterDock(event)">
+	<button id="guestFloatingBtn" class="btn" aria-label="Open filters for guests" onclick="event.stopPropagation(); return window.showGuestFilterDock && window.showGuestFilterDock(event)">
 		<img src="/images/dattachments/filtering%20icon.png" class="floating-btn-icon" alt="Filter" />
 		<span class="filter-label">Filter</span>
 	</button>
 	@endguest
 
 <script>
+window.setGuestFilterDockOpen = function(isOpen){
+	var dock = document.getElementById('guestFilterDock');
+	if(!dock) return false;
+	var isDesktop = window.innerWidth > 767;
+	var shouldOpen = isDesktop ? true : !!isOpen;
+	dock.classList.remove('guest-filter-initial-open');
+	dock.classList.toggle('open', shouldOpen);
+	if (!isDesktop) {
+		dock.style.display = shouldOpen ? 'flex' : 'none';
+	} else {
+		dock.style.display = shouldOpen ? 'block' : 'none';
+	}
+	document.body.classList.toggle('modal-open', !isDesktop && shouldOpen);
+	document.body.classList.toggle('guest-filter-open', shouldOpen);
+	return true;
+};
+
+window.closeGuestFilterDock = function(){
+	return window.setGuestFilterDockOpen(false);
+};
+
+window.closeGuestMobileFilterPanel = function(){
+	try{
+		var panel = document.getElementById('guestMobileFilterPanel');
+		if(panel && panel.parentNode){
+			panel.parentNode.removeChild(panel);
+		}
+	}catch(e){}
+	try{ document.body.classList.remove('modal-open'); }catch(e){}
+	return false;
+};
+
+window.closeGuestFilterUi = function(ev){
+	if(ev){
+		try{ ev.preventDefault(); }catch(e){}
+		try{ ev.stopPropagation(); }catch(e){}
+	}
+	window.closeGuestMobileFilterPanel();
+	window.closeGuestFilterDock();
+	return false;
+};
+
+window.isGuestFilterInteractionTarget = function(target){
+	if(!target || typeof target.closest !== 'function') return false;
+	return !!(
+		target.closest('#guestFloatingBtn') ||
+		target.closest('.guest-filter-panel') ||
+		target.closest('.filter-modal-panel') ||
+		target.closest('.guest-filter-close') ||
+		target.closest('.select2-container') ||
+		target.closest('.select2-dropdown') ||
+		target.closest('.select2-results') ||
+		target.closest('.select2-selection')
+	);
+};
+
 window.showGuestFilterDock = function(ev){
 	try{
 		console.debug('[showGuestFilterDock] invoked');
@@ -7273,17 +7215,20 @@ window.showGuestFilterDock = function(ev){
 				wrapper.appendChild(inner);
 				document.body.appendChild(wrapper);
 				document.body.classList.add('modal-open');
-				wrapper.addEventListener('click', function(e){ if(e.target === wrapper){ wrapper.remove(); document.body.classList.remove('modal-open'); } });
-				document.addEventListener('keydown', function _esc(e){ if(e.key === 'Escape'){ try{ wrapper.remove(); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc); } });
+				inner.addEventListener('click', function(e){ e.stopPropagation(); });
+				wrapper.addEventListener('click', function(e){ if(!window.isGuestFilterInteractionTarget(e.target)){ window.closeGuestMobileFilterPanel(); } });
+				document.addEventListener('keydown', function _esc(e){ if(e.key === 'Escape'){ window.closeGuestMobileFilterPanel(); document.removeEventListener('keydown', _esc); } });
 				console.debug('[showGuestFilterDock] opened mobile panel by cloning guestFilterDock');
 				return false;
 			}
 			var mobile = document.createElement('div');
 			mobile.id = 'guestMobileFilterPanel'; mobile.className='guest-mobile-filter-panel open'; mobile.style.position='fixed'; mobile.style.inset='0'; mobile.style.zIndex='2200'; mobile.style.display='flex'; mobile.style.alignItems='flex-end'; mobile.style.justifyContent='center'; mobile.style.background='rgba(6,48,110,0.12)';
-			mobile.innerHTML = '<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>';
+			mobile.innerHTML = '<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-header-top"><div><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button></div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>';
 			document.body.appendChild(mobile); document.body.classList.add('modal-open');
-			mobile.addEventListener('click', function(e){ if(e.target === mobile){ mobile.remove(); document.body.classList.remove('modal-open'); } });
-			document.addEventListener('keydown', function _esc2(e){ if(e.key === 'Escape'){ try{ mobile.remove(); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc2); } });
+			var mobilePanel = mobile.querySelector('.filter-modal-panel');
+			if (mobilePanel) mobilePanel.addEventListener('click', function(e){ e.stopPropagation(); });
+			mobile.addEventListener('click', function(e){ if(!window.isGuestFilterInteractionTarget(e.target)){ window.closeGuestMobileFilterPanel(); } });
+			document.addEventListener('keydown', function _esc2(e){ if(e.key === 'Escape'){ window.closeGuestMobileFilterPanel(); document.removeEventListener('keydown', _esc2); } });
 			console.debug('[showGuestFilterDock] opened simple mobile fallback');
 			return false;
 		}
@@ -7291,9 +7236,7 @@ window.showGuestFilterDock = function(ev){
 		var dock = document.getElementById('guestFilterDock');
 		if(dock){
 			if(dock.classList.contains('open')){ console.debug('[showGuestFilterDock] dock already open'); return false; }
-			dock.style.display = 'flex'; dock.style.position='fixed'; dock.style.inset='0'; dock.style.background='rgba(6,48,110,0.28)'; dock.style.alignItems='center'; dock.style.justifyContent='center'; dock.classList.add('open'); document.body.classList.add('modal-open');
-			dock.addEventListener('click', function _dockClose(e){ if(e.target === dock){ try{ dock.style.display='none'; dock.classList.remove('open'); document.body.classList.remove('modal-open'); }catch(_){} dock.removeEventListener('click', _dockClose); } });
-			document.addEventListener('keydown', function _esc3(e){ if(e.key === 'Escape'){ try{ dock.style.display='none'; dock.classList.remove('open'); document.body.classList.remove('modal-open'); }catch(_){} document.removeEventListener('keydown', _esc3); } });
+			window.setGuestFilterDockOpen(true);
 			console.debug('[showGuestFilterDock] showed guestFilterDock');
 			return false;
 		}
@@ -7502,6 +7445,11 @@ window.showGuestFilterDock = function(ev){
 			will-change: transform;
 		}
 
+		body.guest-filter-open #guestFloatingBtn {
+			opacity: 0;
+			pointer-events: none;
+		}
+
 		#guestFloatingBtn .floating-btn-icon {
 			width: 30px;
 			height: 30px;
@@ -7515,7 +7463,9 @@ window.showGuestFilterDock = function(ev){
 
 		@media (max-width: 767px) {
 			#guestFloatingBtn { display: flex !important; }
+			.guest-filter-close { display: inline-flex; }
 			#guestFilterDock { display: none; }
+			#guestFilterDock.guest-filter-initial-open { display: none !important; }
 			#guestFilterDock.open {
 				display: flex;
 				position: fixed;
@@ -7538,9 +7488,18 @@ window.showGuestFilterDock = function(ev){
 			top: 112px;
 			right: 18px;
 			z-index: 890;
+			display: block;
 			width: min(388px, calc(100vw - 1rem));
+			padding: 0;
+			background: transparent;
 			transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
 			will-change: transform;
+		}
+		#guestFilterDock.guest-filter-initial-open {
+			display: block;
+		}
+		#guestFilterDock.open {
+			display: block;
 		}
 		.guest-filter-panel {
 			width: 100%;
@@ -7559,6 +7518,35 @@ window.showGuestFilterDock = function(ev){
 		.guest-filter-header {
 			padding: 1.15rem 1.2rem 0.95rem;
 			border-bottom: 1px solid rgba(6, 48, 110, 0.08);
+		}
+		.guest-filter-header-top {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 0.75rem;
+		}
+		.guest-filter-close {
+			display: none;
+			border: 0;
+			background: rgba(6, 48, 110, 0.08);
+			color: #062c67;
+			width: 38px;
+			height: 38px;
+			min-width: 38px;
+			border-radius: 999px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.5rem;
+			line-height: 1;
+			cursor: pointer;
+			transition: background 0.2s ease, transform 0.2s ease;
+		}
+		.guest-filter-close:hover,
+		.guest-filter-close:focus-visible {
+			background: rgba(6, 48, 110, 0.14);
+			transform: translateY(-1px);
+			outline: none;
 		}
 		.guest-filter-kicker {
 			font-size: 0.7rem;
@@ -7585,19 +7573,20 @@ window.showGuestFilterDock = function(ev){
 		}
 		.guest-filter-grid {
 			display: grid;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+			grid-template-columns: minmax(0, 1fr);
 			gap: 0.95rem;
+			align-items: start;
 		}
 		.guest-filter-field {
 			padding: 0.95rem;
 			background: rgba(255, 255, 255, 0.82);
 			border: 1px solid rgba(6, 48, 110, 0.08);
 			border-radius: 18px;
-			min-height: 132px;
+			min-height: 122px;
 		}
 		.guest-filter-field-wide {
 			grid-column: 1 / -1;
-			min-height: 148px;
+			min-height: 132px;
 		}
 		#guestFloatingFilter .st-filter-label {
 			display: block;
@@ -7613,22 +7602,71 @@ window.showGuestFilterDock = function(ev){
 			width: 100% !important;
 		}
 		#guestFloatingFilter .select2-container--default .select2-selection--multiple {
-			min-height: 50px;
-			padding: 0.35rem 0.5rem;
+			min-height: 58px;
+			padding: 0.45rem 0.55rem;
 			border-radius: 14px;
 			border: 1px solid rgba(6, 48, 110, 0.12);
 			background: #ffffff;
 			box-shadow: 0 8px 18px rgba(6, 48, 110, 0.04);
 		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.4rem;
+			align-items: flex-start;
+			padding: 0;
+		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-search--inline {
+			flex: 1 1 100%;
+			margin-top: 0.2rem;
+		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-search__field {
+			width: 100% !important;
+			min-width: 8ch;
+			margin-top: 0 !important;
+			padding-left: 0.1rem;
+		}
 		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-selection__choice {
-			margin-top: 4px;
+			display: inline-flex;
+			align-items: flex-start;
+			max-width: 100%;
+			margin-top: 0;
 			border: none;
-			border-radius: 999px;
-			padding: 0.25rem 0.56rem;
+			border-radius: 14px;
+			padding: 0.42rem 0.7rem;
 			background: rgba(16, 174, 181, 0.14);
 			color: #084a70;
 			font-size: 0.8rem;
 			font-weight: 700;
+			line-height: 1.3;
+			white-space: normal;
+			word-break: break-word;
+		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+			white-space: normal;
+			overflow: visible;
+			text-overflow: clip;
+		}
+		#guestFloatingFilter .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+			position: static;
+			margin-right: 0.45rem;
+			padding: 0;
+			border: none;
+			background: transparent;
+			color: #0a548a;
+			font-weight: 800;
+		}
+		.guest-filter-select2-dropdown .select2-results__option,
+		.guest-filter-select2-dropdown.select2-dropdown .select2-results__option {
+			height: auto !important;
+			line-height: 1.35 !important;
+			white-space: normal !important;
+			word-break: break-word;
+			padding: 0.7rem 0.9rem !important;
+		}
+		.guest-filter-select2-dropdown .select2-results__options,
+		.guest-filter-select2-dropdown.select2-dropdown .select2-results__options {
+			max-height: min(320px, 48vh) !important;
 		}
 		.guest-filter-actions {
 			display: flex;
@@ -7662,11 +7700,11 @@ window.showGuestFilterDock = function(ev){
 				top: auto;
 				bottom: 14px;
 				right: 12px;
-				left: auto;
+				width: min(100vw - 1rem, 420px);
 			}
 
 			.guest-filter-panel {
-				width: min(100vw - 1rem, 420px);
+				width: 100%;
 			}
 		}
 		@media (max-width: 767px) {
@@ -7966,11 +8004,36 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 	if (guestDock && !guestDock.dataset.initialized) {
 		guestDock.dataset.initialized = "true";
+		guestDock.addEventListener('click', function (ev) {
+			if (window.innerWidth <= 767 && !window.isGuestFilterInteractionTarget(ev.target)) {
+				window.closeGuestFilterDock();
+			}
+		});
 		movers.push(guestDock);
 	}
 	if (guestBtn && !guestBtn.dataset.initialized) {
 		guestBtn.dataset.initialized = "true";
 		movers.push(guestBtn);
+	}
+
+	if (guestDock && window.innerWidth > 767) {
+		try {
+			document.body.appendChild(guestDock);
+		} catch (e) {}
+		guestDock.style.position = 'fixed';
+		guestDock.style.top = '112px';
+		guestDock.style.right = '18px';
+		guestDock.style.left = 'auto';
+		guestDock.style.bottom = 'auto';
+		guestDock.style.zIndex = '890';
+		guestDock.style.display = 'block';
+		guestDock.style.width = 'min(388px, calc(100vw - 1rem))';
+		guestDock.style.padding = '0';
+		guestDock.style.background = 'transparent';
+	}
+
+	if (guestDock) {
+		window.setGuestFilterDockOpen(window.innerWidth > 767);
 	}
 
 	if (!movers.length) return; 
@@ -8030,14 +8093,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		pointerX = point.clientX;
 		pointerY = point.clientY;
 		movers.forEach(function(el){
-			if (!el.id || (el.id !== 'floatingBtn' && el.id !== 'guestFloatingBtn')) return;
+			if (!el.id || (el.id !== 'floatingBtn' && el.id !== 'guestFloatingBtn' && el.id !== 'guestFilterDock')) return;
 			const rect = el.getBoundingClientRect();
 			const cx = rect.left + rect.width / 2;
 			const cy = rect.top + rect.height / 2;
 			const dx = pointerX - cx;
 			const dy = pointerY - cy;
-			const targetX = Math.max(-18, Math.min(18, dx * 0.06));
-			const targetY = Math.max(-18, Math.min(18, dy * 0.06));
+			const isGuestDock = el.id === 'guestFilterDock';
+			const limit = isGuestDock ? 10 : 18;
+			const factor = isGuestDock ? 0.025 : 0.06;
+			const targetX = Math.max(-limit, Math.min(limit, dx * factor));
+			const targetY = Math.max(-limit, Math.min(limit, dy * factor));
 			const s = states.get(el);
 			if (s) { s.targetX = targetX; s.targetY = targetY; }
 		});
@@ -8058,6 +8124,24 @@ document.addEventListener('DOMContentLoaded', function () {
 		requestAnimationFrame(animate);
 	}
 	requestAnimationFrame(animate);
+
+	document.addEventListener('pointerdown', function (ev) {
+		const target = ev.target;
+		const mobilePanel = document.getElementById('guestMobileFilterPanel');
+		if (mobilePanel) {
+			if (!window.isGuestFilterInteractionTarget(target)) {
+				window.closeGuestMobileFilterPanel();
+			}
+			return;
+		}
+
+		const openDock = document.getElementById('guestFilterDock');
+		if (window.innerWidth <= 767 && openDock && openDock.classList.contains('open')) {
+			if (!window.isGuestFilterInteractionTarget(target)) {
+				window.closeGuestFilterDock();
+			}
+		}
+	}, true);
 
 	document.addEventListener('click', function (ev) {
 		const btnEl = (ev.target && typeof ev.target.closest === 'function') ? ev.target.closest('#guestFloatingBtn') : null;
@@ -8085,22 +8169,19 @@ document.addEventListener('DOMContentLoaded', function () {
 				movers.push(btnEl);
 				states.set(btnEl, { scrollOffset: 0, targetX: 0, targetY: 0, currentX: 0, currentY: 0 });
 			}
-			const opened = dock.classList.toggle('open');
+			const opened = !dock.classList.contains('open');
+			window.setGuestFilterDockOpen(opened);
 			console.debug('[guestFloatingBtn] toggled guestFilterDock, opened=', opened);
-			if (opened) {
-				document.body.classList.add('modal-open');
-			} else {
-				document.body.classList.remove('modal-open');
-			}
 			return;
 		}
 
 		const openDock = document.getElementById('guestFilterDock');
-		if (openDock && openDock.classList.contains('open')) {
+		if (window.innerWidth <= 767 && openDock && openDock.classList.contains('open')) {
 			const target = ev.target;
-			if (!openDock.contains(target) && !target.closest || !target.closest('#guestFloatingBtn')) {
-				openDock.classList.remove('open');
-				document.body.classList.remove('modal-open');
+			const clickedInsideDock = !!(target && openDock.contains(target));
+			const clickedGuestButton = !!(target && typeof target.closest === 'function' && target.closest('#guestFloatingBtn'));
+			if (!clickedInsideDock && !clickedGuestButton) {
+				window.closeGuestFilterDock();
 			}
 		}
 	});
@@ -8108,9 +8189,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	document.addEventListener('keydown', function (ev) {
 		if (ev.key === 'Escape') {
 			const openDock = document.getElementById('guestFilterDock');
-			if (openDock && openDock.classList.contains('open')) {
-				openDock.classList.remove('open');
-				document.body.classList.remove('modal-open');
+			if (window.innerWidth <= 767 && openDock && openDock.classList.contains('open')) {
+				window.closeGuestFilterDock();
 			}
 		}
 	});
