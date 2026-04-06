@@ -1208,9 +1208,9 @@
 		}
 		.st-map-card-body { grid-template-columns: 1fr !important; }
 		#streportFrame {
-			height: 1000vh !important;
-			min-height: 1000px !important;
-			max-height: 1000vh !important;
+			height: 500px !important;
+			min-height: 500px !important;
+			max-height: none !important;
 		}
 		.st-header-logo { height: auto !important; max-width: 140px !important; min-width: 220px !important; min-height: 100px !important; }
 	}
@@ -1596,7 +1596,7 @@
 		.st-dashboard-card h1 { font-size: 2.4rem !important; }
 		.st-dashboard-select-card { padding: 18px 12px 12px 12px !important; }
 		.st-map-card-body { grid-template-columns: 1fr !important; padding: 8px !important; }
-		#streportFrame { height: 45vh !important; min-height: 260px !important; }
+		#streportFrame { height: 500px !important; min-height: 500px !important; }
 	}
 
 	@media (max-width: 420px) {
@@ -4472,22 +4472,33 @@ window.addEventListener('message', function(e) {
 	if (e.data && e.data.type === 'streportToggleHeight') {
 		const iframe = document.querySelector('#streportFrame') || document.querySelector('iframe[src*="/streport"]');
 		if (!iframe) return;
+		const applyStreportHeight = function(nextHeight) {
+			iframe.style.setProperty('height', nextHeight, 'important');
+			iframe.style.setProperty('min-height', nextHeight, 'important');
+			iframe.style.setProperty('max-height', nextHeight, 'important');
+		};
+		const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+		const mobileCollapsedHeight = '500px';
+		const mobileExpandedHeight = '2700px';
 		const wasInitialized = window._streportHasInitialized;
 		const shouldAutoScroll = e.data.scrollIntoView === true;
 		window._streportHasInitialized = true;
 		iframe.style.transition = 'height 0.3s ease, max-height 0.3s ease';
 		iframe.style.overflow = 'hidden';
 		if (e.data.height) {
-			iframe.style.height = e.data.height;
-			iframe.style.maxHeight = e.data.height;
-			window._streportIframeExpanded = (e.data.height !== '600px');
+			let nextHeight = e.data.height;
+			if (isMobileViewport) {
+				nextHeight = String(nextHeight) === mobileExpandedHeight ? mobileExpandedHeight : mobileCollapsedHeight;
+			}
+			applyStreportHeight(nextHeight);
+			window._streportIframeExpanded = (String(nextHeight) !== '500px' && String(nextHeight) !== mobileCollapsedHeight);
 		} else {
 			if (!window._streportIframeExpanded) {
-				iframe.style.height = '1600px';
-				iframe.style.maxHeight = '1600px';
+				const expandedHeight = isMobileViewport ? mobileExpandedHeight : '1600px';
+				applyStreportHeight(expandedHeight);
 			} else {
-				iframe.style.height = '720px';
-				iframe.style.maxHeight = '720px';
+				const collapsedHeight = isMobileViewport ? mobileCollapsedHeight : '720px';
+				applyStreportHeight(collapsedHeight);
 			}
 			window._streportIframeExpanded = !window._streportIframeExpanded;
 		}

@@ -2387,10 +2387,15 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 	(function(){
 		document.addEventListener('click', function(ev){
-			const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : null;
-			if (!img) return;
-			const slide = img.closest('.swiper-slide');
-			if (!slide || !slide.classList.contains('swiper-slide-active')) return;
+            const slide = ev.target && ev.target.closest ? ev.target.closest('.swiper-slide') : null;
+            const img = ev.target && ev.target.closest ? ev.target.closest('.slider-img') : (slide ? slide.querySelector('.slider-img') : null);
+            if (!slide || !img || !slide.closest('.mySwiper')) return;
+            try {
+                if (!slide.classList.contains('swiper-slide-active') && swiper && typeof swiper.slideToLoop === 'function') {
+                    const realIndex = Number(slide.getAttribute('data-swiper-slide-index'));
+                    if (!Number.isNaN(realIndex)) swiper.slideToLoop(realIndex);
+                }
+            } catch(e) { console.warn('[iframe] slide activation failed', e); }
 			try {
 				let regionName = img.getAttribute('data-region-name') || '';
 				if (!regionName) {
@@ -2451,7 +2456,12 @@ document.addEventListener("DOMContentLoaded", function () {
 			} catch(e) { console.warn('[iframe] click year log error', e); }
 			try { renderRegionStatsForImg(img); } catch(err) { console.error('renderRegionStatsForImg failed', err); }
 			try {
-				window.parent.postMessage({ type:'streportToggleHeight' }, '*');
+                const isMobileViewport = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+                if (isMobileViewport) {
+                    window.parent.postMessage({ type:'streportToggleHeight', height:'2700px', scrollIntoView:true }, '*');
+                } else {
+                    window.parent.postMessage({ type:'streportToggleHeight', scrollIntoView:true }, '*');
+                }
 			} catch(err) { console.error('postMessage failed', err); }
 		});
 	})();
@@ -2741,8 +2751,8 @@ function createChartHitZones(chart) {
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 @if(isset($galleryCards) && $galleryCards->count())
-    <h2 class="section-label gallery-section-label d-none d-md-block">Sectors</h2>
-<section class="card-gallery d-none d-md-block" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
+    <h2 class="section-label gallery-section-label">Sectors</h2>
+<section class="card-gallery" style="--card-bg:#fff; position:relative; z-index:60; pointer-events:auto;">
     <div class="container-cards" style="pointer-events:auto;">
         @foreach($galleryCards as $card)
             @php
@@ -4399,6 +4409,372 @@ document.addEventListener('DOMContentLoaded', function(){
   .gcm-mother::before { left: calc(var(--gcm-line-left)); }
 }
 
+@media (max-width: 1024px) {
+    .slider-wrapper {
+        width: 100%;
+        left: auto;
+        right: auto;
+        margin-left: auto;
+        margin-right: auto;
+        overflow-x: clip;
+    }
+
+    .section-label,
+    .slider-label,
+    .gallery-section-label {
+        left: 0;
+        width: auto;
+        max-width: calc(100vw - 32px);
+        padding-inline: 16px;
+        text-align: center;
+    }
+
+    .rsm-header-left,
+    .rsm-prov-total-st {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    #modalStatsChartWrap,
+    .rsm-listing-wrap,
+    .rsm-listing-wrap .rsm-card {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    #modalStatsChart,
+    #modalStatsChartWrap > canvas {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .rsm-prov-item.province-item,
+    .rsm-provinces-list .province-sublist .city-item,
+    .slider-province-card .province-sublist .city-item,
+    .slider-province-card .city-item,
+    .rsm-provinces-list .province-sublist .st-item,
+    .slider-province-card .st-item {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .card-gallery {
+        width: 100%;
+        max-width: 100%;
+        margin-left: auto;
+        padding: 12px 0 16px;
+        overflow: hidden;
+    }
+
+    .container-cards {
+        width: 100%;
+        padding: 4px 12px 10px;
+        gap: 10px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        justify-content: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .container-cards .card {
+        width: 144px;
+        max-width: 144px;
+        min-width: 144px;
+        min-height: 134px;
+        margin: 0;
+        padding: 10px 8px;
+        border-radius: 10px;
+        gap: 4px;
+        scroll-snap-align: none;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .container-cards .card .imgContainer {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: 56px;
+        height: 56px;
+        margin-bottom: 2px;
+        margin-inline: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .container-cards .card .content {
+        width: 100%;
+        text-align: center;
+        padding-top: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .container-cards .card .content h2 {
+        font-size: 0.78rem;
+        line-height: 1.2;
+        margin-bottom: 0;
+        text-align: center;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 1.9em;
+    }
+
+    .container-cards .card .content p {
+        display: none;
+    }
+
+    .logo-badge {
+        width: 42px;
+        height: 42px;
+    }
+
+    .container-cards .marquee-track {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        width: max-content;
+        min-width: 100%;
+        align-items: stretch;
+        transform: none !important;
+        animation: none !important;
+    }
+
+
+    .section-label,
+    .slider-label,
+    .gallery-section-label {
+        font-size: 1.55rem;
+        letter-spacing: 0.02em;
+        margin: 1.25rem auto;
+    }
+
+    .section-label::after {
+        width: 96px;
+    }
+
+    .swiper {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 220px;
+        max-height: 220px;
+        overflow: visible;
+    }
+
+    .swiper-slide {
+        width: min(72vw, 260px);
+        height: 180px;
+    }
+
+    .rsm-panel,
+    #regionStatsPanel {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .rsm-header {
+        padding: 12px;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .rsm-header-left,
+    .rsm-prov-total-st,
+    .rsm-provinces-and-totals,
+    .rsm-container {
+        flex-direction: column;
+        width: 100%;
+        gap: 16px;
+    }
+
+    .rsm-header-left > div:first-child {
+        width: 100%;
+    }
+
+    .rsm-header .rsm-modal-image,
+    #rsm-modal-image {
+        width: min(100%, 320px) !important;
+        height: auto !important;
+        max-height: none !important;
+        margin-inline: auto;
+    }
+
+    #modalStatsChartWrap {
+        height: auto !important;
+        min-height: 260px;
+        padding: 16px !important;
+    }
+
+    #modalStatsChart,
+    #modalStatsChartWrap > canvas {
+        height: 220px !important;
+        padding-right: 0;
+    }
+
+    .rsm-filter-fields {
+        gap: 12px !important;
+    }
+
+    #rsm-filter-status-card {
+        gap: 12px !important;
+    }
+
+    .rsm-stats-grid {
+        grid-auto-flow: row;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: none;
+    }
+
+    .rsm-listing-wrap,
+    .rsm-listing-wrap .rsm-card,
+    .rsm-container .rsm-listing-wrap,
+    .rsm-container .rsm-cards,
+    #sliderModalContent .rsm-container .rsm-cards {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .rsm-listing-wrap .rsm-card {
+        height: auto !important;
+    }
+
+    .rsm-st-list,
+    .rsm-sts-region-list {
+        min-height: 0;
+        max-height: 360px;
+    }
+
+    .rsm-prov-card,
+    .rsm-card,
+    .slider-bottom-preview,
+    .slider-bottom-province-card {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .slider-bottom-preview {
+        margin: 12px auto 20px;
+        padding: 10px;
+    }
+
+    .slider-bottom-preview img {
+        width: min(100%, 220px);
+        height: auto;
+    }
+
+    .rsm-prov-card .rsm-provinces-list {
+        width: 100%;
+        min-width: 0;
+        max-height: 320px;
+    }
+}
+
+@media (max-width: 480px) {
+    .section-label,
+    .slider-label,
+    .gallery-section-label {
+        font-size: 1.3rem;
+        max-width: calc(100vw - 24px);
+        padding-inline: 12px;
+    }
+
+    .swiper {
+        height: 190px;
+        max-height: 190px;
+    }
+
+    .swiper-slide {
+        width: min(78vw, 220px);
+        height: 150px;
+    }
+
+    .container-cards .card {
+        width: 128px;
+        max-width: 128px;
+        min-width: 128px;
+        flex: 0 0 auto;
+        min-height: 118px;
+        padding: 8px 6px;
+    }
+
+    .container-cards .card .imgContainer {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 2px;
+        margin-inline: auto;
+    }
+
+    .logo-badge {
+        width: 38px;
+        height: 38px;
+    }
+
+    .container-cards .card .content h2 {
+        font-size: 0.72rem;
+        min-height: 1.8em;
+    }
+
+    #rsm-filter-status-card,
+    .rsm-stats-grid {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+
+    .rsm-stat-value {
+        font-size: 1.1rem;
+    }
+
+    .rsm-listing-title {
+        font-size: 0.95rem;
+    }
+
+    .rsm-st-list,
+    .rsm-sts-region-list {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 767px) {
+    .container-cards.autoscroll-paused::after {
+        display: none;
+    }
+
+    .container-cards,
+    .container-cards.js-transform-mode {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: auto;
+    }
+
+    .container-cards .marquee-track {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        width: max-content;
+        transform: none !important;
+        animation: none !important;
+    }
+}
+
 </style>
 
 <script>
@@ -4406,6 +4782,73 @@ document.addEventListener('DOMContentLoaded', function(){
     const scroller = document.querySelector('.container-cards');
     if (!scroller) return;
     scroller.tabIndex = 0;
+
+        function useSimpleMobileGallery() {
+                return window.matchMedia('(max-width: 767px)').matches;
+        }
+
+        function initMobileLoop() {
+            if (scroller.dataset.mobileLoopStarted === '1') return;
+
+            scroller.classList.remove('autoscroll-paused', 'js-transform-mode', 'gallery-popover-open', 'dragging');
+            delete scroller.dataset.pointerDragging;
+            scroller.style.overflowX = 'auto';
+            scroller.style.overflowY = 'hidden';
+            const baseHtml = scroller.dataset.mobileBaseHtml || scroller.innerHTML;
+            scroller.dataset.mobileBaseHtml = baseHtml;
+
+            const measureSingleSetWidth = function() {
+                const probe = document.createElement('div');
+                probe.className = 'container-cards';
+                probe.style.position = 'absolute';
+                probe.style.left = '-99999px';
+                probe.style.top = '0';
+                probe.style.visibility = 'hidden';
+                probe.style.pointerEvents = 'none';
+                probe.style.width = 'max-content';
+                probe.style.height = '0';
+                probe.style.padding = getComputedStyle(scroller).padding;
+                probe.innerHTML = baseHtml;
+                document.body.appendChild(probe);
+                const width = probe.scrollWidth;
+                probe.remove();
+                return width;
+            };
+
+            scroller.innerHTML = baseHtml + baseHtml + baseHtml;
+
+            waitForImages(scroller).then(() => {
+                const singleSetWidth = measureSingleSetWidth();
+                const repositionThreshold = Math.max(24, Math.round(singleSetWidth * 0.35));
+                let isAdjusting = false;
+
+                scroller.scrollLeft = singleSetWidth;
+
+                const keepInMiddleBand = function() {
+                    if (isAdjusting || !singleSetWidth) return;
+                    const current = scroller.scrollLeft;
+
+                    if (current < (singleSetWidth - repositionThreshold)) {
+                        isAdjusting = true;
+                        scroller.scrollLeft = current + singleSetWidth;
+                        isAdjusting = false;
+                        return;
+                    }
+
+                    if (current > (singleSetWidth * 2 - repositionThreshold)) {
+                        isAdjusting = true;
+                        scroller.scrollLeft = current - singleSetWidth;
+                        isAdjusting = false;
+                    }
+                };
+
+                scroller.addEventListener('scroll', keepInMiddleBand, { passive: true });
+            }).catch(() => {
+                scroller.scrollLeft = 0;
+            });
+
+            scroller.dataset.mobileLoopStarted = '1';
+        }
 
     function waitForImages(container){
         const imgs = Array.from(container.querySelectorAll('img'));
@@ -4415,6 +4858,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function initLoop(){
         try {
+            if (useSimpleMobileGallery()) {
+                initMobileLoop();
+                return;
+            }
             if (!scroller.clientWidth) {
                 let tries = 0;
                 const retry = () => {

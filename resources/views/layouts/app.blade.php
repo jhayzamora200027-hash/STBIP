@@ -930,7 +930,7 @@
             <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
             @if(Auth::check() && in_array(Auth::user()->usergroup, ['user', 'admin', 'sysadmin']))
             <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}"><i class="bi bi-database-gear me-2"></i>Master Data</a>
-            <a class="nav-link {{ request()->routeIs('sttitles.all') ? 'active' : '' }}" href="{{ route('sttitles.all') }}"><i class="bi bi-journal-text me-2"></i>Social Technology Titles</a>
+            <a class="nav-link {{ request()->routeIs('sttitles.all') ? 'active' : '' }}" href="{{ route('sttitles.all') }}"><i class="bi bi-journal-text me-2"></i>Inventory for Social Technologies</a>
             @endif
             @if(Auth::check() && Auth::user()->usergroup === 'sysadmin')
             <a id="sidebarRedirectSetter" class="nav-link" href="#" title="Set global page redirect"><i class="bi bi-link-45deg me-2"></i>Page Redirect <span id="sidebarRedirectLabel" style="font-weight:600; float:right; color:#2563eb; font-size:0.86rem;">/</span></a>
