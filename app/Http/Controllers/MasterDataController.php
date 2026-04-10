@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Region;
 use App\Models\RegionItem;
+use App\Models\RegionItemHistory;
 use App\Models\Selectdocslogs;
 use App\Models\StsAttachment;
 use App\Models\Uploadlog;
 use App\Models\User;
 use App\Services\RegionSheetImportService;
 use App\Support\MasterDataRegionCatalog;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
@@ -1046,8 +1049,21 @@ class MasterDataController extends Controller
 
         $validated = $this->validateRegionItem($request);
         $region = Region::query()->findOrFail($validated['region_id']);
+        $payload = $this->buildRegionItemPayload($validated, $actorName);
 
-        $regionItem = RegionItem::query()->create($this->buildRegionItemPayload($validated, $actorName));
+        $regionItem = DB::transaction(function () use ($payload, $region, $actorName) {
+            $createdItem = RegionItem::query()->create($payload);
+            $createdItem->setRelation('region', $region);
+
+            $this->recordRegionItemHistory(
+                $createdItem,
+                'add',
+                $actorName,
+                $this->buildRegionItemChangeSet([], $this->buildRegionItemHistorySnapshot($createdItem, $region->name))
+            );
+
+            return $createdItem;
+        });
 
         if ($request->ajax()) {
             return $this->ajaxUpdatesPanelResponse(
@@ -1068,12 +1084,23 @@ class MasterDataController extends Controller
         $validated = $this->validateRegionItem($request);
 
         $regionItem->loadMissing('region:id,name');
+        $originalSnapshot = $this->buildRegionItemHistorySnapshot($regionItem);
         $originalAttachmentIdentity = $this->buildRegionItemAttachmentIdentity($regionItem);
+        $payload = $this->buildRegionItemPayload($validated, $actorName, $regionItem);
 
-        $regionItem->update($this->buildRegionItemPayload($validated, $actorName, $regionItem));
-        $regionItem->load('region:id,name');
+        DB::transaction(function () use ($regionItem, $payload, $originalAttachmentIdentity, $originalSnapshot, $actorName) {
+            $regionItem->update($payload);
+            $regionItem->load('region:id,name');
 
-        $this->syncRegionItemAttachmentIdentity($originalAttachmentIdentity, $regionItem);
+            $this->syncRegionItemAttachmentIdentity($originalAttachmentIdentity, $regionItem);
+
+            $this->recordRegionItemHistory(
+                $regionItem,
+                'update',
+                $actorName,
+                $this->buildRegionItemChangeSet($originalSnapshot, $this->buildRegionItemHistorySnapshot($regionItem))
+            );
+        });
 
         $regionName = $regionItem->fresh('region')?->region?->name ?? Region::query()->find($validated['region_id'])?->name;
 
@@ -1099,9 +1126,21 @@ class MasterDataController extends Controller
 
     public function destroyRegionItem(Request $request, RegionItem $regionItem): RedirectResponse|JsonResponse
     {
+        $actorName = $this->resolveActorName();
+        $regionItem->loadMissing('region:id,name');
         $regionName = $regionItem->region?->name;
         $message = $this->buildRegionItemNotification('deleted', $regionItem);
-        $regionItem->delete();
+
+        DB::transaction(function () use ($regionItem, $actorName, $regionName) {
+            $this->recordRegionItemHistory(
+                $regionItem,
+                'delete',
+                $actorName,
+                $this->buildRegionItemDeleteChangeSet($this->buildRegionItemHistorySnapshot($regionItem, $regionName))
+            );
+
+            $regionItem->delete();
+        });
 
         if ($request->ajax()) {
             return $this->ajaxUpdatesPanelResponse($request, $message, $regionName);
@@ -1193,7 +1232,7 @@ class MasterDataController extends Controller
             $currentPage,
             [
                 'path' => route('masterdata.index'),
-                'query' => array_merge($request->query(), ['tab' => 'updates', 'page' => $currentPage]),
+                'query' => array_merge(array_diff_key($request->query(), ['page' => true, 'history_page' => true]), ['tab' => 'updates', 'page' => $currentPage]),
             ]
         );
 
@@ -1203,6 +1242,45 @@ class MasterDataController extends Controller
             ->orderBy('social_technology')
             ->pluck('social_technology')
             ->values();
+
+        $canViewRegionItemHistory = $this->canViewRegionItemHistory();
+        $historyDateFrom = trim((string) $request->query('history_date_from', ''));
+        $historyDateTo = trim((string) $request->query('history_date_to', ''));
+        $showRegionItemHistoryModal = $canViewRegionItemHistory && $request->boolean('history_modal');
+        $regionItemHistoryLogs = null;
+
+        if ($canViewRegionItemHistory) {
+            $historyQuery = RegionItemHistory::query()->latest('created_at');
+
+            $fromDate = $this->parseRegionItemHistoryDate($historyDateFrom);
+            if ($fromDate) {
+                $historyQuery->where('created_at', '>=', $fromDate->startOfDay());
+                $historyDateFrom = $fromDate->toDateString();
+            } else {
+                $historyDateFrom = '';
+            }
+
+            $toDate = $this->parseRegionItemHistoryDate($historyDateTo);
+            if ($toDate) {
+                $historyQuery->where('created_at', '<=', $toDate->endOfDay());
+                $historyDateTo = $toDate->toDateString();
+            } else {
+                $historyDateTo = '';
+            }
+
+            $historyQueryParams = $request->query();
+            unset($historyQueryParams['history_page']);
+
+            $regionItemHistoryLogs = $historyQuery
+                ->paginate(10, ['*'], 'history_page', max(1, (int) $request->query('history_page', 1)))
+                ->appends(array_merge($historyQueryParams, [
+                    'tab' => 'updates',
+                    'history_modal' => 1,
+                ]));
+        }
+
+        $updatesQuery = $request->query();
+        unset($updatesQuery['page'], $updatesQuery['history_page']);
 
         return [
             'regionItems' => $regionItems,
@@ -1214,6 +1292,12 @@ class MasterDataController extends Controller
             'provinceOptions' => $provinceOptions,
             'municipalityOptions' => $municipalityOptions,
             'socialTechnologyTitles' => $socialTechnologyTitles,
+            'canViewRegionItemHistory' => $canViewRegionItemHistory,
+            'historyDateFrom' => $historyDateFrom,
+            'historyDateTo' => $historyDateTo,
+            'showRegionItemHistoryModal' => $showRegionItemHistoryModal,
+            'regionItemHistoryLogs' => $regionItemHistoryLogs,
+            'updatesQuery' => $updatesQuery,
         ];
     }
 
@@ -1236,6 +1320,27 @@ class MasterDataController extends Controller
         }
         if ($page > 1) {
             $params['page'] = $page;
+        }
+
+        $historyDateFrom = trim((string) ($request->input('return_history_date_from', $request->query('history_date_from', ''))));
+        $historyDateTo = trim((string) ($request->input('return_history_date_to', $request->query('history_date_to', ''))));
+        $historyPage = (int) ($request->input('return_history_page', $request->query('history_page', 1)));
+        $historyModal = filter_var(
+            $request->input('return_history_modal', $request->query('history_modal', false)),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        if ($historyDateFrom !== '') {
+            $params['history_date_from'] = $historyDateFrom;
+        }
+        if ($historyDateTo !== '') {
+            $params['history_date_to'] = $historyDateTo;
+        }
+        if ($historyModal) {
+            $params['history_modal'] = 1;
+            if ($historyPage > 1) {
+                $params['history_page'] = $historyPage;
+            }
         }
 
         return $params;
@@ -1473,6 +1578,180 @@ class MasterDataController extends Controller
             'createdby' => $existingItem?->createdby ?: $actorName,
             'updatedby' => $actorName,
         ];
+    }
+
+    private function canViewRegionItemHistory(): bool
+    {
+        return in_array(Auth::user()?->usergroup, ['admin', 'sysadmin'], true);
+    }
+
+    private function parseRegionItemHistoryDate(string $value): ?Carbon
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function buildRegionItemHistorySnapshot(RegionItem $regionItem, ?string $regionName = null): array
+    {
+        return [
+            'region_name' => trim((string) ($regionName ?? $regionItem->region?->name ?? '')),
+            'title' => trim((string) $regionItem->title),
+            'province' => $this->normalizeRegionItemHistoryValue($regionItem->province),
+            'municipality' => $this->normalizeRegionItemHistoryValue($regionItem->municipality),
+            'with_expr' => (bool) $regionItem->with_expr,
+            'with_moa' => (bool) $regionItem->with_moa,
+            'year_of_moa' => $regionItem->year_of_moa,
+            'with_res' => (bool) $regionItem->with_res,
+            'year_of_resolution' => $regionItem->year_of_resolution,
+            'included_aip' => (bool) $regionItem->included_aip,
+            'with_adopted' => (bool) $regionItem->with_adopted,
+            'with_replicated' => (bool) $regionItem->with_replicated,
+            'status' => $this->normalizeRegionItemHistoryValue($regionItem->status),
+            'inactive_status' => $this->normalizeRegionItemHistoryValue($regionItem->inactive_status),
+            'inactive_remarks' => $this->normalizeRegionItemHistoryValue($regionItem->inactive_remarks),
+        ];
+    }
+
+    private function buildRegionItemChangeSet(array $before, array $after): array
+    {
+        $labels = [
+            'region_name' => 'Region',
+            'title' => 'ST Title',
+            'province' => 'Province',
+            'municipality' => 'City / Municipality',
+            'with_expr' => 'With Expression of Interest',
+            'with_moa' => 'With MOA',
+            'year_of_moa' => 'Year of MOA',
+            'with_res' => 'With Resolution',
+            'year_of_resolution' => 'Year of Resolution',
+            'included_aip' => 'Included AIP',
+            'with_adopted' => 'Adopted',
+            'with_replicated' => 'Replicated',
+            'status' => 'Status',
+            'inactive_status' => 'Inactive Status',
+            'inactive_remarks' => 'Inactive Remarks',
+        ];
+
+        $changes = [];
+
+        foreach ($labels as $field => $label) {
+            $oldValue = $before[$field] ?? null;
+            $newValue = $after[$field] ?? null;
+
+            if ($oldValue === $newValue) {
+                continue;
+            }
+
+            $changes[] = [
+                'field' => $label,
+                'from' => $this->formatRegionItemHistoryValue($field, $oldValue),
+                'to' => $this->formatRegionItemHistoryValue($field, $newValue),
+            ];
+        }
+
+        return $changes;
+    }
+
+    private function buildRegionItemDeleteChangeSet(array $snapshot): array
+    {
+        return [
+            [
+                'field' => 'Deleted Row',
+                'from' => 'Active',
+                'to' => collect($snapshot)
+                    ->map(function (mixed $value, string $field) {
+                        $label = match ($field) {
+                            'region_name' => 'Region',
+                            'title' => 'ST Title',
+                            'province' => 'Province',
+                            'municipality' => 'City / Municipality',
+                            'with_expr' => 'With Expression of Interest',
+                            'with_moa' => 'With MOA',
+                            'year_of_moa' => 'Year of MOA',
+                            'with_res' => 'With Resolution',
+                            'year_of_resolution' => 'Year of Resolution',
+                            'included_aip' => 'Included AIP',
+                            'with_adopted' => 'Adopted',
+                            'with_replicated' => 'Replicated',
+                            'status' => 'Status',
+                            'inactive_status' => 'Inactive Status',
+                            'inactive_remarks' => 'Inactive Remarks',
+                            default => Str::headline($field),
+                        };
+
+                        return $label . ': ' . $this->formatRegionItemHistoryValue($field, $value);
+                    })
+                    ->implode(', '),
+            ],
+        ];
+    }
+
+    private function normalizeRegionItemHistoryValue(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            $value = trim($value);
+            return $value === '' ? null : $value;
+        }
+
+        return $value;
+    }
+
+    private function formatRegionItemHistoryValue(string $field, mixed $value): string
+    {
+        if (in_array($field, ['with_expr', 'with_moa', 'with_res', 'included_aip', 'with_adopted', 'with_replicated'], true)) {
+            return $value ? 'Yes' : 'No';
+        }
+
+        if ($field === 'status') {
+            if ($value === null) {
+                return 'Blank';
+            }
+
+            return in_array($value, ['inactive', 'dissolved'], true)
+                ? 'Inactive'
+                : Str::headline((string) $value);
+        }
+
+        if ($field === 'inactive_status') {
+            return match ($value) {
+                'pending_document' => 'With document but still pending',
+                'dissolved' => 'Inactive',
+                null => 'Blank',
+                default => Str::headline((string) $value),
+            };
+        }
+
+        if ($value === null || $value === '') {
+            return 'Blank';
+        }
+
+        return (string) $value;
+    }
+
+    private function recordRegionItemHistory(RegionItem $regionItem, string $action, string $updatedBy, array $changeSet): void
+    {
+        RegionItemHistory::query()->create([
+            'region_item_id' => $regionItem->id,
+            'region_id' => $regionItem->region_id,
+            'region_name' => $regionItem->region?->name,
+            'st_title' => $regionItem->title,
+            'province' => $regionItem->province,
+            'city' => $regionItem->municipality,
+            'updated_by' => $updatedBy,
+            'action' => $action,
+            'update_row' => empty($changeSet)
+                ? 'No tracked field changes.'
+                : collect($changeSet)
+                    ->map(fn (array $change) => $change['field'] . ': ' . $change['from'] . ' -> ' . $change['to'])
+                    ->implode('; '),
+        ]);
     }
 
     private function buildOverview(Collection $regions, Collection $regionItems): array

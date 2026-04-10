@@ -1,168 +1,140 @@
 <!-- Register Modal -->
-<div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content modal-login-bg border-0">
-            <div class="modal-body p-3">
-                <div class="modal-login-content" style="padding: 15px;">
-                    <h2 id="registerModalLabel" style="margin-bottom: 15px; font-size: 1.5rem;">Register Your Account</h2>
+<div class="modal fade portal-auth-modal portal-register-modal" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl portal-register-dialog">
+        <div class="modal-content border-0 portal-login-frame portal-register-frame">
+            <div class="modal-body p-0">
+                <div class="portal-register-shell">
+                    <section class="portal-register-brand-panel portal-auth-pane">
+                        <div class="portal-register-brand-copy">
+                            <span class="portal-register-kicker">Account Request</span>
+                            <h2>Create your STBIP access</h2>
+                            <p>Submit your DSWD account request for administrator approval. Use accurate identity details so the account can be reviewed quickly.</p>
+                        </div>
 
-                    @if (session('error'))
-                        <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
-                            {{ session('error') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    @endif
-                    <div id="registerErrorMsg" style="display:none;margin-bottom:12px;font-size:1.1rem;font-weight:bold;color:#fff;background:#ff4d4f;padding:12px 16px;border-radius:8px;text-align:center;box-shadow:0 2px 8px rgba(255,77,79,0.18);z-index:10;"></div>
-                    @if ($errors->register->any())
-                        <div class="alert alert-danger alert-dismissible fade show py-2" style="max-height: 200px; overflow-y: auto;" role="alert">
-                            <ul class="mb-0" style="font-size: 0.875rem;">
-                                @foreach ($errors->register->all() as $error)
-                                    <li style="word-wrap: break-word; white-space: normal;">{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    @endif
-                    
-                    <style>
-                        .register-form-label {
-                            color: #fff;
-                            text-align: left;
-                            font-size: 0.875rem;
-                            margin-bottom: 4px;
-                            display: block;
-                        }
-                        .register-form-input {
-                            width: 100%;
-                            padding: 8px 10px;
-                            border: none;
-                            border-radius: 6px;
-                            background: rgba(255,255,255,0.2);
-                            color: #fff;
-                            font-size: 0.875rem;
-                        }
-                        .register-form-input::placeholder {
-                            color: rgba(255,255,255,0.6);
-                        }
-                        select.register-form-input {
-                            color: #fff !important;
-                        }
-                        select.register-form-input option {
-                            color: #000 !important;
-                        }
-                        .form-group-compact {
-                            margin-bottom: 12px;
-                        }
-                        .pw-requirements {
-                            margin-top: 6px;
-                            background: rgba(20,20,20,0.94);
-                            padding: 12px;
-                            border-radius: 8px;
-                            display: none; 
-                            position: fixed;
-                            z-index: 3050;
-                            width: 320px;
-                            max-width: 90vw;
-                            box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-                            opacity: 0;
-                            transition: opacity 0.28s ease;
-                        }
-                        .pw-requirements.show {
-                            opacity: 1;
-                        }
-                        .pw-popover-arrow {
-                            position: absolute;
-                            width: 10px;
-                            height: 10px;
-                            background: rgba(255,255,255,0.03);
-                            transform: rotate(45deg);
-                            left: 16px;
-                            top: -6px;
-                            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-                        }
-                        .pw-req-list {
-                            display: flex;
-                            flex-direction: column;
-                        }
-                        .pw-req-item {
-                            display: flex;
-                            align-items: center;
-                            color: #bbb;
-                            margin: 4px 0;
-                            font-size: 0.85rem;
-                        }
-                        .pw-req-icon {
-                            width: 20px;
-                            text-align: center;
-                            margin-right: 8px;
-                            font-weight: 700;
-                            color: #bbb;
-                        }
-                        .pw-req-item.met { color: #b8ffb8; }
-                        .pw-req-item.met .pw-req-icon { color: #b8ffb8; }
-                        .pw-strength .progress { height: 8px; border-radius: 8px; overflow: hidden; }
-                        .pw-strength .progress-bar { transition: width 0.22s ease, background 0.22s ease; }
-                    </style>
-                    
-                    <form method="POST" action="{{ route('register') }}" id="ajaxRegisterForm">
-                        @csrf
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerFirstName" class="register-form-label">First Name *</label>
-                                    <input type="text" id="registerFirstName" name="firstname" placeholder="First Name" value="{{ old('firstname') }}" class="register-form-input">
+                        <div class="portal-register-highlights">
+                            <div class="portal-register-highlight-card">
+                                <i class="bi bi-envelope-check"></i>
+                                <div>
+                                    <strong>DSWD email required</strong>
+                                    <span>Use your official <code>@dswd.gov.ph</code> address.</span>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerMiddleName" class="register-form-label">Middle Name *</label>
-                                    <input type="text" id="registerMiddleName" name="middlename" placeholder="Middle Name" value="{{ old('middlename') }}" class="register-form-input">
+                            <div class="portal-register-highlight-card">
+                                <i class="bi bi-shield-lock"></i>
+                                <div>
+                                    <strong>Strong password policy</strong>
+                                    <span>Passwords must include upper, lower, number, and symbol.</span>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerLastName" class="register-form-label">Last Name *</label>
-                                    <input type="text" id="registerLastName" name="lastname" placeholder="Last Name" value="{{ old('lastname') }}" class="register-form-input">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerEmail" class="register-form-label">Email Address *</label>
-                                    <input type="email" id="registerEmail" name="email" placeholder="Email address" value="{{ old('email') }}" class="register-form-input">
+                            <div class="portal-register-highlight-card">
+                                <i class="bi bi-person-check"></i>
+                                <div>
+                                    <strong>Admin approval required</strong>
+                                    <span>You can sign in only after your registration is approved.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerPhone" class="register-form-label">Phone Number</label>
-                                    <input type="text" id="registerPhone" name="phonenumber" placeholder="Phone Number" value="{{ old('phonenumber') }}" class="register-form-input">
-                                </div>
+                        <div class="portal-register-illustration-wrap">
+                            <div class="portal-register-illustration-glow"></div>
+                            <div class="portal-register-stat-card portal-register-stat-card-main">
+                                <strong>Approval flow</strong>
+                                <span>Submit request</span>
+                                <span>Admin review (Approve/Reject)</span>
+                                <span>Portal access</span>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerGender" class="register-form-label">Gender</label>
-                                    <select name="gender" id="registerGender" class="register-form-input">
-                                        <option value="">Select Gender</option>
-                                        <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>Male</option>
-                                        <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
-                                        <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>Prefer not to say</option>
-                                    </select>
-                                </div>
+                            <div class="portal-register-stat-card portal-register-stat-card-alt">
+                                <span class="portal-register-stat-badge">DSWD only</span>
+                                <small>Use a valid government email for verification.</small>
                             </div>
                         </div>
+                    </section>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                            <label for="registerPassword" class="register-form-label">Password</label>
-                                            <input type="password" id="registerPassword" name="password" placeholder="Password" class="register-form-input" aria-describedby="pwRequirements">
+                    <section class="portal-register-form-panel portal-auth-pane">
+                        <div class="portal-register-form-wrap">
+                            <p class="portal-login-eyebrow">Join the portal</p>
+                            <h1 id="registerModalLabel">Register your account</h1>
+                            <p class="portal-register-subtitle">Complete the form below. Required fields help us verify and approve your access request.</p>
+
+                            @if (session('error'))
+                                <div class="alert alert-danger portal-login-alert" role="alert">
+                                    {{ session('error') }}
+                                </div>
+                            @endif
+
+                            <div id="registerErrorMsg" class="portal-login-alert portal-login-alert-inline" style="display:none;"></div>
+
+                            @if ($errors->register->any())
+                                <div class="alert alert-danger alert-dismissible fade show portal-login-alert" role="alert">
+                                    <div class="portal-login-alert-body">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        <ul class="mb-0">
+                                            @foreach ($errors->register->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            @endif
+
+                            <form method="POST" action="{{ route('register') }}" id="ajaxRegisterForm">
+                                @csrf
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerFirstName" class="portal-register-label">First Name *</label>
+                                            <input type="text" id="registerFirstName" name="firstname" placeholder="Juan" value="{{ old('firstname') }}" class="portal-register-input">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerMiddleName" class="portal-register-label">Middle Name</label>
+                                            <input type="text" id="registerMiddleName" name="middlename" placeholder="Santos" value="{{ old('middlename') }}" class="portal-register-input">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerLastName" class="portal-register-label">Last Name *</label>
+                                            <input type="text" id="registerLastName" name="lastname" placeholder="Dela Cruz" value="{{ old('lastname') }}" class="portal-register-input">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerEmail" class="portal-register-label">DSWD Email Address *</label>
+                                            <input type="email" id="registerEmail" name="email" placeholder="name@dswd.gov.ph" value="{{ old('email') }}" class="portal-register-input">
+                                            <small class="portal-register-help">Only official DSWD email addresses are accepted.</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerPhone" class="portal-register-label">Phone Number</label>
+                                            <input type="text" id="registerPhone" name="phonenumber" placeholder="09XXXXXXXXX" value="{{ old('phonenumber') }}" class="portal-register-input">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerGender" class="portal-register-label">Gender</label>
+                                            <select name="gender" id="registerGender" class="portal-register-input portal-register-select">
+                                                <option value="">Select Gender</option>
+                                                <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>Male</option>
+                                                <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
+                                                <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>Prefer not to say</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field portal-register-password-field">
+                                            <label for="registerPassword" class="portal-register-label">Password *</label>
+                                            <div class="portal-register-input-wrap">
+                                                <input type="password" id="registerPassword" name="password" placeholder="Create a secure password" class="portal-register-input" aria-describedby="pwRequirements">
+                                                <button type="button" class="portal-password-toggle portal-password-toggle-register" data-password-toggle data-target="registerPassword" aria-label="Show password" aria-pressed="false">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
                                             <div id="pwRequirements" class="pw-requirements" aria-live="polite">
-                                                <div class="pw-req-header" style="font-size:0.85rem;color:#ddd;margin-bottom:6px;">Password must include</div>
+                                                <div class="pw-popover-arrow"></div>
+                                                <div class="pw-req-header">Password must include</div>
                                                 <div class="pw-req-list">
                                                     <div class="pw-req-item" data-test="length"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 8 characters</span></div>
                                                     <div class="pw-req-item" data-test="upper"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 1 uppercase letter</span></div>
@@ -171,30 +143,43 @@
                                                     <div class="pw-req-item" data-test="symbol"><span class="pw-req-icon" aria-hidden="true">○</span><span class="pw-req-text">At least 1 symbol (e.g., !@#$%)</span></div>
                                                 </div>
                                                 <div class="pw-strength mt-2">
-                                                    <div class="progress" style="background:rgba(255,255,255,0.12);">
+                                                    <div class="progress">
                                                         <div id="pwStrengthBar" class="progress-bar" role="progressbar" style="width:0%;background:#d9534f;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
                                                     </div>
-                                                    <div id="pwStrengthText" class="small text-muted mt-1 pw-strength-text" style="color:#ddd;">Strength: Very weak</div>
+                                                    <div id="pwStrengthText" class="small mt-1 pw-strength-text">Strength: Very weak</div>
                                                 </div>
-                                                <div id="pwMatchMsg" class="small mt-1 pw-match-msg" style="display:none;color:#ffb3b3;">Passwords do not match.</div>
+                                                <div id="pwMatchMsg" class="small mt-1 pw-match-msg" style="display:none;">Passwords do not match.</div>
                                             </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="portal-register-field">
+                                            <label for="registerPasswordConfirmation" class="portal-register-label">Confirm Password *</label>
+                                            <div class="portal-register-input-wrap">
+                                                <input type="password" id="registerPasswordConfirmation" name="password_confirmation" placeholder="Re-enter your password" class="portal-register-input">
+                                                <button type="button" class="portal-password-toggle portal-password-toggle-register" data-password-toggle data-target="registerPasswordConfirmation" aria-label="Show password" aria-pressed="false">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="portal-register-field">
+                                            <label for="registerAddress" class="portal-register-label">Address</label>
+                                            <textarea id="registerAddress" name="address" placeholder="Office or mailing address" rows="3" class="portal-register-input portal-register-textarea">{{ old('address') }}</textarea>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-compact">
-                                    <label for="registerPasswordConfirmation" class="register-form-label">Confirm Password</label>
-                                    <input type="password" id="registerPasswordConfirmation" name="password_confirmation" placeholder="Confirm Password" class="register-form-input">
+
+                                <div class="portal-register-actions">
+                                    <button type="button" class="portal-login-secondary-btn" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="modal">
+                                        Back to login
+                                    </button>
+                                    <button type="submit" class="portal-login-primary-btn">Submit registration</button>
                                 </div>
-                            </div>
+                            </form>
                         </div>
-                        
-                        <div class="form-group-compact">
-                            <label for="registerAddress" class="register-form-label">Address</label>
-                            <textarea id="registerAddress" name="address" placeholder="Address" rows="2" class="register-form-input">{{ old('address') }}</textarea>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100 mt-2" style="padding: 10px;">Register</button>
-                    </form>
+                    </section>
                 </div>
             </div>
         </div>
@@ -225,9 +210,53 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const registerModalEl = document.getElementById('registerModal');
+        const registerModal = typeof bootstrap !== 'undefined' && registerModalEl
+            ? bootstrap.Modal.getOrCreateInstance(registerModalEl)
+            : null;
+        const registerFormPanel = registerModalEl
+            ? registerModalEl.querySelector('.portal-register-form-panel')
+            : null;
+
+        if (registerModalEl && registerFormPanel) {
+            registerModalEl.addEventListener('show.bs.modal', function() {
+                registerFormPanel.scrollTop = 0;
+            });
+        }
+
+        function bindPasswordToggles(scope) {
+            const toggleButtons = scope.querySelectorAll('[data-password-toggle]');
+
+            toggleButtons.forEach(function(toggleButton) {
+                const targetId = toggleButton.getAttribute('data-target');
+                const targetInput = targetId ? document.getElementById(targetId) : null;
+                const icon = toggleButton.querySelector('i');
+
+                if (!targetInput || !icon) {
+                    return;
+                }
+
+                toggleButton.addEventListener('click', function() {
+                    const shouldShow = targetInput.type === 'password';
+                    targetInput.type = shouldShow ? 'text' : 'password';
+                    toggleButton.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+                    toggleButton.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+                    icon.className = shouldShow ? 'bi bi-eye-slash' : 'bi bi-eye';
+                    targetInput.focus({ preventScroll: true });
+                    const valueLength = targetInput.value.length;
+                    targetInput.setSelectionRange(valueLength, valueLength);
+                });
+            });
+        }
+
+        if (registerModalEl) {
+            bindPasswordToggles(registerModalEl);
+        }
+
         @if ($errors->register->any())
-            let registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
-            registerModal.show();
+            if (registerModal) {
+                registerModal.show();
+            }
         @endif
         
         @if (session('success') === 'Registration Successful')
@@ -240,7 +269,6 @@
             const pwdInputEl = document.getElementById('registerPassword');
             const pwdConfirmEl = document.getElementById('registerPasswordConfirmation');
             const popEl = document.getElementById('pwRequirements');
-            let popClone = null;
             let autoFadeTimeout = null;
             let hideAnimationTimeout = null;
 
@@ -258,7 +286,7 @@
                 const pwd = pwdInputEl ? pwdInputEl.value : '';
                 const conf = pwdConfirmEl ? pwdConfirmEl.value : '';
                 const checks = evaluatePassword(pwd);
-                const activePop = popClone || popEl;
+                const activePop = popEl;
                 const reqItems = (activePop && activePop.querySelectorAll) ? activePop.querySelectorAll('.pw-req-item') : registerForm.querySelectorAll('.pw-req-item');
                 reqItems.forEach(item => {
                     const test = item.getAttribute('data-test');
@@ -314,7 +342,7 @@
             function scheduleAutoFade() {
                 if (autoFadeTimeout) clearTimeout(autoFadeTimeout);
                 autoFadeTimeout = setTimeout(() => {
-                    const active = popClone || popEl;
+                    const active = popEl;
                     if (active) hidePopoverWithFade(active);
                     autoFadeTimeout = null;
                 }, 2000);
@@ -326,26 +354,6 @@
 
             if (pwdInputEl) pwdInputEl.addEventListener('input', updatePwdUI);
             if (pwdConfirmEl) pwdConfirmEl.addEventListener('input', updatePwdUI);
-
-            if (popEl) {
-                try {
-                    popClone = popEl.cloneNode(true);
-                    popClone.id = 'pwRequirements_clone';
-                    const innerText = popClone.querySelector('#pwStrengthText');
-                    if (innerText) innerText.classList.add('pw-strength-text');
-                    const innerMatch = popClone.querySelector('#pwMatchMsg');
-                    if (innerMatch) innerMatch.classList.add('pw-match-msg');
-                    const clonedBar = popClone.querySelector('#pwStrengthBar');
-                    if (clonedBar) clonedBar.classList.add('progress-bar');
-                    popClone.style.display = 'none';
-                    popClone.style.position = 'fixed';
-                    popClone.style.zIndex = '9999';
-                    document.body.appendChild(popClone);
-                } catch (e) {
-                    console.debug('pw pop clone failed', e);
-                    popClone = null;
-                }
-            }
             updatePwdUI();
 
             if (popEl) {
@@ -354,53 +362,13 @@
                 let popHovered = false;
                 let hideTimeout = null;
 
-                function getActivePop() { return popClone || popEl; }
-
-                function positionPopover() {
-                    const active = getActivePop();
-                    if (!pwdInputEl || !active) return;
-                    const wasHidden = active.style.display === 'none';
-                    if (wasHidden) {
-                        active.style.visibility = 'hidden';
-                        active.style.display = 'block';
-                    }
-                    const rect = pwdInputEl.getBoundingClientRect();
-                    const popRect = active.getBoundingClientRect();
-                    let left = rect.left;
-                    let top = rect.bottom + 8;
-                    if (top + popRect.height > window.innerHeight) {
-                        top = rect.top - popRect.height - 8;
-                    }
-                    if (left + popRect.width > window.innerWidth) {
-                        left = window.innerWidth - popRect.width - 8;
-                    }
-                    if (left < 8) left = 8;
-                    if (top < 8) top = 8;
-                    active.style.left = left + 'px';
-                    active.style.top = top + 'px';
-                    if (wasHidden) {
-                        active.style.display = 'none';
-                        active.style.visibility = '';
-                    }
-                }
-
                 function showPopover() {
-                    const active = getActivePop();
+                    const active = popEl;
                     if (!active) return;
-                    try {
-                        if (active.parentElement !== document.body) {
-                            document.body.appendChild(active);
-                            active.style.position = 'fixed';
-                        }
-                    } catch (e) {
-                    }
                     cancelAutoFade();
                     if (hideAnimationTimeout) { clearTimeout(hideAnimationTimeout); hideAnimationTimeout = null; }
                     active.style.display = 'block';
-                    active.style.zIndex = 9999;
-                    positionPopover();
                     requestAnimationFrame(() => active.classList.add('show'));
-                    if (window.console && console.debug) console.debug('pw popover shown');
                 }
 
                 function hideIfNotActive() {
@@ -408,8 +376,7 @@
                     hideTimeout = setTimeout(() => {
                         if (!pwdInputEl) return;
                         if (document.activeElement === pwdInputEl || inputHovered || popHovered) return;
-                        const active = getActivePop();
-                        hidePopoverImmediate(active);
+                        hidePopoverImmediate(popEl);
                     }, 150);
                 }
 
@@ -423,19 +390,12 @@
 
                 popEl.addEventListener('mouseenter', () => { popHovered = true; });
                 popEl.addEventListener('mouseleave', () => { popHovered = false; hideIfNotActive(); });
-                if (popClone) {
-                    popClone.addEventListener('mouseenter', () => { popHovered = true; });
-                    popClone.addEventListener('mouseleave', () => { popHovered = false; hideIfNotActive(); });
-                }
-
-                window.addEventListener('resize', positionPopover);
-                window.addEventListener('scroll', () => { const active = getActivePop(); if (active && active.style.display === 'block') positionPopover(); }, true);
             }
 
             registerForm.addEventListener('submit', function(e) {
                 e.preventDefault();
 
-                const existingAlert = registerForm.closest('.modal-login-content').querySelector('.alert-danger');
+                const existingAlert = registerForm.closest('.portal-register-form-wrap').querySelector('.alert-danger');
                 if (existingAlert) {
                     existingAlert.remove();
                 }

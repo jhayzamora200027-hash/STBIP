@@ -477,9 +477,28 @@
 		flex-wrap: wrap;
 		margin-bottom: 18px;
 	}
+	.masterdata-history-filter-bar {
+		display: flex;
+		gap: 14px;
+		align-items: end;
+		flex-wrap: wrap;
+	}
 	.masterdata-filter-bar .masterdata-field {
 		min-width: min(100%, 220px);
 		flex: 1 1 240px;
+	}
+	.masterdata-history-filter-bar .masterdata-field {
+		min-width: min(100%, 180px);
+		flex: 1 1 180px;
+	}
+	.masterdata-history-row-cell {
+		min-width: 300px;
+		white-space: normal;
+		line-height: 1.5;
+	}
+	.masterdata-history-table th:nth-child(8),
+	.masterdata-history-table td:nth-child(8) {
+		min-width: 340px;
 	}
 	.masterdata-list-meta {
 		display: flex;
@@ -1284,6 +1303,56 @@
 			initializeConditionalFields(root);
 			initializeRowToggles(root);
 			initializeUpdatesPanelAjax(root);
+			initializeRegionItemHistoryModal(root);
+		}
+
+		function syncRegionItemHistoryModalUrl(isOpen) {
+			const url = new URL(window.location.href);
+			if (isOpen) {
+				url.searchParams.set('history_modal', '1');
+			} else {
+				url.searchParams.delete('history_modal');
+				url.searchParams.delete('history_page');
+			}
+			history.replaceState({}, '', url.toString());
+		}
+
+		function openRegionItemHistoryModal() {
+			if (typeof bootstrap === 'undefined') {
+				return;
+			}
+
+			const modalEl = document.getElementById('regionItemHistoryModal');
+			if (!modalEl) {
+				return;
+			}
+
+			bootstrap.Modal.getOrCreateInstance(modalEl).show();
+			syncRegionItemHistoryModalUrl(true);
+		}
+
+		function initializeRegionItemHistoryModal(root) {
+			if (typeof bootstrap === 'undefined') {
+				return;
+			}
+
+			const scope = root || document;
+			const modalEl = scope.querySelector('#regionItemHistoryModal');
+			if (!modalEl) {
+				return;
+			}
+
+			if (modalEl.dataset.historyModalBound !== '1') {
+				modalEl.dataset.historyModalBound = '1';
+				modalEl.addEventListener('hidden.bs.modal', function () {
+					syncRegionItemHistoryModalUrl(false);
+				});
+			}
+
+			if (modalEl.dataset.autoOpen === '1') {
+				bootstrap.Modal.getOrCreateInstance(modalEl).show();
+				syncRegionItemHistoryModalUrl(true);
+			}
 		}
 
 		function openMasterdataAttachmentUploadModal(button) {
@@ -1525,7 +1594,7 @@
 					event.stopPropagation();
 
 					const formType = form.getAttribute('data-masterdata-updates-form');
-					if (formType === 'region' || formType === 'filters') {
+					if (formType === 'region' || formType === 'filters' || formType === 'history-filters') {
 						handleUpdatesPanelQuery(form);
 						return;
 					}
@@ -1586,6 +1655,13 @@
 		}
 
 		document.addEventListener('click', function (event) {
+			const historyButton = event.target.closest('.btn-open-region-item-history');
+			if (historyButton) {
+				event.preventDefault();
+				openRegionItemHistoryModal();
+				return;
+			}
+
 			const uploadButton = event.target.closest('.btn-upload-masterdata-attachment');
 			if (uploadButton) {
 				event.preventDefault();

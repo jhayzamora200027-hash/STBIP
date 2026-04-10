@@ -1,8 +1,10 @@
 <tr class="gallery-row" data-bs-toggle="collapse" data-bs-target="#children-panel-{{ $card->id }}" aria-expanded="false" aria-controls="children-panel-{{ $card->id }}" style="cursor:pointer;">
-    <td class="text-muted small"><span class="badge bg-light text-dark">{{ $card->status ?? 'On going' }}</span></td>
+    <td class="text-muted small">
+        <span class="badge rounded-pill {{ ($card->status ?? 'On going') === 'Completed' ? 'text-bg-success' : 'text-bg-warning' }}">{{ $card->status ?? 'On going' }}</span>
+    </td>
     <td>
         <span class="me-2"><i class="bi bi-caret-down-fill text-muted expand-icon" style="transform:rotate(-90deg);"></i></span>
-        <strong>{{ $card->docno ?? $card->order ?? '-' }}</strong>
+        <span class="badge rounded-pill text-bg-light border px-3 py-2 fw-semibold">{{ $card->docno ?? $card->order ?? '-' }}</span>
     </td>
     <td class="text-center">
         @if($card->image)
@@ -12,7 +14,9 @@
                     : (file_exists(public_path($card->image)) ? asset($card->image) : null);
             @endphp
             @if($imgSrc)
-                <img src="{{ $imgSrc }}" alt="preview" class="gallery-thumb rounded" style="width:56px;height:38px;object-fit:cover;"> 
+                <span class="d-inline-flex align-items-center justify-content-center rounded-4 border bg-white shadow-sm p-1">
+                    <img src="{{ $imgSrc }}" alt="preview" class="gallery-thumb rounded" style="width:56px;height:38px;object-fit:cover;">
+                </span>
             @else
                 <span class="text-muted small">&mdash;</span>
             @endif
@@ -20,15 +24,20 @@
             <span class="text-muted small">&mdash;</span>
         @endif
     </td>
-    <td>{{ $card->title }}</td>
+    <td>
+        <div class="fw-bold text-dark">{{ $card->title }}</div>
+        <div class="small text-muted">Expand row to manage nested sector content.</div>
+    </td>
 
-    <td>{{ $card->url }}</td>
+    <td><span class="small text-muted">{{ $card->url ?: '—' }}</span></td>
     <td>{{ $card->creator ? $card->creator->name : ($card->created_by ?? '') }}</td>
     <td>{{ $card->updater ? $card->updater->name : ($card->updated_by ?? '') }}</td>
-    <td>{{ $card->is_active ? 'Yes' : 'No' }}</td>
+    <td>
+        <span class="badge rounded-pill {{ $card->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $card->is_active ? 'Yes' : 'No' }}</span>
+    </td>
     <td>
         <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-sm btn-secondary btn-edit-card"
+            <button class="btn btn-sm btn-outline-secondary btn-edit-card"
                 data-id="{{ $card->id }}"
                 data-title="{{ e($card->title) }}"
                 data-url="{{ e($card->url) }}"
@@ -37,7 +46,7 @@
             <form action="{{ route('admin.gallery.destroy', $card->id) }}" method="POST" class="m-0 ajax-form">
                 @csrf
                 @method('DELETE')
-                <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this card?')">Delete</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this card?')">Delete</button>
             </form>
         </div>
     </td>
@@ -46,26 +55,34 @@
 <tr class="children-row" id="children-row-{{ $card->id }}">
     <td colspan="9">
         <div id="children-panel-{{ $card->id }}" class="collapse children-panel @if(old('parent_card_id') == $card->id || (old('editing_child_id') && $card->children->pluck('id')->contains(old('editing_child_id')))) show @endif">
-            <div class="card card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong>Children for "{{ $card->title }}"</strong>
-                <small class="text-muted">{{ $card->children->count() }} child(ren)</small>
+            <div class="card card-body sector-section-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <strong class="d-block fs-6">Children for "{{ $card->title }}"</strong>
+                    <small class="text-muted">Manage nested entries, status, and docno history.</small>
+                </div>
+                <span class="badge rounded-pill text-bg-light border px-3 py-2">{{ $card->children->count() }} child(ren)</span>
             </div>
 
-            <h6 class="mb-2">Existing children</h6>
+            <h6 class="mb-3 text-uppercase small fw-bold text-muted">Existing children</h6>
             <div class="table-responsive">
-                <table class="table table-bordered table-sm mb-2">
+                <table class="table table-bordered table-sm mb-3 bg-white rounded-4 overflow-hidden">
                     <thead>
                         <tr><th>Title</th><th>DocNo</th><th>URL</th><th>Active</th><th>Status</th><th>Created By</th><th>Updated By</th><th style="width:260px">Actions</th></tr>
                     </thead>
                     <tbody>
                         @foreach(($card->children ?? collect())->sortBy('id') as $child)
                         <tr>
-                            <td>{{ $child->title }}</td>
-                            <td>{{ $child->docno }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ $child->title }}</div>
+                                @if($child->is_mother)
+                                    <div class="small text-muted">Mother entry with sub-children management.</div>
+                                @endif
+                            </td>
+                            <td><span class="badge rounded-pill text-bg-light border px-3 py-2">{{ $child->docno }}</span></td>
                             <td><small class="text-muted">{{ $child->url ?? '-' }}</small></td>
-                            <td>{{ $child->is_active ? 'Yes' : 'No' }}</td>
-                            <td><span class="badge bg-light text-dark">{{ $child->status ?? 'On going' }}</span></td>
+                            <td><span class="badge rounded-pill {{ $child->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $child->is_active ? 'Yes' : 'No' }}</span></td>
+                            <td><span class="badge rounded-pill {{ ($child->status ?? 'On going') === 'Completed' ? 'text-bg-success' : 'text-bg-warning' }}">{{ $child->status ?? 'On going' }}</span></td>
                             <td>{{ $child->creator ? $child->creator->name : ($child->created_by ?? '') }}</td>
                             <td>{{ $child->updater ? $child->updater->name : ($child->updated_by ?? '') }}</td>
                             <td>
@@ -81,7 +98,7 @@
                                 @endphp
 
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <button type="button" class="btn btn-sm btn-secondary btn-edit-child"
+                                                                        <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-child"
                                       data-id="{{ $child->id }}"
                                       data-title="{{ e($child->title) }}"
                                       data-url="{{ e($child->url) }}"
@@ -115,7 +132,7 @@
                                                 ];
                                             })->toJson();
                                         @endphp
-                                        <button type="button" class="btn btn-sm btn-info btn-manage-subchildren"
+                                        <button type="button" class="btn btn-sm btn-outline-primary btn-manage-subchildren"
                                             data-card-id="{{ $card->id }}"
                                             data-child-id="{{ $child->id }}"
                                             data-child-title="{{ e($child->title) }}"
@@ -132,7 +149,7 @@
                                     <form action="{{ route('admin.gallery.children.destroy', $child->id) }}" method="POST" class="m-0 ajax-form">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this child?')">Delete</button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this child?')">Delete</button>
                                     </form>
                                 </div>
                             </td>
@@ -143,11 +160,16 @@
                 </table>
             </div>
 
-            <hr>
+            <hr class="my-4">
 
-            <h6>Add child for "{{ $card->title }}"</h6>
-            <div class="mb-2">
-                <button type="button" class="btn btn-sm btn-success btn-open-add-child" data-card-id="{{ $card->id }}">Add Child</button>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h6 class="mb-1">Add child for "{{ $card->title }}"</h6>
+                    <p class="text-muted small mb-0">Create a new child entry under this sector card.</p>
+                </div>
+                <div class="mb-2 mb-md-0">
+                    <button type="button" class="btn btn-sm btn-success sector-action-btn btn-open-add-child" data-card-id="{{ $card->id }}">Add Child</button>
+                </div>
             </div>
 
         </div>

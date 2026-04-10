@@ -375,7 +375,9 @@ class UserController extends Controller
             return $ajaxError('email', 'Your account access is restricted. Please contact support.');
         }
 
-        if (Auth::attempt($IncomingFields)) {
+        $remember = $request->boolean('remember');
+
+        if (Auth::attempt($IncomingFields, $remember)) {
             $request->session()->regenerate();
             if ($request->expectsJson()) {
                 return response()->json(['success' => true, 'redirect' => url('main')]);

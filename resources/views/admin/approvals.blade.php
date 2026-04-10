@@ -229,6 +229,37 @@
             gap: 0.75rem;
         }
 
+        .approvals-filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            align-items: end;
+            padding: 0 1.5rem 1rem;
+        }
+
+        .approvals-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 190px;
+            flex: 1 1 190px;
+        }
+
+        .approvals-filter-group label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #59708a;
+        }
+
+        .approvals-history-reason {
+            min-width: 260px;
+            white-space: normal;
+            color: #5f7183;
+            line-height: 1.55;
+        }
+
         .approvals-search-box {
             position: relative;
             min-width: min(320px, 100%);
@@ -436,6 +467,16 @@
         .approvals-pill-sysadmin {
             background: rgba(123, 82, 216, 0.12);
             color: #6d46cc;
+        }
+
+        .approvals-pill-approved {
+            background: rgba(25, 164, 100, 0.12);
+            color: #128355;
+        }
+
+        .approvals-pill-rejected {
+            background: rgba(209, 79, 109, 0.12);
+            color: #be385a;
         }
 
         .approvals-view-btn,
@@ -833,6 +874,104 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                @endif
+            </div>
+
+            <div class="approvals-panel mt-4">
+                <div class="approvals-panel-header">
+                    <div class="approvals-panel-title">
+                        <h5>Approval History Logs</h5>
+                        <p>View who approved or rejected a registration, when it happened, and the rejection reason when one was provided.</p>
+                    </div>
+                </div>
+
+                <form method="GET" action="{{ route('approvals.index') }}" class="approvals-filter-form">
+                    <div class="approvals-filter-group">
+                        <label for="history-email">Applicant Email</label>
+                        <input id="history-email" type="text" name="history_email" class="form-control" value="{{ $historyEmail ?? '' }}" placeholder="Filter approved/rejected email">
+                    </div>
+                    <div class="approvals-filter-group">
+                        <label for="history-date-from">Date From</label>
+                        <input id="history-date-from" type="date" name="history_date_from" class="form-control" value="{{ $historyDateFrom ?? '' }}">
+                    </div>
+                    <div class="approvals-filter-group">
+                        <label for="history-date-to">Date To</label>
+                        <input id="history-date-to" type="date" name="history_date_to" class="form-control" value="{{ $historyDateTo ?? '' }}">
+                    </div>
+                    <div class="approval-form-actions" style="margin-top: 0;">
+                        <button type="submit" class="btn approvals-view-btn">Apply Filters</button>
+                        <a href="{{ route('approvals.index') }}" class="btn approvals-reject-btn">Clear</a>
+                    </div>
+                </form>
+
+                <div class="approvals-results-meta">
+                    <div>
+                        <span class="approvals-results-count">{{ $approvalHistoryLogs->total() }}</span>
+                        <span>history entries</span>
+                    </div>
+                    <div class="approvals-legend">
+                        <span style="color:#2163d6;">Filtered by applicant email and action date</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive approvals-table-wrap">
+                    <table class="table approvals-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Applicant</th>
+                                <th>Email</th>
+                                <th>Action</th>
+                                <th>Reviewed By</th>
+                                <th>Reviewer Email</th>
+                                <th>Date</th>
+                                <th>Rejection Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($approvalHistoryLogs as $log)
+                                <tr>
+                                    <td>
+                                        <div class="approvals-user-name">{{ $log->applicant_name }}</div>
+                                        <div class="approvals-user-subtext">{{ $log->assigned_usergroup ? 'Assigned role: ' . ucfirst($log->assigned_usergroup) : 'No role assigned' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="approvals-email">{{ $log->applicant_email }}</div>
+                                        <div class="approvals-email-subtext">Reviewed account email</div>
+                                    </td>
+                                    <td>
+                                        <span class="approvals-pill {{ $log->action === 'approved' ? 'approvals-pill-approved' : 'approvals-pill-rejected' }}">{{ ucfirst($log->action) }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="approvals-user-name">{{ $log->reviewed_by_name ?: '-' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="approvals-email">{{ $log->reviewed_by_email ?: '-' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="approvals-date-label">{{ $log->created_at?->format('M d, Y') ?: '-' }}</div>
+                                        <div class="approvals-date-subtext">{{ $log->created_at?->format('h:i A') ?: '-' }}</div>
+                                    </td>
+                                    <td class="approvals-history-reason">{{ $log->rejection_reason ?: 'N/A' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="approvals-empty-state">
+                                            <i class="bi bi-journal-text"></i>
+                                            <div class="fw-bold mb-1">No approval history found</div>
+                                            <div>There are no approval or rejection records for the current filters.</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if($approvalHistoryLogs->hasPages())
+                    <div class="d-flex justify-content-center mt-3 mb-3">
+                        {{ $approvalHistoryLogs->onEachSide(1)->links() }}
                     </div>
                 @endif
             </div>

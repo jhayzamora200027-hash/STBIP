@@ -1,41 +1,95 @@
-<!-- Login Modal Blade Partial -->
-<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content modal-login-bg border-0">
+<div class="modal fade portal-auth-modal portal-login-modal" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl portal-login-dialog">
+    <div class="modal-content border-0 portal-login-frame">
       <div class="modal-body p-0">
-        <div class="modal-login-content">
-          <h1>STB Inventory Portal</h1>
-          {{-- <img src="/images/dattachments/DSWD STB Bagong Pil logo.png" style="width:400px; height: 100px;margin-bottom:16px;"> --}}
-          <h2 id="loginModalLabel">Login</h2>
-          @if(session('error'))
-            <div class="alert alert-danger">{{ session('error') }}</div>
-          @endif
-          @if ($errors->login->any())
-            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" style="background:rgba(255,0,0,0.12);border:1.5px solid #ff4d4f;color:#f3f1f1;padding:18px 20px 18px 16px;border-radius:12px;box-shadow:0 2px 8px rgba(255,77,79,0.08);font-size:1.05rem;gap:12px;max-height: 300px; overflow-y: auto;" role="alert">
-              <i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:#ff4d4f;"></i>
-              <div style="flex:1;">
-                <ul class="mb-0" style="list-style:none;padding-left:0;">
-                  @foreach ($errors->login->all() as $error)
-                    <li style="word-wrap: break-word; white-space: normal;">{{ $error }}</li>
-                  @endforeach
-                </ul>
-              </div>
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="portal-login-shell">
+          <section class="portal-login-brand-panel portal-auth-pane">
+            <div class="portal-login-brand-copy">
+              <span class="portal-login-kicker">Social Technology Bureau</span>
+              <h2>Inventory Portal</h2>
+              <p>Centralized monitoring for approved social technology records, uploads, and regional reporting.</p>
             </div>
-          @endif
-          <div id="loginErrorMsg" style="display:none;margin-bottom:12px;font-size:1.1rem;font-weight:bold;color:#fff;background:#ff4d4f;padding:12px 16px;border-radius:8px;text-align:center;box-shadow:0 2px 8px rgba(255,77,79,0.18);z-index:10;"></div>
-          <form id="ajaxLoginForm" method="POST" action="{{ route('login') }}">
-            @csrf
-            <label for="loginEmail" style="float:left;width:100%;color:#fff;text-align:left;font-size:1rem;">Email</label>
-            <input type="email" id="loginEmail" name="email" required autofocus>
-            <label for="loginPassword" style="float:left;width:100%;color:#fff;text-align:left;font-size:1rem;">Password</label>
-            <input type="password" id="loginPassword" name="password" required>
-            <div class="actions"></div>
-            <button type="submit">Log in</button>
-          </form>
-          <div class="register">
-            Don't have an account? <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" data-bs-dismiss="modal">Register</a>
-          </div>
+            <div class="portal-login-illustration">
+              <div class="portal-login-illustration-ring"></div>
+              <img src="{{ request()->isSecure() ? secure_asset('images/dattachments/Asset 7@1080x.png') : asset('images/dattachments/Asset 7@1080x.png') }}" alt="Portal login illustration">
+            </div>
+            <div class="portal-login-brand-footer">
+              <img src="{{ request()->isSecure() ? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') : asset('images/dattachments/social technology bureau innovating solution logo.png') }}" alt="Social Technology Bureau logo">
+              <div>
+                <strong>STB Digital Services</strong>
+                <span>Operational access for active and approved users only.</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="portal-login-form-panel portal-auth-pane">
+            <div class="portal-login-form-wrap">
+              <p class="portal-login-eyebrow">Welcome back</p>
+              <h1 id="loginModalLabel">Sign in to your account</h1>
+              <p class="portal-login-subtitle">Please use your portal credentials to continue.</p>
+
+              @if(session('error'))
+                <div class="alert alert-danger portal-login-alert" role="alert">
+                  {{ session('error') }}
+                </div>
+              @endif
+
+              @if ($errors->login->any())
+                <div class="alert alert-danger alert-dismissible fade show portal-login-alert" role="alert">
+                  <div class="portal-login-alert-body">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <ul class="mb-0">
+                      @foreach ($errors->login->all() as $error)
+                        <li>{{ $error }}</li>
+                      @endforeach
+                    </ul>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              @endif
+
+              <div id="loginErrorMsg" class="portal-login-alert portal-login-alert-inline" style="display:none;"></div>
+
+              <form id="ajaxLoginForm" method="POST" action="{{ route('login') }}">
+                @csrf
+
+                <div class="portal-login-field">
+                  <label for="loginEmail">Email address</label>
+                  <div class="portal-login-input-wrap">
+                    <i class="bi bi-person"></i>
+                    <input type="email" id="loginEmail" name="email" value="{{ old('email') }}" placeholder="name@example.com" required autofocus>
+                  </div>
+                </div>
+
+                <div class="portal-login-field">
+                  <label for="loginPassword">Password</label>
+                  <div class="portal-login-input-wrap">
+                    <i class="bi bi-lock"></i>
+                    <input type="password" id="loginPassword" name="password" placeholder="Enter your password" required>
+                    <button type="button" class="portal-password-toggle" data-password-toggle data-target="loginPassword" aria-label="Show password" aria-pressed="false">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="portal-login-utility-row">
+                  <label class="portal-login-check" for="loginRemember">
+                    <input type="checkbox" id="loginRemember" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+                    <span>Remember me</span>
+                  </label>
+
+                  <span class="portal-login-help portal-login-help-muted">Forgot password? Contact your administrator.</span>
+                </div>
+
+                <div class="portal-login-action-row">
+                  <button type="button" class="portal-login-secondary-btn" data-bs-toggle="modal" data-bs-target="#registerModal" data-bs-dismiss="modal">
+                    Register
+                  </button>
+                  <button type="submit" class="portal-login-primary-btn">Log in</button>
+                </div>
+              </form>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -44,10 +98,44 @@
 <script>
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (@json($errors->login->any())) {
-        let loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-        loginModal.show();
-    }
+  const loginModalEl = document.getElementById('loginModal');
+  const loginModal = typeof bootstrap !== 'undefined' && loginModalEl
+    ? bootstrap.Modal.getOrCreateInstance(loginModalEl)
+    : null;
+
+  function bindPasswordToggles(scope) {
+    const toggleButtons = scope.querySelectorAll('[data-password-toggle]');
+
+    toggleButtons.forEach(function(toggleButton) {
+      const targetId = toggleButton.getAttribute('data-target');
+      const targetInput = targetId ? document.getElementById(targetId) : null;
+      const icon = toggleButton.querySelector('i');
+
+      if (!targetInput || !icon) {
+        return;
+      }
+
+      toggleButton.addEventListener('click', function() {
+        const shouldShow = targetInput.type === 'password';
+        targetInput.type = shouldShow ? 'text' : 'password';
+        toggleButton.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+        toggleButton.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+        icon.className = shouldShow ? 'bi bi-eye-slash' : 'bi bi-eye';
+        targetInput.focus({ preventScroll: true });
+        const valueLength = targetInput.value.length;
+        targetInput.setSelectionRange(valueLength, valueLength);
+      });
+    });
+  }
+
+  if (loginModalEl) {
+    bindPasswordToggles(loginModalEl);
+  }
+
+  if (@json($errors->login->any()) && loginModal) {
+    loginModal.show();
+  }
+
   const loginForm = document.getElementById('ajaxLoginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', function(e) {
@@ -70,9 +158,15 @@ document.addEventListener('DOMContentLoaded', function() {
         body: formData
       })
       .then(async response => {
-        console.log('AJAX login response:', response);
         if (response.ok) {
-          window.location.reload();
+          let data = {};
+          try {
+            data = await response.json();
+          } catch (e) {
+            data = {};
+          }
+
+          window.location.href = data.redirect || window.location.href;
         } else {
           let data;
           try {
@@ -80,7 +174,6 @@ document.addEventListener('DOMContentLoaded', function() {
           } catch (e) {
             data = { message: 'Login failed. (Invalid server response)' };
           }
-          console.log('AJAX login error data:', data);
           let msg = data.message || 'Login failed.';
           let errorSet = new Set();
           if (msg) errorSet.add(msg);
@@ -104,8 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (errorMsg) {
             errorMsg.innerHTML = msg;
             errorMsg.style.display = 'block';
-            if (typeof bootstrap !== 'undefined') {
-              let loginModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('loginModal'));
+            if (loginModal) {
               loginModal.show();
             }
           }
@@ -116,8 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (errorMsg) {
           errorMsg.innerHTML = 'An error occurred. Please try again.';
           errorMsg.style.display = 'block';
-          if (typeof bootstrap !== 'undefined') {
-            let loginModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('loginModal'));
+          if (loginModal) {
             loginModal.show();
           }
         }

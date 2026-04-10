@@ -2,12 +2,22 @@
 @php($isSysadmin = $userGroup === 'sysadmin')
 @php($canWriteMasterData = in_array($userGroup, ['user', 'admin', 'sysadmin'], true))
 @php($canDeleteMasterData = in_array($userGroup, ['admin', 'sysadmin'], true))
+@php($canViewRegionItemHistory = in_array($userGroup, ['admin', 'sysadmin'], true))
 
 <div class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-body">
 		<div class="masterdata-toolbar">
 			<form method="GET" action="{{ route('masterdata.index') }}" class="d-flex align-items-end gap-3 flex-wrap" data-masterdata-updates-form="region">
 				<input type="hidden" name="tab" value="updates">
+				@if($historyDateFrom)
+					<input type="hidden" name="history_date_from" value="{{ $historyDateFrom }}">
+				@endif
+				@if($historyDateTo)
+					<input type="hidden" name="history_date_to" value="{{ $historyDateTo }}">
+				@endif
+				@if($showRegionItemHistoryModal)
+					<input type="hidden" name="history_modal" value="1">
+				@endif
 				<div class="masterdata-field">
 					<label for="region-filter">Regional Office</label>
 					<select id="region-filter" name="region_filter" data-masterdata-region-filter="1">
@@ -48,6 +58,10 @@
 		<form method="POST" action="{{ route('masterdata.region-items.store') }}" data-masterdata-updates-form="create">
 			@csrf
 			<input type="hidden" name="form_origin" value="region_item_create">
+			<input type="hidden" name="return_history_date_from" value="{{ $historyDateFrom }}">
+			<input type="hidden" name="return_history_date_to" value="{{ $historyDateTo }}">
+			<input type="hidden" name="return_history_modal" value="{{ $showRegionItemHistoryModal ? '1' : '0' }}">
+			<input type="hidden" name="return_history_page" value="{{ $regionItemHistoryLogs?->currentPage() ?? 1 }}">
 			@if($errors->any() && old('form_origin') === 'region_item_create')
 				<div class="masterdata-alert masterdata-alert-error" style="margin-bottom:12px;">
 					<strong>Unable to save new item.</strong>
@@ -155,9 +169,30 @@
 		<h2>Update Existing Items</h2>
 	</div>
 	<div class="masterdata-card-body">
+		@if($canViewRegionItemHistory)
+			<div class="masterdata-toolbar" style="margin-bottom: 16px; align-items: center;">
+				<div>
+					<div class="masterdata-stat-label">History Logs</div>
+					<div class="masterdata-item-title">Track add and update activity for Region Item Management.</div>
+				</div>
+				<div class="masterdata-item-actions" style="margin-top: 0;">
+					<button type="button" class="masterdata-btn masterdata-btn-secondary btn-open-region-item-history">Open History Logs</button>
+				</div>
+			</div>
+		@endif
+
 		<form method="GET" action="{{ route('masterdata.index') }}" class="masterdata-filter-bar" data-masterdata-updates-form="filters">
 			<input type="hidden" name="tab" value="updates">
 			<input type="hidden" name="region_filter" value="{{ $selectedRegionName }}">
+			@if($historyDateFrom)
+				<input type="hidden" name="history_date_from" value="{{ $historyDateFrom }}">
+			@endif
+			@if($historyDateTo)
+				<input type="hidden" name="history_date_to" value="{{ $historyDateTo }}">
+			@endif
+			@if($showRegionItemHistoryModal)
+				<input type="hidden" name="history_modal" value="1">
+			@endif
 			<div class="masterdata-field">
 				<label for="update-province-filter">Province</label>
 				<select id="update-province-filter" name="province_filter">
@@ -178,7 +213,7 @@
 			</div>
 			<div class="masterdata-item-actions" style="margin-top:0; justify-content:flex-start;">
 				<button type="submit" class="masterdata-btn masterdata-btn-primary" data-masterdata-apply-filters="1">Apply Filters</button>
-				<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('masterdata.index', ['tab' => 'updates', 'region_filter' => $selectedRegionName]) }}" data-masterdata-updates-clear="1">Clear</a>
+				<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('masterdata.index', array_filter(['tab' => 'updates', 'region_filter' => $selectedRegionName, 'history_date_from' => $historyDateFrom ?: null, 'history_date_to' => $historyDateTo ?: null, 'history_modal' => $showRegionItemHistoryModal ? 1 : null])) }}" data-masterdata-updates-clear="1">Clear</a>
 			</div>
 		</form>
 
@@ -304,6 +339,10 @@
 							<input type="hidden" name="return_province_filter" value="{{ $selectedProvince }}">
 							<input type="hidden" name="return_municipality_filter" value="{{ $selectedMunicipality }}">
 							<input type="hidden" name="return_page" value="{{ $regionItems->currentPage() }}">
+							<input type="hidden" name="return_history_date_from" value="{{ $historyDateFrom }}">
+							<input type="hidden" name="return_history_date_to" value="{{ $historyDateTo }}">
+							<input type="hidden" name="return_history_modal" value="{{ $showRegionItemHistoryModal ? '1' : '0' }}">
+							<input type="hidden" name="return_history_page" value="{{ $regionItemHistoryLogs?->currentPage() ?? 1 }}">
 							<div class="masterdata-form-grid">
 								<div class="masterdata-field">
 									<label>Regional Office</label>
@@ -399,6 +438,10 @@
 							<input type="hidden" name="return_province_filter" value="{{ $selectedProvince }}">
 							<input type="hidden" name="return_municipality_filter" value="{{ $selectedMunicipality }}">
 							<input type="hidden" name="return_page" value="{{ $regionItems->currentPage() }}">
+							<input type="hidden" name="return_history_date_from" value="{{ $historyDateFrom }}">
+							<input type="hidden" name="return_history_date_to" value="{{ $historyDateTo }}">
+							<input type="hidden" name="return_history_modal" value="{{ $showRegionItemHistoryModal ? '1' : '0' }}">
+							<input type="hidden" name="return_history_page" value="{{ $regionItemHistoryLogs?->currentPage() ?? 1 }}">
 							<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete Item</button>
 						</form>
 						@endif
@@ -479,6 +522,91 @@
 		@endif
 	</div>
 </section>
+
+@if($canViewRegionItemHistory)
+<div class="modal fade" id="regionItemHistoryModal" tabindex="-1" aria-labelledby="regionItemHistoryModalLabel" aria-hidden="true" data-auto-open="{{ $showRegionItemHistoryModal ? '1' : '0' }}">
+	<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<div>
+					<h5 class="modal-title" id="regionItemHistoryModalLabel">Region Item History Logs</h5>
+					<div class="small text-muted">Visible only to admin and sysadmin accounts.</div>
+				</div>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form method="GET" action="{{ route('masterdata.index') }}" class="masterdata-history-filter-bar" data-masterdata-updates-form="history-filters">
+					<input type="hidden" name="tab" value="updates">
+					<input type="hidden" name="region_filter" value="{{ $selectedRegionName }}">
+					@if($selectedProvince)
+						<input type="hidden" name="province_filter" value="{{ $selectedProvince }}">
+					@endif
+					@if($selectedMunicipality)
+						<input type="hidden" name="municipality_filter" value="{{ $selectedMunicipality }}">
+					@endif
+					@if($regionItems->currentPage() > 1)
+						<input type="hidden" name="page" value="{{ $regionItems->currentPage() }}">
+					@endif
+					<input type="hidden" name="history_modal" value="1">
+					<div class="masterdata-field">
+						<label for="history-date-from">Date From</label>
+						<input id="history-date-from" type="date" name="history_date_from" value="{{ $historyDateFrom }}">
+					</div>
+					<div class="masterdata-field">
+						<label for="history-date-to">Date To</label>
+						<input id="history-date-to" type="date" name="history_date_to" value="{{ $historyDateTo }}">
+					</div>
+					<div class="masterdata-item-actions" style="margin-top: 0; justify-content: flex-start;">
+						<button type="submit" class="masterdata-btn masterdata-btn-primary">Apply Range</button>
+						<a class="masterdata-btn masterdata-btn-secondary" href="{{ route('masterdata.index', array_filter(['tab' => 'updates', 'region_filter' => $selectedRegionName, 'province_filter' => $selectedProvince ?: null, 'municipality_filter' => $selectedMunicipality ?: null, 'page' => $regionItems->currentPage() > 1 ? $regionItems->currentPage() : null, 'history_modal' => 1])) }}" data-masterdata-updates-clear="1">Clear Range</a>
+					</div>
+				</form>
+
+				<div class="masterdata-table-wrap" style="margin-top: 18px;">
+					<table class="masterdata-table masterdata-history-table">
+						<thead>
+							<tr>
+								<th>Region</th>
+								<th>ST Title</th>
+								<th>Province</th>
+								<th>City</th>
+								<th>Updated By</th>
+								<th>Date</th>
+								<th>Action</th>
+								<th>Update Row</th>
+							</tr>
+						</thead>
+						<tbody>
+							@forelse($regionItemHistoryLogs ?? [] as $log)
+								<tr>
+									<td>{{ $log->region_name ?: '-' }}</td>
+									<td>{{ $log->st_title }}</td>
+									<td>{{ $log->province ?: '-' }}</td>
+									<td>{{ $log->city ?: '-' }}</td>
+									<td>{{ $log->updated_by ?: '-' }}</td>
+									<td>{{ $log->created_at?->format('M d, Y h:i A') ?: '-' }}</td>
+									<td><span class="masterdata-pill {{ $log->action === 'add' ? 'masterdata-status-ongoing' : '' }}">{{ ucfirst($log->action) }}</span></td>
+									<td class="masterdata-history-row-cell">{{ $log->update_row ?: '-' }}</td>
+								</tr>
+							@empty
+								<tr>
+									<td colspan="8">No history logs found for the selected date range.</td>
+								</tr>
+							@endforelse
+						</tbody>
+					</table>
+				</div>
+
+				@if(($regionItemHistoryLogs?->hasPages() ?? false))
+					<div class="masterdata-pagination" style="margin-top: 18px;">
+						{{ $regionItemHistoryLogs->onEachSide(1)->links() }}
+					</div>
+				@endif
+			</div>
+		</div>
+	</div>
+</div>
+@endif
 
 	@if($canWriteMasterData)
 	<script>

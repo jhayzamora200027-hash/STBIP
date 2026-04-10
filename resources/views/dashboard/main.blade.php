@@ -1699,14 +1699,27 @@
 <style>
 canvas#onGoing {
 	width: 100% !important;
-	height: 56vh !important;
-	max-height: 760px !important;
+	height: 100% !important;
+	max-height: none !important;
+	padding-left: 0 !important;
 	display: block !important;
 }
 
+.formal-chart-canvas-trend {
+	min-height: 430px;
+	height: 430px;
+	padding: 20px 24px 12px;
+	box-sizing: border-box;
+}
+
 @media (max-width: 767px) {
-	canvas#onGoing { height: 44vh !important; max-height: none !important; }
+	canvas#onGoing { height: 100% !important; }
 	.formal-chart-canvas { min-height: 320px !important; }
+	.formal-chart-canvas-trend {
+		min-height: 260px !important;
+		height: clamp(260px, 72vw, 340px) !important;
+		padding: 16px 12px 10px !important;
+	}
 }
 </style>
 
@@ -1999,7 +2012,7 @@ if (!document.getElementById('catListTooltip')) {
 	<div class="row mt-4">
 		<div class="col-12 p-0">
 			<div class="card st-dashboard-card no-hover year-of-moa-card flex-fill" style="width:100%;max-width:none;margin:0 auto;">
-				<div class="card-header text-center">Total Social Technologies</div>
+				<div class="card-header text-center">Social Technology Analytics & Overview</div>
 				<div class="card-body total-st-body">
 <div class="formal-st-overview">
 	<div class="formal-st-top-grid">
@@ -2038,8 +2051,8 @@ if (!document.getElementById('catListTooltip')) {
 						<div class="formal-panel-title">Status Movement Over Time</div>
 					</div>
 				</div>
-                <div class="formal-chart-canvas formal-chart-canvas-large">
-                    <canvas id="onGoing" style="width: 800px; height: 430px; padding-left: 50px;"></canvas>
+				<div class="formal-chart-canvas formal-chart-canvas-large formal-chart-canvas-trend">
+					<canvas id="onGoing"></canvas>
                 </div>
             </div>
 
@@ -2181,7 +2194,6 @@ if (!document.getElementById('catListTooltip')) {
 						<div class="formal-panel-eyebrow">Reference Listing</div>
 						<div class="formal-panel-title">ST Titles</div>
 					</div>
-					<div class="formal-panel-caption">Ordered by share of total records</div>
 				</div>
 				<div id="stCategoryListCopy" class="formal-st-category-list"></div>
 			</div>
@@ -3415,6 +3427,15 @@ if (!document.getElementById('catListTooltip')) {
 			box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 			margin-bottom: 6px;
 			font-size: 0.9rem;
+			border: 1px solid transparent;
+			transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+		}
+		.st-map-region-row:hover,
+		.st-map-region-row.is-active {
+			transform: translateX(4px);
+			background: linear-gradient(135deg, #ffffff 0%, #f0fbfc 100%);
+			border-color: rgba(16, 174, 181, 0.25);
+			box-shadow: 0 10px 24px rgba(16, 174, 181, 0.14);
 		}
 		.st-map-region-row-main {
 			display: flex;
@@ -3431,11 +3452,19 @@ if (!document.getElementById('catListTooltip')) {
 			font-weight: 500;
 			color: #0f172a;
 		}
+		.st-map-region-row:hover .st-map-region-label,
+		.st-map-region-row.is-active .st-map-region-label {
+			color: #0b7285;
+		}
 		.st-map-region-count {
 			min-width: 34px;
 			text-align: right;
 			font-weight: 600;
 			color: #10aeb5;
+		}
+		.st-map-region-row:hover .st-map-region-count,
+		.st-map-region-row.is-active .st-map-region-count {
+			color: #0f766e;
 		}
 		@media (max-width: 1400px) {
 			.st-title-listing-card { max-width: 99vw; }
@@ -5679,7 +5708,7 @@ $('#region-select-modal').on('change', function() {
 				titleEl.textContent = regionDisplayName || 'Region';
 					if (bodyEl) {
 						if (!rows || !rows.length) {
-							bodyEl.innerHTML = "<p style=\"margin:0; color:#64748b;\">No ST titles for this region based on the current filters.</p>";
+							bodyEl.innerHTML = "<p style=\"margin:0; color:#64748b;\">No Record found.</p>";
 						} else {
 							let html = '';
 							rows.forEach(function(row, idx) {
@@ -5754,6 +5783,7 @@ $('#region-select-modal').on('change', function() {
 			const phMapObject = document.getElementById('philippines-map');
 			if (!phMapObject) return;
 			if (phMapObject.dataset.phRegionsBound === '1') return;
+			const mapWrapper = phMapObject.closest('.st-map-figure-wrapper');
 			const regionLabelEl = document.getElementById('map-region-label');
 			const svgDoc = phMapObject.contentDocument || (phMapObject.getSVGDocument && phMapObject.getSVGDocument());
 			if (!svgDoc) return;
@@ -5879,6 +5909,7 @@ $('#region-select-modal').on('change', function() {
 
 			const regionToPaths = {};
 			const regionToProvinces = {};
+			const regionRows = {};
 			const provinceRegionIndex = {};
 			const pathInfos = [];
 			const svgRoot = svgDoc.documentElement;
@@ -5921,7 +5952,6 @@ $('#region-select-modal').on('change', function() {
 				'BARMM': '#ffecb3'
 			};
 			const regionBlinkTimers = {};
-
 			paths.forEach(path => {
 				if (path.dataset.phHoverBound === '1') return;
 				const computed = window.getComputedStyle(path);
@@ -5961,7 +5991,9 @@ $('#region-select-modal').on('change', function() {
 
 				path.dataset.phHoverBound = '1';
 				path.style.fill = info.originalFill;
-				path.style.transition = 'fill 0.15s ease-out, stroke 0.15s ease-out, stroke-width 0.15s ease-out';
+				path.style.transition = 'fill 0.18s ease-out, stroke 0.18s ease-out, stroke-width 0.18s ease-out, opacity 0.18s ease-out, filter 0.18s ease-out';
+				path.style.strokeLinecap = 'round';
+				path.style.strokeLinejoin = 'round';
 				path.style.cursor = 'pointer';
 			});
 
@@ -6061,6 +6093,39 @@ $('#region-select-modal').on('change', function() {
 				mapTooltip.style.display = 'none';
 			}
 
+			function clearRegionBlinkTimers() {
+				Object.keys(regionBlinkTimers).forEach(function(regionCode) {
+					clearInterval(regionBlinkTimers[regionCode]);
+					delete regionBlinkTimers[regionCode];
+				});
+			}
+
+			function clearMapHoverState() {
+				clearRegionBlinkTimers();
+				highlightGroup(pathInfos[0] || { regionName: null }, false);
+				if (regionLabelEl) {
+					regionLabelEl.textContent = 'Hover a region on the map';
+				}
+				hideMapTooltip();
+			}
+
+			function isWithinMapBoundary(target) {
+				if (!target) return false;
+				if (svgRoot && typeof svgRoot.contains === 'function' && svgRoot.contains(target)) {
+					return true;
+				}
+				if (mapWrapper && typeof mapWrapper.contains === 'function' && mapWrapper.contains(target)) {
+					return true;
+				}
+				return false;
+			}
+
+			function setActiveRegionRow(regionCode) {
+				Object.keys(regionRows).forEach(function(code) {
+					regionRows[code].classList.toggle('is-active', !!regionCode && code === regionCode);
+				});
+			}
+
 			const regionListEl = document.getElementById('map-region-list');
 			if (regionListEl) {
 				const orderedRegions = [
@@ -6111,18 +6176,21 @@ $('#region-select-modal').on('change', function() {
 					if (regionBlinkTimers[regionCode]) {
 						clearInterval(regionBlinkTimers[regionCode]);
 					}
-					let visible = true;
-					highlightGroup(info, true, { color: '#ffeb3b', stroke: '#f9a825' });
+					let isVisible = true;
+					highlightGroup(info, true, { color: '#dff8f4', stroke: '#0b2540' });
 					regionBlinkTimers[regionCode] = setInterval(function() {
-						visible = !visible;
-						highlightGroup(info, visible, { color: '#ffeb3b', stroke: '#f9a825' });
-					}, 450);
+						isVisible = !isVisible;
+						if (isVisible) {
+							highlightGroup(info, true, { color: '#dff8f4', stroke: '#0b2540' });
+						} else {
+							highlightGroup(info, false);
+						}
+					}, 650);
 				}
 				function stopRegionBlink(regionCode) {
 					if (!regionCode) return;
-					const timer = regionBlinkTimers[regionCode];
-					if (timer) {
-						clearInterval(timer);
+					if (regionBlinkTimers[regionCode]) {
+						clearInterval(regionBlinkTimers[regionCode]);
 						delete regionBlinkTimers[regionCode];
 					}
 					const info = getRegionRepresentativeInfo(regionCode);
@@ -6133,6 +6201,9 @@ $('#region-select-modal').on('change', function() {
 				const listRows = regionListEl.querySelectorAll('.st-map-region-row');
 				listRows.forEach(function(row) {
 					const code = row.getAttribute('data-region');
+					if (code) {
+						regionRows[code] = row;
+					}
 					row.addEventListener('mouseenter', function() {
 						if (regionLabelEl) {
 							if (code && regionLabels[code]) {
@@ -6171,25 +6242,38 @@ $('#region-select-modal').on('change', function() {
 				} else {
 					targets = [targetInfo];
 				}
-				const highlightFill = options && options.color ? options.color : '#10aeb5';
-				const highlightStroke = options && options.stroke ? options.stroke : '#1de9b6';
-
-				targets.forEach(info => {
-					if (isHover) {
-						info.path.style.fill = highlightFill;
-						info.path.style.stroke = highlightStroke;
-						info.path.style.strokeWidth = '1.5';
-					} else {
-						try {
-							console.log('openRegionTitlesModal rows count:', rows.length);
-							console.log('openRegionTitlesModal sample rows:', (rows || []).slice(0,5));
-							console.log('openRegionTitlesModal with_res but missing year_of_resolution:', (rows || []).filter(function(r){ return r && (r.with_res || r.with_res === true || String(r.with_res) === '1') && !(r.year_of_resolution || r.year_of_resolution === 0); }));
-						} catch(e) {}
+				if (!isHover) {
+					pathInfos.forEach(function(info) {
 						info.path.style.fill = info.originalFill;
 						info.path.style.stroke = info.originalStroke;
 						info.path.style.strokeWidth = info.originalStrokeWidth;
-					}
+						info.path.style.opacity = '1';
+						info.path.style.filter = 'none';
+					});
+					setActiveRegionRow(null);
+					return;
+				}
+
+				pathInfos.forEach(function(info) {
+					info.path.style.fill = info.originalFill;
+					info.path.style.stroke = info.originalStroke;
+					info.path.style.strokeWidth = '0.8';
+					info.path.style.opacity = '0.22';
+					info.path.style.filter = 'saturate(0.75) brightness(1.02)';
 				});
+
+				targets.forEach(function(info) {
+					if (svgRoot && info.path.parentNode === svgRoot) {
+						svgRoot.appendChild(info.path);
+					}
+					info.path.style.fill = options && options.color ? options.color : info.originalFill;
+					info.path.style.stroke = options && options.stroke ? options.stroke : '#0b2540';
+					info.path.style.strokeWidth = '2.4';
+					info.path.style.opacity = '1';
+					info.path.style.filter = 'drop-shadow(0 0 10px rgba(16, 174, 181, 0.38)) brightness(1.08) saturate(1.18)';
+				});
+
+				setActiveRegionRow(regionName || null);
 			}
 
 			function normalizeProvinceName(name) {
@@ -6282,11 +6366,6 @@ $('#region-select-modal').on('change', function() {
 							if (!row || !row.province) return false;
 							return normalizeProvinceName(row.province) === targetProvNorm;
 						});
-                if (pageData.length < perPage) {
-                    for (let i = pageData.length; i < perPage; i++) {
-                        html += '<tr><td colspan="5" class="social-listing-empty">&nbsp;</td></tr>';
-                    }
-                }
 					}
 				}
 				const displayName = (regionName && regionLabels[regionName]) || regionName || (targetInfo.path.getAttribute('title') ? ('Province: ' + targetInfo.path.getAttribute('title')) : 'Region');
@@ -6298,6 +6377,26 @@ $('#region-select-modal').on('change', function() {
 
 			pathInfos.forEach(info => {
 				const p = info.path;
+				let lastPointerOpenAt = 0;
+
+				function openRegionFromPath(event) {
+					if (event) {
+						if (typeof event.preventDefault === 'function') {
+							event.preventDefault();
+						}
+						if (typeof event.stopPropagation === 'function') {
+							event.stopPropagation();
+						}
+					}
+					const now = Date.now();
+					if (now - lastPointerOpenAt < 200) {
+						return;
+					}
+					lastPointerOpenAt = now;
+					handleRegionClick(info);
+					hideMapTooltip();
+				}
+
 				p.addEventListener('mouseenter', function () {
 					highlightGroup(info, true);
 					if (regionLabelEl) {
@@ -6316,18 +6415,35 @@ $('#region-select-modal').on('change', function() {
 						hideMapTooltip();
 					}
 				});
-				p.addEventListener('mouseleave', function () {
-					highlightGroup(info, false);
-					if (regionLabelEl) {
-						regionLabelEl.textContent = 'Hover a region on the map';
+				p.addEventListener('mouseleave', function (event) {
+					if (isWithinMapBoundary(event.relatedTarget)) {
+						return;
 					}
-					hideMapTooltip();
+					clearMapHoverState();
 				});
-				p.addEventListener('click', function () {
-					handleRegionClick(info);
-					hideMapTooltip();
-				});
+				p.addEventListener('pointerup', openRegionFromPath);
+				p.addEventListener('click', openRegionFromPath);
 			});
+
+			if (svgRoot && svgRoot.dataset.phMapExitBound !== '1') {
+				svgRoot.addEventListener('mouseleave', function(event) {
+					if (isWithinMapBoundary(event.relatedTarget)) {
+						return;
+					}
+					clearMapHoverState();
+				});
+				svgRoot.dataset.phMapExitBound = '1';
+			}
+
+			if (mapWrapper && mapWrapper.dataset.phMapExitBound !== '1') {
+				mapWrapper.addEventListener('mouseleave', function(event) {
+					if (isWithinMapBoundary(event.relatedTarget)) {
+						return;
+					}
+					clearMapHoverState();
+				});
+				mapWrapper.dataset.phMapExitBound = '1';
+			}
 
 			phMapObject.dataset.phRegionsBound = '1';
 		}
@@ -6955,6 +7071,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		},
 		options: {
 			responsive: true,
+			maintainAspectRatio: false,
 			scales: { y: { beginAtZero: true } }
 		}
 	});
