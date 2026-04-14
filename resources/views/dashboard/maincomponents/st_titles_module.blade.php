@@ -55,10 +55,28 @@
         font-size: 0.97rem;
         font-weight: 700;
         color: #0b2540;
+        line-height: 1.45;
+        word-break: break-word;
     }
     .masterdata-item-row-cell {
         font-size: 0.9rem;
         color: #244865;
+    }
+    .masterdata-item-row > div {
+        min-width: 0;
+    }
+    .masterdata-mobile-label {
+        display: none;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #607588;
+        margin-bottom: 4px;
+    }
+    .masterdata-item-row-value {
+        display: block;
+        word-break: break-word;
     }
     .masterdata-item-row-cell-muted {
         color: #607588;
@@ -160,6 +178,67 @@
     .masterdata-btn-primary { background: linear-gradient(135deg, #0b2540, #175d8f); color: #fff; }
     .masterdata-btn-secondary { background: #eff6fb; color: #194566; border: 1px solid #d8e5f1; }
     .masterdata-btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    @media (max-width: 820px) {
+        .st-shell {
+            padding: 12px;
+        }
+        .st-hero,
+        .st-card {
+            padding: 16px;
+        }
+        .masterdata-item-list {
+            width: 100%;
+            margin: 0;
+            border-radius: 16px;
+        }
+        .masterdata-item-list-head {
+            display: none;
+        }
+        .masterdata-item-row {
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px 12px;
+            padding: 16px;
+        }
+        .masterdata-item-row > :first-child {
+            grid-column: 1 / 2;
+        }
+        .masterdata-item-row > :last-child {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+            justify-self: end;
+            align-self: start;
+        }
+        .masterdata-item-row-cell {
+            grid-column: 1 / -1;
+        }
+        .masterdata-mobile-label {
+            display: block;
+        }
+        .masterdata-item-detail,
+        .masterdata-item-detail.is-open {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .masterdata-form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 560px) {
+        .st-shell {
+            padding: 10px;
+        }
+        .st-hero {
+            border-radius: 14px;
+        }
+        .masterdata-item-row {
+            padding: 14px;
+        }
+        .masterdata-field input,
+        .masterdata-field select,
+        .masterdata-field textarea {
+            font-size: 0.92rem;
+        }
+    }
 </style>
 
 <div class="st-shell">
@@ -186,9 +265,18 @@
                             <div>
                                 <div class="masterdata-item-row-title">{{ $t->social_technology }}</div>
                             </div>
-                            <div class="masterdata-item-row-cell {{ $t->sector ? '' : 'masterdata-item-row-cell-muted' }}">{{ $t->sector ?: 'No sector' }}</div>
-                            <div>{{ $t->createdby ?: '-' }}</div>
-                            <div>{{ $t->updated_at?->format('M d, Y h:i A') ?: '-' }}</div>
+                            <div class="masterdata-item-row-cell {{ $t->sector ? '' : 'masterdata-item-row-cell-muted' }}">
+                                <span class="masterdata-mobile-label">Sector</span>
+                                <span class="masterdata-item-row-value">{{ $t->sector ?: 'No sector' }}</span>
+                            </div>
+                            <div class="masterdata-item-row-cell {{ $t->createdby ? '' : 'masterdata-item-row-cell-muted' }}">
+                                <span class="masterdata-mobile-label">Created By</span>
+                                <span class="masterdata-item-row-value">{{ $t->createdby ?: '-' }}</span>
+                            </div>
+                            <div class="masterdata-item-row-cell {{ $t->updated_at ? '' : 'masterdata-item-row-cell-muted' }}">
+                                <span class="masterdata-mobile-label">Updated At</span>
+                                <span class="masterdata-item-row-value">{{ $t->updated_at?->format('M d, Y h:i A') ?: '-' }}</span>
+                            </div>
                             <div><span class="masterdata-row-chevron">▾</span></div>
                         </div>
 

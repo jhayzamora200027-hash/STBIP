@@ -1078,11 +1078,10 @@
 }
 </style>
 <style>
-	body {
-		min-height: 100vh;
+	.stb-main-content {
+		padding-bottom: 0 !important;
 	}
 	.st-center-outer {
-		min-height: 100vh;
 		display: flex;
 		align-items: center;
 		justify-content: flex-start; 
@@ -1101,7 +1100,7 @@
 		padding: 56px 48px 48px 48px;
 		max-width: 1200px;
 		width: 100%;
-		margin: 40px auto;
+		margin: 40px auto 0;
 		position: relative;
 	}
 	.st-dashboard-header {
@@ -1735,7 +1734,7 @@ setTimeout(function(){ if(window.__stb_resizeAllCharts) try{ window.__stb_resize
 			   Print / Save as PDF
 		   </button>
 	   </div> --}}
-	    	<div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:100%; min-width:0; max-width:1800px !important; margin:40px auto !important; box-sizing:border-box;">
+	    	<div class="st-dashboard-container" style="padding-top:0; position:relative; overflow:hidden; width:100%; min-width:0; max-width:1800px !important; margin:40px auto 0 !important; box-sizing:border-box;">
 	    	<div class="st-dashboard-header st-dashboard-header-fullwidth">
 	   		<div class="st-dashboard-header-row" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; min-height:100px; padding:10px 10px 10px 10px;">
 	   			<div style="display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap;">
@@ -2068,8 +2067,8 @@ if (!document.getElementById('catListTooltip')) {
 					<div class="formal-panel-title">Year of MOA Count</div>
 				</div>
 			</div>
-			<div class="formal-chart-canvas formal-chart-canvas-medium">
-				<canvas id="yearMoaBar" style="width: 760px !imporant; height: 360px;"></canvas>
+				<div class="formal-chart-canvas formal-chart-canvas-medium formal-chart-canvas-moa">
+					<canvas id="yearMoaBar"></canvas>
 			</div>
 			<div class="formal-year-summary">
 				<div class="formal-year-summary-grid">
@@ -2627,6 +2626,18 @@ if (!document.getElementById('catListTooltip')) {
 
 .formal-chart-canvas-medium {
 	min-height: 360px;
+}
+
+.formal-chart-canvas-moa {
+	min-height: 360px;
+	padding: 16px 18px 10px;
+	align-items: stretch;
+}
+
+.formal-chart-canvas-moa canvas {
+	width: 100% !important;
+	height: 100% !important;
+	max-height: none !important;
 }
 
 .formal-chart-canvas-docflow {
@@ -4608,6 +4619,7 @@ $('#region-select-modal').on('change', function() {
 			},
 			options: {
 				responsive: true,
+				maintainAspectRatio: false,
 				plugins: {
 					legend: { display: false },
 					title: { display: false },
@@ -7237,11 +7249,24 @@ document.addEventListener('DOMContentLoaded', function(){
 	}
 	.formal-chart-canvas-large { min-height: 300px !important; }
 	.formal-chart-canvas-medium, .formal-chart-canvas-docflow { min-height: 240px !important; }
+	.formal-chart-canvas-moa {
+		min-height: 320px !important;
+		padding: 12px 10px 8px !important;
+	}
 	.formal-chart-canvas-region { min-height: 260px !important; }
 
 	.st-dashboard-card, .map-overlay-card { width: 100% !important; margin: 0 0 12px 0 !important; }
 
 	#floatingBtn { right: 12px !important; top: 92px !important; }
+}
+</style>
+
+<style>
+@media (max-width: 420px) {
+	.formal-chart-canvas-moa {
+		min-height: 340px !important;
+		padding: 12px 6px 8px !important;
+	}
 }
 </style>
 

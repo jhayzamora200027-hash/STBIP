@@ -189,6 +189,151 @@
         footer {
             flex-shrink: 0;
         }
+        .stb-site-footer {
+            position: relative;
+            width: 100%;
+            margin-top: 2rem;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at top right, rgba(95, 173, 86, 0.16), transparent 28%),
+                linear-gradient(135deg, #0a2d63 0%, #114f8f 58%, #f1f7ff 160%);
+            color: #e9f3ff;
+            box-shadow: 0 -16px 40px rgba(10, 45, 99, 0.12);
+        }
+        .stb-site-footer::before,
+        .stb-site-footer::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+        .stb-site-footer::before {
+            width: 280px;
+            height: 280px;
+            top: -110px;
+            left: -60px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .stb-site-footer::after {
+            width: 220px;
+            height: 220px;
+            right: -70px;
+            bottom: -120px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .stb-site-footer__inner {
+            position: relative;
+            z-index: 1;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 1.8rem 1.5rem 1rem;
+        }
+        .stb-site-footer__top {
+            display: grid;
+            grid-template-columns: minmax(240px, 1.1fr) repeat(2, minmax(200px, 0.8fr));
+            gap: 1.4rem;
+            align-items: start;
+        }
+        .stb-site-footer__brand {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .stb-site-footer__logo {
+            flex: 0 0 auto;
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            padding: 0.45rem;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 14px 32px rgba(6, 16, 34, 0.18);
+            object-fit: contain;
+        }
+        .stb-site-footer__eyebrow {
+            display: inline-flex;
+            margin-bottom: 0.35rem;
+            padding: 0.28rem 0.72rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .stb-site-footer__title {
+            margin: 0;
+            color: #ffffff;
+            font-size: 1.08rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        .stb-site-footer__summary {
+            margin: 0.45rem 0 0;
+            max-width: 34rem;
+            color: rgba(233, 243, 255, 0.84);
+            font-size: 0.93rem;
+            line-height: 1.7;
+        }
+        .stb-site-footer__section {
+            padding: 0.15rem 0;
+        }
+        .stb-site-footer__section-title {
+            margin: 0 0 0.55rem;
+            color: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .stb-site-footer__list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .stb-site-footer__list li {
+            margin-bottom: 0.45rem;
+            color: rgba(233, 243, 255, 0.82);
+            font-size: 0.93rem;
+            line-height: 1.65;
+        }
+        .stb-site-footer__meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin-top: 0.9rem;
+        }
+        .stb-site-footer__pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.11);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .stb-site-footer__bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.4rem;
+            padding-top: 0.95rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .stb-site-footer__bottom-copy,
+        .stb-site-footer__bottom-note {
+            margin: 0;
+            color: rgba(233, 243, 255, 0.78);
+            font-size: 0.86rem;
+            line-height: 1.5;
+        }
+        .stb-site-footer__bottom-note {
+            text-align: right;
+        }
 
         /* Mobile-only: remove container side padding and center dashboard wrapper for all users */
         @media (max-width: 767px) {
@@ -203,6 +348,40 @@
             }
             .st-center-outer { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
             html, body { overflow-x: hidden !important; }
+            .stb-site-footer {
+                margin-top: 1.25rem;
+            }
+            .stb-site-footer__inner {
+                padding: 1.35rem 1rem 0.95rem;
+            }
+            .stb-site-footer__top {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .stb-site-footer__brand {
+                gap: 0.8rem;
+            }
+            .stb-site-footer__logo {
+                width: 52px;
+                height: 52px;
+                border-radius: 16px;
+            }
+            .stb-site-footer__title {
+                font-size: 1rem;
+            }
+            .stb-site-footer__summary,
+            .stb-site-footer__list li,
+            .stb-site-footer__bottom-copy,
+            .stb-site-footer__bottom-note {
+                font-size: 0.88rem;
+            }
+            .stb-site-footer__bottom {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .stb-site-footer__bottom-note {
+                text-align: left;
+            }
         }
 
         @if(request()->query('embed') || (isset($embed) && $embed))
@@ -1553,7 +1732,7 @@
                                             <li>
                                                 <a class="dropdown-item" href="{{ route('STDashboard') }}">
                                                     <i class="bi bi-upload me-2"></i>
-                                                    Social Technologies Titles
+                                                    Social Technology Titles
                                                 </a>
                                             </li>
                                         </ul>
@@ -1788,12 +1967,49 @@
     <div class="container py-5 stb-main-content" style="margin-top: 70px;">
         @yield('content')
     </div>
-    <footer style="width:100%; background:linear-gradient(90deg,#e0e7ff 60%,#f8fafc 100%); color:#2c3e50; text-align:center;  font-size:0.92rem; margin-top:1.2rem; margin-bottom: -10.2rem; margin-left: -40px; box-shadow:0 -2px 12px rgba(44,62,80,0.05);">
-        <div style="max-width:700px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:0.15rem; line-height:1.3;">
-            <div>Department of Social Welfare and Development, Social Technology Bureau</div>
-            <div>3RD Floor, Matapat Building Department Of Social Welfare And Development - Central Office IBP Road, Constitution Hills, Batasan Complex, Quezon City</div>
-            <div>Tel: 02-8951-7124 | 02-8951-2802 | 02-8931-8144</div>
-            <div>© {{ date('Y') }} DSWD STB Inventory Portal. All rights reserved.</div>
+    <footer class="stb-site-footer">
+        <div class="stb-site-footer__inner">
+            <div class="stb-site-footer__top">
+                <div class="stb-site-footer__section stb-site-footer__brand">
+                    <img
+                        src="{{ request()->isSecure() ? secure_asset('images/dattachments/social technology bureau innovating solution logo.png') : asset('images/dattachments/social technology bureau innovating solution logo.png') }}"
+                        alt="DSWD Social Technology Bureau logo"
+                        class="stb-site-footer__logo"
+                    >
+                    <div>
+                        <span class="stb-site-footer__eyebrow">STB Inventory Portal</span>
+                        <p class="stb-site-footer__title">Department of Social Welfare and Development, Social Technology Bureau</p>
+                        <p class="stb-site-footer__summary">A centralized workspace for managing social technology records, inventory updates, and reporting across regions and local implementation sites.</p>
+                        <div class="stb-site-footer__meta">
+                            <span class="stb-site-footer__pill"><i class="bi bi-shield-check"></i> Internal system</span>
+                            <span class="stb-site-footer__pill"><i class="bi bi-clipboard-data"></i> Inventory and master data</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stb-site-footer__section">
+                    <p class="stb-site-footer__section-title">Office Address</p>
+                    <ul class="stb-site-footer__list">
+                        <li>3rd Floor, Matapat Building</li>
+                        <li>DSWD Central Office, IBP Road</li>
+                        <li>Constitution Hills, Batasan Complex, Quezon City</li>
+                    </ul>
+                </div>
+
+                <div class="stb-site-footer__section">
+                    <p class="stb-site-footer__section-title">Contact Lines</p>
+                    <ul class="stb-site-footer__list">
+                        <li>02-8951-7124</li>
+                        <li>02-8951-2802</li>
+                        <li>02-8931-8144</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="stb-site-footer__bottom">
+                <p class="stb-site-footer__bottom-copy">© {{ date('Y') }} DSWD STB Inventory Portal. All rights reserved.</p>
+                <p class="stb-site-footer__bottom-note">Built for Social Technology Bureau operations and regional coordination.</p>
+            </div>
         </div>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
