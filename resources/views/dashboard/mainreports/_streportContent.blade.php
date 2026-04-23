@@ -2306,7 +2306,7 @@ document.addEventListener("DOMContentLoaded", function () {
 								const citiesObj = grouped[prov] || {};
 								const cityNames = Object.keys(citiesObj);
 					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => { const key=(cn||'').toString().trim(); const displayCity = (cn === 'UNKNOWN') ? '(no city specified)' : cn; return `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="city-name">${esc(displayCity)}</div><div class="province-badge">${(citiesObj[key]||[]).length}</div></div>` }).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
-					this.insertAdjacentHTML('afterend', subHtml);
+                    this.insertAdjacentHTML('afterend', (typeof sanitizeHtml === 'function') ? sanitizeHtml(subHtml) : subHtml);
 								const sub = this.nextElementSibling;
 								if (sub) {
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
