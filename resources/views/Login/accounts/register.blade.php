@@ -414,14 +414,18 @@
                 const allGood = Object.values(checks).every(Boolean);
                 if (!allGood) {
                     if (errorContainer) {
-                        errorContainer.innerHTML = 'Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.';
+                        const escHtml = s => String(s == null ? '' : s)
+                            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                        errorContainer.innerHTML = escHtml('Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.');
                         errorContainer.style.display = 'block';
                     }
                     return;
                 }
                 if (pwdVal !== pwdConfirmVal) {
                     if (errorContainer) {
-                        errorContainer.innerHTML = 'Passwords do not match.';
+                        const escHtml = s => String(s == null ? '' : s)
+                            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                        errorContainer.innerHTML = escHtml('Passwords do not match.');
                         errorContainer.style.display = 'block';
                     }
                     return;
@@ -486,27 +490,31 @@
                             });
                         }
 
-                        if (messages.size > 0 && errorContainer) {
+                            if (messages.size > 0 && errorContainer) {
+                            const escHtml = s => String(s == null ? '' : s)
+                                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
                             let html;
                             const arr = Array.from(messages);
                             if (arr.length > 1) {
-                                html = arr[0] + '<ul style="margin:0;padding-left:18px;font-size:0.875rem;">';
+                                html = escHtml(arr[0]) + '<ul style="margin:0;padding-left:18px;font-size:0.875rem;">';
                                 for (let i = 1; i < arr.length; i++) {
-                                    html += '<li style="word-wrap: break-word; white-space: normal;">' + arr[i] + '</li>';
+                                    html += '<li style="word-wrap: break-word; white-space: normal;">' + escHtml(arr[i]) + '</li>';
                                 }
                                 html += '</ul>';
                             } else {
-                                html = arr[0];
+                                html = escHtml(arr[0]);
                             }
-                            errorContainer.innerHTML = html;
+                            errorContainer.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
                             errorContainer.style.display = 'block';
                         }
                     }
                 })
-                .catch(err => {
+                    } catch(err => {
                     console.error('AJAX register fetch error:', err);
                     if (errorContainer) {
-                        errorContainer.innerHTML = 'An error occurred. Please try again.';
+                        const escHtml = s => String(s == null ? '' : s)
+                            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                        errorContainer.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(escHtml('An error occurred. Please try again.')) : escHtml('An error occurred. Please try again.');
                         errorContainer.style.display = 'block';
                     }
                 })

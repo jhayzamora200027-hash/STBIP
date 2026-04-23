@@ -334,7 +334,7 @@
 			if (!mapTooltip || !regionCode) return;
 			const html = formatRegionTooltip(regionCode);
 			if (!html) return;
-			mapTooltip.innerHTML = html;
+			mapTooltip.innerHTML = sanitizeHtml(html);
 			mapTooltip.style.display = 'block';
 
 			const baseRect = anchorRect || phMapObject.getBoundingClientRect();
@@ -367,7 +367,7 @@
 				html += '<span class="st-map-region-count">' + count + '</span>';
 				html += '</div>';
 			});
-			regionListEl.innerHTML = html;
+			regionListEl.innerHTML = sanitizeHtml(html);
 			function getRegionRepresentativeInfo(regionCode) { const arr = regionToPaths[regionCode]; return (arr && arr.length) ? arr[0] : null; }
 			function getRegionAnchorRectFromCode(regionCode) { const info = getRegionRepresentativeInfo(regionCode); if (!info) return phMapObject.getBoundingClientRect(); return getPathAnchorRect(info.path); }
 			function startRegionBlink(regionCode) { if (!regionCode) return; const info = getRegionRepresentativeInfo(regionCode); if (!info) return; if (regionBlinkTimers[regionCode]) { clearInterval(regionBlinkTimers[regionCode]); } let visible = true; highlightGroup(info, true, { color: '#ffeb3b', stroke: '#f9a825' }); regionBlinkTimers[regionCode] = setInterval(function() { visible = !visible; highlightGroup(info, visible, { color: '#ffeb3b', stroke: '#f9a825' }); }, 450); }

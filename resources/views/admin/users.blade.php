@@ -1171,14 +1171,16 @@
                             }
 
                             if (messages.size > 0 && errorContainer) {
+                                const escHtml = s => String(s == null ? '' : s)
+                                    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
                                 let html = '<ul class="mb-0" style="padding-left:18px;">';
                                 messages.forEach(msg => {
-                                    html += '<li>' + msg + '</li>';
+                                    html += '<li>' + escHtml(msg) + '</li>';
                                 });
                                 html += '</ul>';
                                 const listDiv = errorContainer.querySelector('#addUserErrorList');
                                 if (listDiv) {
-                                    listDiv.innerHTML = html;
+                                    listDiv.innerHTML = sanitizeHtml(html);
                                 }
                                 errorContainer.style.display = 'block';
                             }

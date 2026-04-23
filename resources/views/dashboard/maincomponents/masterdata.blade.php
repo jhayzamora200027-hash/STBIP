@@ -145,6 +145,11 @@
 	}
 	.masterdata-stat-card {
 		padding: 20px 22px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
 	}
 	.masterdata-stat-label {
 		font-size: 0.82rem;
@@ -152,10 +157,15 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: #5e7388;
+		min-height: 3.2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
 	}
 	.masterdata-stat-value {
 		margin-top: 10px;
-		font-size: 2rem;
+		font-size: 3rem;
 		font-weight: 800;
 		color: #0b2540;
 	}
@@ -178,6 +188,11 @@
 		padding: 18px 22px;
 		background: linear-gradient(135deg, #eff6fb, #f8fbfe);
 		border-bottom: 1px solid #e4edf6;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 6px;
+		min-height: 118px;
 	}
 	.masterdata-card-header h2,
 	.masterdata-card-header h3 {
@@ -785,20 +800,16 @@
 	<div id="masterdata-panel-overview" class="masterdata-panel {{ $activeTab === 'overview' ? 'active' : '' }}">
 		<div class="masterdata-stats">
 			<div class="masterdata-stat-card">
-				<div class="masterdata-stat-label">Regional Offices</div>
-				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['total_regions'] }}</div>
-			</div>
-			<div class="masterdata-stat-card">
 				<div class="masterdata-stat-label">Total number of institutionalizing LGUs and stakeholders</div>
-				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['total_items'] }}</div>
+				<div class="masterdata-stat-value">{{ $overview['total_items'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
-				<div class="masterdata-stat-label">With MOA</div>
-				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['with_moa'] }}</div>
+					<div class="masterdata-stat-label">With MOA</div>
+					<div class="masterdata-stat-value">{{ $overview['with_moa'] }}</div>
 			</div>
 			<div class="masterdata-stat-card">
-				<div class="masterdata-stat-label">With Resolution</div>
-				<div class="masterdata-stat-value" style="text-align: center;">{{ $overview['with_resolution'] }}</div>
+					<div class="masterdata-stat-label">With Resolution</div>
+					<div class="masterdata-stat-value">{{ $overview['with_resolution'] }}</div>
 			</div>
 		</div>
 
@@ -1207,7 +1218,11 @@
 				return;
 			}
 			const alertClass = type === 'error' ? 'masterdata-alert-error' : 'masterdata-alert-success';
-			ajaxFeedback.innerHTML = '<div class="masterdata-alert ' + alertClass + '">' + message + '</div>';
+			const alertEl = document.createElement('div');
+			alertEl.className = 'masterdata-alert ' + alertClass;
+			alertEl.textContent = message;
+			ajaxFeedback.innerHTML = '';
+			ajaxFeedback.appendChild(alertEl);
 		}
 
 		function showSuccessModal(message) {
@@ -1487,7 +1502,17 @@
 				throw new Error('Unable to load update items.');
 			}
 			const html = await response.text();
-			updatesPanelContent.innerHTML = html;
+			function sanitizeHtml(src) {
+				if (!src) return '';
+				if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+					return DOMPurify.sanitize(src);
+				}
+				// Fallback: remove script tags and inline event handlers
+				return String(src)
+					.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+					.replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
+			}
+			updatesPanelContent.innerHTML = sanitizeHtml(html);
 			initializeUpdatesPanel(updatesPanelContent);
 			updateBrowserUrl(browserUrl);
 			if (message) {
@@ -1555,7 +1580,7 @@
 				}
 
 				const payload = await response.json();
-				updatesPanelContent.innerHTML = payload.html;
+				updatesPanelContent.innerHTML = sanitizeHtml(payload.html);
 				initializeUpdatesPanel(updatesPanelContent);
 				updateBrowserUrl(payload.url);
 				showAjaxFeedback('success', '');

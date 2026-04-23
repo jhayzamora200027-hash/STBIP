@@ -1218,7 +1218,7 @@
 
             const approvalActionButtons = document.getElementById('approvalActionButtons');
             if (approvalActionButtons && approvalActionButtonsHtml) {
-                approvalActionButtons.innerHTML = approvalActionButtonsHtml;
+                approvalActionButtons.innerHTML = sanitizeHtml(approvalActionButtonsHtml);
             }
 
             if (userDetailsModal) {
@@ -1233,7 +1233,7 @@
 
             const rejectionForm = document.getElementById('rejectionForm');
             if (rejectionForm && rejectionFormHtml) {
-                rejectionForm.innerHTML = rejectionFormHtml;
+                rejectionForm.innerHTML = sanitizeHtml(rejectionFormHtml);
             }
 
             const rejectionReason = document.getElementById('rejectionReason');

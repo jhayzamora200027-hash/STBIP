@@ -653,13 +653,25 @@
                 if (heroAvatar) {
                     heroAvatar.src = src;
                 } else if (heroFallback) {
-                    heroFallback.outerHTML = '<img src="' + src + '" alt="{{ e($profileDisplayName) }}" id="profileHeroAvatarImage">';
+                    try {
+                        const img = document.createElement('img');
+                        img.src = src;
+                        img.alt = "{{ e($profileDisplayName) }}";
+                        img.id = 'profileHeroAvatarImage';
+                        heroFallback.replaceWith(img);
+                    } catch(e) { try { const imgFall = document.createElement('img'); imgFall.src = src; imgFall.alt = "{{ e($profileDisplayName) }}"; imgFall.id = 'profileHeroAvatarImage'; heroFallback.insertAdjacentElement('afterend', imgFall); heroFallback.remove(); } catch(_){ heroFallback.outerHTML = '<img src="' + src + '" alt="{{ e($profileDisplayName) }}" id="profileHeroAvatarImage">'; } }
                 }
 
                 if (summaryAvatar) {
                     summaryAvatar.src = src;
                 } else if (summaryFallback) {
-                    summaryFallback.outerHTML = '<img src="' + src + '" alt="{{ e($profileDisplayName) }}" id="profileSummaryAvatarImage">';
+                    try {
+                        const img2 = document.createElement('img');
+                        img2.src = src;
+                        img2.alt = "{{ e($profileDisplayName) }}";
+                        img2.id = 'profileSummaryAvatarImage';
+                        summaryFallback.replaceWith(img2);
+                    } catch(e) { try { const img2Fall = document.createElement('img'); img2Fall.src = src; img2Fall.alt = "{{ e($profileDisplayName) }}"; img2Fall.id = 'profileSummaryAvatarImage'; summaryFallback.insertAdjacentElement('afterend', img2Fall); summaryFallback.remove(); } catch(_){ summaryFallback.outerHTML = '<img src="' + src + '" alt="{{ e($profileDisplayName) }}" id="profileSummaryAvatarImage">'; } }
                 }
             };
             reader.readAsDataURL(file);

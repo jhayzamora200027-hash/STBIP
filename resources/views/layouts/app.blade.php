@@ -174,6 +174,26 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    <script>
+        // Global sanitize helper: uses DOMPurify if present, otherwise safe fallback.
+        function sanitizeHtml(src) {
+            if (!src) return '';
+            if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+                return DOMPurify.sanitize(src);
+            }
+            return String(src)
+                .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+                .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
+        }
+        function escapeHtml(str) {
+            return (str || '').toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+    </script>
     <style>
         html, body {
             height: 100%;
@@ -193,33 +213,12 @@
             position: relative;
             width: 100%;
             margin-top: 2rem;
-            overflow: hidden;
-            background:
-                radial-gradient(circle at top right, rgba(95, 173, 86, 0.16), transparent 28%),
-                linear-gradient(135deg, #0a2d63 0%, #114f8f 58%, #f1f7ff 160%);
-            color: #e9f3ff;
-            box-shadow: 0 -16px 40px rgba(10, 45, 99, 0.12);
+            background-color: #06306e; /* match navbar */
+            color: #ffffff;
         }
         .stb-site-footer::before,
         .stb-site-footer::after {
-            content: "";
-            position: absolute;
-            border-radius: 999px;
-            pointer-events: none;
-        }
-        .stb-site-footer::before {
-            width: 280px;
-            height: 280px;
-            top: -110px;
-            left: -60px;
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .stb-site-footer::after {
-            width: 220px;
-            height: 220px;
-            right: -70px;
-            bottom: -120px;
-            background: rgba(255, 255, 255, 0.1);
+            display: none; /* hide decorative shapes */
         }
         .stb-site-footer__inner {
             position: relative;

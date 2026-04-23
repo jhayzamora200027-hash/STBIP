@@ -98,6 +98,23 @@ document.addEventListener("DOMContentLoaded", function () {
 		return (s||'').toString().replace(/[\x00-\x1F\x7F]/g, '');
 	}
 
+    function sanitizeHtml(src) {
+        if (!src) return '';
+        if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') return DOMPurify.sanitize(src);
+        return String(src)
+            .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+            .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
+    }
+
+    function escapeHtml(str) {
+        return (str || '').toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
 	
 	function normalizeGrouping(src) {
 		const out = {};
@@ -301,8 +318,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			const provinces = Array.isArray(payload && payload.provinces) ? payload.provinces : [];
 			const rawGrouped = payload && payload.grouped ? payload.grouped : {};
 		const grouped = normalizeGrouping(rawGrouped);
-			if (!provinces.length) {
-				list.innerHTML = '<div class="province-empty">No provinces found for this region.</div>';
+            if (!provinces.length) {
+                list.innerHTML = sanitizeHtml('<div class="province-empty">No provinces found for this region.</div>');
 				card.setAttribute('aria-hidden','true');
 				return;
 			}
@@ -316,7 +333,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				const label = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
 				html += `<div class="province-item"><div class="prov-name">${esc(label)}</div><div class="province-badge">${cityCount}</div></div>`;
 			});
-			list.innerHTML = html;
+            list.innerHTML = sanitizeHtml(html);
 			
 
 		} catch (e) { console.error('renderBottomProvinceList error', e); }
@@ -392,11 +409,11 @@ document.addEventListener("DOMContentLoaded", function () {
 						};
 						const mappedRegion = filenameToRegion[fileName] || null;
 						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
-						bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
+                        bottomList.innerHTML = sanitizeHtml('<div class="province-empty">Loading…</div>');
 						fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
 							.then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
 							.then(payload => renderBottomProvinceList(payload))
-							.catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
+                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = sanitizeHtml('<div class="province-empty">Failed to load provinces</div>'); });
 					}
 				} catch(e) { console.error(e); }
 			} else {
@@ -620,7 +637,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const rawGrouped = payload.grouped || {};
         const grouped = normalizeGrouping(rawGrouped);
         if (!provinces.length) {
-            list.innerHTML = '<div class="province-empty">No provinces found for this region.</div>';
+            list.innerHTML = sanitizeHtml('<div class="province-empty">No provinces found for this region.</div>');
             card.setAttribute('aria-hidden','false');
             return;
         }
@@ -634,7 +651,7 @@ document.addEventListener("DOMContentLoaded", function () {
             html += `<div class="province-item" role="button" tabindex="0" data-prov="${esc(prov)}"><div class="prov-name">${esc(displayProv)}</div><div class="province-badge">${cityCount}</div></div>`;
         });
         
-        list.innerHTML = html;
+        list.innerHTML = sanitizeHtml(html);
         
         list.style.height = 'calc(40px * 8 + 16px)';
         
@@ -768,7 +785,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!cities.length) {
             html += '<div class="province-empty">No cities found for this province.</div>';
-            sub.innerHTML = html;
+            sub.innerHTML = sanitizeHtml(html);
             provEl.parentNode.insertBefore(sub, provEl.nextSibling);
             provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
             return;
@@ -783,7 +800,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         html += '</div>';
         html += '<div class="st-list" style="margin-top:8px;"></div>';
-        sub.innerHTML = html;
+        sub.innerHTML = sanitizeHtml(html);
 
         
         provEl.parentNode.insertBefore(sub, provEl.nextSibling);
@@ -820,7 +837,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 
                 const stContainer = sub.querySelector('.st-list');
                 if (!stContainer) return;
-                stContainer.innerHTML = '<div class="province-empty">ST Titles are managed in the ST Titles panel and are not affected by province selection.</div>';
+                stContainer.innerHTML = sanitizeHtml('<div class="province-empty">ST Titles are managed in the ST Titles panel and are not affected by province selection.</div>');
             };
 
             ci.addEventListener('click', ev => {
@@ -855,13 +872,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const list = document.getElementById('sliderProvinceList');
         const card = document.getElementById('sliderProvinceListCard');
         if (!list || !card) return;
-        list.innerHTML = '<div class="province-empty">Loading…</div>';
+        list.innerHTML = sanitizeHtml('<div class="province-empty">Loading…</div>');
         card.setAttribute('aria-hidden','false');
         try { const card = document.getElementById('sliderProvinceTotalCard'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); const exprCard = document.getElementById('sliderProvinceExprCard'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); const repCard = document.getElementById('sliderProvinceReplicatedCard'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); const adCard = document.getElementById('sliderProvinceAdoptedCard'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (card) card.setAttribute('aria-hidden','false'); if (stCountEl) stCountEl.textContent = '…'; if (exprCard) exprCard.setAttribute('aria-hidden','false'); if (exprCountEl) exprCountEl.textContent = '…'; if (repCard) repCard.setAttribute('aria-hidden','false'); if (repCountEl) repCountEl.textContent = '…'; if (adCard) adCard.setAttribute('aria-hidden','false'); if (adCountEl) adCountEl.textContent = '…'; positionProvinceTotalCard(); } catch(e) {}
         fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionKey))
             .then(r => { if (!r.ok) throw new Error('Network'); return r.json(); })
             .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
-.catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
+.catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = sanitizeHtml('<div class="province-empty">Failed to load provinces</div>'); try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
 
     
@@ -911,7 +928,7 @@ document.addEventListener("DOMContentLoaded", function () {
             pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
 
             const title = (stInfo && stInfo.title) ? stInfo.title : '';
-            pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
+            pop.innerHTML = sanitizeHtml(`<div class="rp-msg">Replicate "${escapeHtml(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`);
             document.body.appendChild(pop);
 
             
@@ -1046,7 +1063,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			
 			rsmEl('rsm-loading').style.display = ''; 
 			document.getElementById('rsm-cards').style.display = 'none';
-			rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
+            rsmEl('rsm-st-list').innerHTML = sanitizeHtml('<div class="rsm-empty">Select a city to view ST titles</div>'); 
 
 			
 			fetch('/sts-report/ajax-region-hierarchy?region_image=' + encodeURIComponent(regionParam))
@@ -1059,15 +1076,15 @@ document.addEventListener("DOMContentLoaded", function () {
 					const rawGrouped = payload.grouped || {};
 		const grouped = normalizeGrouping(rawGrouped);
 					const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-					if (!provincesArr.length) {
-						provEl.innerHTML = '<div class="rsm-empty">No provinces</div>';
-						provEl.setAttribute('aria-hidden','true');
-					} else {
-						provEl.innerHTML = provincesArr.map(p => {
-							const cities = Object.keys(grouped[p] || {});
-							return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div>`;
-						}).join('');
-						provEl.setAttribute('aria-hidden','false');
+                    if (!provincesArr.length) {
+                        provEl.innerHTML = sanitizeHtml('<div class="rsm-empty">No provinces</div>');
+                        provEl.setAttribute('aria-hidden','true');
+                    } else {
+                        provEl.innerHTML = sanitizeHtml(provincesArr.map(p => {
+                            const cities = Object.keys(grouped[p] || {});
+                            return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div>`;
+                        }).join(''));
+                        provEl.setAttribute('aria-hidden','false');
 
 						
 						window._lastRsmPayload = payload;
@@ -1105,11 +1122,11 @@ document.addEventListener("DOMContentLoaded", function () {
 									cityItems.forEach(x => { if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); } else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); } });
 									const stContainer = sub.querySelector('.st-list');
 									if (!stContainer) return;
-									if (!rows.length) { stContainer.innerHTML = '<div class="province-empty">No STs for this city</div>'; try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
+                                    if (!rows.length) { stContainer.innerHTML = sanitizeHtml('<div class="province-empty">No STs for this city</div>'); try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
 									let sHtml = '<div style="max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px;">';
 									rows.forEach(r => { sHtml += `<div class="st-item" role="button" tabindex="0" title="${esc(r.title)}" style="padding:8px;border-radius:6px;background:transparent;cursor:pointer;">${esc(r.title || '(no title)')}</div>`; });
 									sHtml += '</div>';
-									stContainer.innerHTML = sHtml;
+                                    stContainer.innerHTML = sanitizeHtml(sHtml);
 									try { let hdr = sub.querySelector('.st-list-header'); if (!hdr) { hdr = document.createElement('div'); hdr.className = 'st-list-header'; const cityListNode = sub.querySelector('.city-list'); if (cityListNode) cityListNode.insertAdjacentElement('afterend', hdr); else sub.insertBefore(hdr, stContainer); } hdr.textContent = 'List of STs'; } catch(e) {}
 									try { const stItems = Array.from(stContainer.querySelectorAll('.st-item')); stItems.forEach(el => el.classList.remove('show')); stItems.forEach((el, i) => setTimeout(()=> el.classList.add('show'), 60 + i * 34)); } catch(e) {}
 									try { Array.from(stContainer.querySelectorAll('.st-item')).forEach((si, idx) => { si.addEventListener('click', ev3 => { ev3.stopPropagation(); const row = rows[idx] || { title: si.textContent }; showReplicateConfirmPopover(si, { province: provName, city: city, title: row.title || si.textContent, row }); }); si.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); si.click(); } }); }); } catch(e) {}
@@ -1152,12 +1169,12 @@ document.addEventListener("DOMContentLoaded", function () {
 						});
 								const stContainer = sub.querySelector('.st-list');
 								if (!stContainer) return;
-								if (!rows.length) { stContainer.innerHTML = '<div class="province-empty">No STs for this city</div>'; try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
+                                if (!rows.length) { stContainer.innerHTML = sanitizeHtml('<div class="province-empty">No STs for this city</div>'); try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
 
 								let sHtml = '<div style="max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px;">';
 								rows.forEach(r => { sHtml += `<div class="st-item" role="button" tabindex="0" title="${esc(r.title)}" style="padding:8px;border-radius:6px;background:transparent;cursor:pointer;">${esc(r.title || '(no title)')}</div>`; });
 								sHtml += '</div>';
-								stContainer.innerHTML = sHtml;
+                                stContainer.innerHTML = sanitizeHtml(sHtml);
 
 								try { let hdr = sub.querySelector('.st-list-header'); if (!hdr) { hdr = document.createElement('div'); hdr.className = 'st-list-header'; const cityListNode = sub.querySelector('.city-list'); if (cityListNode) cityListNode.insertAdjacentElement('afterend', hdr); else sub.insertBefore(hdr, stContainer); } hdr.textContent = 'List of STs'; } catch(e) {}
 								try { const stItems = Array.from(stContainer.querySelectorAll('.st-item')); stItems.forEach(el => el.classList.remove('show')); stItems.forEach((el, i) => setTimeout(()=> el.classList.add('show'), 60 + i * 34)); } catch(e) {}
@@ -1199,7 +1216,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					
 					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => { const key=(cn||'').toString().trim(); const displayCity = (cn === 'UNKNOWN') ? '(no city specified)' : cn; return `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="city-name">${esc(displayCity)}</div><div class="province-badge">${(citiesObj[key]||[]).length}</div></div>` }).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
 					
-					this.insertAdjacentHTML('afterend', subHtml);
+                    this.insertAdjacentHTML('afterend', (typeof sanitizeHtml === 'function') ? sanitizeHtml(subHtml) : subHtml);
 								
 								const sub = this.nextElementSibling;
 								if (sub) {
@@ -1292,7 +1309,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         
                         if (!rows.length) {
                             const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
-                            stListEl.innerHTML = emptyMsg;
+                            stListEl.innerHTML = sanitizeHtml(emptyMsg);
                             return;
                         }
 
@@ -1307,7 +1324,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         const entries = Object.entries(titleMap).sort((a,b) => b[1] - a[1]);
                         if (!entries.length) {
                             const emptyMsg = '<div class="rsm-empty">No ST titles for this region</div>';
-                            stListEl.innerHTML = emptyMsg;
+                            stListEl.innerHTML = sanitizeHtml(emptyMsg);
                             return;
                         }
 
@@ -1328,7 +1345,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         });
                         html += '</div>';
 
-                        stListEl.innerHTML = html;
+                        stListEl.innerHTML = sanitizeHtml(html);
                         
                         const applyHandlers = el => {
                             if (!el) return;
@@ -1355,8 +1372,8 @@ document.addEventListener("DOMContentLoaded", function () {
 				.catch(err => {
 					document.getElementById('rsm-loading').style.display = 'none';
 					document.getElementById('rsm-cards').style.display = 'none';
-					rsmEl('rsm-provinces').innerHTML = '<div class="rsm-empty">Failed to load provinces</div>'; 
-					rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Failed to load STs listing</div>'; 
+                    rsmEl('rsm-provinces').innerHTML = sanitizeHtml('<div class="rsm-empty">Failed to load provinces</div>'); 
+                    rsmEl('rsm-st-list').innerHTML = sanitizeHtml('<div class="rsm-empty">Failed to load STs listing</div>'); 
 					console.error(err);
 				});
 		} catch(e){ console.error('renderRegionStatsForImg', e); }
@@ -1405,27 +1422,27 @@ document.addEventListener("DOMContentLoaded", function () {
 						const yearEl = document.getElementById('rsm-filter-year');
 						const provEl = document.getElementById('rsm-filter-prov');
 						const cityEl = document.getElementById('rsm-filter-city');
-						if (yearEl) {
-							if (yrs.length) {
-								yearEl.innerHTML = yrs.map(y=> '<option>'+y+'</option>').join('');
-							} else {
-								yearEl.innerHTML = '<option value="">No data found</option>';
-							}
-						}
-						if (provEl) {
-							if (provs.length) {
-								provEl.innerHTML = provs.map(p=> '<option>'+p+'</option>').join('');
-							} else {
-								provEl.innerHTML = '<option value="">No data found</option>';
-							}
-						}
-						if (cityEl) {
-							if (cities.length) {
-								cityEl.innerHTML = cities.map(c=> '<option>'+c+'</option>').join('');
-							} else {
-								cityEl.innerHTML = '<option value="">No data found</option>';
-							}
-						}
+                        if (yearEl) {
+                            if (yrs.length) {
+                                yearEl.innerHTML = sanitizeHtml(yrs.map(y => `<option value="${escapeHtml(String(y))}">${escapeHtml(String(y))}</option>`).join(''));
+                            } else {
+                                yearEl.innerHTML = sanitizeHtml('<option value="">No data found</option>');
+                            }
+                        }
+                        if (provEl) {
+                            if (provs.length) {
+                                provEl.innerHTML = sanitizeHtml(provs.map(p => `<option value="${escapeHtml(String(p))}">${escapeHtml(String(p))}</option>`).join(''));
+                            } else {
+                                provEl.innerHTML = sanitizeHtml('<option value="">No data found</option>');
+                            }
+                        }
+                        if (cityEl) {
+                            if (cities.length) {
+                                cityEl.innerHTML = sanitizeHtml(cities.map(c => `<option value="${escapeHtml(String(c))}">${escapeHtml(String(c))}</option>`).join(''));
+                            } else {
+                                cityEl.innerHTML = sanitizeHtml('<option value="">No data found</option>');
+                            }
+                        }
 					} catch(e){ console.warn('[iframe] update selects failed', e); }
 					
 					try {

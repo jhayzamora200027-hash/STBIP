@@ -175,6 +175,12 @@ document.addEventListener('DOMContentLoaded', function() {
             data = { message: 'Login failed. (Invalid server response)' };
           }
           let msg = data.message || 'Login failed.';
+          function escHtml(s) { return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;'); }
           let errorSet = new Set();
           if (msg) errorSet.add(msg);
           if (data.errors) {
@@ -195,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
             msg = errorArr[0];
           }
           if (errorMsg) {
-            errorMsg.innerHTML = msg;
+            errorMsg.innerHTML = escHtml(msg);
             errorMsg.style.display = 'block';
             if (loginModal) {
               loginModal.show();
@@ -206,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch((err) => {
         console.error('AJAX login fetch error:', err);
         if (errorMsg) {
-          errorMsg.innerHTML = 'An error occurred. Please try again.';
+          errorMsg.innerHTML = escHtml('An error occurred. Please try again.');
           errorMsg.style.display = 'block';
           if (loginModal) {
             loginModal.show();

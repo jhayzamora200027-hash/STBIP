@@ -15,6 +15,7 @@ class Kernel extends HttpKernel
         'web' => [
             // ...existing Laravel web middleware...
             \App\Http\Middleware\EncryptCookies::class,
+            \App\Http\Middleware\ContentSecurityPolicy::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             // ...other middleware...

@@ -200,7 +200,12 @@
                             .then(function (response) { return response.json(); })
                             .then(function (data) {
                                 if (data && data.html) {
-                                    container.innerHTML = data.html;
+                                    function sanitizeHtml(src) {
+                                        if (!src) return '';
+                                        if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') return DOMPurify.sanitize(src);
+                                        return String(src).replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '').replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
+                                    }
+                                    container.innerHTML = sanitizeHtml(data.html);
                                 } else if (data && data.redirect) {
                                     window.location = data.redirect;
                                 }

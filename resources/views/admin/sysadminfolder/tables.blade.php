@@ -138,14 +138,18 @@
             document.getElementById('createTableBtn').addEventListener('click', function() {
                 const tableName = document.getElementById('newTableName').value.trim();
                 
+                function showAlert(containerId, type, text) {
+                    const c = document.getElementById(containerId);
+                    if (!c) return;
+                    try { c.innerHTML = ''; const d = document.createElement('div'); d.className = 'alert alert-' + type; d.textContent = text; c.appendChild(d); } catch(e) { try { c.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<div class="alert alert-' + type + '">' + String(text) + '</div>') : ('<div class="alert alert-' + type + '">' + String(text) + '</div>'); } catch(_){} }
+                }
+
                 if (!tableName) {
-                    document.getElementById('createTableMessage').innerHTML = 
-                        '<div class="alert alert-danger">Table name is required</div>';
+                    showAlert('createTableMessage', 'danger', 'Table name is required');
                     return;
                 }
-                
-                document.getElementById('createTableMessage').innerHTML = 
-                    '<div class="alert alert-info">Creating table...</div>';
+
+                showAlert('createTableMessage', 'info', 'Creating table...');
                 
                 fetch('/admin/create-table', {
                     method: 'POST',
@@ -163,8 +167,7 @@
                         document.getElementById('newTableName').value = '';
                         setTimeout(() => location.reload(), 1500);
                     } else {
-                        document.getElementById('createTableMessage').innerHTML = 
-                            '<div class="alert alert-danger">Error: ' + data.message + '</div>';
+                        showAlert('createTableMessage', 'danger', 'Error: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
@@ -253,7 +256,7 @@
                             `;
                         });
                         
-                        document.getElementById('columnsTableBody').innerHTML = html;
+                        document.getElementById('columnsTableBody').innerHTML = sanitizeHtml(html);
                         
                         document.querySelectorAll('.delete-column-btn').forEach(btn => {
                             btn.addEventListener('click', function() {
@@ -265,8 +268,7 @@
                         });
                     })
                     .catch(error => {
-                        document.getElementById('columnsTableBody').innerHTML = 
-                            '<tr><td colspan="6" class="text-center text-danger">Error loading columns</td></tr>';
+                        try { document.getElementById('columnsTableBody').innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<tr><td colspan="6" class="text-center text-danger">Error loading columns</td></tr>') : '<tr><td colspan="6" class="text-center text-danger">Error loading columns</td></tr>'; } catch(_){}
                         console.error('Error:', error);
                     });
             }
@@ -277,13 +279,11 @@
                 const nullable = document.getElementById('newColumnNullable').value;
                 
                 if (!columnName) {
-                    document.getElementById('addColumnMessage').innerHTML = 
-                        '<div class="alert alert-danger">Column name is required</div>';
+                    showAlert('addColumnMessage', 'danger', 'Column name is required');
                     return;
                 }
-                
-                document.getElementById('addColumnMessage').innerHTML = 
-                    '<div class="alert alert-info">Adding column...</div>';
+
+                showAlert('addColumnMessage', 'info', 'Adding column...');
                 
                 fetch('/admin/add-column', {
                     method: 'POST',
@@ -306,13 +306,11 @@
                         document.getElementById('newColumnName').value = '';
                         loadColumns(currentTableName); 
                     } else {
-                        document.getElementById('addColumnMessage').innerHTML = 
-                            '<div class="alert alert-danger">Error: ' + data.message + '</div>';
+                        showAlert('addColumnMessage', 'danger', 'Error: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
-                    document.getElementById('addColumnMessage').innerHTML = 
-                        '<div class="alert alert-danger">Error adding column</div>';
+                    showAlert('addColumnMessage', 'danger', 'Error adding column');
                     console.error('Error:', error);
                 });
             });
@@ -345,17 +343,14 @@
                 })
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('addColumnMessage').innerHTML = 
-                            '<div class="alert alert-success">Column deleted successfully!</div>';
+                        showAlert('addColumnMessage', 'success', 'Column deleted successfully!');
                         loadColumns(tableName); 
                     } else {
-                        document.getElementById('addColumnMessage').innerHTML = 
-                            '<div class="alert alert-danger">Error: ' + data.message + '</div>';
+                        showAlert('addColumnMessage', 'danger', 'Error: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
-                    document.getElementById('addColumnMessage').innerHTML = 
-                        '<div class="alert alert-danger">Error deleting column: ' + error.message + '</div>';
+                    showAlert('addColumnMessage', 'danger', 'Error deleting column: ' + (error && error.message ? error.message : String(error)));
                     console.error('Error:', error);
                 });
             }

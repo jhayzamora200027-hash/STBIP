@@ -160,7 +160,7 @@ window.openRsmStDetailsModal = function(row){
         if (row.with_moa) html += '<div class="masterdata-field"><label>Year of MOA</label><input type="text" value="' + esc(row.year_of_moa || '-') + '" readonly></div>';
         if (row.with_res) html += '<div class="masterdata-field"><label>Year of Resolution</label><input type="text" value="' + esc(row.year_of_resolution || '-') + '" readonly></div>';
         html += '</div>';
-        bodyEl.innerHTML = html;
+        bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
     }
     modal.style.display = 'flex';
     try{ document.body.style.overflow = 'hidden'; } catch(e){}
@@ -356,7 +356,7 @@ function renderStTitlesFromRows(rows, regionParam) {
         });
         html += '</div>';
 
-        stListEl.innerHTML = html;
+        stListEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
         stListEl.onclick = function(ev){
             const detailRow = ev.target.closest('.rsm-st-detail-row');
             if (detailRow) {
@@ -734,7 +734,8 @@ function applyRsmFilters(){
                 filtered.forEach(r => { const p = (r.province||'').toString().trim() || 'UNKNOWN'; byProv[p] = byProv[p] || []; byProv[p].push(r); });
                 const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                 const provincesArr = Object.keys(byProv).sort();
-                provEl.innerHTML = provincesArr.length ? provincesArr.map(p => `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${byProv[p].length}</div></div>`).join('') : '<div class="rsm-empty">No provinces match filters</div>';
+                const provHtml = provincesArr.length ? provincesArr.map(p => `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${byProv[p].length}</div></div>`).join('') : '<div class="rsm-empty">No provinces match filters</div>';
+                provEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(provHtml) : provHtml;
             }
         } catch(e) {}
 
@@ -869,7 +870,7 @@ if (provSel) {
                 items.forEach(i => $e.append(new Option(i,i)));
                 $e.trigger('change');
             } else {
-                el.innerHTML = items.map(i => `<option value="${i}">${i}</option>`).join('');
+                el.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(items.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('')) : items.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
             }
         }
 
@@ -1047,7 +1048,7 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         pop.style.transform = 'translateY(-6px) scale(0.98)';
         pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
 
-        pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
+        pop.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(`<div class="rp-msg">Replicate "${esc(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`) : `<div class="rp-msg">Replicate "${esc(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
         document.body.appendChild(pop);
         try {
             const cb = pop.querySelector('.rp-confirm');
@@ -1528,11 +1529,11 @@ document.addEventListener("DOMContentLoaded", function () {
 			const provinces = Array.isArray(payload && payload.provinces) ? payload.provinces : [];
 			const rawGrouped = payload && payload.grouped ? payload.grouped : {};
 		const grouped = normalizeGrouping(rawGrouped);
-			if (!provinces.length) {
-				list.innerHTML = '<div class="province-empty">No provinces found for this region.</div>';
-				card.setAttribute('aria-hidden','true');
-				return;
-			}
+            if (!provinces.length) {
+            list.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<div class="province-empty">No provinces found for this region.</div>') : '<div class="province-empty">No provinces found for this region.</div>';
+                card.setAttribute('aria-hidden','true');
+                return;
+            }
 			card.setAttribute('aria-hidden','false');
 			const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 			let html = '';
@@ -1543,7 +1544,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				const label = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
 				html += `<div class="province-item"><div class="prov-name">${esc(label)}</div><div class="province-badge">${cityCount}</div></div>`;
 			});
-			list.innerHTML = html;
+            list.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
 
 		} catch (e) { console.error('renderBottomProvinceList error', e); }
 	}
@@ -1606,10 +1607,10 @@ document.addEventListener("DOMContentLoaded", function () {
 						};
 						const mappedRegion = filenameToRegion[fileName] || null;
 						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
-						bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
+                        bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
                         (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                             .then(payload => renderBottomProvinceList(payload))
-                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; });
+                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<div class="province-empty">Failed to load provinces</div>') : '<div class="province-empty">Failed to load provinces</div>'; });
 					}
 				} catch(e) { console.error(e); }
 			} else {
@@ -1805,7 +1806,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const displayProv = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
             html += `<div class="province-item" role="button" tabindex="0" data-prov="${esc(prov)}"><div class="prov-name">${esc(displayProv)}</div><div class="province-badge">${cityCount}</div></div>`;
         });
-        list.innerHTML = html;
+        list.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
         list.style.height = 'calc(40px * 8 + 16px)';
         if(card) card.style.height = 'calc(40px * 8 + 16px + 40px)';
         card.setAttribute('aria-hidden','false');
@@ -1914,7 +1915,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!cities.length) {
             html += '<div class="province-empty">No cities found for this province.</div>';
-            sub.innerHTML = html;
+            sub.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
             provEl.parentNode.insertBefore(sub, provEl.nextSibling);
             provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
             return;
@@ -1929,7 +1930,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         html += '</div>';
         html += '<div class="st-list" style="margin-top:8px;"></div>';
-        sub.innerHTML = html;
+        sub.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
         provEl.parentNode.insertBefore(sub, provEl.nextSibling);
         provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
         try {
@@ -2176,7 +2177,7 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch(e) { console.error('rsm animation removed', e); try { const ri = rsmEl('rsm-modal-image'); if (ri) { ri.src = src || ''; ri.style.visibility = 'visible'; } } catch(e){} }
 			rsmEl('rsm-loading').style.display = ''; 
 			document.getElementById('rsm-cards').style.display = 'none';
-			rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
+            rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
             (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                 .then(payload => {
 					const provEl = rsmEl('rsm-provinces');
@@ -2185,14 +2186,14 @@ document.addEventListener("DOMContentLoaded", function () {
 					const rawGrouped = payload.grouped || {};
 		const grouped = normalizeGrouping(rawGrouped);
 					const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-					if (!provincesArr.length) {
-						provEl.innerHTML = '<div class="rsm-empty">No provinces</div>';
-						provEl.setAttribute('aria-hidden','true');
-					} else {
-						provEl.innerHTML = provincesArr.map(p => {
+                    if (!provincesArr.length) {
+                        provEl.innerHTML = '<div class="rsm-empty">No provinces</div>';
+                        provEl.setAttribute('aria-hidden','true');
+                    } else {
+                        provEl.innerHTML = provincesArr.map(p => {
 							const cities = Object.keys(grouped[p] || {});
 							return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div>`;
-						}).join('');
+					}).join('');
 						provEl.setAttribute('aria-hidden','false');
 						window._lastRsmPayload = payload;
 						try {
@@ -2225,11 +2226,11 @@ document.addEventListener("DOMContentLoaded", function () {
 									cityItems.forEach(x => { if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); } else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); } });
 									const stContainer = sub.querySelector('.st-list');
 									if (!stContainer) return;
-									if (!rows.length) { stContainer.innerHTML = '<div class="province-empty">No STs for this city</div>'; try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
+                                    if (!rows.length) { stContainer.innerHTML = '<div class="province-empty">No STs for this city</div>'; try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
 									let sHtml = '<div style="max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px;">';
 									rows.forEach(r => { sHtml += `<div class="st-item" role="button" tabindex="0" title="${esc(r.title)}" style="padding:8px;border-radius:6px;background:transparent;cursor:pointer;">${esc(r.title || '(no title)')}</div>`; });
 									sHtml += '</div>';
-									stContainer.innerHTML = sHtml;
+                                    stContainer.innerHTML = sanitizeHtml(sHtml);
 									try { let hdr = sub.querySelector('.st-list-header'); if (!hdr) { hdr = document.createElement('div'); hdr.className = 'st-list-header'; const cityListNode = sub.querySelector('.city-list'); if (cityListNode) cityListNode.insertAdjacentElement('afterend', hdr); else sub.insertBefore(hdr, stContainer); } hdr.textContent = 'List of STs'; } catch(e) {}
 									try { const stItems = Array.from(stContainer.querySelectorAll('.st-item')); stItems.forEach(el => el.classList.remove('show')); stItems.forEach((el, i) => setTimeout(()=> el.classList.add('show'), 60 + i * 34)); } catch(e) {}
 									try { Array.from(stContainer.querySelectorAll('.st-item')).forEach((si, idx) => { si.addEventListener('click', ev3 => { ev3.stopPropagation(); const row = rows[idx] || { title: si.textContent }; showReplicateConfirmPopover(si, { province: provName, city: city, title: row.title || si.textContent, row }); }); si.addEventListener('keydown', k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); si.click(); } }); }); } catch(e) {}
@@ -2268,12 +2269,12 @@ document.addEventListener("DOMContentLoaded", function () {
 						});
 								const stContainer = sub.querySelector('.st-list');
 								if (!stContainer) return;
-								if (!rows.length) { stContainer.innerHTML = '<div class="province-empty">No STs for this city</div>'; try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
+                                if (!rows.length) { stContainer.innerHTML = sanitizeHtml('<div class="province-empty">No STs for this city</div>'); try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
 
 								let sHtml = '<div style="max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px;">';
 								rows.forEach(r => { sHtml += `<div class="st-item" role="button" tabindex="0" title="${esc(r.title)}" style="padding:8px;border-radius:6px;background:transparent;cursor:pointer;">${esc(r.title || '(no title)')}</div>`; });
 								sHtml += '</div>';
-								stContainer.innerHTML = sHtml;
+                                stContainer.innerHTML = sanitizeHtml(sHtml);
 
 								try { let hdr = sub.querySelector('.st-list-header'); if (!hdr) { hdr = document.createElement('div'); hdr.className = 'st-list-header'; const cityListNode = sub.querySelector('.city-list'); if (cityListNode) cityListNode.insertAdjacentElement('afterend', hdr); else sub.insertBefore(hdr, stContainer); } hdr.textContent = 'List of STs'; } catch(e) {}
 								try { const stItems = Array.from(stContainer.querySelectorAll('.st-item')); stItems.forEach(el => el.classList.remove('show')); stItems.forEach((el, i) => setTimeout(()=> el.classList.add('show'), 60 + i * 34)); } catch(e) {}
@@ -2379,8 +2380,8 @@ document.addEventListener("DOMContentLoaded", function () {
 				.catch(err => {
 					document.getElementById('rsm-loading').style.display = 'none';
 					document.getElementById('rsm-cards').style.display = 'none';
-					rsmEl('rsm-provinces').innerHTML = '<div class="rsm-empty">Failed to load provinces</div>'; 
-					rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Failed to load STs listing</div>'; 
+                    rsmEl('rsm-provinces').innerHTML = sanitizeHtml('<div class="rsm-empty">Failed to load provinces</div>'); 
+                    rsmEl('rsm-st-list').innerHTML = sanitizeHtml('<div class="rsm-empty">Failed to load STs listing</div>'); 
 					console.error(err);
 				});
 		} catch(e){ console.error('renderRegionStatsForImg', e); }
@@ -2427,27 +2428,27 @@ document.addEventListener("DOMContentLoaded", function () {
 						const yearEl = document.getElementById('rsm-filter-year');
 						const provEl = document.getElementById('rsm-filter-prov');
 						const cityEl = document.getElementById('rsm-filter-city');
-						if (yearEl) {
-							if (yrs.length) {
-								yearEl.innerHTML = yrs.map(y=> '<option>'+y+'</option>').join('');
-							} else {
-								yearEl.innerHTML = '<option value="">No data found</option>';
-							}
-						}
-						if (provEl) {
-							if (provs.length) {
-								provEl.innerHTML = provs.map(p=> '<option>'+p+'</option>').join('');
-							} else {
-								provEl.innerHTML = '<option value="">No data found</option>';
-							}
-						}
-						if (cityEl) {
-							if (cities.length) {
-								cityEl.innerHTML = cities.map(c=> '<option>'+c+'</option>').join('');
-							} else {
-								cityEl.innerHTML = '<option value="">No data found</option>';
-							}
-						}
+                        if (yearEl) {
+                            if (yrs.length) {
+                                yearEl.innerHTML = sanitizeHtml(yrs.map(y => `<option value="${escapeHtml(String(y))}">${escapeHtml(String(y))}</option>`).join(''));
+                            } else {
+                                yearEl.innerHTML = sanitizeHtml('<option value="">No data found</option>');
+                            }
+                        }
+                        if (provEl) {
+                            if (provs.length) {
+                                provEl.innerHTML = sanitizeHtml(provs.map(p => `<option value="${escapeHtml(String(p))}">${escapeHtml(String(p))}</option>`).join(''));
+                            } else {
+                                provEl.innerHTML = sanitizeHtml('<option value="">No data found</option>');
+                            }
+                        }
+                        if (cityEl) {
+                            if (cities.length) {
+                                cityEl.innerHTML = sanitizeHtml(cities.map(c => `<option value="${escapeHtml(String(c))}">${escapeHtml(String(c))}</option>`).join(''));
+                            } else {
+                                cityEl.innerHTML = sanitizeHtml('<option value="">No data found</option>');
+                            }
+                        }
 					} catch(e){ console.warn('[iframe] update selects failed', e); }
 					try {
 						window.parent.postMessage({ type:'sliderRegionData', region: regionName, years: yrs, provinces: provs, cities: cities }, '*');
@@ -2977,7 +2978,7 @@ document.addEventListener('DOMContentLoaded', function(){
       </div>
     `;
 
-    popBody.innerHTML = tabHtml;
+    popBody.innerHTML = sanitizeHtml(tabHtml);
     try {
       const tabs = popBody.querySelectorAll('.gcm-status-btn');
       const views = popBody.querySelectorAll('.gcm-status-view');
@@ -3245,7 +3246,7 @@ document.addEventListener('DOMContentLoaded', function(){
           if (!stListEl) return;
 
           if (!rows || !rows.length) {
-              stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+              stListEl.innerHTML = sanitizeHtml('<div class="rsm-empty">No ST titles for selected filters</div>');
               return;
           }
 
@@ -3300,7 +3301,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
           const entries = Object.entries(titleCounts).sort((a,b) => b[1] - a[1]);
           if (!entries.length) {
-              stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+              stListEl.innerHTML = sanitizeHtml('<div class="rsm-empty">No ST titles for selected filters</div>');
               return;
           }
 
@@ -3363,7 +3364,7 @@ document.addEventListener('DOMContentLoaded', function(){
           });
           html += '</div>';
 
-          stListEl.innerHTML = html;
+        stListEl.innerHTML = sanitizeHtml(html);
 
           const getReplicateRowInfo = function(rowEl) {
               if (!rowEl) return null;
@@ -4808,14 +4809,14 @@ document.addEventListener('DOMContentLoaded', function(){
                 probe.style.width = 'max-content';
                 probe.style.height = '0';
                 probe.style.padding = getComputedStyle(scroller).padding;
-                probe.innerHTML = baseHtml;
+                probe.innerHTML = sanitizeHtml(baseHtml);
                 document.body.appendChild(probe);
                 const width = probe.scrollWidth;
                 probe.remove();
                 return width;
             };
 
-            scroller.innerHTML = baseHtml + baseHtml + baseHtml;
+            scroller.innerHTML = sanitizeHtml(baseHtml + baseHtml + baseHtml);
 
             waitForImages(scroller).then(() => {
                 const singleSetWidth = measureSingleSetWidth();
@@ -4874,7 +4875,7 @@ document.addEventListener('DOMContentLoaded', function(){
             if (!scroller.dataset.looped) {
                 scroller.dataset.looped = '1';
                 const html = scroller.innerHTML;
-                scroller.innerHTML = html + html;
+                scroller.innerHTML = sanitizeHtml(html + html);
             }
 
             waitForImages(scroller).then(()=>{
@@ -4884,7 +4885,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 const MAX_COPIES = 20;
 
                 while (originalWidth <= scroller.clientWidth && copies < MAX_COPIES) {
-                    scroller.innerHTML += baseHtml;
+                    const newHtml = scroller.innerHTML + baseHtml;
+                    scroller.innerHTML = sanitizeHtml(newHtml);
                     originalWidth = scroller.scrollWidth / 2;
                     copies++;
                 }
@@ -4903,7 +4905,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     scroller.innerHTML = '';
                     const track = document.createElement('div');
                     track.className = 'marquee-track js-transform';
-                    track.innerHTML = childrenHtml + childrenHtml;
+                    track.innerHTML = sanitizeHtml(childrenHtml + childrenHtml);
                     scroller.appendChild(track);
                     scroller.classList.add('js-transform-mode');
                     track.dataset.offset = '0';
@@ -5109,7 +5111,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         scroller.innerHTML = '';
                         const track = document.createElement('div');
                         track.className = 'marquee-track js-transform';
-                        track.innerHTML = childrenHtml + childrenHtml;
+                        track.innerHTML = sanitizeHtml(childrenHtml + childrenHtml);
                         scroller.appendChild(track);
                         scroller.classList.add('js-transform-mode');
                         track.dataset.offset = '0';

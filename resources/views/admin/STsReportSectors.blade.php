@@ -130,6 +130,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .08em;
+        align-self: center;
       }
 
       .sector-summary-value {
@@ -137,6 +138,8 @@
         font-weight: 800;
         letter-spacing: -.05em;
         line-height: 1;
+        align-self:center;
+        
       }
 
       .sector-summary-note {
@@ -706,23 +709,19 @@
             <div class="sector-hero-copy">
                 <span class="sector-kicker">Sector Utilities Workspace</span>
                 <h3 class="sector-title">STs Report Gallery Utilities</h3>
-                <p class="sector-subtitle">Manage sector cards, child entries, and sub-children from one place with clearer hierarchy, faster scanning, and less visual clutter.</p>
             </div>
             <div class="sector-summary-grid">
                 <div class="sector-summary-card">
                     <span class="sector-summary-label">Gallery Cards</span>
                     <span class="sector-summary-value">{{ $galleryCount }}</span>
-                    <span class="sector-summary-note">Top-level sector cards currently listed.</span>
                 </div>
                 <div class="sector-summary-card">
                     <span class="sector-summary-label">Active Cards</span>
                     <span class="sector-summary-value">{{ $activeGalleryCount }}</span>
-                    <span class="sector-summary-note">Cards visible and ready for use.</span>
                 </div>
                 <div class="sector-summary-card">
                     <span class="sector-summary-label">Child Entries</span>
                     <span class="sector-summary-value">{{ $childCount }}</span>
-                    <span class="sector-summary-note">Nested records across all sectors.</span>
                 </div>
             </div>
         </section>
@@ -1304,11 +1303,12 @@ function openEditChildModal(data){
     var histEl = document.getElementById('modal_docno_history');
     histEl.innerHTML = '';
     (data.histories || []).forEach(function(h){
-        var li = document.createElement('li');
-        li.innerHTML = '<strong>' + (h.docno || '') + '</strong>' +
-                       ' <span class="text-muted">(previous: ' + (h.previous_docno||'-') + ')</span>' +
-                       ' — <em>' + (h.creator || '') + '</em> <small class="text-muted">' + (h.created_at || '') + '</small>';
-        histEl.appendChild(li);
+      var li = document.createElement('li');
+      var histHtml = '<strong>' + (h.docno || '') + '</strong>' +
+               ' <span class="text-muted">(previous: ' + (h.previous_docno||'-') + ')</span>' +
+               ' — <em>' + (h.creator || '') + '</em> <small class="text-muted">' + (h.created_at || '') + '</small>';
+      li.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(histHtml) : histHtml;
+      histEl.appendChild(li);
     });
 
     try {
@@ -1630,7 +1630,7 @@ document.addEventListener('DOMContentLoaded', function(){
               var activeBadge = '<span class="badge rounded-pill ' + (n.is_active ? 'text-bg-success' : 'text-bg-secondary') + '">' + (n.is_active ? 'Yes' : 'No') + '</span>';
               var statusBadge = '<span class="badge rounded-pill ' + ((n.status || 'On going') === 'Completed' ? 'text-bg-success' : 'text-bg-warning') + '">' + escapeHtml(n.status || 'On going') + '</span>';
 
-                tr.innerHTML = '<td>' + titleHtml + '</td>' +
+                var rowHtml = '<td>' + titleHtml + '</td>' +
                        '<td><span class="badge rounded-pill text-bg-light border px-3 py-2">' + escapeHtml(n.docno || '-') + '</span></td>' +
                        '<td><span class="manage-sub-url">' + escapeHtml(n.url || '-') + '</span></td>' +
                        '<td>' + activeBadge + '</td>' +
@@ -1646,6 +1646,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                    '</form>' +
                                  '</div>' +
                                '</td>';
+                tr.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(rowHtml) : rowHtml;
                 tbody.appendChild(tr);
                 if (n.children && n.children.length) renderSubRows(n.children, level + 1);
             });
@@ -1755,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     var titleHtml = indent + (n.children && n.children.length ? ' <span class="badge bg-secondary ms-2">' + n.children.length + '</span>' : '');
                     var histAttr = ' data-histories="' + (n.histories ? (JSON.stringify(n.histories).replace(/'/g,'&#39;').replace(/\"/g,'&quot;')) : '[]') + '"';
 
-                    tr.innerHTML = '<td>' + titleHtml + '</td>' +
+                    var rowHtml = '<td>' + titleHtml + '</td>' +
                                    '<td>' + (n.docno || '') + '</td>' +
                                    '<td><small class="text-muted">' + (n.url || '-') + '</small></td>' +
                                    '<td>' + (n.is_active ? 'Yes' : 'No') + '</td>' +
@@ -1772,6 +1773,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                        '</form>' +
                                      '</div>' +
                                    '</td>';
+                    tr.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(rowHtml) : rowHtml;
                     tbody.appendChild(tr);
                     if (n.children && n.children.length) renderSubRows(n.children, level + 1);
                 });

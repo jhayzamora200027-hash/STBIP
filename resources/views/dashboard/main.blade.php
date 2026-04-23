@@ -4016,6 +4016,16 @@ if (!document.getElementById('catListTooltip')) {
 				.replace(/"/g, '&quot;')
 				.replace(/'/g, '&#39;');
 		}
+
+		function sanitizeHtml(src) {
+			if (!src) return '';
+			if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+				return DOMPurify.sanitize(src);
+			}
+			return String(src)
+				.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+				.replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
+		}
 		function truthy(v) {
 			if (typeof v === 'boolean') return v;
 			const s = String(v || '').toLowerCase().trim();
@@ -4203,7 +4213,7 @@ if (!document.getElementById('catListTooltip')) {
 					html += '</div>';
 					html += '</div>';
 
-			document.getElementById('title-listing-table-container').innerHTML = html;
+			document.getElementById('title-listing-table-container').innerHTML = sanitizeHtml(html);
 			try {
 				const container = document.getElementById('title-listing-table-container');
 				const table = container.querySelector('.social-listing-table');
@@ -4705,7 +4715,7 @@ $('#region-select-modal').on('change', function() {
 					narrative += `<br><br><strong>Scaling Efficiency</strong>: adoption intensity and replication metrics not shown here.`;
 					narrative += `<br><br><strong>Risk & Stability</strong>: concentration risk exists with top programs dominating; long tail offers innovation reservoir.`;
 					narrative += `<br><br><strong>Performance Signal</strong>: system appears managed for replication and nationwide rollout.`;
-					insightEl.innerHTML = narrative;
+					insightEl.innerHTML = sanitizeHtml(narrative);
 				} else {
 					insightEl.style.display = 'none';
 				}
@@ -4923,8 +4933,8 @@ $('#region-select-modal').on('change', function() {
 				listHtml += `</div>`;
 			}
 			const mainListEl = document.getElementById('stCategoryList');
-			if (mainListEl) {
-				mainListEl.innerHTML = listHtml;
+				if (mainListEl) {
+				mainListEl.innerHTML = sanitizeHtml(listHtml);
 			}
 
 			const copyListEl = document.getElementById('stCategoryListCopy');
@@ -4949,7 +4959,7 @@ $('#region-select-modal').on('change', function() {
 					copyHtml += `<button id="stCatNextBtnCopy" class="st-cat-page-btn" ${page === totalPages ? 'disabled' : ''}>Next</button>`;
 					copyHtml += '</div>';
 				}
-				copyListEl.innerHTML = copyHtml;
+				copyListEl.innerHTML = sanitizeHtml(copyHtml);
 			}
 			if (totalPages > 1) {
 				const prevMain = document.getElementById('stCatPrevBtn');
@@ -4987,7 +4997,7 @@ $('#region-select-modal').on('change', function() {
 						startDoughnutBlink(mainIdx, lowIdx);
 						const label = stTitleLabels[idx];
 						const percent = stTitlePercentages[idx].toFixed(1);
-						catListTooltip.innerHTML = `<strong>${label}</strong><br><span style='color:#1de9b6;font-weight:600;'>${percent}%</span>`;
+						catListTooltip.innerHTML = sanitizeHtml(`<strong>${escapeHtml(label)}</strong><br><span style='color:#1de9b6;font-weight:600;'>${escapeHtml(String(percent))}%</span>`);
 						catListTooltip.style.display = 'block';
 						let placed = false;
 						if (mainChart && mainIdx !== undefined) {
@@ -5132,7 +5142,7 @@ $('#region-select-modal').on('change', function() {
 							const label = stTitleLabels[globalIdx] || '';
 							const value = stTitleData[globalIdx] || 0;
 							const percent = (stTitlePercentages[globalIdx] || 0).toFixed(1);
-							tooltipDiv.innerHTML = `<strong>${label}</strong><br><span style="color:#1de9b6;font-weight:600;">${percent}% (${value})</span>`;
+							tooltipDiv.innerHTML = sanitizeHtml(`<strong>${escapeHtml(label)}</strong><br><span style="color:#1de9b6;font-weight:600;">${escapeHtml(String(percent))}% (${escapeHtml(String(value))})</span>`);
 							tooltipDiv.style.display = 'block';
 							const mainIdxMap = window.stTitleGlobalToMainIndex || {};
 							const mainIdx = mainIdxMap[globalIdx];
@@ -5277,7 +5287,7 @@ $('#region-select-modal').on('change', function() {
 							const label = stTitleLabels[globalIdx] || '';
 							const value = stTitleData[globalIdx] || 0;
 							const percent = (stTitlePercentages[globalIdx] || 0).toFixed(1);
-							tooltipDiv.innerHTML = `<strong>${label}</strong><br><span style="color:#1de9b6;font-weight:600;">${percent}% (${value})</span>`;
+							tooltipDiv.innerHTML = sanitizeHtml(`<strong>${escapeHtml(label)}</strong><br><span style="color:#1de9b6;font-weight:600;">${escapeHtml(String(percent))}% (${escapeHtml(String(value))})</span>`);
 							tooltipDiv.style.display = 'block';
 							const mainIdxMap = window.stTitleGlobalToMainIndex || {};
 							const mainIdx = mainIdxMap[globalIdx];
@@ -5339,7 +5349,8 @@ $('#region-select-modal').on('change', function() {
 			if (!raw) return '';
 			const str = raw.toString();
 			const div = document.createElement('div');
-			div.innerHTML = str;
+			const safeStr = (typeof sanitizeHtml === 'function') ? sanitizeHtml(str) : str;
+			div.innerHTML = safeStr;
 			const decoded = (div.textContent || div.innerText || '').trim();
 			return decoded.toLowerCase();
 		}
@@ -5371,7 +5382,7 @@ $('#region-select-modal').on('change', function() {
 			}
 			if (!bodyEl) return;
 			if (!rows.length) {
-				bodyEl.innerHTML = '<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>';
+				bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>') : '<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>';
 			} else {
 				let html = '<div class="st-title-modal-toolbar">';
 				html += '<div class="st-title-modal-count">' + rows.length + ' matching records</div>';
@@ -5411,7 +5422,7 @@ $('#region-select-modal').on('change', function() {
 					'</tr>';
 				});
 				html += '</tbody></table></div>';
-				bodyEl.innerHTML = html;
+				bodyEl.innerHTML = sanitizeHtml(html);
 			}
 			modal.style.display = 'block';
 			if (document.body) {
@@ -5440,7 +5451,7 @@ $('#region-select-modal').on('change', function() {
 			} catch(e) {}
 			if (titleEl) titleEl.textContent = (row && row.title) ? row.title : 'ST Details';
 			if (!row) {
-				bodyEl.innerHTML = '<p class="st-title-modal-empty">No details available.</p>';
+				bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<p class="st-title-modal-empty">No details available.</p>') : '<p class="st-title-modal-empty">No details available.</p>';
 			} else {
 				const status = (row.status || '').toString();
 				let statusLabel = '-';
@@ -5513,7 +5524,7 @@ $('#region-select-modal').on('change', function() {
 				}
 				html += '</div>';
 
-				bodyEl.innerHTML = html;
+				bodyEl.innerHTML = sanitizeHtml(html);
 			}
 			if (document.body) {
 				document.body.classList.add('st-details-open');
@@ -5545,7 +5556,7 @@ $('#region-select-modal').on('change', function() {
 			titleEl.textContent = config.title || 'ST Listing';
 
 			if (!rows.length) {
-				bodyEl.innerHTML = '<p class="st-summary-empty">No ST records matched this summary card.</p>';
+				bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<p class="st-summary-empty">No ST records matched this summary card.</p>') : '<p class="st-summary-empty">No ST records matched this summary card.</p>';
 			} else {
 				let html = '<div class="st-summary-modal-toolbar">';
 				html += '<div class="st-summary-modal-meta">' + rows.length + ' matching records</div>';
@@ -5564,7 +5575,7 @@ $('#region-select-modal').on('change', function() {
 					'</tr>';
 				});
 				html += '</tbody></table></div>';
-				bodyEl.innerHTML = html;
+				bodyEl.innerHTML = sanitizeHtml(html);
 				modal._rows = rows;
 				setTimeout(function(){
 					try {
@@ -5720,7 +5731,7 @@ $('#region-select-modal').on('change', function() {
 				titleEl.textContent = regionDisplayName || 'Region';
 					if (bodyEl) {
 						if (!rows || !rows.length) {
-							bodyEl.innerHTML = "<p style=\"margin:0; color:#64748b;\">No Record found.</p>";
+							bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml("<p style=\"margin:0; color:#64748b;\">No Record found.</p>") : "<p style=\"margin:0; color:#64748b;\">No Record found.</p>";
 						} else {
 							let html = '';
 							rows.forEach(function(row, idx) {
@@ -5755,7 +5766,7 @@ $('#region-select-modal').on('change', function() {
 								html += '</div>';
 								html += '</div>';
 							});
-							bodyEl.innerHTML = html;
+							bodyEl.innerHTML = sanitizeHtml(html);
 							modal._rows = rows;
 							setTimeout(function(){
 								const items = bodyEl.querySelectorAll('.st-region-title-item');
@@ -6069,19 +6080,19 @@ $('#region-select-modal').on('change', function() {
 				return el;
 			})();
 
-			function formatRegionTooltip(regionCode) {
-				if (!regionCode) return '';
-				const label = regionLabels[regionCode] || regionCode;
-				const count = regionCounts[regionCode] || 0;
-				const plural = count === 1 ? 'ST' : 'STs';
-				return '<strong>' + label + '</strong><br><span style="color:#1de9b6;font-weight:600;">' + count + ' ' + plural + '</span>';
-			}
+				function formatRegionTooltip(regionCode) {
+					if (!regionCode) return '';
+					const label = regionLabels[regionCode] || regionCode;
+					const count = regionCounts[regionCode] || 0;
+					const plural = count === 1 ? 'ST' : 'STs';
+					return sanitizeHtml('<strong>' + escapeHtml(label) + '</strong><br><span style="color:#1de9b6;font-weight:600;">' + escapeHtml(String(count)) + ' ' + plural + '</span>');
+				}
 
 			function showMapTooltip(regionCode, anchorRect) {
 				if (!mapTooltip || !regionCode) return;
 				const html = formatRegionTooltip(regionCode);
 				if (!html) return;
-				mapTooltip.innerHTML = html;
+				mapTooltip.innerHTML = sanitizeHtml(html);
 				mapTooltip.style.display = 'block';
 
 				const baseRect = anchorRect || phMapObject.getBoundingClientRect();
@@ -6166,12 +6177,12 @@ $('#region-select-modal').on('change', function() {
 					html += '<div class="st-map-region-row" data-region="' + code + '">';
 					html += '<div class="st-map-region-row-main">';
 					html += '<span class="st-map-region-color-dot" style="background:' + color + ';"></span>';
-					html += '<span class="st-map-region-label">' + (regionLabels[code] || code) + '</span>';
+					html += '<span class="st-map-region-label">' + escapeHtml(regionLabels[code] || code) + '</span>';
 					html += '</div>';
 					html += '<span class="st-map-region-count">' + count + '</span>';
 					html += '</div>';
 				});
-				regionListEl.innerHTML = html;
+				regionListEl.innerHTML = sanitizeHtml(html);
 				function getRegionRepresentativeInfo(regionCode) {
 					const arr = regionToPaths[regionCode];
 					return (arr && arr.length) ? arr[0] : null;
@@ -6535,7 +6546,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
             pop.style.transform = 'translateY(-6px) scale(0.98)';
             pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
             const title = (stInfo && stInfo.title) ? stInfo.title : '';
-            pop.innerHTML = `<div class="rp-msg">Replicate "${(title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
+			pop.innerHTML = sanitizeHtml(`<div class="rp-msg">Replicate "${escapeHtml(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`);
             document.body.appendChild(pop);
             try {
                 const cb = pop.querySelector('.rp-confirm');
@@ -7002,16 +7013,16 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 			container.innerHTML = '<div class="formal-ranking-item"><div class="formal-ranking-main"><div class="formal-ranking-label">No records available</div><div class="formal-ranking-meta">No ranking data could be derived.</div></div></div>';
 			return;
 		}
-		container.innerHTML = items.map((item, index) => {
+		container.innerHTML = sanitizeHtml(items.map((item, index) => {
 			return '<div class="formal-ranking-item">' +
-				'<div class="formal-ranking-rank">#' + (index + 1) + '</div>' +
+				'<div class="formal-ranking-rank">#' + escapeHtml(String(index + 1)) + '</div>' +
 				'<div class="formal-ranking-main">' +
-					'<div class="formal-ranking-label">' + item.name + '</div>' +
-					'<div class="formal-ranking-meta">' + item.share + '% of total ' + noun + ' records</div>' +
+					'<div class="formal-ranking-label">' + escapeHtml(item.name) + '</div>' +
+					'<div class="formal-ranking-meta">' + escapeHtml(String(item.share)) + '% of total ' + escapeHtml(noun) + ' records</div>' +
 				'</div>' +
-				'<div class="formal-ranking-value">' + item.count + ' records</div>' +
+				'<div class="formal-ranking-value">' + escapeHtml(String(item.count)) + ' records</div>' +
 			'</div>';
-		}).join('');
+		}).join(''));
 	}
 
 	function buildTopCounts(fieldName) {
@@ -7353,7 +7364,7 @@ window.showGuestFilterDock = function(ev){
 				wrapper.style.position = 'fixed'; wrapper.style.inset='0'; wrapper.style.zIndex='2200'; wrapper.style.display='flex'; wrapper.style.alignItems='flex-end'; wrapper.style.justifyContent='center'; wrapper.style.background='rgba(6,48,110,0.12)';
 				var inner = document.createElement('div');
 				inner.className = 'filter-modal-panel mobile'; inner.style.display='block'; inner.style.width='100%'; inner.style.maxWidth='640px'; inner.style.borderRadius='12px 12px 0 0'; inner.style.margin='0'; inner.style.padding='0.5rem';
-				inner.innerHTML = existingDock.innerHTML;
+				inner.innerHTML = sanitizeHtml(existingDock.innerHTML);
 				wrapper.appendChild(inner);
 				document.body.appendChild(wrapper);
 				document.body.classList.add('modal-open');
