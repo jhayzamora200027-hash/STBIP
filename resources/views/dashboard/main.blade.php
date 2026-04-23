@@ -6958,7 +6958,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 					tooltip: {
 						callbacks: {
 							label(context) {
-								return context.label + ': ' + context.parsed.y + ' records';
+								return context.label + ': ' + context.parsed.x + ' records';
 							}
 						}
 					}

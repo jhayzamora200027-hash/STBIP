@@ -22,7 +22,7 @@ Route::get('/', function () {
     $controller = app(\App\Http\Controllers\MainReportController::class);
     $view = $controller->index(request());
     return view('dashboard.main', $view->getData());
-})->name('main')->middleware('guest');
+})->name('landing')->middleware('guest');
 
 
 
@@ -48,7 +48,7 @@ Route::get('/main', function () {
     $controller = app(\App\Http\Controllers\MainReportController::class);
     $view = $controller->index(request());
     return view('dashboard.main', $view->getData());
-});
+})->name('main');
 Route::get('/stbmain', function () {
     $controller = app(\App\Http\Controllers\MainReportController::class);
     $view = $controller->index(request());
