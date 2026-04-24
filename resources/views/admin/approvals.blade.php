@@ -1117,10 +1117,10 @@
             toast.classList.remove('success', 'error', 'show');
             if (type === 'success') {
                 toast.classList.add('success');
-                icon.innerHTML = '<i class="bi bi-check-lg"></i>';
+                icon.innerHTML = sanitizeHtml('<i class="bi bi-check-lg"></i>');
             } else {
                 toast.classList.add('error');
-                icon.innerHTML = '<i class="bi bi-x-lg"></i>';
+                icon.innerHTML = sanitizeHtml('<i class="bi bi-x-lg"></i>');
             }
 
             toast.classList.remove('d-none');
@@ -1274,12 +1274,12 @@
             if (status === 'A') {
                 const approvalActionButtons = document.getElementById('approvalActionButtons');
                 if (approvalActionButtons) {
-                    approvalActionButtons.innerHTML = '<div class="text-center py-3"><div class="spinner-border" role="status"></div><p class="mt-3 mb-0">Processing approval...</p></div>';
+                    approvalActionButtons.innerHTML = sanitizeHtml('<div class="text-center py-3"><div class="spinner-border" role="status"></div><p class="mt-3 mb-0">Processing approval...</p></div>');
                 }
             } else if (status === 'R') {
                 const rejectionForm = document.getElementById('rejectionForm');
                 if (rejectionForm) {
-                    rejectionForm.innerHTML = '<div class="text-center py-3"><div class="spinner-border" role="status"></div><p class="mt-3 mb-0">Submitting rejection...</p></div>';
+                    rejectionForm.innerHTML = sanitizeHtml('<div class="text-center py-3"><div class="spinner-border" role="status"></div><p class="mt-3 mb-0">Submitting rejection...</p></div>');
                 }
             }
 

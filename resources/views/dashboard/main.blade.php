@@ -5342,6 +5342,7 @@ $('#region-select-modal').on('change', function() {
 						clientY: e.clientY
 					});
 					innerCopyCanvas.dispatchEvent(simulated);
+					
 				});
 			});
 		})();
@@ -5349,8 +5350,8 @@ $('#region-select-modal').on('change', function() {
 			if (!raw) return '';
 			const str = raw.toString();
 			const div = document.createElement('div');
-			const safeStr = (typeof sanitizeHtml === 'function') ? sanitizeHtml(str) : str;
-			div.innerHTML = safeStr;
+			const safeStr = sanitizeHtml(str);
+			div.innerHTML = sanitizeHtml(safeStr);
 			const decoded = (div.textContent || div.innerText || '').trim();
 			return decoded.toLowerCase();
 		}
@@ -5382,7 +5383,7 @@ $('#region-select-modal').on('change', function() {
 			}
 			if (!bodyEl) return;
 			if (!rows.length) {
-				bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>') : '<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>';
+				bodyEl.innerHTML = sanitizeHtml('<p class="st-title-modal-empty">No records found for this ST title based on the current filters.</p>');
 			} else {
 				let html = '<div class="st-title-modal-toolbar">';
 				html += '<div class="st-title-modal-count">' + rows.length + ' matching records</div>';
@@ -5451,7 +5452,7 @@ $('#region-select-modal').on('change', function() {
 			} catch(e) {}
 			if (titleEl) titleEl.textContent = (row && row.title) ? row.title : 'ST Details';
 			if (!row) {
-				bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<p class="st-title-modal-empty">No details available.</p>') : '<p class="st-title-modal-empty">No details available.</p>';
+				bodyEl.innerHTML = sanitizeHtml('<p class="st-title-modal-empty">No details available.</p>');
 			} else {
 				const status = (row.status || '').toString();
 				let statusLabel = '-';
@@ -5556,7 +5557,7 @@ $('#region-select-modal').on('change', function() {
 			titleEl.textContent = config.title || 'ST Listing';
 
 			if (!rows.length) {
-				bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<p class="st-summary-empty">No ST records matched this summary card.</p>') : '<p class="st-summary-empty">No ST records matched this summary card.</p>';
+				bodyEl.innerHTML = sanitizeHtml('<p class="st-summary-empty">No ST records matched this summary card.</p>');
 			} else {
 				let html = '<div class="st-summary-modal-toolbar">';
 				html += '<div class="st-summary-modal-meta">' + rows.length + ' matching records</div>';
@@ -5731,7 +5732,7 @@ $('#region-select-modal').on('change', function() {
 				titleEl.textContent = regionDisplayName || 'Region';
 					if (bodyEl) {
 						if (!rows || !rows.length) {
-							bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml("<p style=\"margin:0; color:#64748b;\">No Record found.</p>") : "<p style=\"margin:0; color:#64748b;\">No Record found.</p>";
+							bodyEl.innerHTML = sanitizeHtml("<p style=\"margin:0; color:#64748b;\">No Record found.</p>");
 						} else {
 							let html = '';
 							rows.forEach(function(row, idx) {
@@ -7010,7 +7011,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		const container = document.getElementById(elementId);
 		if (!container) return;
 		if (!items.length) {
-			container.innerHTML = '<div class="formal-ranking-item"><div class="formal-ranking-main"><div class="formal-ranking-label">No records available</div><div class="formal-ranking-meta">No ranking data could be derived.</div></div></div>';
+			container.innerHTML = sanitizeHtml('<div class="formal-ranking-item"><div class="formal-ranking-main"><div class="formal-ranking-label">No records available</div><div class="formal-ranking-meta">No ranking data could be derived.</div></div></div>');
 			return;
 		}
 		container.innerHTML = sanitizeHtml(items.map((item, index) => {
@@ -7376,7 +7377,7 @@ window.showGuestFilterDock = function(ev){
 			}
 			var mobile = document.createElement('div');
 			mobile.id = 'guestMobileFilterPanel'; mobile.className='guest-mobile-filter-panel open'; mobile.style.position='fixed'; mobile.style.inset='0'; mobile.style.zIndex='2200'; mobile.style.display='flex'; mobile.style.alignItems='flex-end'; mobile.style.justifyContent='center'; mobile.style.background='rgba(6,48,110,0.12)';
-			mobile.innerHTML = '<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-header-top"><div><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button></div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>';
+			mobile.innerHTML = sanitizeHtml('<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-header-top"><div><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button></div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>');
 			document.body.appendChild(mobile); document.body.classList.add('modal-open');
 			var mobilePanel = mobile.querySelector('.filter-modal-panel');
 			if (mobilePanel) mobilePanel.addEventListener('click', function(e){ e.stopPropagation(); });

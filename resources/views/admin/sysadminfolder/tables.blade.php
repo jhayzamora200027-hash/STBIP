@@ -141,7 +141,7 @@
                 function showAlert(containerId, type, text) {
                     const c = document.getElementById(containerId);
                     if (!c) return;
-                    try { c.innerHTML = ''; const d = document.createElement('div'); d.className = 'alert alert-' + type; d.textContent = text; c.appendChild(d); } catch(e) { try { c.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<div class="alert alert-' + type + '">' + String(text) + '</div>') : ('<div class="alert alert-' + type + '">' + String(text) + '</div>'); } catch(_){} }
+                    try { c.textContent = ''; const d = document.createElement('div'); d.className = 'alert alert-' + type; d.textContent = text; c.appendChild(d); } catch(e) { try { c.innerHTML = sanitizeHtml('<div class="alert alert-' + type + '">' + String(text) + '</div>'); } catch(_){} }
                 }
 
                 if (!tableName) {
@@ -162,8 +162,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('createTableMessage').innerHTML = 
-                            '<div class="alert alert-success">Table created successfully!</div>';
+                        document.getElementById('createTableMessage').innerHTML = sanitizeHtml('<div class="alert alert-success">Table created successfully!</div>');
                         document.getElementById('newTableName').value = '';
                         setTimeout(() => location.reload(), 1500);
                     } else {
@@ -171,8 +170,7 @@
                     }
                 })
                 .catch(error => {
-                    document.getElementById('createTableMessage').innerHTML = 
-                        '<div class="alert alert-danger">Error creating table</div>';
+                    document.getElementById('createTableMessage').innerHTML = sanitizeHtml('<div class="alert alert-danger">Error creating table</div>');
                     console.error('Error:', error);
                 });
             });
@@ -219,10 +217,9 @@
                     
                     document.getElementById('columnsModalLabel').textContent = 'Columns in ' + tableName;
                     
-                    document.getElementById('columnsTableBody').innerHTML = 
-                        '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+                    document.getElementById('columnsTableBody').innerHTML = sanitizeHtml('<tr><td colspan="6" class="text-center">Loading...</td></tr>');
                     
-                    document.getElementById('addColumnMessage').innerHTML = '';
+                    document.getElementById('addColumnMessage').textContent = '';
                     
                     if (modal) {
                         modal.show();
@@ -268,7 +265,7 @@
                         });
                     })
                     .catch(error => {
-                        try { document.getElementById('columnsTableBody').innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<tr><td colspan="6" class="text-center text-danger">Error loading columns</td></tr>') : '<tr><td colspan="6" class="text-center text-danger">Error loading columns</td></tr>'; } catch(_){}
+                            try { document.getElementById('columnsTableBody').innerHTML = sanitizeHtml('<tr><td colspan="6" class="text-center text-danger">Error loading columns</td></tr>'); } catch(_){} 
                         console.error('Error:', error);
                     });
             }
@@ -301,8 +298,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('addColumnMessage').innerHTML = 
-                            '<div class="alert alert-success">Column added successfully!</div>';
+                        document.getElementById('addColumnMessage').innerHTML = sanitizeHtml('<div class="alert alert-success">Column added successfully!</div>');
                         document.getElementById('newColumnName').value = '';
                         loadColumns(currentTableName); 
                     } else {
@@ -317,8 +313,7 @@
             
             
             function deleteColumn(tableName, columnName) {
-                document.getElementById('addColumnMessage').innerHTML = 
-                    '<div class="alert alert-info">Deleting column...</div>';
+                document.getElementById('addColumnMessage').innerHTML = sanitizeHtml('<div class="alert alert-info">Deleting column...</div>');
 
                 fetch('/admin/delete-column', {
                     method: 'POST',

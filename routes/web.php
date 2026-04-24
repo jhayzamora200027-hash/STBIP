@@ -40,6 +40,11 @@ Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/register', [UserController::class, 'register'])->name('register');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 
+// OTP verification for optional 2FA (email OTP)
+Route::get('/otp', [UserController::class, 'showOtpForm'])->name('otp.form');
+Route::post('/otp', [UserController::class, 'verifyOtp'])->name('otp.verify');
+Route::post('/otp/resend', [UserController::class, 'resendOtp'])->name('otp.resend');
+
 
 // ==================== DASHBOARD ROUTES ====================
 
@@ -199,6 +204,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin', [TableController::class, 'index'])
         ->name('admin')
         ->middleware(\App\Http\Middleware\SysAdminMiddleware::class);
+    Route::get('/admin/logs', [\App\Http\Controllers\Admin\LogsController::class, 'index'])
+        ->name('admin.logs')
+        ->middleware(\App\Http\Middleware\RequireAdminOrSysadmin::class);
     Route::get('/admin/table-columns/{tableName}', [TableController::class, 'getColumns']);
     Route::post('/admin/create-table', [TableController::class, 'create']);
     Route::post('/admin/delete-table', [TableController::class, 'delete']);

@@ -95,6 +95,8 @@
     </div>
   </div>
 </div>
+@include('auth.partials.otp_modal')
+
 <script>
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -144,9 +146,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const errorMsg = document.getElementById('loginErrorMsg');
       errorMsg.style.display = 'none';
       const loginBtn = loginForm.querySelector('button[type="submit"]');
-      if (loginBtn) {
+        if (loginBtn) {
         loginBtn.disabled = true;
-        loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...';
+        loginBtn.innerHTML = sanitizeHtml('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...');
       }
       fetch(loginForm.action, {
         method: 'POST',
@@ -164,6 +166,16 @@ document.addEventListener('DOMContentLoaded', function() {
             data = await response.json();
           } catch (e) {
             data = {};
+          }
+
+          // If server indicates OTP is required, open the OTP modal and populate it
+          if (data.otp_required) {
+            if (typeof openOtpModal === 'function') {
+              openOtpModal({ masked_email: data.masked_email, otp_expires_at: data.otp_expires_at });
+            }
+            // restore login button state
+            if (loginBtn) { loginBtn.disabled = false; loginBtn.innerHTML = sanitizeHtml('Log in'); }
+            return;
           }
 
           window.location.href = data.redirect || window.location.href;
@@ -201,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
             msg = errorArr[0];
           }
           if (errorMsg) {
-            errorMsg.innerHTML = escHtml(msg);
+            errorMsg.textContent = msg;
             errorMsg.style.display = 'block';
             if (loginModal) {
               loginModal.show();
@@ -212,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch((err) => {
         console.error('AJAX login fetch error:', err);
         if (errorMsg) {
-          errorMsg.innerHTML = escHtml('An error occurred. Please try again.');
+          errorMsg.textContent = 'An error occurred. Please try again.';
           errorMsg.style.display = 'block';
           if (loginModal) {
             loginModal.show();
@@ -222,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .finally(() => {
         if (loginBtn) {
           loginBtn.disabled = false;
-          loginBtn.innerHTML = 'Log in';
+          loginBtn.innerHTML = sanitizeHtml('Log in');
         }
       });
     });

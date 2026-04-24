@@ -1214,14 +1214,14 @@
 		function showAjaxFeedback(type, message) {
 			if (!ajaxFeedback) return;
 			if (!message) {
-				ajaxFeedback.innerHTML = '';
+				ajaxFeedback.textContent = '';
 				return;
 			}
 			const alertClass = type === 'error' ? 'masterdata-alert-error' : 'masterdata-alert-success';
 			const alertEl = document.createElement('div');
 			alertEl.className = 'masterdata-alert ' + alertClass;
 			alertEl.textContent = message;
-			ajaxFeedback.innerHTML = '';
+			ajaxFeedback.textContent = '';
 			ajaxFeedback.appendChild(alertEl);
 		}
 

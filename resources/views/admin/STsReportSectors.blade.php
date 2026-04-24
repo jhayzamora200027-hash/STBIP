@@ -1301,13 +1301,13 @@ function openEditChildModal(data){
     document.getElementById('modal_docno').textContent = data.docno || '-';
 
     var histEl = document.getElementById('modal_docno_history');
-    histEl.innerHTML = '';
+    histEl.textContent = '';
     (data.histories || []).forEach(function(h){
       var li = document.createElement('li');
       var histHtml = '<strong>' + (h.docno || '') + '</strong>' +
                ' <span class="text-muted">(previous: ' + (h.previous_docno||'-') + ')</span>' +
                ' — <em>' + (h.creator || '') + '</em> <small class="text-muted">' + (h.created_at || '') + '</small>';
-      li.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(histHtml) : histHtml;
+      li.innerHTML = sanitizeHtml(histHtml);
       histEl.appendChild(li);
     });
 
@@ -1394,7 +1394,7 @@ function openEditCardModal(data){
     if (document.getElementById('card_modal_status')) document.getElementById('card_modal_status').value = data.status || 'On going';
 
     var prev = document.getElementById('card_modal_preview');
-    prev.innerHTML = '';
+    prev.textContent = '';
     if (data.image) {
         var img = document.createElement('img');
         img.src = data.image;
@@ -1582,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', function(){
         document.getElementById('manageSub_activeCount').textContent = countActiveNodes(subs);
 
         var tbody = document.getElementById('manageSub_tbody');
-        tbody.innerHTML = '';
+        tbody.textContent = '';
 
         var parentNode = {
             id: childId,
@@ -1646,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                    '</form>' +
                                  '</div>' +
                                '</td>';
-                tr.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(rowHtml) : rowHtml;
+                tr.innerHTML = sanitizeHtml(rowHtml);
                 tbody.appendChild(tr);
                 if (n.children && n.children.length) renderSubRows(n.children, level + 1);
             });
@@ -1655,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', function(){
           if (parentNode.children && parentNode.children.length) {
             renderSubRows(parentNode.children || [], 0);
           } else {
-            tbody.innerHTML = '<tr><td colspan="7" class="manage-sub-empty"><strong>No sub-children yet</strong><span>Add a sub-child to start building this nested structure.</span></td></tr>';
+            tbody.innerHTML = sanitizeHtml('<tr><td colspan="7" class="manage-sub-empty"><strong>No sub-children yet</strong><span>Add a sub-child to start building this nested structure.</span></td></tr>');
           }
 
         tbody.querySelectorAll('.btn-edit-subchild').forEach(function(b){
@@ -1773,7 +1773,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                        '</form>' +
                                      '</div>' +
                                    '</td>';
-                    tr.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(rowHtml) : rowHtml;
+                    tr.innerHTML = sanitizeHtml(rowHtml);
                     tbody.appendChild(tr);
                     if (n.children && n.children.length) renderSubRows(n.children, level + 1);
                 });

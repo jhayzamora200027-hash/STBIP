@@ -1108,18 +1108,24 @@
                     }
 
                     errorContainer.style.display = 'none';
-                    errorContainer.innerHTML = '<div class="d-flex align-items-start gap-2">'
-                        + '<i class="bi bi-exclamation-triangle-fill" style="font-size:1.3rem;color:#ff4d4f;margin-top:2px;"></i>'
-                        + '<div style="flex:1;"><strong style="display:block;margin-bottom:4px;">Validation failed.</strong><div id="addUserErrorList"></div></div>'
-                        + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
-                        + '</div>';
+                    // build safe DOM for error container contents
+                    while (errorContainer.firstChild) errorContainer.removeChild(errorContainer.firstChild);
+                    const wrapper = document.createElement('div'); wrapper.className = 'd-flex align-items-start gap-2';
+                    const icon = document.createElement('i'); icon.className = 'bi bi-exclamation-triangle-fill'; icon.style.fontSize = '1.3rem'; icon.style.color = '#ff4d4f'; icon.style.marginTop = '2px';
+                    const content = document.createElement('div'); content.style.flex = '1';
+                    const strong = document.createElement('strong'); strong.style.display = 'block'; strong.style.marginBottom = '4px'; strong.textContent = 'Validation failed.';
+                    const listDiv = document.createElement('div'); listDiv.id = 'addUserErrorList';
+                    content.appendChild(strong); content.appendChild(listDiv);
+                    const closeBtn = document.createElement('button'); closeBtn.type = 'button'; closeBtn.className = 'btn-close'; closeBtn.setAttribute('data-bs-dismiss','alert'); closeBtn.setAttribute('aria-label','Close');
+                    wrapper.appendChild(icon); wrapper.appendChild(content); wrapper.appendChild(closeBtn);
+                    errorContainer.appendChild(wrapper);
 
                     const submitBtn = addUserForm.querySelector('button[type="submit"]');
                     let originalBtnHtml = '';
                     if (submitBtn) {
                         originalBtnHtml = submitBtn.innerHTML;
                         submitBtn.disabled = true;
-                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+                        submitBtn.innerHTML = sanitizeHtml('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
                     }
 
                     const fetchWithTimeout = (url, options, timeout = 10000) => {
@@ -1180,6 +1186,7 @@
                                 html += '</ul>';
                                 const listDiv = errorContainer.querySelector('#addUserErrorList');
                                 if (listDiv) {
+                                    // error list contains only escaped list HTML from messages above
                                     listDiv.innerHTML = sanitizeHtml(html);
                                 }
                                 errorContainer.style.display = 'block';
@@ -1191,7 +1198,7 @@
                         if (errorContainer) {
                             const listDiv = errorContainer.querySelector('#addUserErrorList');
                             if (listDiv) {
-                                listDiv.innerHTML = 'An error occurred. Please try again.';
+                                listDiv.textContent = 'An error occurred. Please try again.';
                             }
                             errorContainer.style.display = 'block';
                         }
@@ -1199,7 +1206,7 @@
                     .finally(() => {
                         if (submitBtn) {
                             submitBtn.disabled = false;
-                            submitBtn.innerHTML = originalBtnHtml || 'Add User';
+                            submitBtn.innerHTML = sanitizeHtml(originalBtnHtml || 'Add User');
                         }
                         if (typeof hideLoader === 'function') {
                             hideLoader();

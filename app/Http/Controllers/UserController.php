@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Mail\OtpMail;
+use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class UserController extends Controller
 {
@@ -377,15 +380,190 @@ class UserController extends Controller
 
         $remember = $request->boolean('remember');
 
-        if (Auth::attempt($IncomingFields, $remember)) {
-            $request->session()->regenerate();
-            if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'redirect' => url('main')]);
-            }
-            return redirect()->intended('main');
-        } else {
+        // Verify password without fully authenticating; require OTP as a second factor.
+        if (!Hash::check($IncomingFields['password'], $user->password)) {
             return $ajaxError('password', 'The password is incorrect.');
         }
+
+        // Generate one-time 6-digit code and store in session (5 minute lifetime)
+        try {
+            $otp = random_int(100000, 999999);
+        } catch (\Exception $e) {
+            $otp = rand(100000, 999999);
+        }
+
+        $expires = Carbon::now()->addMinutes(5);
+        $request->session()->put('otp_user_id', $user->id);
+        $request->session()->put('otp_code', (string) $otp);
+        $request->session()->put('otp_expires_at', $expires->toDateTimeString());
+        $request->session()->put('otp_attempts', 0);
+
+        // Send OTP via email (plaintext for now)
+        try {
+            Mail::to($user->email)->send(new OtpMail($otp));
+        } catch (\Exception $e) {
+            Log::error('Failed to send OTP email to ' . $user->email . ': ' . $e->getMessage());
+        }
+
+        // Prepare masked email and ISO expiry for AJAX flows
+        $masked = null;
+        if ($user && $user->email) {
+            $parts = explode('@', $user->email);
+            $local = $parts[0] ?? '';
+            $domain = $parts[1] ?? '';
+            if (strlen($local) <= 2) {
+                $maskedLocal = substr($local, 0, 1) . '*';
+            } else {
+                $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(1, strlen($local)-2)) . substr($local, -1);
+            }
+            $masked = $maskedLocal . ($domain ? '@' . $domain : '');
+        }
+
+        $isoExpiry = null;
+        try {
+            $isoExpiry = Carbon::parse($expires->toDateTimeString())->toIso8601String();
+        } catch (\Exception $e) {
+            $isoExpiry = $expires->toDateTimeString();
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'otp_required' => true,
+                'masked_email' => $masked,
+                'otp_expires_at' => $isoExpiry,
+            ]);
+        }
+
+        return redirect()->route('otp.form');
+    }
+
+    // Show OTP input form
+    public function showOtpForm(Request $request)
+    {
+        if (!$request->session()->has('otp_user_id')) {
+            return redirect()->route('landing');
+        }
+
+        $expiresAt = $request->session()->get('otp_expires_at');
+        // normalize expiry to ISO-8601 for reliable JS parsing
+        if ($expiresAt) {
+            try {
+                $expiresAt = Carbon::parse($expiresAt)->toIso8601String();
+            } catch (\Exception $e) {
+                // leave as-is if parse fails
+            }
+        }
+        $user = null;
+        $masked = null;
+        $userId = $request->session()->get('otp_user_id');
+        if ($userId) {
+            $user = User::find($userId);
+            if ($user && $user->email) {
+                $email = $user->email;
+                // mask email for display (e.g. j***@dswd.gov.ph)
+                $parts = explode('@', $email);
+                $local = $parts[0] ?? '';
+                $domain = $parts[1] ?? '';
+                if (strlen($local) <= 2) {
+                    $maskedLocal = substr($local, 0, 1) . '*';
+                } else {
+                    $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(1, strlen($local)-2)) . substr($local, -1);
+                }
+                $masked = $maskedLocal . ($domain ? '@' . $domain : '');
+            }
+        }
+
+        return view('auth.otp_verify', [
+            'otp_expires_at' => $expiresAt,
+            'masked_email' => $masked,
+        ]);
+    }
+
+    // Verify OTP and complete login
+    public function verifyOtp(Request $request)
+    {
+        $userId = $request->session()->get('otp_user_id');
+        $code = $request->session()->get('otp_code');
+        $expiresAt = $request->session()->get('otp_expires_at');
+        $attempts = (int) $request->session()->get('otp_attempts', 0);
+
+        if (!$userId || !$code || !$expiresAt) {
+            return redirect()->route('landing')->withErrors(['otp' => 'OTP session not found. Please login again.']);
+        }
+
+        if (Carbon::now()->gt(Carbon::parse($expiresAt))) {
+            $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'The verification code has expired. Please login again.'], 422);
+            }
+            return redirect()->route('landing')->withErrors(['otp' => 'The verification code has expired. Please login again.']);
+        }
+
+        if ($attempts >= 5) {
+            $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
+            return redirect()->route('landing')->withErrors(['otp' => 'Too many attempts. Please login again.']);
+        }
+
+        $validated = $request->validate([
+            'otp_code' => 'required|string',
+        ]);
+
+        if (hash_equals((string)$code, (string)$validated['otp_code'])) {
+            $user = User::find($userId);
+            if (!$user) {
+                $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Account not found.'], 422);
+                }
+                return redirect()->route('landing')->withErrors(['otp' => 'Account not found.']);
+            }
+            Auth::loginUsingId($user->id, false);
+            $request->session()->regenerate();
+            $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'redirect' => url('/main')]);
+            }
+            return redirect()->intended('main');
+        }
+
+        $request->session()->put('otp_attempts', $attempts + 1);
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'The code is incorrect.'], 422);
+        }
+        return back()->withErrors(['otp_code' => 'The code is incorrect.'])->withInput();
+    }
+
+    // Resend OTP
+    public function resendOtp(Request $request)
+    {
+        $userId = $request->session()->get('otp_user_id');
+        if (!$userId) {
+            return redirect()->route('landing');
+        }
+        $user = User::find($userId);
+        if (!$user) return redirect()->route('landing');
+
+        try {
+            $otp = random_int(100000, 999999);
+        } catch (\Exception $e) {
+            $otp = rand(100000, 999999);
+        }
+        $expires = Carbon::now()->addMinutes(5);
+        $request->session()->put('otp_code', (string)$otp);
+        $request->session()->put('otp_expires_at', $expires->toDateTimeString());
+        $request->session()->put('otp_attempts', 0);
+
+        try {
+            Mail::to($user->email)->send(new OtpMail($otp));
+        } catch (\Exception $e) {
+            Log::error('Failed to resend OTP email to ' . $user->email . ': ' . $e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'A new verification code was sent to your email.']);
+        }
+        return back()->with('status', 'A new verification code was sent to your email.');
     }
 
     public function logout(Request $request)

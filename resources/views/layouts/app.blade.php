@@ -174,13 +174,16 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
     <script>
-        // Global sanitize helper: uses DOMPurify if present, otherwise safe fallback.
+        // Global sanitize helper: uses DOMPurify if present.
+        // DOMPurify is included above via CDN to ensure availability for inline scripts.
         function sanitizeHtml(src) {
             if (!src) return '';
             if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
-                return DOMPurify.sanitize(src);
+                try { return DOMPurify.sanitize(src); } catch(e) { return String(src); }
             }
+            // Fallback conservative sanitizer: strip script tags and on* attributes
             return String(src)
                 .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
                 .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
@@ -193,6 +196,43 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
         }
+        // Runtime sanitizer shim: conservatively sanitize HTML passed to risky DOM APIs.
+        (function(){
+            try {
+                const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+                if (desc && typeof desc.set === 'function') {
+                    const originalSetter = desc.set;
+                    Object.defineProperty(Element.prototype, 'innerHTML', {
+                        get: desc.get,
+                        set: function(html) {
+                            try {
+                                originalSetter.call(this, sanitizeHtml(html));
+                            } catch (e) {
+                                // Fallback to original value if sanitizer fails
+                                try { originalSetter.call(this, html); } catch (_) {}
+                            }
+                        },
+                        configurable: true
+                    });
+                }
+            } catch (e) {
+                console.warn('innerHTML shim not applied:', e);
+            }
+            try {
+                const origInsert = Element.prototype.insertAdjacentHTML;
+                if (typeof origInsert === 'function') {
+                    Element.prototype.insertAdjacentHTML = function(position, html) {
+                        try {
+                            return origInsert.call(this, position, sanitizeHtml(html));
+                        } catch (e) {
+                            return origInsert.call(this, position, html);
+                        }
+                    };
+                }
+            } catch (e) {
+                console.warn('insertAdjacentHTML shim not applied:', e);
+            }
+        })();
     </script>
     <style>
         html, body {
@@ -383,7 +423,7 @@
             }
         }
 
-        @if(request()->query('embed') || (isset($embed) && $embed))
+        @if((isset($embed) && $embed))
         nav.navbar,
         .stb-sidebar,
         footer {
@@ -1728,6 +1768,12 @@
                                                     Sector Utilities
                                                 </a>
                                             </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ route('admin.logs') }}">
+                                                        <i class="bi bi-journal-text me-2"></i>
+                                                        System Logs
+                                                    </a>
+                                                </li>
                                             <li>
                                                 <a class="dropdown-item" href="{{ route('STDashboard') }}">
                                                     <i class="bi bi-upload me-2"></i>

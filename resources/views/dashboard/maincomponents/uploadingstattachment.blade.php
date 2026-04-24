@@ -113,7 +113,7 @@
 						return;
 					}
 
-					container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div> Loading logs...</div>';
+					container.innerHTML = sanitizeHtml('<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div> Loading logs...</div>');
 
 					fetch(url, {
 						credentials: 'include',
@@ -227,7 +227,7 @@
 							}
 							titlesList = titlesList.slice(0, 15);
 
-							suggestions.innerHTML = '';
+							suggestions.textContent = '';
 							if (titlesList.length === 0) {
 								hideSuggestions();
 								return;

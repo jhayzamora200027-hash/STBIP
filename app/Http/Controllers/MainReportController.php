@@ -356,7 +356,12 @@ class MainReportController extends Controller
     public function index(Request $request)
     {
         
-        $embed = $request->query('embed');
+        $embedRaw = $request->query('embed', null);
+        $embed = false;
+        if ($embedRaw !== null) {
+            $embedStr = strtolower(trim((string)$embedRaw));
+            $embed = in_array($embedStr, ['1', 'true', 'yes', 'on'], true);
+        }
         $path = $this->findLatestExcelPath();
         $parsed = $this->getPrimaryDashboardData($path);
 

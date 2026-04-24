@@ -96,7 +96,7 @@ try {
                     <div id="rsm-st-details-body" style="padding:18px;max-height:60vh;overflow:auto;color:#16324f;"></div>
                 </div>
             </div>`;
-        document.body.insertAdjacentHTML('beforeend', tpl);
+        document.body.insertAdjacentHTML('beforeend', sanitizeHtml(tpl));
         document.getElementById('rsm-st-details-close').addEventListener('click', function(){ document.getElementById('rsm-st-details-modal').style.display='none'; try{ document.body.style.overflow=''; }catch(e){} });
     })();
 } catch(e) {}
@@ -118,7 +118,13 @@ window.openRsmStDetailsModal = function(row){
     const bodyEl = document.getElementById('rsm-st-details-body');
     if (!modal || !bodyEl) return;
     if (titleEl) titleEl.textContent = row && row.title ? row.title : 'ST Details';
-    if (!row) { bodyEl.innerHTML = '<p>No details available.</p>'; } else {
+    if (!row) {
+        // insert plain text safely
+        while (bodyEl.firstChild) bodyEl.removeChild(bodyEl.firstChild);
+        const p = document.createElement('p');
+        p.textContent = 'No details available.';
+        bodyEl.appendChild(p);
+    } else {
         const attUrl = row.attachment_url || '';
         const uploadedBy = row.attachment_uploaded_by || '';
         let html = '';
@@ -160,7 +166,8 @@ window.openRsmStDetailsModal = function(row){
         if (row.with_moa) html += '<div class="masterdata-field"><label>Year of MOA</label><input type="text" value="' + esc(row.year_of_moa || '-') + '" readonly></div>';
         if (row.with_res) html += '<div class="masterdata-field"><label>Year of Resolution</label><input type="text" value="' + esc(row.year_of_resolution || '-') + '" readonly></div>';
         html += '</div>';
-        bodyEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+        // sanitize HTML before inserting
+        bodyEl.innerHTML = sanitizeHtml(html);
     }
     modal.style.display = 'flex';
     try{ document.body.style.overflow = 'hidden'; } catch(e){}
@@ -195,7 +202,7 @@ function renderStTitlesFromRows(rows, regionParam) {
         if (!stListEl) return;
 
         if (!rows || !rows.length) {
-            stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+            stListEl.innerHTML = sanitizeHtml('<div class="rsm-empty">No ST titles for selected filters</div>');
             return;
         }
         const titleCounts = {};
@@ -260,7 +267,7 @@ function renderStTitlesFromRows(rows, regionParam) {
 
         const entries = Object.entries(titleCounts).sort((a,b) => b[1] - a[1]);
         if (!entries.length) {
-            stListEl.innerHTML = '<div class="rsm-empty">No ST titles for selected filters</div>';
+            stListEl.innerHTML = sanitizeHtml('<div class="rsm-empty">No ST titles for selected filters</div>');
             return;
         }
 
@@ -356,7 +363,7 @@ function renderStTitlesFromRows(rows, regionParam) {
         });
         html += '</div>';
 
-        stListEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+        stListEl.innerHTML = sanitizeHtml(html);
         stListEl.onclick = function(ev){
             const detailRow = ev.target.closest('.rsm-st-detail-row');
             if (detailRow) {
@@ -681,8 +688,8 @@ function applyRsmFilters(){
         try {
             const cityEl2 = document.getElementById('rsm-filter-city');
             const yearEl2 = document.getElementById('rsm-filter-year');
-            if (cityEl2) cityEl2.innerHTML = '';
-            if (yearEl2) yearEl2.innerHTML = '';
+            if (cityEl2) cityEl2.textContent = '';
+            if (yearEl2) yearEl2.textContent = '';
             const citySet = new Set();
             const yearSet = new Set();
             filtered.forEach(r => {
@@ -735,7 +742,7 @@ function applyRsmFilters(){
                 const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                 const provincesArr = Object.keys(byProv).sort();
                 const provHtml = provincesArr.length ? provincesArr.map(p => `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${byProv[p].length}</div></div>`).join('') : '<div class="rsm-empty">No provinces match filters</div>';
-                provEl.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(provHtml) : provHtml;
+                provEl.innerHTML = sanitizeHtml(provHtml);
             }
         } catch(e) {}
 
@@ -824,8 +831,8 @@ if (provSel) {
     function updateProvinceFilters(){
         const cityEl2 = document.getElementById('rsm-filter-city');
         const yearEl2 = document.getElementById('rsm-filter-year');
-        if (cityEl2) cityEl2.innerHTML = '';
-        if (yearEl2) yearEl2.innerHTML = '';
+        if (cityEl2) cityEl2.textContent = '';
+        if (yearEl2) yearEl2.textContent = '';
 
         const provs = _getSelectedValues('rsm-filter-prov');
         let payload = window._lastRsmPayload || {};
@@ -869,8 +876,8 @@ if (provSel) {
                 $e.find('option').remove();
                 items.forEach(i => $e.append(new Option(i,i)));
                 $e.trigger('change');
-            } else {
-                el.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(items.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('')) : items.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+                } else {
+                el.innerHTML = sanitizeHtml(items.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join(''));
             }
         }
 
@@ -1048,7 +1055,7 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         pop.style.transform = 'translateY(-6px) scale(0.98)';
         pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
 
-        pop.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(`<div class="rp-msg">Replicate "${esc(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`) : `<div class="rp-msg">Replicate "${esc(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`;
+        pop.innerHTML = sanitizeHtml(`<div class="rp-msg">Replicate "${esc(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`);
         document.body.appendChild(pop);
         try {
             const cb = pop.querySelector('.rp-confirm');
@@ -1267,7 +1274,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		function loadCss(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}        
 		function loadScript(u,cb){var s=document.createElement('script');s.onload=cb;s.src=u;document.head.appendChild(s);}        
 		function init(){
-			try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true });
+                try{ jQuery('.rsm-select2').select2({ width:'100%', placeholder:function(){return jQuery(this).data('placeholder')||'';}, allowClear:true, escapeMarkup: function(markup){ try { return sanitizeHtml(markup); } catch(e) { return String(markup); } } });
                 const $prov = jQuery('#rsm-filter-prov');
                 if ($prov.length) {
                     $prov.on('change.select2 select2:select select2:unselect', function(){
@@ -1530,7 +1537,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			const rawGrouped = payload && payload.grouped ? payload.grouped : {};
 		const grouped = normalizeGrouping(rawGrouped);
             if (!provinces.length) {
-            list.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<div class="province-empty">No provinces found for this region.</div>') : '<div class="province-empty">No provinces found for this region.</div>';
+            list.innerHTML = sanitizeHtml('<div class="province-empty">No provinces found for this region.</div>');
                 card.setAttribute('aria-hidden','true');
                 return;
             }
@@ -1544,7 +1551,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				const label = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
 				html += `<div class="province-item"><div class="prov-name">${esc(label)}</div><div class="province-badge">${cityCount}</div></div>`;
 			});
-            list.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+            list.innerHTML = sanitizeHtml(html);
 
 		} catch (e) { console.error('renderBottomProvinceList error', e); }
 	}
@@ -1607,10 +1614,10 @@ document.addEventListener("DOMContentLoaded", function () {
 						};
 						const mappedRegion = filenameToRegion[fileName] || null;
 						const regionParam = mappedRegion || (activeImg && activeImg.getAttribute('data-region-name')) || (activeImg && activeImg.getAttribute('data-region-number')) || fileName;
-                        bottomList.innerHTML = '<div class="province-empty">Loading…</div>';
+                        bottomList.innerHTML = sanitizeHtml('<div class="province-empty">Loading…</div>');
                         (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                             .then(payload => renderBottomProvinceList(payload))
-                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml('<div class="province-empty">Failed to load provinces</div>') : '<div class="province-empty">Failed to load provinces</div>'; });
+                            .catch(err => { console.error('bottom province fetch', err); bottomList.innerHTML = sanitizeHtml('<div class="province-empty">Failed to load provinces</div>'); });
 					}
 				} catch(e) { console.error(e); }
 			} else {
@@ -1794,7 +1801,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const rawGrouped = payload.grouped || {};
         const grouped = normalizeGrouping(rawGrouped);
         if (!provinces.length) {
-            list.innerHTML = '<div class="province-empty">No provinces found for this region.</div>';
+            list.innerHTML = sanitizeHtml('<div class="province-empty">No provinces found for this region.</div>');
             card.setAttribute('aria-hidden','false');
             return;
         }
@@ -1806,7 +1813,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const displayProv = (prov === 'UNKNOWN') ? '(no province specified)' : prov;
             html += `<div class="province-item" role="button" tabindex="0" data-prov="${esc(prov)}"><div class="prov-name">${esc(displayProv)}</div><div class="province-badge">${cityCount}</div></div>`;
         });
-        list.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+        list.innerHTML = sanitizeHtml(html);
         list.style.height = 'calc(40px * 8 + 16px)';
         if(card) card.style.height = 'calc(40px * 8 + 16px + 40px)';
         card.setAttribute('aria-hidden','false');
@@ -1915,7 +1922,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!cities.length) {
             html += '<div class="province-empty">No cities found for this province.</div>';
-            sub.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+            sub.innerHTML = sanitizeHtml(html);
             provEl.parentNode.insertBefore(sub, provEl.nextSibling);
             provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
             return;
@@ -1930,7 +1937,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         html += '</div>';
         html += '<div class="st-list" style="margin-top:8px;"></div>';
-        sub.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+        sub.innerHTML = sanitizeHtml(html);
         provEl.parentNode.insertBefore(sub, provEl.nextSibling);
         provEl.classList.add('expanded'); provEl.setAttribute('aria-expanded','true');
         try {
@@ -1955,14 +1962,14 @@ document.addEventListener("DOMContentLoaded", function () {
             const renderSTs = () => {
                 const stContainer = sub.querySelector('.st-list');
                 if (!stContainer) return;
-                stContainer.innerHTML = '<div class="province-empty">ST Titles are managed in the ST Titles panel and are not affected by province selection.</div>';
+                stContainer.innerHTML = sanitizeHtml('<div class="province-empty">ST Titles are managed in the ST Titles panel and are not affected by province selection.</div>');
             };
 
             ci.addEventListener('click', ev => {
                 ev.stopPropagation();
                 if (ci.classList.contains('selected')) {
                     cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
-                    const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
+                    const sc = sub.querySelector('.st-list'); if (sc) sc.textContent = '';
                     try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
                     try { const stitle = sub.querySelector('.sublist-title'); if (stitle) { stitle.textContent = 'Choose City'; stitle.style.display = ''; } } catch(e){}
                     return;
@@ -1983,12 +1990,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const list = document.getElementById('sliderProvinceList');
         const card = document.getElementById('sliderProvinceListCard');
         if (!list || !card) return;
-        list.innerHTML = '<div class="province-empty">Loading…</div>';
+        list.innerHTML = sanitizeHtml('<div class="province-empty">Loading…</div>');
         card.setAttribute('aria-hidden','false');
         try { const card = document.getElementById('sliderProvinceTotalCard'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); const exprCard = document.getElementById('sliderProvinceExprCard'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); const repCard = document.getElementById('sliderProvinceReplicatedCard'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); const adCard = document.getElementById('sliderProvinceAdoptedCard'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (card) card.setAttribute('aria-hidden','false'); if (stCountEl) stCountEl.textContent = '…'; if (exprCard) exprCard.setAttribute('aria-hidden','false'); if (exprCountEl) exprCountEl.textContent = '…'; if (repCard) repCard.setAttribute('aria-hidden','false'); if (repCountEl) repCountEl.textContent = '…'; if (adCard) adCard.setAttribute('aria-hidden','false'); if (adCountEl) adCountEl.textContent = '…'; positionProvinceTotalCard(); } catch(e) {}
         (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionKey) : Promise.reject(new Error('fetchRegionHierarchy missing')))
             .then(payload => { try { window._lastProvincePayload = payload; } catch(e){}; return renderProvinceCard(payload); })
-.catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = '<div class="province-empty">Failed to load provinces</div>'; try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
+.catch(err => { console.error('fetchModalProvinces error', err); list.innerHTML = sanitizeHtml('<div class="province-empty">Failed to load provinces</div>'); try { const card = document.getElementById('sliderProvinceTotalCard'); if (card) card.setAttribute('aria-hidden','true'); const stCountEl = document.getElementById('sliderProvinceTotalCardCount'); if (stCountEl) stCountEl.textContent = ''; const exprCard = document.getElementById('sliderProvinceExprCard'); if (exprCard) exprCard.setAttribute('aria-hidden','true'); const exprCountEl = document.getElementById('sliderProvinceExprCardCount'); if (exprCountEl) exprCountEl.textContent = ''; const repCard = document.getElementById('sliderProvinceReplicatedCard'); if (repCard) repCard.setAttribute('aria-hidden','true'); const repCountEl = document.getElementById('sliderProvinceReplicatedCardCount'); if (repCountEl) repCountEl.textContent = ''; const adCard = document.getElementById('sliderProvinceAdoptedCard'); if (adCard) adCard.setAttribute('aria-hidden','true'); const adCountEl = document.getElementById('sliderProvinceAdoptedCardCount'); if (adCountEl) adCountEl.textContent = ''; } catch(e) {} });
     }
     try { window.fetchModalProvinces = fetchModalProvinces; window.renderProvinceCard = renderProvinceCard; } catch(e) {}
     function showTransientPopover(targetEl, text, opts = {}) {
@@ -2069,15 +2076,14 @@ document.addEventListener("DOMContentLoaded", function () {
             panel.style.color = '#e5e7eb';
             panel.style.fontSize = '0.9rem';
 
-            panel.innerHTML = '' +
+            panel.innerHTML = sanitizeHtml('' +
                 '<div style="font-weight:600;margin-bottom:8px;">Replication directory URL</div>' +
                 '<div style="font-size:0.78rem;color:#9ca3af;margin-bottom:8px;">This URL will open when you confirm replication.</div>' +
                 '<input type="text" id="rsm-replicate-dir-input" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(148,163,184,0.6);background:#020617;color:#e5e7eb;font-size:0.82rem;margin-bottom:10px;" />' +
                 '<div style="display:flex;justify-content:flex-end;gap:8px;">' +
                     '<button type="button" class="rsm-repdir-cancel" style="background:transparent;border:1px solid rgba(148,163,184,0.5);color:#9ca3af;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Cancel</button>' +
                     '<button type="button" class="rsm-repdir-save" style="background:#10b981;border:none;color:#022c22;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:600;">Save</button>' +
-                '</div>';
-
+                '</div>');
             overlay.appendChild(panel);
             document.body.appendChild(overlay);
 
@@ -2177,7 +2183,7 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch(e) { console.error('rsm animation removed', e); try { const ri = rsmEl('rsm-modal-image'); if (ri) { ri.src = src || ''; ri.style.visibility = 'visible'; } } catch(e){} }
 			rsmEl('rsm-loading').style.display = ''; 
 			document.getElementById('rsm-cards').style.display = 'none';
-            rsmEl('rsm-st-list').innerHTML = '<div class="rsm-empty">Select a city to view ST titles</div>'; 
+            rsmEl('rsm-st-list').innerHTML = sanitizeHtml('<div class="rsm-empty">Select a city to view ST titles</div>'); 
             (window.fetchRegionHierarchy ? window.fetchRegionHierarchy(regionParam) : Promise.reject(new Error('fetchRegionHierarchy missing')))
                 .then(payload => {
 					const provEl = rsmEl('rsm-provinces');
@@ -2187,13 +2193,13 @@ document.addEventListener("DOMContentLoaded", function () {
 		const grouped = normalizeGrouping(rawGrouped);
 					const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                     if (!provincesArr.length) {
-                        provEl.innerHTML = '<div class="rsm-empty">No provinces</div>';
+                        provEl.innerHTML = sanitizeHtml('<div class="rsm-empty">No provinces</div>');
                         provEl.setAttribute('aria-hidden','true');
                     } else {
-                        provEl.innerHTML = provincesArr.map(p => {
+                        provEl.innerHTML = sanitizeHtml(provincesArr.map(p => {
 							const cities = Object.keys(grouped[p] || {});
 							return `<div class="rsm-prov-item province-item" role="button" tabindex="0" data-prov="${esc(p)}"><div class="prov-name">${esc(p)}</div><div class="province-badge">${cities.length}</div></div>`;
-					}).join('');
+                }).join(''));
 						provEl.setAttribute('aria-hidden','false');
 						window._lastRsmPayload = payload;
 						try {
@@ -2219,14 +2225,14 @@ document.addEventListener("DOMContentLoaded", function () {
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
 									if (ci.classList.contains('selected')) {
 										cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
-										const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
+                                        const sc = sub.querySelector('.st-list'); if (sc) sc.textContent = '';
 										try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
 										return;
 									}
 									cityItems.forEach(x => { if (x !== ci) { x.classList.add('hidden'); x.style.display = 'none'; x.classList.remove('selected'); } else { x.classList.remove('hidden'); x.style.display = ''; x.classList.add('selected'); } });
 									const stContainer = sub.querySelector('.st-list');
 									if (!stContainer) return;
-                                    if (!rows.length) { stContainer.innerHTML = '<div class="province-empty">No STs for this city</div>'; try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
+                                    if (!rows.length) { stContainer.innerHTML = sanitizeHtml('<div class="province-empty">No STs for this city</div>'); try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){} return; }
 									let sHtml = '<div style="max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px;">';
 									rows.forEach(r => { sHtml += `<div class="st-item" role="button" tabindex="0" title="${esc(r.title)}" style="padding:8px;border-radius:6px;background:transparent;cursor:pointer;">${esc(r.title || '(no title)')}</div>`; });
 									sHtml += '</div>';
@@ -2259,7 +2265,7 @@ document.addEventListener("DOMContentLoaded", function () {
 								const cityItems = Array.from(sub.querySelectorAll('.city-item'));
 								if (ci.classList.contains('selected')) {
 									cityItems.forEach(x => { x.classList.remove('hidden','selected'); x.style.display = ''; });
-									const sc = sub.querySelector('.st-list'); if (sc) sc.innerHTML = '';
+                                    const sc = sub.querySelector('.st-list'); if (sc) sc.textContent = '';
 									try { const hdr = sub.querySelector('.st-list-header'); if (hdr) hdr.remove(); } catch(e){}
 									return;
 								}
@@ -2306,7 +2312,8 @@ document.addEventListener("DOMContentLoaded", function () {
 								const citiesObj = grouped[prov] || {};
 								const cityNames = Object.keys(citiesObj);
 					const subHtml = cityNames.length ? `<div class="province-sublist">${cityNames.map(cn => { const key=(cn||'').toString().trim(); const displayCity = (cn === 'UNKNOWN') ? '(no city specified)' : cn; return `<div class="city-item" role="button" tabindex="0" data-prov="${esc(prov)}" data-city="${esc(key)}"><div class="city-name">${esc(displayCity)}</div><div class="province-badge">${(citiesObj[key]||[]).length}</div></div>` }).join('')}<div class="st-list" style="margin-top:8px;"></div></div>` : `<div class="province-sublist"><div class="province-empty">No cities</div><div class="st-list" style="margin-top:8px;"></div></div>`;
-                    this.insertAdjacentHTML('afterend', (typeof sanitizeHtml === 'function') ? sanitizeHtml(subHtml) : subHtml);
+                    // insert sanitized markup
+                    this.insertAdjacentHTML('afterend', sanitizeHtml(subHtml));
 								const sub = this.nextElementSibling;
 								if (sub) {
 									const cityItems = Array.from(sub.querySelectorAll('.city-item'));
@@ -2471,7 +2478,7 @@ function initOrUpdateModalStatsChart(values = [0,0,0,0], perYearTotals = null) {
     function refreshControls(){
         const ctrl = fetchEl('modalStatsChartControls');
         if (!ctrl || !modalStatsChart) return;
-        ctrl.innerHTML = '';
+        ctrl.textContent = '';
     }
     let el = document.getElementById('modalStatsChart');
     if (!el) el = fetchEl('modalStatsChart');
@@ -2704,7 +2711,7 @@ function createChartHitZones(chart) {
         const canvas = chart && chart.canvas;
         const zonesContainer = document.getElementById('modalStatsChartZones');
         if (!zonesContainer || !canvas) return;
-        zonesContainer.innerHTML = '';
+        zonesContainer.textContent = '';
         zonesContainer.style.pointerEvents = 'auto';
         const meta = chart.getDatasetMeta(0);
         const pts = (meta && meta.data) ? meta.data : [];
@@ -3170,9 +3177,9 @@ document.addEventListener('DOMContentLoaded', function(){
       const provEl = document.getElementById('rsm-filter-prov');
       const cityEl = document.getElementById('rsm-filter-city');
       const yearEl = document.getElementById('rsm-filter-year');
-      if (provEl) provEl.innerHTML = '';
-      if (cityEl) cityEl.innerHTML = '';
-      if (yearEl) yearEl.innerHTML = '';
+    if (provEl) provEl.textContent = '';
+    if (cityEl) cityEl.textContent = '';
+    if (yearEl) yearEl.textContent = '';
       const norm = region ? normalizeRegionText(region) : '';
       const keys = Object.keys((window.parent && window.parent.regionMap) ? window.parent.regionMap : {});
       let map = (window.parent && window.parent.regionMap) ? window.parent.regionMap[norm] : null;
@@ -4902,7 +4909,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 if (originalWidth <= scroller.clientWidth) {
                     const childrenHtml = scroller.innerHTML;
-                    scroller.innerHTML = '';
+                    scroller.textContent = '';
                     const track = document.createElement('div');
                     track.className = 'marquee-track js-transform';
                     track.innerHTML = sanitizeHtml(childrenHtml + childrenHtml);
@@ -5108,7 +5115,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     if (stableCounter >= stabilityLimit) {
                         clearInterval(badgeUpdater);
                         const childrenHtml = scroller.innerHTML;
-                        scroller.innerHTML = '';
+                        scroller.textContent = '';
                         const track = document.createElement('div');
                         track.className = 'marquee-track js-transform';
                         track.innerHTML = sanitizeHtml(childrenHtml + childrenHtml);

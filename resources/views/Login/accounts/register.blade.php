@@ -403,7 +403,7 @@
                 let errorContainer = document.getElementById('registerErrorMsg');
                 if (errorContainer) {
                     errorContainer.style.display = 'none';
-                    errorContainer.innerHTML = '';
+                    errorContainer.textContent = '';
                 }
 
                 
@@ -416,7 +416,7 @@
                     if (errorContainer) {
                         const escHtml = s => String(s == null ? '' : s)
                             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-                        errorContainer.innerHTML = escHtml('Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.');
+                        errorContainer.textContent = 'Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.';
                         errorContainer.style.display = 'block';
                     }
                     return;
@@ -425,7 +425,7 @@
                     if (errorContainer) {
                         const escHtml = s => String(s == null ? '' : s)
                             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-                        errorContainer.innerHTML = escHtml('Passwords do not match.');
+                        errorContainer.textContent = 'Passwords do not match.';
                         errorContainer.style.display = 'block';
                     }
                     return;
@@ -438,7 +438,7 @@
                 if (submitBtn) {
                     originalBtnHtml = submitBtn.innerHTML;
                     submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registering...';
+                    submitBtn.innerHTML = sanitizeHtml('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registering...');
                 }
 
                 const fetchWithTimeout = (url, options, timeout = 10000) => {
@@ -504,7 +504,7 @@
                             } else {
                                 html = escHtml(arr[0]);
                             }
-                            errorContainer.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(html) : html;
+                            errorContainer.innerHTML = sanitizeHtml(html);
                             errorContainer.style.display = 'block';
                         }
                     }
@@ -514,15 +514,15 @@
                     if (errorContainer) {
                         const escHtml = s => String(s == null ? '' : s)
                             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-                        errorContainer.innerHTML = (typeof sanitizeHtml === 'function') ? sanitizeHtml(escHtml('An error occurred. Please try again.')) : escHtml('An error occurred. Please try again.');
+                        errorContainer.innerHTML = sanitizeHtml(escHtml('An error occurred. Please try again.'));
                         errorContainer.style.display = 'block';
                     }
                 })
                 .finally(() => {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnHtml || 'Register';
-                    }
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = sanitizeHtml(originalBtnHtml || 'Register');
+                        }
                 });
             });
 
