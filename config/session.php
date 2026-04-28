@@ -32,9 +32,21 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env('SESSION_LIFETIME', 5),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Absolute Session Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | Optionally enforce an absolute session lifetime (in minutes). When set
+    | to 0 the absolute timeout is disabled. Typical values for sensitive
+    | applications: 480 (8 hours) or 1440 (24 hours).
+    |
+    */
+    'absolute_lifetime' => (int) env('SESSION_ABSOLUTE_LIFETIME', 480),
 
     /*
     |--------------------------------------------------------------------------
@@ -47,7 +59,7 @@ return [
     |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => env('SESSION_ENCRYPT', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -169,7 +181,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', true),
 
     /*
     |--------------------------------------------------------------------------

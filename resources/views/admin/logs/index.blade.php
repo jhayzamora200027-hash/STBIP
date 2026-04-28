@@ -29,6 +29,9 @@
   </style>
 
   <div class="sector-utilities-page">
+    @if(!empty($missingTables ?? []))
+      <div class="alert alert-warning border-0 shadow-sm">The logs UI detected missing log-related tables: <strong>{{ implode(', ', $missingTables) }}</strong>. Create the missing migrations or run your migrations to enable those modules in the logs view.</div>
+    @endif
     <section class="sector-hero">
       <div>
         <span class="sector-kicker">System</span>
@@ -36,18 +39,6 @@
         <p class="sector-subtitle">Recorded application activity and events across modules. Use filters to narrow results.</p>
       </div>
       <div class="sector-summary-grid">
-        <div class="sector-summary-card">
-          <div class="sector-summary-label">Total entries</div>
-          <div class="sector-summary-value">{{ $total ?? ($logs->count() ?? 0) }}</div>
-        </div>
-        <div class="sector-summary-card">
-          <div class="sector-summary-label">Shown</div>
-          <div class="sector-summary-value">{{ $logs->count() }}</div>
-        </div>
-        <div class="sector-summary-card">
-          <div class="sector-summary-label">Modules</div>
-          <div class="sector-summary-value">{{ $logs->pluck('module')->unique()->filter()->count() ?: 'All' }}</div>
-        </div>
       </div>
     </section>
 
@@ -71,6 +62,7 @@
               <option value="">All</option>
               <option value="master_data" {{ request('module')=='master_data'?'selected':'' }}>Master Data</option>
               <option value="sector_utilities" {{ request('module')=='sector_utilities'?'selected':'' }}>Sector Utilities</option>
+              <option value="file_uploads" {{ request('module')=='file_uploads'?'selected':'' }}>File Uploads</option>
               <option value="social_titles" {{ request('module')=='social_titles'?'selected':'' }}>Social Technology Titles</option>
               <option value="user_management" {{ request('module')=='user_management'?'selected':'' }}>User Management</option>
               <option value="user_approval" {{ request('module')=='user_approval'?'selected':'' }}>User Approval</option>

@@ -356,11 +356,16 @@ class MainReportController extends Controller
     public function index(Request $request)
     {
         
+        // Strictly validate the `embed` query parameter. Only allow boolean-like values
+        // in a tight whitelist (1/0, true/false, yes/no, on/off). Reject any other input.
         $embedRaw = $request->query('embed', null);
         $embed = false;
-        if ($embedRaw !== null) {
-            $embedStr = strtolower(trim((string)$embedRaw));
-            $embed = in_array($embedStr, ['1', 'true', 'yes', 'on'], true);
+        if ($embedRaw !== null && is_string($embedRaw)) {
+            if (preg_match('/^\s*(?:1|0|true|false|yes|no|on|off)\s*$/i', $embedRaw)) {
+                $embed = in_array(strtolower(trim($embedRaw)), ['1', 'true', 'yes', 'on'], true);
+            } else {
+                $embed = false;
+            }
         }
         $path = $this->findLatestExcelPath();
         $parsed = $this->getPrimaryDashboardData($path);
@@ -654,8 +659,15 @@ class MainReportController extends Controller
         $selectedProvinces = $request->input('province', []);
         $selectedMunicipalities = $request->input('municipality', []);
         $selectedYears = (array) $request->input('year_of_moa', []);
-        if ($request->query('embed')) {
-            
+        // Validate embed query for AJAX listing as well using the same strict rules.
+        $embedQuery = $request->query('embed', null);
+        $embedListing = false;
+        if ($embedQuery !== null && is_string($embedQuery)) {
+            if (preg_match('/^\s*(?:1|0|true|false|yes|no|on|off)\s*$/i', $embedQuery)) {
+                $embedListing = in_array(strtolower(trim($embedQuery)), ['1', 'true', 'yes', 'on'], true);
+            }
+        }
+        if ($embedListing) {
             $selectedRegions = [];
             $selectedProvinces = [];
             $selectedMunicipalities = [];

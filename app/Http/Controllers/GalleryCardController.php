@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\GalleryCard;
+use Illuminate\Support\Facades\DB;
 
 class GalleryCardController extends Controller
 {
@@ -58,13 +59,28 @@ class GalleryCardController extends Controller
             
             $data['created_by'] = Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null;
 
-            GalleryCard::create($data);
+            $card = GalleryCard::create($data);
+
+            // record a sector utilities log entry (if table exists)
+            try {
+                if (DB::getSchemaBuilder()->hasTable('sector_utilities_logs')) {
+                    DB::table('sector_utilities_logs')->insert([
+                        'action' => 'create',
+                        'user' => (Auth::check() ? (Auth::user()->user_id ?? Auth::id()) : null),
+                        'details' => 'Created gallery card: ' . ($card->title ?? ''),
+                        'gallery_card_id' => $card->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // don't block creation on logging failure
+            }
 
             if ($request->ajax()) {
-                
-                return response()->json(['success' => true]);
+                return response()->json(['success' => true, 'card_id' => $card->id, 'docno' => $card->docno]);
             }
-            return redirect()->route('admin.stsreportsectors')->with('success', 'Gallery card added.');
+            return redirect()->route('admin.stsreportsectors')->with('success', 'Gallery card added (docno: ' . ($card->docno ?? '-') . ').');
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Failed to add gallery card.'], 500);

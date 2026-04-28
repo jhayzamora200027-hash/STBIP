@@ -2059,8 +2059,126 @@
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     @yield('scripts')
-</body>
+@auth
+        <!-- Idle timeout modal -->
+        <div class="modal fade" id="idleTimeoutModal" tabindex="-1" aria-labelledby="idleTimeoutModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="idleTimeoutModalLabel">Session expiring soon</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">For your security, your session will expire due to inactivity.</p>
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                                <div style="flex:1">
+                                        <div class="progress" style="height:10px; border-radius:6px; overflow:hidden; background:#e9ecef;">
+                                                <div id="idleProgressBar" class="progress-bar" role="progressbar" style="width:100%; background:#0d6efd; transition:width 0.5s linear;"></div>
+                                        </div>
+                                </div>
+                                <div style="min-width:110px; text-align:right; font-weight:600; color:#333;" id="idleTimeRemaining">00:30</div>
+                        </div>
+                        <p class="small text-muted mb-0">You can stay signed in to continue your work. Otherwise you'll be logged out automatically.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+    <form id="idleLogoutForm" action="{{ route('logout') }}" method="POST" style="display:none;">
+        @csrf
+    </form>
 
+    <script>
+        (function(){
+            var idleMinutes = parseInt("{{ config('session.lifetime', 5) }}", 10) || 5;
+            var idleMs = idleMinutes * 60 * 1000;
+            var warnMs = Math.min(60, Math.floor(idleMinutes * 60 / 2)) * 1000; // warn at min(60s, half)
+            var idleTimer, warnTimer, tickTimer;
+
+            var modalEl = document.getElementById('idleTimeoutModal');
+            var bsModal = (modalEl && typeof bootstrap !== 'undefined') ? new bootstrap.Modal(modalEl, {backdrop: 'static', keyboard: false}) : null;
+            var stayBtn = document.getElementById('idleStayBtn');
+            var logoutBtn = document.getElementById('idleLogoutBtn');
+            var progressBar = document.getElementById('idleProgressBar');
+            var timeLabel = document.getElementById('idleTimeRemaining');
+
+            function clearTimers(){
+                if(idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+                if(warnTimer) { clearTimeout(warnTimer); warnTimer = null; }
+                if(tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+            }
+
+            function formatMs(ms){
+                var s = Math.max(0, Math.ceil(ms/1000));
+                var mm = Math.floor(s/60);
+                var ss = s%60;
+                return (mm>0?mm+':':'') + (mm>0?String(ss).padStart(2,'0'):ss+'s');
+            }
+
+            function showWarning(){
+                // set up expiry time for countdown
+                var expiresAt = Date.now() + warnMs;
+                if (bsModal) bsModal.show();
+                // update countdown every 0.5s
+                if (tickTimer) clearInterval(tickTimer);
+                tickTimer = setInterval(function(){
+                    var remaining = Math.max(0, idleTimer ? (getIdleRemaining()) : 0);
+                    if (progressBar) {
+                        var pct = Math.max(0, Math.min(100, (remaining / idleMs) * 100));
+                        progressBar.style.width = pct + '%';
+                    }
+                    if (timeLabel) timeLabel.textContent = formatMs(remaining);
+                }, 500);
+            }
+
+            function getIdleRemaining(){
+                // compute remaining from idleTimer if possible by storing expiry timestamp
+                return (window._idleExpiry || 0) - Date.now();
+            }
+
+            function expireSession(){
+                clearTimers();
+                var form = document.getElementById('idleLogoutForm');
+                if (form) {
+                    form.submit();
+                } else {
+                    window.location.href = '/login?expired=1';
+                }
+            }
+
+            function resetTimers(){
+                clearTimers();
+                if (bsModal) try { bsModal.hide(); } catch(e){}
+                // compute and store expiry timestamp
+                window._idleExpiry = Date.now() + idleMs;
+                // schedule warn and expiry
+                warnTimer = setTimeout(function(){ showWarning(); }, Math.max(0, idleMs - warnMs));
+                idleTimer = setTimeout(function(){ expireSession(); }, idleMs);
+                // ensure progress reflects full
+                if (progressBar) progressBar.style.width = '100%';
+                if (timeLabel) timeLabel.textContent = formatMs(idleMs);
+            }
+
+            function keepAliveThenHide(){
+                // silently hit current page to refresh server session (send cookies)
+                fetch(window.location.href, {method:'GET', credentials:'same-origin', cache:'no-cache'})
+                    .catch(function(){}).finally(function(){
+                        // reset timers to extend session and hide modal
+                        resetTimers();
+                    });
+            }
+
+            if (stayBtn) stayBtn.addEventListener('click', function(){ keepAliveThenHide(); if (bsModal) bsModal.hide(); });
+            if (logoutBtn) logoutBtn.addEventListener('click', function(){ expireSession(); });
+
+            ['mousemove','keydown','click','touchstart'].forEach(function(evt){
+                document.addEventListener(evt, resetTimers, true);
+            });
+
+            // init
+            resetTimers();
+        })();
+    </script>
+@endauth
 </body>
 </html>

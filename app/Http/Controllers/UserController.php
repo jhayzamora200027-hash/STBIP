@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 use App\Mail\OtpMail;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -53,10 +57,12 @@ class UserController extends Controller
                     'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
                     'confirmed',
                 ],
+                'g-recaptcha-response' => 'required',
             ],
             [
                 'email.regex' => 'The email address must be a DSWD email (example: user@dswd.gov.ph).',
                 'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.',
+                'g-recaptcha-response.required' => 'Please complete the reCAPTCHA.',
             ]
         );
 
@@ -141,10 +147,30 @@ class UserController extends Controller
         }
         return redirect()->back()->with('success', 'Additional user added and approved successfully.');
     }
+    /**
+     * Ensure responses take at least a minimum amount of time to mitigate timing attacks.
+     *
+     * @param float $start microtime(true) start time
+     * @param int $minMs minimum response time in milliseconds
+     * @return void
+     */
+    private function ensureMinResponseTime(float $start, int $minMs = 700): void
+    {
+        try {
+            $elapsed = (microtime(true) - $start) * 1000.0;
+            $remaining = $minMs - $elapsed;
+            if ($remaining > 0) {
+                usleep((int)($remaining * 1000));
+            }
+        } catch (\Throwable $e) {
+            // best-effort; don't let timing helper break the request
+        }
+    }
     public function register(Request $request)
     {
         $emailForUserId = $request->email;
         $generatedUserId = null;
+        $start = microtime(true);
         if ($emailForUserId && strpos($emailForUserId, '@') !== false) {
             $generatedUserId = strstr($emailForUserId, '@', true);
         }
@@ -159,32 +185,29 @@ class UserController extends Controller
                 ->exists()
             : false;
         
-        if ($approvedEmailExists) {
-            $error = ['email' => ['This email is already registered and approved.']];
+        if ($approvedEmailExists || $approvedUserIdExists) {
+            $this->ensureMinResponseTime($start, 700);
+            try {
+                if ($approvedEmailExists) {
+                    Mail::send('emails.existing_registration_attempt', [], function ($message) use ($request) {
+                        $message->to($request->email)
+                                ->subject('Security notice: Registration attempt - STB Inventory Portal');
+                    });
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send existing-registration notification: ' . $e->getMessage());
+            }
+
+            $genericMsg = 'If this email is not yet registered, a verification link has been sent. If it is already registered, please check your inbox for login instructions.';
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Validation failed.',
-                    'errors' => $error,
-                ], 422);
+                    'success' => true,
+                    'message' => $genericMsg,
+                ]);
             }
-            return redirect()->back()
-                ->withErrors($error, 'register')
-                ->withInput();
+            return redirect()->route('main')->with('success', $genericMsg);
         }
-        
-        if ($approvedUserIdExists) {
-            $error = ['user_id' => ['This User ID is already registered and approved.']];
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Validation failed.',
-                    'errors' => $error,
-                ], 422);
-            }
-            return redirect()->back()
-                ->withErrors($error, 'register')
-                ->withInput();
-        }
-        
+
         $pendingEmail = User::where('email', $request->email)
             ->where(function($query) {
                 $query->whereNull('approvalstatus')
@@ -201,30 +224,18 @@ class UserController extends Controller
                 ->exists()
             : false;
 
-        if ($pendingEmail) {
-            $error = ['email' => ['This email already has a pending registration. Please wait for admin review or contact support.']];
+        // If there is a pending registration for the email or generated user_id,
+        // return the same generic message as above to avoid account enumeration.
+        if ($pendingEmail || $pendingUserId) {
+            $this->ensureMinResponseTime($start, 700);
+            $genericMsg = 'If this email is not yet registered, a verification link has been sent. If it is already registered, please check your inbox for login instructions.';
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Validation failed.',
-                    'errors' => $error,
-                ], 422);
+                    'success' => true,
+                    'message' => $genericMsg,
+                ]);
             }
-            return redirect()->back()
-                ->withErrors($error, 'register')
-                ->withInput();
-        }
-
-        if ($pendingUserId) {
-            $error = ['user_id' => ['This User ID already has a pending registration. Please wait for admin review or contact support.']];
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Validation failed.',
-                    'errors' => $error,
-                ], 422);
-            }
-            return redirect()->back()
-                ->withErrors($error, 'register')
-                ->withInput();
+            return redirect()->route('main')->with('success', $genericMsg);
         }
         
         $validator = Validator::make(
@@ -266,6 +277,34 @@ class UserController extends Controller
                 ->withInput();
         }
         
+        // Verify recaptcha before attempting to create the account
+        if (!$validator->fails()) {
+            $recaptchaResponse = $request->input('g-recaptcha-response');
+            try {
+                $recapSecret = config('services.recaptcha.secret');
+                $verify = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                    'secret' => $recapSecret,
+                    'response' => $recaptchaResponse,
+                    'remoteip' => $request->ip(),
+                ]);
+                $body = $verify->json();
+            } catch (\Exception $e) {
+                $body = ['success' => false];
+            }
+
+            if (!($body['success'] ?? false)) {
+                $this->ensureMinResponseTime($start, 700);
+                $error = ['g-recaptcha-response' => ['reCAPTCHA verification failed.']];
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Validation failed.',
+                        'errors' => $error,
+                    ], 422);
+                }
+                return redirect()->back()->withErrors($error, 'register')->withInput();
+            }
+        }
+
         try {
             $IncomingFields = $validator->validated();
             $IncomingFields['password'] = bcrypt($IncomingFields['password']);
@@ -302,6 +341,16 @@ class UserController extends Controller
                 ->withInput();
         }
 
+        // Attempt to notify the registrant that their request was received (non-enumerating).
+        try {
+            Mail::send('emails.registration_submitted', [], function ($message) use ($request) {
+                $message->to($request->email)
+                        ->subject('Registration Received - STB Inventory Portal');
+            });
+        } catch (\Exception $e) {
+            Log::error('Failed to send registration-submitted email: ' . $e->getMessage());
+        }
+
         try {
             $pendingCount = User::where(function($q) {
                 $q->whereNull('approvalstatus')
@@ -318,6 +367,7 @@ class UserController extends Controller
             Log::error('Failed sending new registration notification: ' . $mailEx->getMessage());
         }
 
+        $this->ensureMinResponseTime($start, 700);
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
@@ -344,7 +394,12 @@ class UserController extends Controller
             throw $e;
         }
 
+        $start = microtime(true);
         $user = User::where('email', $IncomingFields['email'])->first();
+
+        // track failed login attempts per email (short lived)
+        $emailKey = 'login_attempts:' . sha1(strtolower(trim($IncomingFields['email'])));
+        $attempts = (int) Cache::get($emailKey, 0);
 
         $ajaxError = function($field, $msg) use ($request) {
             if ($request->expectsJson()) {
@@ -358,32 +413,74 @@ class UserController extends Controller
             ], 'login')->onlyInput('email');
         };
 
+        // If threshold reached, require reCAPTCHA and verify it here
+        if ($attempts >= 3) {
+            $recaptchaToken = $request->input('g-recaptcha-response');
+            if (empty($recaptchaToken)) {
+                // increment attempts slightly to keep consistent throttling
+                Cache::put($emailKey, $attempts + 1, now()->addMinutes(15));
+                return $ajaxError('g-recaptcha-response', 'Please complete the reCAPTCHA.');
+            }
+
+            try {
+                $recaptchaSecret = config('services.recaptcha.secret');
+                $post = http_build_query([
+                    'secret' => $recaptchaSecret,
+                    'response' => $recaptchaToken,
+                    'remoteip' => $request->ip(),
+                ]);
+                $opts = [
+                    'http' => [
+                        'method' => 'POST',
+                        'header' => "Content-type: application/x-www-form-urlencoded\r\nContent-Length: " . strlen($post) . "\r\n",
+                        'content' => $post,
+                        'timeout' => 5,
+                    ],
+                ];
+                $context = stream_context_create($opts);
+                $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
+                if ($result === false) {
+                    throw new \Exception('reCAPTCHA request failed');
+                }
+                $verify = json_decode($result, true);
+            } catch (\Exception $e) {
+                Cache::put($emailKey, $attempts + 1, now()->addMinutes(15));
+                return $ajaxError('g-recaptcha-response', 'reCAPTCHA verification failed. Please try again.');
+            }
+
+            if (empty($verify) || empty($verify['success'])) {
+                Cache::put($emailKey, $attempts + 1, now()->addMinutes(15));
+                return $ajaxError('g-recaptcha-response', 'reCAPTCHA verification failed. Please try again.');
+            }
+        }
+
+        $genericAuthMsg = 'Invalid email or password.';
+
         if (!$user) {
-            return $ajaxError('email', 'No account found with this email address.');
+            $this->ensureMinResponseTime($start, 700);
+            $curr = (int) Cache::get($emailKey, 0);
+            Cache::put($emailKey, $curr + 1, now()->addMinutes(15));
+            return $ajaxError('email', $genericAuthMsg);
         }
 
-        if ($user->active == 0) {
-            return $ajaxError('email', 'Your account is not active. Please contact support.');
+        if ($user->active == 0 || empty($user->approvalstatus) || is_null($user->approvalstatus) || $user->approvalstatus === 'R' || $user->approvalstatus !== 'A') {
+            $this->ensureMinResponseTime($start, 700);
+            $curr = (int) Cache::get($emailKey, 0);
+            Cache::put($emailKey, $curr + 1, now()->addMinutes(15));
+            return $ajaxError('email', $genericAuthMsg);
         }
-
-        if (empty($user->approvalstatus) || is_null($user->approvalstatus)) {
-            return $ajaxError('email', 'Your registration is pending admin approval. Please wait for approval.');
-        }
-
-        if ($user->approvalstatus === 'R') {
-            return $ajaxError('email', 'Your registration has been rejected. Please contact support.');
-        }
-
-        if ($user->approvalstatus !== 'A') {
-            return $ajaxError('email', 'Your account access is restricted. Please contact support.');
-        }
-
         $remember = $request->boolean('remember');
 
         // Verify password without fully authenticating; require OTP as a second factor.
         if (!Hash::check($IncomingFields['password'], $user->password)) {
-            return $ajaxError('password', 'The password is incorrect.');
+            $this->ensureMinResponseTime($start, 700);
+            $curr = (int) Cache::get($emailKey, 0);
+            Cache::put($emailKey, $curr + 1, now()->addMinutes(15));
+            return $ajaxError('email', $genericAuthMsg);
         }
+
+        // successful credential check -> reset failed attempts
+        Cache::forget($emailKey);
 
         // Generate one-time 6-digit code and store in session (5 minute lifetime)
         try {
@@ -647,6 +744,21 @@ class UserController extends Controller
 
             $user->update($updateData);
 
+            if (Schema::hasTable('userlogs')) {
+                try {
+                    DB::table('userlogs')->insert([
+                        'user_id' => $user->id,
+                        'action' => 'update',
+                        'performed_by' => Auth::check() ? (Auth::user()->id ?? Auth::id()) : null,
+                        'meta' => json_encode($updateData),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } catch (\Throwable $e) {
+                    // best-effort logging
+                }
+            }
+
             return redirect()->back()
                 ->with('profile_success', 'Profile updated successfully.')
                 ->with('profile_modal_open', true);
@@ -707,6 +819,20 @@ class UserController extends Controller
             }
 
             $user->update($updateData);
+
+            if (Schema::hasTable('userlogs')) {
+                try {
+                    DB::table('userlogs')->insert([
+                        'user_id' => $user->id,
+                        'action' => 'profile_update',
+                        'performed_by' => Auth::check() ? (Auth::user()->id ?? Auth::id()) : null,
+                        'meta' => json_encode($updateData),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } catch (\Throwable $e) {
+                }
+            }
 
             return redirect()->route('users.index')
                 ->with('success', 'User updated successfully.');

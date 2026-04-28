@@ -37,13 +37,13 @@ Route::put('/profile', [UserController::class, 'updateProfile'])
 
 // Authentication handlers
 Route::post('/login', [UserController::class, 'login'])->name('login');
-Route::post('/register', [UserController::class, 'register'])->name('register');
+Route::post('/register', [UserController::class, 'register'])->name('register')->middleware('throttle:10,1');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 
 // OTP verification for optional 2FA (email OTP)
 Route::get('/otp', [UserController::class, 'showOtpForm'])->name('otp.form');
 Route::post('/otp', [UserController::class, 'verifyOtp'])->name('otp.verify');
-Route::post('/otp/resend', [UserController::class, 'resendOtp'])->name('otp.resend');
+Route::post('/otp/resend', [UserController::class, 'resendOtp'])->name('otp.resend')->middleware('throttle:6,1');
 
 
 // ==================== DASHBOARD ROUTES ====================

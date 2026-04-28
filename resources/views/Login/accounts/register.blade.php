@@ -171,7 +171,25 @@
                                     </div>
                                 </div>
 
-                                <div class="portal-register-actions">
+                                @if(config('services.recaptcha.site_key'))
+                                    <div class="portal-register-field mt-3">
+                                        <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                                        @if ($errors->register->has('g-recaptcha-response'))
+                                            <div class="text-danger small mt-2">{{ $errors->register->first('g-recaptcha-response') }}</div>
+                                        @endif
+                                    </div>
+
+                                    <div class="portal-register-actions">
+                                        @push('recaptcha_script')
+                                            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                                        @endpush
+                                @else
+                                    <div class="portal-register-field mt-3">
+                                        <div class="text-muted small">reCAPTCHA is not configured. Please contact the administrator.</div>
+                                    </div>
+
+                                    <div class="portal-register-actions">
+                                @endif
                                     <button type="button" class="portal-login-secondary-btn" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="modal">
                                         Back to login
                                     </button>
@@ -208,6 +226,7 @@
     </div>
 </div>
 
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const registerModalEl = document.getElementById('registerModal');
@@ -509,7 +528,7 @@
                         }
                     }
                 })
-                    } catch(err => {
+                .catch(err => {
                     console.error('AJAX register fetch error:', err);
                     if (errorContainer) {
                         const escHtml = s => String(s == null ? '' : s)

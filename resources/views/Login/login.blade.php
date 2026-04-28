@@ -87,6 +87,27 @@
                   </button>
                   <button type="submit" class="portal-login-primary-btn">Log in</button>
                 </div>
+                @if(config('services.recaptcha.site_key'))
+                <style>
+                  /* Center the reCAPTCHA and scale responsively */
+                  #loginRecaptchaContainer{ display:none; margin-top:14px; width:100%; box-sizing:border-box; }
+                  #loginRecaptchaInner{ display:flex; justify-content:center; }
+                  #loginRecaptchaContainer .g-recaptcha{ transform-origin:0 0; }
+                  @media (min-width: 768px) {
+                    #loginRecaptchaContainer .g-recaptcha{ transform:scale(0.95); }
+                  }
+                  @media (max-width: 480px) {
+                    #loginRecaptchaContainer .g-recaptcha{ transform:scale(0.82); }
+                  }
+                  #loginRecaptchaError{ display:none; margin-top:6px; text-align:center; }
+                </style>
+                <div id="loginRecaptchaContainer">
+                  <div id="loginRecaptchaInner">
+                    <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                  </div>
+                  <div class="text-danger small" id="loginRecaptchaError"></div>
+                </div>
+                @endif
               </form>
             </div>
           </section>
@@ -213,8 +234,19 @@ document.addEventListener('DOMContentLoaded', function() {
             msg = errorArr[0];
           }
           if (errorMsg) {
-            errorMsg.textContent = msg;
+            errorMsg.innerHTML = msg;
             errorMsg.style.display = 'block';
+            // If server indicated captcha is required, unhide the recaptcha container
+            try {
+              const recaptchaContainer = document.getElementById('loginRecaptchaContainer');
+              const recaptchaError = document.getElementById('loginRecaptchaError');
+              if (data && data.errors && data.errors['g-recaptcha-response']) {
+                if (recaptchaContainer) recaptchaContainer.style.display = 'block';
+                if (recaptchaError) { recaptchaError.textContent = data.errors['g-recaptcha-response'][0]; recaptchaError.style.display = 'block'; }
+              }
+            } catch (e) {
+              // ignore UI helper errors
+            }
             if (loginModal) {
               loginModal.show();
             }

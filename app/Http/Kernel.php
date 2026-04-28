@@ -14,15 +14,19 @@ class Kernel extends HttpKernel
     protected $middlewareGroups = [
         'web' => [
             // ...existing Laravel web middleware...
+            \App\Http\Middleware\ForceHttps::class,
             \App\Http\Middleware\EncryptCookies::class,
             \App\Http\Middleware\ContentSecurityPolicy::class,
+            \App\Http\Middleware\SecurityHeaders::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
+               \App\Http\Middleware\SessionTimeout::class,
             // ...other middleware...
         ],
 
         'api' => [
             'throttle:api',
+            \App\Http\Middleware\SecurityHeaders::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];

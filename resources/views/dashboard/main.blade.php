@@ -3852,7 +3852,10 @@ if (!document.getElementById('catListTooltip')) {
 			<div class="st-region-modal-dialog">
 				<div class="st-region-modal-header">
 					<h5 id="region-titles-modal-title">Region</h5>
-					<button type="button" class="st-region-modal-close" onclick="window.closeRegionTitlesModal && window.closeRegionTitlesModal()">&times;</button>
+					<div style="display:flex; gap:8px; align-items:center;">
+						<button class="masterdata-btn masterdata-btn-secondary" id="region-titles-export-btn" style="font-weight:700;">Export</button>
+						<button type="button" class="st-region-modal-close" onclick="window.closeRegionTitlesModal && window.closeRegionTitlesModal()">&times;</button>
+					</div>
 				</div>
 				<div id="region-titles-modal-body" class="st-region-modal-body"></div>
 			</div>
@@ -4022,9 +4025,41 @@ if (!document.getElementById('catListTooltip')) {
 			if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
 				return DOMPurify.sanitize(src);
 			}
-			return String(src)
-				.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-				.replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^>\s]+)/gi, '');
+			// Fallback sanitizer: parse and strip disallowed nodes/attributes using DOM APIs
+			try {
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(String(src), 'text/html');
+				const ALLOWED_TAGS = new Set(['a','b','i','strong','em','u','br','p','ul','ol','li','span','div','img','table','thead','tbody','tr','td','th','caption']);
+				const ALLOWED_ATTRS = new Set(['href','src','alt','title','class','id','colspan','rowspan']);
+				function isSafeUrl(url) {
+					if (!url) return false;
+					try { const u = new URL(url, window.location.href); return u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'mailto:'; } catch (e) { return false; }
+				}
+				function cleanNode(node) {
+					if (node.nodeType === Node.TEXT_NODE) return;
+					if (node.nodeType !== Node.ELEMENT_NODE) { node.remove(); return; }
+					const tag = node.tagName.toLowerCase();
+					if (!ALLOWED_TAGS.has(tag)) { // replace disallowed tags with their text content
+						const txt = document.createTextNode(node.textContent || '');
+						node.parentNode.replaceChild(txt, node);
+						return;
+					}
+					// remove dangerous attributes
+					[...node.attributes].forEach(attr => {
+						const name = attr.name.toLowerCase();
+						const val = attr.value || '';
+						if (!ALLOWED_ATTRS.has(name)) { node.removeAttribute(attr.name); return; }
+						if ((name === 'href' || name === 'src') && !isSafeUrl(val)) { node.removeAttribute(attr.name); }
+					});
+					// recurse
+					Array.from(node.childNodes).forEach(child => cleanNode(child));
+				};
+				Array.from(doc.body.childNodes).forEach(child => cleanNode(child));
+				return doc.body.innerHTML || '';
+			} catch (e) {
+				// Last-resort: escape everything
+				return (String(src) || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+			}
 		}
 		function truthy(v) {
 			if (typeof v === 'boolean') return v;
@@ -5561,6 +5596,7 @@ $('#region-select-modal').on('change', function() {
 			} else {
 				let html = '<div class="st-summary-modal-toolbar">';
 				html += '<div class="st-summary-modal-meta">' + rows.length + ' matching records</div>';
+				html += '<div class="st-summary-modal-actions"><button class="masterdata-btn masterdata-btn-secondary" id="st-summary-export-btn">Export Titles</button></div>';
 				html += '</div>';
 				html += '<div class="st-summary-table-wrap">';
 				html += '<table class="st-summary-table">';
@@ -5578,6 +5614,33 @@ $('#region-select-modal').on('change', function() {
 				html += '</tbody></table></div>';
 				bodyEl.innerHTML = sanitizeHtml(html);
 				modal._rows = rows;
+				try {
+					var exportBtn = document.getElementById('st-summary-export-btn');
+					if (exportBtn) {
+						exportBtn.addEventListener('click', function(){
+							try {
+								var rows = (modal._rows || []);
+								var header = '"ST Title","Region","Province","City/Municipality","Year of MOA"';
+								var csvLines = [header];
+								rows.forEach(function(r){
+									var cols = [r.title||'', r.region||'', r.province||'', r.municipality||'', r.year_of_moa||''];
+									var safeCols = cols.map(function(c){ return '"' + (String(c).replace(/"/g,'""')) + '"'; });
+									csvLines.push(safeCols.join(','));
+								});
+								var csv = csvLines.join('\r\n');
+								var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+								var url = URL.createObjectURL(blob);
+								var a = document.createElement('a');
+								a.href = url;
+								var safeFile = (titleEl && titleEl.textContent ? titleEl.textContent.replace(/[^a-z0-9]+/gi, '_') : 'st_titles');
+								a.download = safeFile + '.csv';
+								document.body.appendChild(a);
+								a.click();
+								setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+							} catch(e) { console.error('st-summary export failed', e); }
+						});
+					}
+				} catch(e) { console.error('attach export handler failed', e); }
 				setTimeout(function(){
 					try {
 						const table = bodyEl.querySelector('.st-summary-table');
@@ -5767,8 +5830,36 @@ $('#region-select-modal').on('change', function() {
 								html += '</div>';
 								html += '</div>';
 							});
-							bodyEl.innerHTML = sanitizeHtml(html);
-							modal._rows = rows;
+										bodyEl.innerHTML = sanitizeHtml(html);
+										modal._rows = rows;
+										// attach export handler for region titles
+										try {
+											var regionExportBtn = document.getElementById('region-titles-export-btn');
+											if (regionExportBtn) {
+												regionExportBtn.addEventListener('click', function(){
+													try {
+														var dataRows = modal._rows || [];
+														var header = '"ST Title","Region","Province","City/Municipality","Year of MOA"';
+														var csvLines = [header];
+														dataRows.forEach(function(r){
+															var cols = [r.title||'', r.region||'', r.province||'', r.municipality||'', r.year_of_moa||''];
+															var safeCols = cols.map(function(c){ return '"' + (String(c).replace(/"/g,'""')) + '"'; });
+															csvLines.push(safeCols.join(','));
+														});
+														var csv = csvLines.join('\r\n');
+														var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+														var url = URL.createObjectURL(blob);
+														var a = document.createElement('a');
+														a.href = url;
+														var safeFile = (titleEl && titleEl.textContent ? titleEl.textContent.replace(/[^a-z0-9]+/gi, '_') : 'region_titles');
+														a.download = safeFile + '.csv';
+														document.body.appendChild(a);
+														a.click();
+														setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+													} catch(e) { console.error('region titles export failed', e); }
+												});
+											}
+										} catch(e) { console.error('attach region export handler failed', e); }
 							setTimeout(function(){
 								const items = bodyEl.querySelectorAll('.st-region-title-item');
 								items.forEach(function(it){

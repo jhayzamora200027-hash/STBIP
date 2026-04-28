@@ -8,6 +8,7 @@ use App\Models\Selectdocslogs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -195,13 +196,40 @@ class SocialTechnologyController extends Controller
                     $existing->fill(array_merge($existing->toArray(), $rowData));
                     $existing->updatedby = $userName;
                     $existing->save();
+                    if (Schema::hasTable('social_technology_logs')) {
+                        try {
+                            DB::table('social_technology_logs')->insert([
+                                'action' => 'import-update',
+                                'performed_by' => $userName,
+                                'details' => json_encode(['social_technology' => $titleVal, 'id' => $existing->id]),
+                                'social_technology_title_id' => $existing->id,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        } catch (\Throwable $e) {
+                            // best-effort: don't block import on logging failure
+                        }
+                    }
                     $updated++;
                 } else {
                     $createData = $rowData;
                     $createData['social_technology'] = $titleVal;
                     $createData['createdby'] = $userName;
                     $createData['updatedby'] = $userName;
-                    SocialTechnologyTitle::create($createData);
+                    $created = SocialTechnologyTitle::create($createData);
+                    if (Schema::hasTable('social_technology_logs')) {
+                        try {
+                            DB::table('social_technology_logs')->insert([
+                                'action' => 'import-create',
+                                'performed_by' => $userName,
+                                'details' => json_encode(['social_technology' => $titleVal, 'id' => $created->id]),
+                                'social_technology_title_id' => $created->id,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        } catch (\Throwable $e) {
+                        }
+                    }
                     $added++;
                 }
             }
@@ -240,11 +268,24 @@ class SocialTechnologyController extends Controller
         foreach ($submitted as $title) {
             $exists = SocialTechnologyTitle::query()->where('social_technology', $title)->exists();
             if ($exists) continue;
-            SocialTechnologyTitle::create([
+            $created = SocialTechnologyTitle::create([
                 'social_technology' => $title,
                 'createdby' => Auth::check() ? Auth::user()->name : null,
                 'updatedby' => Auth::check() ? Auth::user()->name : null,
             ]);
+            if (Schema::hasTable('social_technology_logs')) {
+                try {
+                    DB::table('social_technology_logs')->insert([
+                        'action' => 'create',
+                        'performed_by' => Auth::check() ? Auth::user()->name : null,
+                        'details' => json_encode(['social_technology' => $title, 'id' => $created->id]),
+                        'social_technology_title_id' => $created->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } catch (\Throwable $e) {
+                }
+            }
             $added++;
         }
 
@@ -384,6 +425,20 @@ class SocialTechnologyController extends Controller
         $saved = $item->save();
         Log::info('SocialTechnology save result', ['id' => $id, 'saved' => $saved]);
 
+        if (Schema::hasTable('social_technology_logs')) {
+            try {
+                DB::table('social_technology_logs')->insert([
+                    'action' => 'update',
+                    'performed_by' => Auth::check() ? Auth::user()->name : null,
+                    'details' => json_encode(['social_technology' => $title, 'id' => $item->id]),
+                    'social_technology_title_id' => $item->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+            }
+        }
+
         if ($request->ajax()) {
             return response()->json(['message' => 'Updated.']);
         }
@@ -399,6 +454,20 @@ class SocialTechnologyController extends Controller
                 return response()->json(['message' => 'Title not found.'], 404);
             }
             return redirect()->route('STDashboard')->with('error', 'Title not found.');
+        }
+
+        if (Schema::hasTable('social_technology_logs')) {
+            try {
+                DB::table('social_technology_logs')->insert([
+                    'action' => 'delete',
+                    'performed_by' => Auth::check() ? Auth::user()->name : null,
+                    'details' => json_encode(['social_technology' => $item->social_technology, 'id' => $item->id]),
+                    'social_technology_title_id' => $item->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+            }
         }
 
         $item->delete();

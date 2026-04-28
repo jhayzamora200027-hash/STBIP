@@ -137,15 +137,48 @@ class TableController extends Controller
             if (!$this->isValidIdentifier($table) || !$this->isValidIdentifier($column) || !$this->isAllowedType($type)) {
                 return response()->json(['success' => false, 'message' => 'Invalid table/column/type']);
             }
-            // Use schema builder to add column when possible (best-effort)
-            Schema::table($table, function (\Illuminate\Database\Schema\Blueprint $t) use ($column, $type, $nullable) {
-                // Basic mapping handled by existing helper
-                $laravelType = 'string';
-                // Fallback: perform raw alter only if absolutely necessary
-            });
-            // Fallback raw statement if schema builder couldn't be used for provided type
-            $sql = "ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$type} {$nullable}";
-            DB::statement($sql);
+            try {
+                $tType = strtoupper(trim($type));
+                Schema::table($table, function (\Illuminate\Database\Schema\Blueprint $t) use ($column, $tType, $nullable) {
+                    $col = null;
+                    if (preg_match('/^VARCHAR\((\d+)\)$/i', $tType, $m)) {
+                        $col = $t->string($column, (int)$m[1]);
+                    } elseif (preg_match('/^CHAR\((\d+)\)$/i', $tType, $m)) {
+                        $col = $t->char($column, (int)$m[1]);
+                    } elseif (preg_match('/^DECIMAL\((\d+),(\d+)\)$/i', $tType, $m)) {
+                        $col = $t->decimal($column, (int)$m[1], (int)$m[2]);
+                    } elseif (stripos($tType, 'INT') !== false) {
+                        $col = $t->integer($column);
+                    } elseif (stripos($tType, 'BIGINT') !== false) {
+                        $col = $t->bigInteger($column);
+                    } elseif (stripos($tType, 'TEXT') !== false) {
+                        $col = $t->text($column);
+                    } elseif (stripos($tType, 'DATE') !== false && stripos($tType, 'DATETIME') === false) {
+                        $col = $t->date($column);
+                    } elseif (stripos($tType, 'DATETIME') !== false || stripos($tType, 'TIMESTAMP') !== false) {
+                        $col = $t->dateTime($column);
+                    } elseif (stripos($tType, 'BOOLEAN') !== false) {
+                        $col = $t->boolean($column);
+                    } else {
+                        $col = $t->string($column);
+                    }
+
+                    if ($col && strtoupper(trim($nullable)) === 'NULL') {
+                        try { $col->nullable(); } catch (\Throwable $_) {}
+                    }
+                });
+            } catch (\Throwable $ex) {
+                if (!$this->isValidIdentifier($table) || !$this->isValidIdentifier($column) || !$this->isAllowedType($type)) {
+                    throw $ex;
+                }
+                $sql = "ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$type} {$nullable}";
+                try {
+                    DB::statement($sql);
+                } catch (\Throwable $_ex) {
+                    Log::error('Raw ALTER TABLE failed', ['sql' => $sql, 'error' => $_ex->getMessage()]);
+                    throw $_ex;
+                }
+            }
 
             $writer = new MigrationWriter();
             $laravelType = $this->mapSqlTypeToLaravel($type);
@@ -213,8 +246,24 @@ class TableController extends Controller
             if (!in_array($column, Schema::getColumnListing($table))) {
                 return response()->json(['success' => false, 'message' => "Column '{$column}' does not exist in table '{$table}'."]);
             }
-            $sql = "ALTER TABLE `{$table}` DROP COLUMN `{$column}`";
-            DB::statement($sql);
+            // Drop column using Schema builder (preferred)
+            try {
+                Schema::table($table, function (\Illuminate\Database\Schema\Blueprint $t) use ($column) {
+                    $t->dropColumn($column);
+                });
+            } catch (\Throwable $ex) {
+                // Fallback to validated raw statement if schema builder fails
+                if (!$this->isValidIdentifier($table) || !$this->isValidIdentifier($column)) {
+                    throw $ex;
+                }
+                $sql = "ALTER TABLE `{$table}` DROP COLUMN `{$column}`";
+                try {
+                    DB::statement($sql);
+                } catch (\Throwable $_ex) {
+                    Log::error('Raw DROP COLUMN failed', ['sql' => $sql, 'error' => $_ex->getMessage()]);
+                    throw $_ex;
+                }
+            }
 
             $writer = new MigrationWriter();
             $up = "Schema::table('$table', function (Blueprint $table) {\n    \$table->dropColumn('$column');\n});";
