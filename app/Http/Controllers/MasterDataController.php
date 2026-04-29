@@ -425,7 +425,11 @@ class MasterDataController extends Controller
                 } elseif (str_contains($snorm, 'dissolved') || str_contains($snorm, 'inactive') || str_contains($snorm, 'completed')) {
                     $status = 'dissolved';
                 } else {
-                    $status = $snorm;
+                    // Unknown or free-text status values are not valid for the
+                    // DB enum (allowed: 'ongoing','dissolved'). Store null
+                    // and record the raw value for review instead of trying
+                    // to persist arbitrary strings which causes SQL truncation.
+                    $status = null;
                 }
             }
             if ($status === null && $statusRaw !== '') {
@@ -835,9 +839,11 @@ class MasterDataController extends Controller
                 if (str_contains($snorm, 'ongoing') || $snorm === 'on going') {
                     $status = 'ongoing';
                 } elseif (str_contains($snorm, 'dissolved') || str_contains($snorm, 'inactive') || str_contains($snorm, 'completed')) {
-                    $status = 'inactive';
+                    $status = 'dissolved';
                 } else {
-                    $status = $snorm;
+                    // Unknown status values should not be written into the enum
+                    // column. Use null and record the raw value for review.
+                    $status = null;
                 }
             }
             if ($status === null && $statusRaw !== '') {
