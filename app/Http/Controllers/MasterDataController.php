@@ -320,7 +320,6 @@ class MasterDataController extends Controller
         $skipped = 0;
         $warnings = [];
         $statusIssues = [];
-        $statusIssues = [];
 
         $sampleRows = array_slice($rows, $headerIndex, 10);
         $debugSample = ['header_index' => $headerIndex, 'map' => $map, 'rows' => []];
@@ -794,6 +793,7 @@ class MasterDataController extends Controller
         $updated = 0;
         $skipped = 0;
         $warnings = [];
+        $statusIssues = [];
 
         $dataRows = array_slice($rows, $headerIndex);
 
