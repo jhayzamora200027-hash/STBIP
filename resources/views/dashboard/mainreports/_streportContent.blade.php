@@ -97,6 +97,26 @@ try {
                 </div>
             </div>`;
         document.body.insertAdjacentHTML('beforeend', sanitizeHtml(tpl));
+        // Inject responsive CSS for small screens to ensure the ST details and listing fit mobile viewports
+        try {
+            const mobileCss = `
+                @media (max-width: 767px) {
+                    #rsm-st-details-modal > div { max-width: calc(100% - 32px) !important; margin: 12px !important; }
+                    #rsm-st-details-modal #rsm-st-details-body { padding: 12px !important; max-height: 60vh !important; }
+                    .rsm-st-details { margin-left: 0 !important; border-left: none !important; padding-left: 0 !important; }
+                    .rsm-st-summary-row { gap: 8px !important; padding: 8px !important; }
+                    .rsm-st-summary-row > div:first-child { min-width: unset !important; }
+                    .rsm-st-detail-row { font-size: 0.95rem !important; }
+                    .rsm-st-summary-row, .rsm-st-detail-row { flex-wrap: wrap !important; }
+                    .rsm-empty { padding: 10px 6px !important; }
+                }
+            `;
+            const styleEl = document.createElement('style');
+            styleEl.setAttribute('data-rsm-mobile-fix', '1');
+            styleEl.appendChild(document.createTextNode(mobileCss));
+            (document.head || document.getElementsByTagName('head')[0] || document.documentElement).appendChild(styleEl);
+        } catch (e) { console.warn('[RSM] mobile CSS injection failed', e); }
+
         document.getElementById('rsm-st-details-close').addEventListener('click', function(){ document.getElementById('rsm-st-details-modal').style.display='none'; try{ document.body.style.overflow=''; }catch(e){} });
     })();
 } catch(e) {}
