@@ -63,7 +63,7 @@ class MainReportController extends Controller
         $userNames = [];
         $userIds = $attachments->pluck('created_by')->filter()->unique()->values();
         if ($userIds->isNotEmpty()) {
-            $userNames = User::whereIn('user_id', $userIds)->pluck('name', 'user_id')->toArray();
+            $userNames = User::whereIn('id', $userIds->all())->pluck('name', 'id')->toArray();
         }
 
         $attachmentMap = [];

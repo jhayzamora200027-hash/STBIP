@@ -1401,8 +1401,8 @@ class MasterDataController extends Controller
         $userIds = $attachments->pluck('created_by')->filter()->unique()->values();
         if ($userIds->isNotEmpty()) {
             $userNames = User::query()
-                ->whereIn('user_id', $userIds)
-                ->pluck('name', 'user_id')
+                ->whereIn('id', $userIds->all())
+                ->pluck('name', 'id')
                 ->toArray();
         }
 
