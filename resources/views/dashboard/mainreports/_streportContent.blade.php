@@ -1075,6 +1075,7 @@ function showReplicateConfirmPopover(targetEl, stInfo = {}) {
         pop.style.transform = 'translateY(-6px) scale(0.98)';
         pop.style.transition = 'opacity 160ms ease, transform 160ms ease';
 
+        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         pop.innerHTML = sanitizeHtml(`<div class="rp-msg">Replicate "${esc(title||'')}"?</div><div class="rp-actions"><button class="rp-confirm">Confirm</button><button class="rp-cancel">Cancel</button></div>`);
         document.body.appendChild(pop);
         try {
