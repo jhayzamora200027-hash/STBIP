@@ -1219,6 +1219,12 @@
             const approvalActionButtons = document.getElementById('approvalActionButtons');
             if (approvalActionButtons && approvalActionButtonsHtml) {
                 approvalActionButtons.innerHTML = sanitizeHtml(approvalActionButtonsHtml);
+
+                // Reattach event listeners since sanitizer strips inline onclick attributes
+                const approveBtn = approvalActionButtons.querySelector('.approvals-approve-btn');
+                const rejectBtn = approvalActionButtons.querySelector('.approvals-reject-btn');
+                if (approveBtn) { approveBtn.addEventListener('click', () => submitApproval('A')); }
+                if (rejectBtn) { rejectBtn.addEventListener('click', showRejectionModal); }
             }
 
             if (userDetailsModal) {
@@ -1234,6 +1240,10 @@
             const rejectionForm = document.getElementById('rejectionForm');
             if (rejectionForm && rejectionFormHtml) {
                 rejectionForm.innerHTML = sanitizeHtml(rejectionFormHtml);
+
+                // Reattach submission handler because sanitizer removes inline onclick
+                const submitRejectBtn = rejectionForm.querySelector('.approvals-reject-btn');
+                if (submitRejectBtn) { submitRejectBtn.addEventListener('click', () => submitApproval('R')); }
             }
 
             const rejectionReason = document.getElementById('rejectionReason');

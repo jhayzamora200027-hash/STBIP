@@ -2063,26 +2063,54 @@
         <!-- Idle timeout modal -->
         <div class="modal fade" id="idleTimeoutModal" tabindex="-1" aria-labelledby="idleTimeoutModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="idleTimeoutModalLabel">Session expiring soon</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-2">For your security, your session will expire due to inactivity.</p>
-                        <div class="d-flex align-items-center gap-3 mb-2">
-                                <div style="flex:1">
-                                        <div class="progress" style="height:10px; border-radius:6px; overflow:hidden; background:#e9ecef;">
-                                                <div id="idleProgressBar" class="progress-bar" role="progressbar" style="width:100%; background:#0d6efd; transition:width 0.5s linear;"></div>
-                                        </div>
-                                </div>
-                                <div style="min-width:110px; text-align:right; font-weight:600; color:#333;" id="idleTimeRemaining">00:30</div>
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="idleTimeoutModalLabel">Session expiring soon</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <p class="small text-muted mb-0">You can stay signed in to continue your work. Otherwise you'll be logged out automatically.</p>
+                        <div class="modal-body">
+                            <p class="mb-2">For your security, your session will expire due to inactivity.</p>
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                    <div style="flex:1">
+                                            <div class="progress" style="height:10px; border-radius:6px; overflow:hidden; background:#e9ecef;">
+                                                    <div id="idleProgressBar" class="progress-bar" role="progressbar" style="width:100%; background:#0d6efd; transition:width 0.5s linear;"></div>
+                                            </div>
+                                    </div>
+                                    <div style="min-width:110px; text-align:right; font-weight:600; color:#333;" id="idleTimeRemaining">00:30</div>
+                            </div>
+                            <p class="small text-muted mb-0">Please continue your activity. Otherwise you'll be logged out automatically.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" id="idleStayBtn" class="btn btn-outline-primary">Stay Logged In</button>
+                            <button type="button" id="idleLogoutBtn" class="btn btn-danger">Logout Now</button>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+            <!-- Session expired modal (replaces full-page 419) -->
+            <div class="modal fade" id="idleExpiredModal" tabindex="-1" aria-labelledby="idleExpiredModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 bg-transparent">
+                        <div class="card shadow-lg mx-auto" style="max-width:720px;border-radius:18px;">
+                            <div class="card-body text-center py-5 px-4">
+                                <div class="mb-3 d-inline-flex align-items-center justify-content-center" style="width:86px;height:86px;border-radius:50%;background:linear-gradient(135deg,#10aeb5,#1de9b6);box-shadow:0 14px 40px rgba(29,233,182,0.14);">
+                                    <span style="font-size:1.8rem;color:#ffffff;font-weight:700;">419</span>
+                                </div>
+                                <h4 class="mt-3 mb-2" id="idleExpiredModalLabel" style="font-weight:700;color:#0f172a;">Session Expired</h4>
+                                <p class="text-muted mb-4" style="max-width:580px;margin:0 auto;">Your session has expired or you logged out in another tab. Sign in again to continue uploading attachments or using the dashboard.</p>
+
+                                <div class="d-flex justify-content-center gap-3 mt-4">
+                                    <a href="{{ route('main') }}" id="idleExpiredLoginBtn" class="btn btn-primary btn-lg" style="background:linear-gradient(90deg,#10aeb5,#1de9b6);border:none;border-radius:999px;padding:12px 28px;font-weight:700;box-shadow:0 8px 28px rgba(16,174,181,0.22);">Go to Login / Home</a>
+                                    <button type="button" id="idleExpiredLogoutBtn" class="btn btn-outline-secondary btn-lg" style="border-radius:999px;padding:12px 26px;font-weight:600;border:2px solid rgba(15,23,42,0.08);">Logout</button>
+                                </div>
+
+                                <div class="mt-3 small text-muted">If you'd like to keep working, re-authenticate using the button above.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
     <form id="idleLogoutForm" action="{{ route('logout') }}" method="POST" style="display:none;">
         @csrf
@@ -2101,6 +2129,10 @@
             var logoutBtn = document.getElementById('idleLogoutBtn');
             var progressBar = document.getElementById('idleProgressBar');
             var timeLabel = document.getElementById('idleTimeRemaining');
+            var expiredEl = document.getElementById('idleExpiredModal');
+            var bsExpiredModal = (expiredEl && typeof bootstrap !== 'undefined') ? new bootstrap.Modal(expiredEl, {backdrop: 'static', keyboard: false}) : null;
+            var expiredLogoutBtn = document.getElementById('idleExpiredLogoutBtn');
+            var expiredLoginBtn = document.getElementById('idleExpiredLoginBtn');
 
             function clearTimers(){
                 if(idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
@@ -2138,11 +2170,16 @@
 
             function expireSession(){
                 clearTimers();
-                var form = document.getElementById('idleLogoutForm');
-                if (form) {
-                    form.submit();
+                // hide warning modal if showing
+                try { if (bsModal) bsModal.hide(); } catch(e){}
+                // show expired modal to the user instead of redirecting immediately
+                if (bsExpiredModal) {
+                    bsExpiredModal.show();
                 } else {
-                    window.location.href = '/login?expired=1';
+                    // fallback: perform logout redirect
+                    var form = document.getElementById('idleLogoutForm');
+                    if (form) { form.submit(); }
+                    else { window.location.href = '/login?expired=1'; }
                 }
             }
 
@@ -2170,6 +2207,14 @@
 
             if (stayBtn) stayBtn.addEventListener('click', function(){ keepAliveThenHide(); if (bsModal) bsModal.hide(); });
             if (logoutBtn) logoutBtn.addEventListener('click', function(){ expireSession(); });
+            if (expiredLogoutBtn) expiredLogoutBtn.addEventListener('click', function(){
+                var form = document.getElementById('idleLogoutForm');
+                if (form) form.submit(); else window.location.href = '/login?expired=1';
+            });
+            if (expiredLoginBtn) expiredLoginBtn.addEventListener('click', function(){
+                // default anchor will navigate; ensure any open modal is hidden
+                try { if (bsExpiredModal) bsExpiredModal.hide(); } catch(e){}
+            });
 
             ['mousemove','keydown','click','touchstart'].forEach(function(evt){
                 document.addEventListener(evt, resetTimers, true);
