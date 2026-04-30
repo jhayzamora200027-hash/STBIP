@@ -1535,6 +1535,12 @@ class MasterDataController extends Controller
 
     private function validateRegionItem(Request $request): array
     {
+        // Normalize common inputs to avoid validation failures caused by
+        // leading/trailing whitespace or non-string values (e.g. from datalist).
+        if ($request->has('title')) {
+            $request->merge(['title' => trim((string) $request->input('title'))]);
+        }
+
         return $request->validate([
             'region_id' => ['required', 'exists:regions,id'],
             'title' => ['required', 'string', 'max:255', 'exists:social_technology_titles,social_technology'],
