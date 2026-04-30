@@ -62,66 +62,73 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::rename('region_item_histories', 'region_item_histories_old');
-
-        Schema::create('region_item_histories', function (Blueprint $table) use ($includeDeleteAction) {
-            $table->id();
-            $regionItemColumn = $table->foreignId('region_item_id');
-            if ($includeDeleteAction) {
-                $regionItemColumn->nullable();
-            }
-            $regionItemColumn->constrained('region_items')->{$includeDeleteAction ? 'nullOnDelete' : 'cascadeOnDelete'}();
-
-            $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();
-            $table->string('region_name')->nullable();
-            $table->string('st_title');
-            $table->string('province')->nullable();
-            $table->string('city')->nullable();
-            $table->string('updated_by')->nullable();
-            $table->string('action');
-            $table->text('update_row')->nullable();
-            $table->timestamps();
-
-            $table->index('created_at');
-            $table->index(['action', 'created_at']);
-        });
-
-        $query = DB::table('region_item_histories_old')->select([
-            'id',
-            'region_item_id',
-            'region_id',
-            'region_name',
-            'st_title',
-            'province',
-            'city',
-            'updated_by',
-            'action',
-            'update_row',
-            'created_at',
-            'updated_at',
-        ]);
-
-        if (!$includeDeleteAction) {
-            $query->whereNotNull('region_item_id')
-                ->whereIn('action', ['add', 'update']);
+        if (!Schema::hasTable('region_item_histories_old') && Schema::hasTable('region_item_histories')) {
+            Schema::rename('region_item_histories', 'region_item_histories_old');
         }
 
-        DB::table('region_item_histories')->insertUsing([
-            'id',
-            'region_item_id',
-            'region_id',
-            'region_name',
-            'st_title',
-            'province',
-            'city',
-            'updated_by',
-            'action',
-            'update_row',
-            'created_at',
-            'updated_at',
-        ], $query);
+        if (!Schema::hasTable('region_item_histories')) {
+            Schema::create('region_item_histories', function (Blueprint $table) use ($includeDeleteAction) {
+                $table->id();
+                $regionItemColumn = $table->foreignId('region_item_id');
+                if ($includeDeleteAction) {
+                    $regionItemColumn->nullable();
+                }
+                $regionItemColumn->constrained('region_items')->{$includeDeleteAction ? 'nullOnDelete' : 'cascadeOnDelete'}();
 
-        Schema::drop('region_item_histories_old');
+                $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();
+                $table->string('region_name')->nullable();
+                $table->string('st_title');
+                $table->string('province')->nullable();
+                $table->string('city')->nullable();
+                $table->string('updated_by')->nullable();
+                $table->string('action');
+                $table->text('update_row')->nullable();
+                $table->timestamps();
+
+                $table->index('created_at');
+                $table->index(['action', 'created_at']);
+            });
+
+            if (Schema::hasTable('region_item_histories_old')) {
+                $query = DB::table('region_item_histories_old')->select([
+                    'id',
+                    'region_item_id',
+                    'region_id',
+                    'region_name',
+                    'st_title',
+                    'province',
+                    'city',
+                    'updated_by',
+                    'action',
+                    'update_row',
+                    'created_at',
+                    'updated_at',
+                ]);
+
+                if (!$includeDeleteAction) {
+                    $query->whereNotNull('region_item_id')
+                        ->whereIn('action', ['add', 'update']);
+                }
+
+                DB::table('region_item_histories')->insertUsing([
+                    'id',
+                    'region_item_id',
+                    'region_id',
+                    'region_name',
+                    'st_title',
+                    'province',
+                    'city',
+                    'updated_by',
+                    'action',
+                    'update_row',
+                    'created_at',
+                    'updated_at',
+                ], $query);
+
+                Schema::dropIfExists('region_item_histories_old');
+            }
+        }
+
         Schema::enableForeignKeyConstraints();
     }
 };
