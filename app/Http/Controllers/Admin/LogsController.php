@@ -14,7 +14,9 @@ class LogsController extends Controller
         $perPage = 50;
 
         $results = collect();
-        $gather = function (string $table, string $moduleName, array $mapping = []) use (&$results) {
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+
+        $gather = function (string $table, string $moduleName, array $mapping = []) use (&$results, $isSqlite) {
             if (!DB::getSchemaBuilder()->hasTable($table)) return;
             $cols = DB::getSchemaBuilder()->getColumnListing($table);
 
@@ -60,7 +62,11 @@ class LogsController extends Controller
                 $qd = $quote($detailsCol);
                 if ($qd) {
                     if ($detailsCol === 'excelname') {
-                        $selects[] = DB::raw("CONCAT('excel:', {$qd}) as details");
+                        if ($isSqlite) {
+                            $selects[] = DB::raw("'excel:' || {$qd} as details");
+                        } else {
+                            $selects[] = DB::raw("CONCAT('excel:', {$qd}) as details");
+                        }
                     } else {
                         $selects[] = DB::raw("{$qd} as details");
                     }
@@ -101,13 +107,19 @@ class LogsController extends Controller
             if (DB::getSchemaBuilder()->hasTable('approval_histories')) {
                 $q = DB::table('approval_histories')->leftJoin('users', 'approval_histories.user_id', '=', 'users.id');
                 $q->selectRaw('? as module', ['user_approval']);
+                if ($isSqlite) {
+                    $detailsExpr = "approval_histories.applicant_email || (CASE WHEN approval_histories.rejection_reason IS NOT NULL AND approval_histories.rejection_reason <> '' THEN ' -- ' || approval_histories.rejection_reason ELSE '' END) as details";
+                } else {
+                    $detailsExpr = "CONCAT(approval_histories.applicant_email, IF(approval_histories.rejection_reason IS NOT NULL AND approval_histories.rejection_reason <> '', CONCAT(' -- ', approval_histories.rejection_reason), '')) as details";
+                }
+
                 $q->addSelect([
                     DB::raw('approval_histories.id as id'),
                     DB::raw('approval_histories.action as action'),
                     // prefer reviewer name stored in table, then users.name, otherwise user_id
                     DB::raw("COALESCE(approval_histories.reviewed_by_name, users.name, approval_histories.user_id) as user_id"),
                     // details: show applicant email and include rejection reason when present
-                    DB::raw("CONCAT(approval_histories.applicant_email, IF(approval_histories.rejection_reason IS NOT NULL AND approval_histories.rejection_reason <> '', CONCAT(' -- ', approval_histories.rejection_reason), '')) as details"),
+                    DB::raw($detailsExpr),
                     DB::raw('approval_histories.created_at as created_at'),
                 ]);
                 $results = $results->concat($q->get());
