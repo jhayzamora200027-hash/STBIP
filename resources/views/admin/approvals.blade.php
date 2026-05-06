@@ -1220,7 +1220,6 @@
             if (approvalActionButtons && approvalActionButtonsHtml) {
                 approvalActionButtons.innerHTML = sanitizeHtml(approvalActionButtonsHtml);
 
-                // Reattach event listeners since sanitizer strips inline onclick attributes
                 const approveBtn = approvalActionButtons.querySelector('.approvals-approve-btn');
                 const rejectBtn = approvalActionButtons.querySelector('.approvals-reject-btn');
                 if (approveBtn) { approveBtn.addEventListener('click', () => submitApproval('A')); }

@@ -1405,8 +1405,181 @@
 			if (yearInput) yearInput.value = year;
 			if (fileInput) fileInput.value = '';
 
+			// remember the opener for popover feedback
+			try { window._lastSTUploadButton = button; } catch (e) {}
 			bootstrap.Modal.getOrCreateInstance(modalEl).show();
 		}
+
+		// AJAX submit handler for masterdata attachment upload
+		document.addEventListener('DOMContentLoaded', function () {
+			var form = document.getElementById('masterdataAttachmentForm');
+			if (!form) return;
+			// immediate file size validation on change
+			var mdFileInput = document.getElementById('masterdataAttachmentFile');
+			if (mdFileInput) {
+				mdFileInput.addEventListener('change', function () {
+					var maxBytes = 30 * 1024 * 1024;
+					var submitBtn = document.getElementById('masterdataAttachmentSubmitBtn');
+					if (mdFileInput.files && mdFileInput.files.length > 0 && mdFileInput.files[0].size > maxBytes) {
+						var opener = window._lastSTUploadButton;
+						var msg = 'File too large. Max 30MB.';
+						if (opener) {
+							try { var p = new bootstrap.Popover(opener, {content: msg, trigger: 'manual', placement: 'top'}); p.show(); setTimeout(function () { p.hide(); p.dispose(); }, 3000); } catch (e) { alert(msg); }
+						} else { alert(msg); }
+						if (submitBtn) submitBtn.disabled = true;
+					} else {
+						if (submitBtn) submitBtn.disabled = false;
+					}
+				});
+			}
+			form.addEventListener('submit', function (e) {
+				e.preventDefault();
+				var submitBtn = document.getElementById('masterdataAttachmentSubmitBtn');
+				var modalEl = document.getElementById('masterdataAttachmentUploadModal');
+				var modalInstance = bootstrap.Modal.getInstance(modalEl);
+				if (submitBtn) submitBtn.disabled = true;
+				var origText = submitBtn ? submitBtn.innerHTML : null;
+				if (submitBtn) submitBtn.innerHTML = 'Uploading...';
+				// client-side size check (30MB)
+				var fileInput = document.getElementById('masterdataAttachmentFile');
+				var maxBytes = 30 * 1024 * 1024;
+				if (fileInput && fileInput.files && fileInput.files.length > 0) {
+					if (fileInput.files[0].size > maxBytes) {
+						var opener = window._lastSTUploadButton;
+						var message = 'File too large. Max 30MB.';
+						if (opener) {
+							try {
+								var pop = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'});
+								pop.show();
+								setTimeout(function () { pop.hide(); pop.dispose(); }, 3500);
+							} catch (e) {
+								alert(message);
+							}
+						} else {
+							alert(message);
+						}
+						if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; }
+						return;
+					}
+				}
+
+				// client-side size check (already done earlier) and then use XHR for progress
+				var fd = new FormData(form);
+				var progressWrap = document.getElementById('masterdataAttachmentProgress');
+				var progressBar = progressWrap ? progressWrap.querySelector('.progress-bar') : null;
+				if (progressWrap) { progressWrap.style.display = 'block'; if (progressBar) progressBar.style.width = '0%'; }
+
+				var xhr = new XMLHttpRequest();
+				xhr.open('POST', form.action, true);
+				xhr.withCredentials = true;
+				xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+				xhr.upload.onprogress = function (e) {
+					try {
+						var fileSize = 0;
+						try { fileSize = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0].size : 0; } catch (_) { fileSize = 0; }
+						var total = (e.lengthComputable && e.total) ? e.total : (fileSize || 0);
+						if (progressBar) {
+							if (e.lengthComputable || total > 0) {
+								var pct = Math.round((e.loaded / total) * 100);
+								if (!isFinite(pct) || pct < 0) pct = 0;
+								if (pct > 100) pct = 100;
+								progressBar.style.width = pct + '%';
+								progressBar.setAttribute('aria-valuenow', pct);
+								progressBar.textContent = pct + '%';
+								progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+							} else {
+								progressBar.style.width = '40%';
+								progressBar.classList.add('progress-bar-striped', 'progress-bar-animated');
+								progressBar.removeAttribute('aria-valuenow');
+							}
+						}
+					} catch (err) { console.log('progress handler error', err); }
+				};
+
+				xhr.onload = function () {
+					try { if (progressBar) progressBar.style.width = '100%'; } catch (e) {}
+					if (xhr.status >= 200 && xhr.status < 300) {
+						var data = {};
+						try { data = JSON.parse(xhr.responseText); } catch (e) {}
+						if (data.success) {
+							if (modalInstance) modalInstance.hide();
+							var opener = window._lastSTUploadButton;
+							try {
+								if (opener) {
+									var wrapper = opener.closest('.masterdata-attachment-actions') || opener.parentElement;
+									// preserve data attributes on wrapper for reconstruction after delete
+									try {
+										var dr = opener.getAttribute('data-region'); if (dr) wrapper.setAttribute('data-region', dr);
+										var dp = opener.getAttribute('data-province'); if (dp) wrapper.setAttribute('data-province', dp);
+										var dm = opener.getAttribute('data-municipality'); if (dm) wrapper.setAttribute('data-municipality', dm);
+										var dt = opener.getAttribute('data-title'); if (dt) wrapper.setAttribute('data-title', dt);
+										var dy = opener.getAttribute('data-year'); if (dy) wrapper.setAttribute('data-year', dy);
+									} catch (e) {}
+									var csrf = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+									var viewBtn = '<button type="button" class="masterdata-btn masterdata-btn-secondary btn-view-masterdata-attachment" data-url="' + (data.attachment && data.attachment.url ? data.attachment.url : '') + '" data-title="' + (data.attachment && data.attachment.title ? (data.attachment.title.replace(/"/g,'\\"')) : '') + '" data-uploader="' + (data.uploader || '') + '">View PDF</button>';
+									var deleteForm = '<form method="POST" class="attachment-delete-form" action="/sts-attachments/' + (data.attachment && data.attachment.id ? data.attachment.id : '') + '" onsubmit="return false;" style="display:inline-block;margin:0;">' +
+										'<input type="hidden" name="_token" value="' + csrf + '">' +
+										'<input type="hidden" name="_method" value="DELETE">' +
+										'<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete PDF</button>' +
+										'</form>';
+									if (wrapper) wrapper.innerHTML = viewBtn + (data.uploader && data.uploader.length ? '<div style="display:inline-block;margin-left:8px;" class="text-muted">Uploaded</div>' : '') + deleteForm;
+								}
+							} catch (e) { console.log('DOM update failed', e); }
+
+							if (opener) {
+								try { var pop = new bootstrap.Popover(opener, {content: data.message || 'Uploaded', trigger: 'manual', placement: 'top'}); pop.show(); setTimeout(function () { pop.hide(); pop.dispose(); }, 3000); } catch (e) { console.log('Popover failed', e); }
+							}
+
+							// show the page's existing success modal helper if present, else create a small modal
+							try {
+								if (typeof showSuccessModal === 'function') {
+									showSuccessModal(data.message || 'Attachment uploaded successfully.');
+								} else {
+									(function (msg) {
+										var existing = document.getElementById('upload-success-modal');
+										if (!existing) {
+											var div = document.createElement('div');
+											div.innerHTML = '<div class="modal fade" id="upload-success-modal" tabindex="-1" aria-hidden="true">' +
+												'<div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-3">' +
+												'<div class="h5 mb-2">' + (msg || 'Uploaded') + '</div>' +
+												'<div><button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">OK</button></div>' +
+												'</div></div></div></div>';
+											document.body.appendChild(div.firstChild);
+											existing = document.getElementById('upload-success-modal');
+										} else {
+											var h = existing.querySelector('.h5'); if (h) h.textContent = msg || 'Uploaded';
+										}
+										var m = new bootstrap.Modal(existing); m.show();
+									})(data.message || 'Attachment uploaded successfully.');
+								}
+							} catch (e) { try { console.log(e); } catch(_){} }
+						} else {
+							alert(data.message || 'Upload failed.');
+						}
+					} else if (xhr.status === 422) {
+						var err = {};
+						try { err = JSON.parse(xhr.responseText); } catch (e) {}
+						var msgs = [];
+						if (err.errors) { for (var k in err.errors) msgs.push(err.errors[k].join(' ')); }
+						else if (err.message) msgs.push(err.message);
+						alert(msgs.join('\n') || 'Validation failed.');
+					} else if (xhr.status === 413) {
+						var errText = {};
+						try { errText = JSON.parse(xhr.responseText); } catch (e) {}
+						var message = errText && errText.message ? errText.message : 'Uploaded file exceeds the maximum allowed size of 30MB.';
+						var opener = window._lastSTUploadButton;
+						if (opener) { try { var pop2 = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'}); pop2.show(); setTimeout(function () { pop2.hide(); pop2.dispose(); }, 3500); } catch (e) { alert(message); } }
+						else { alert(message); }
+					} else { alert('Upload failed: ' + (xhr.statusText || xhr.responseText)); }
+					if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; }
+					if (progressWrap) { setTimeout(function () { progressWrap.style.display = 'none'; if (progressBar) progressBar.style.width = '0%'; }, 800); }
+				};
+
+				xhr.onerror = function () { alert('Upload error.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; } if (progressWrap) progressWrap.style.display = 'none'; };
+				xhr.send(fd);
+			});
+		});
 
 		function openMasterdataAttachmentViewModal(button) {
 			if (!button || typeof bootstrap === 'undefined') {

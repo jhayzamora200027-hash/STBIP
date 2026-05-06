@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       fetch(loginForm.action, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-TOKEN': formData.get('_token'),

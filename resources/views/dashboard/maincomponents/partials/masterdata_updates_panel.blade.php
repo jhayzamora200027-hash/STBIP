@@ -43,6 +43,104 @@
 	</datalist>
 @endif
 
+<!-- Confirm Delete Modal for Masterdata (local) -->
+<div class="modal fade" id="confirmDeleteModalMaster" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Confirm Delete</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<p id="confirmDeleteMessageMaster">Are you sure you want to delete this attachment?</p>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-danger" id="confirmDeleteBtnMaster">Delete</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	var stack = document.querySelector('.masterdata-item-stack');
+	if (!stack) return;
+	var modalEl = document.getElementById('confirmDeleteModalMaster');
+	var modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+	var deleteTarget = null;
+
+	stack.addEventListener('click', function (e) {
+		var btn = e.target.closest('.attachment-delete-form button');
+		if (!btn) return;
+		e.preventDefault();
+		var form = btn.closest('.attachment-delete-form');
+		if (!form) return;
+		var action = form.getAttribute('action');
+		deleteTarget = { formEl: form, url: action, wrapper: form.parentElement };
+		if (modal) modal.show();
+	});
+
+	var confirmBtn = document.getElementById('confirmDeleteBtnMaster');
+	if (confirmBtn) {
+		confirmBtn.addEventListener('click', function () {
+			if (!deleteTarget || !deleteTarget.url) { if (modal) modal.hide(); return; }
+			var url = deleteTarget.url;
+			var wrapper = deleteTarget.wrapper;
+			var token = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', url, true);
+			xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+			xhr.setRequestHeader('X-CSRF-TOKEN', token);
+			xhr.setRequestHeader('Accept', 'application/json');
+
+			xhr.onload = function () {
+				if (xhr.status >= 200 && xhr.status < 300) {
+					var data = {};
+					try { data = JSON.parse(xhr.responseText); } catch (e) {}
+					try {
+						if (wrapper) {
+							var region = wrapper.getAttribute('data-region') || '';
+							var province = wrapper.getAttribute('data-province') || '';
+							var municipality = wrapper.getAttribute('data-municipality') || '';
+							var title = wrapper.getAttribute('data-title') || '';
+							var year = wrapper.getAttribute('data-year') || '';
+							var uploadBtn = '<button type="button" class="masterdata-btn masterdata-btn-secondary btn-upload-masterdata-attachment" data-region="' + (region.replace(/"/g,'\"')) + '" data-province="' + (province.replace(/"/g,'\"')) + '" data-municipality="' + (municipality.replace(/"/g,'\"')) + '" data-title="' + (title.replace(/"/g,'\"')) + '" data-year="' + (year.replace(/"/g,'\"')) + '">Upload PDF</button>';
+							wrapper.innerHTML = uploadBtn;
+						}
+					} catch (e) { console.log('replace wrapper failed', e); }
+
+					try {
+						var newOpener = wrapper ? wrapper.querySelector('.btn-upload-masterdata-attachment') : null;
+						if (newOpener) {
+							var msg = (data && data.message) ? data.message : 'Attachment deleted';
+							var pop = new bootstrap.Popover(newOpener, {content: msg, trigger: 'manual', placement: 'top'});
+							pop.show(); setTimeout(function () { pop.hide(); pop.dispose(); }, 2500);
+						}
+					} catch (e) {}
+
+					if (modal) modal.hide(); deleteTarget = null;
+				} else {
+					var err = {};
+					try { err = JSON.parse(xhr.responseText); } catch (e) {}
+					var msg = (err && err.message) ? err.message : ('Delete failed: ' + (xhr.statusText || xhr.responseText));
+					alert(msg);
+					if (modal) modal.hide(); deleteTarget = null;
+				}
+			};
+
+			xhr.onerror = function () { alert('Delete request failed.'); if (modal) modal.hide(); deleteTarget = null; };
+
+			var body = new FormData();
+			body.append('_method', 'DELETE');
+			if (token) body.append('_token', token);
+			xhr.send(body);
+		});
+	}
+});
+</script>
+
 @unless($canWriteMasterData)
 	<div class="masterdata-fixed-note" style="margin-bottom: 22px;">
 		You currently have read-only access to Region Item Management.
@@ -292,7 +390,13 @@
 									@endif
 								</div>
 							</div>
-							<div class="masterdata-attachment-actions">
+							    <div class="masterdata-attachment-actions"
+								    data-region="{{ $item->region?->name ?: $selectedRegionName }}"
+								    data-province="{{ $item->province ?? '' }}"
+								    data-municipality="{{ $item->municipality ?? '' }}"
+								    data-title="{{ $item->title }}"
+								    data-year="{{ $item->year_of_moa ?? '' }}"
+							    >
 								@if($itemAttachment)
 									<button
 										type="button"
@@ -307,7 +411,8 @@
 										<form
 											method="POST"
 											action="{{ route('sts.attachments.destroy', ['attachment' => $itemAttachment['id']]) }}"
-											onsubmit="return confirm('Delete this attachment?');"
+											onsubmit="return false;"
+											class="attachment-delete-form"
 										>
 											@csrf
 											@method('DELETE')
@@ -642,7 +747,7 @@
 <div class="modal fade" id="masterdataAttachmentUploadModal" tabindex="-1" aria-labelledby="masterdataAttachmentUploadModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">
-			<form method="POST" action="{{ route('sts.attachments.store') }}" enctype="multipart/form-data">
+			<form id="masterdataAttachmentForm" class="ajax-form" method="POST" action="{{ route('sts.attachments.store') }}" enctype="multipart/form-data">
 				@csrf
 				<div class="modal-header">
 					<h5 class="modal-title" id="masterdataAttachmentUploadModalLabel">Upload Attachment for Existing Item</h5>
@@ -659,12 +764,15 @@
 					<div class="mb-3">
 						<label for="masterdataAttachmentFile" class="form-label">Select PDF file</label>
 						<input type="file" class="form-control" id="masterdataAttachmentFile" name="attachment" accept="application/pdf" required>
-						<div class="form-text">PDF only, max size 10MB.</div>
+						<div class="form-text">PDF only, max size 30MB.</div>
+						<div class="progress mt-2" id="masterdataAttachmentProgress" style="height:6px; display:none;">
+							<div class="progress-bar" role="progressbar" style="width:0%" aria-valuemin="0" aria-valuemax="100"></div>
+						</div>
 					</div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-					<button type="submit" class="btn btn-primary">Upload</button>
+					<button type="submit" class="btn btn-primary" id="masterdataAttachmentSubmitBtn">Upload</button>
 				</div>
 			</form>
 		</div>

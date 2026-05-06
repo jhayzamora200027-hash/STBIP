@@ -385,10 +385,10 @@ class MasterDataController extends Controller
 
                 $region = Region::query()->where('name', $candidate)->first();
                 if (!$region) {
-                    $region = Region::query()->whereRaw('LOWER(name) = ?', [strtolower($candidate)])->first();
+                        $region = Region::query()->whereRaw('LOWER(name) = ?', [strtolower($candidate)], 'and')->first();
                 }
-                if (!$region && $candidateNormalized !== $candidate) {
-                    $region = Region::query()->whereRaw('LOWER(name) = ?', [strtolower($candidateNormalized)])->first();
+                    if (!$region && $candidateNormalized !== $candidate) {
+                        $region = Region::query()->whereRaw('LOWER(name) = ?', [strtolower($candidateNormalized)], 'and')->first();
                 }
                 if (!$region) {
                     $allRegions = Region::query()->get();
@@ -402,7 +402,7 @@ class MasterDataController extends Controller
                 continue;
             }
 
-            $titleExists = SocialTechnologyTitle::query()->whereRaw('LOWER(social_technology) = ?', [strtolower($title)])->exists();
+            $titleExists = SocialTechnologyTitle::query()->whereRaw('LOWER(social_technology) = ?', [strtolower($title)], 'and')->exists();
             if (!$titleExists) {
                 $skipped++;
                 $warnings[] = "Row {$sheetRowNumber}: title not found ('{$title}')";

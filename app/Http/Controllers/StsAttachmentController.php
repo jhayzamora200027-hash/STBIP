@@ -17,13 +17,25 @@ class StsAttachmentController extends Controller
             'municipality' => 'nullable|string|max:255',
             'title' => 'required|string|max:1024',
             'year_of_moa' => 'nullable|string|max:50',
-            'attachment' => 'required|file|mimes:pdf|max:10240', 
+            // allow up to 30MB (30720 KB)
+            'attachment' => 'required|file|mimes:pdf|max:30720', 
         ]);
 
         $file = $request->file('attachment');
+        // enforce server-side size limit (30MB) and return JSON for AJAX
+        $maxBytes = 30 * 1024 * 1024; // 30MB in bytes
+        if ($file && $file->getSize() > $maxBytes) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Uploaded file exceeds the maximum allowed size of 30MB.'
+                ], 413);
+            }
+            return redirect()->back()->withErrors(['attachment' => 'Uploaded file exceeds the maximum allowed size of 30MB.']);
+        }
         $storedPath = $file->store('st_attachments', 'public');
 
-        StsAttachment::create([
+        $attachmentModel = StsAttachment::create([
             'region' => $validated['region'],
             'province' => $validated['province'] ?? null,
             'municipality' => $validated['municipality'] ?? null,
@@ -36,6 +48,21 @@ class StsAttachmentController extends Controller
             'created_by' => Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null,
             'action' => 'added',
         ]);
+
+        // If request expects JSON (AJAX), return JSON response
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Attachment uploaded successfully.',
+                'attachment' => [
+                    'id' => $attachmentModel->id,
+                    'title' => $attachmentModel->title,
+                    'original_filename' => $attachmentModel->original_filename,
+                    'file_size' => $attachmentModel->file_size,
+                    'url' => Storage::disk('public')->url($storedPath),
+                ],
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Attachment uploaded successfully.');
     }
@@ -82,6 +109,14 @@ class StsAttachmentController extends Controller
             'created_by' => Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null,
             'action' => 'deleted',
         ]);
+
+        // If AJAX request, return JSON so client can update UI without reload
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Attachment deleted successfully.',
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Attachment deleted successfully.');
     }
