@@ -2026,7 +2026,7 @@
                         <p class="stb-site-footer__title">Department of Social Welfare and Development, Social Technology Bureau</p>
                         <p class="stb-site-footer__summary">A centralized workspace for managing social technology records, inventory updates, and reporting across regions and local implementation sites.</p>
                         <div class="stb-site-footer__meta">
-                            <span class="stb-site-footer__pill"><i class="bi bi-shield-check"></i> Internal system</span>
+                            <span class="stb-site-footer__pill"><i class="bi bi-shield-check"></i> External system</span>
                             <span class="stb-site-footer__pill"><i class="bi bi-clipboard-data"></i> Inventory and master data</span>
                         </div>
                     </div>
