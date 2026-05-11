@@ -19,6 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Illuminate\View\View as ViewContract;
@@ -1087,7 +1088,7 @@ class MasterDataController extends Controller
     public function updateRegionItem(Request $request, RegionItem $regionItem): RedirectResponse|JsonResponse
     {
         $actorName = $this->resolveActorName();
-        $validated = $this->validateRegionItem($request);
+        $validated = $this->validateRegionItem($request, $regionItem);
 
         $regionItem->loadMissing('region:id,name');
         $originalSnapshot = $this->buildRegionItemHistorySnapshot($regionItem);
@@ -1533,15 +1534,26 @@ class MasterDataController extends Controller
         $query->where($column, $value);
     }
 
-    private function validateRegionItem(Request $request): array
+    private function validateRegionItem(Request $request, ?RegionItem $existingItem = null): array
     {
-        // Normalize common inputs to avoid validation failures caused by
-        // leading/trailing whitespace or non-string values (e.g. from datalist).
-        if ($request->has('title')) {
-            $request->merge(['title' => trim((string) $request->input('title'))]);
+        if ($existingItem !== null && !$request->request->has('title')) {
+            $request->merge(['title' => $existingItem->title]);
         }
 
-        return $request->validate([
+        // Normalize common inputs to avoid validation failures caused by
+        // leading/trailing whitespace or non-string values (e.g. from datalist).
+        $normalized = [];
+        foreach (['title', 'province', 'municipality', 'inactive_remarks'] as $field) {
+            if ($request->has($field)) {
+                $normalized[$field] = trim((string) $request->input($field));
+            }
+        }
+
+        if ($normalized !== []) {
+            $request->merge($normalized);
+        }
+
+        $validator = Validator::make($request->all(), [
             'region_id' => ['required', 'exists:regions,id'],
             'title' => ['required', 'string', 'max:255', 'exists:social_technology_titles,social_technology'],
             'province' => ['nullable', 'string', 'max:255'],
@@ -1556,7 +1568,51 @@ class MasterDataController extends Controller
             'status' => ['nullable', 'in:ongoing,inactive'],
             'inactive_status' => ['nullable', 'in:pending_document,dissolved'],
             'inactive_remarks' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'title.required' => 'Social Technology Title is required.',
+            'title.exists' => 'Select an approved Social Technology Title from the ST title list.',
         ]);
+
+        $validator->after(function ($validator) use ($request, $existingItem) {
+            $regionId = $request->input('region_id');
+            $title = trim((string) $request->input('title', ''));
+
+            if (!$regionId || $title === '') {
+                return;
+            }
+
+            $query = RegionItem::query()
+                ->where('region_id', $regionId)
+                ->where('title', $title);
+
+            $this->whereRegionItemColumnMatches($query, 'province', $request->input('province'));
+            $this->whereRegionItemColumnMatches($query, 'municipality', $request->input('municipality'));
+
+            if ($existingItem !== null) {
+                $query->whereKeyNot($existingItem->getKey());
+            }
+
+            if ($query->exists()) {
+                $validator->errors()->add('title', 'This ST item already exists for the selected region, province, and municipality.');
+            }
+        });
+
+        return $validator->validate();
+    }
+
+    private function whereRegionItemColumnMatches($query, string $column, mixed $value): void
+    {
+        $normalizedValue = trim((string) ($value ?? ''));
+
+        if ($normalizedValue === '') {
+            $query->where(function ($nestedQuery) use ($column) {
+                $nestedQuery->whereNull($column)->orWhere($column, '');
+            });
+
+            return;
+        }
+
+        $query->where($column, $normalizedValue);
     }
 
     private function buildRegionItemPayload(array $validated, string $actorName, ?RegionItem $existingItem = null): array

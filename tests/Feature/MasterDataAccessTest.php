@@ -265,6 +265,142 @@ class MasterDataAccessTest extends TestCase
         $this->assertStringContainsString('ST Title: History Item -> History Item Updated', (string) $updateRow);
     }
 
+    public function test_update_region_item_preserves_existing_title_when_request_omits_title(): void
+    {
+        $region = Region::query()->create(['name' => 'Fallback Region']);
+        $admin = $this->makeUser('admin');
+
+        $item = RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'createdby' => $admin->name,
+            'updatedby' => $admin->name,
+        ]);
+
+        $response = $this->actingAs($admin)->patch(route('masterdata.region-items.update', $item), [
+            'region_id' => $region->id,
+            'province' => 'Province B',
+            'municipality' => 'City B',
+            'adoption_status' => 'none',
+            'with_expr' => '0',
+            'with_moa' => '0',
+            'with_res' => '0',
+            'included_aip' => '0',
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertRedirect();
+
+        $item->refresh();
+
+        $this->assertSame('History Item', $item->title);
+        $this->assertSame('Province B', $item->province);
+        $this->assertSame('City B', $item->municipality);
+    }
+
+    public function test_cannot_create_duplicate_region_item_for_same_identity(): void
+    {
+        $region = Region::query()->create(['name' => 'Duplicate Region']);
+        $admin = $this->makeUser('admin');
+
+        RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'createdby' => $admin->name,
+            'updatedby' => $admin->name,
+        ]);
+
+        $response = $this->actingAs($admin)->from(route('masterdata.index', ['tab' => 'updates']))->post(route('masterdata.region-items.store'), [
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'adoption_status' => 'none',
+            'with_expr' => '0',
+            'with_moa' => '0',
+            'with_res' => '0',
+            'included_aip' => '0',
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertSessionHasErrors(['title']);
+        $this->assertDatabaseCount('region_items', 1);
+    }
+
+    public function test_cannot_update_region_item_into_duplicate_identity(): void
+    {
+        $region = Region::query()->create(['name' => 'Duplicate Update Region']);
+        $admin = $this->makeUser('admin');
+
+        $original = RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'createdby' => $admin->name,
+            'updatedby' => $admin->name,
+        ]);
+
+        $itemToUpdate = RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item Updated',
+            'province' => 'Province B',
+            'municipality' => 'City B',
+            'createdby' => $admin->name,
+            'updatedby' => $admin->name,
+        ]);
+
+        $response = $this->actingAs($admin)->from(route('masterdata.index', ['tab' => 'updates']))->patch(route('masterdata.region-items.update', $itemToUpdate), [
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'adoption_status' => 'none',
+            'with_expr' => '0',
+            'with_moa' => '0',
+            'with_res' => '0',
+            'included_aip' => '0',
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertSessionHasErrors(['title']);
+
+        $original->refresh();
+        $itemToUpdate->refresh();
+
+        $this->assertSame('History Item', $original->title);
+        $this->assertSame('History Item Updated', $itemToUpdate->title);
+        $this->assertSame('Province B', $itemToUpdate->province);
+        $this->assertSame('City B', $itemToUpdate->municipality);
+    }
+
+    public function test_invalid_title_shows_approved_title_message(): void
+    {
+        $region = Region::query()->create(['name' => 'Validation Region']);
+        $admin = $this->makeUser('admin');
+
+        $response = $this->actingAs($admin)->from(route('masterdata.index', ['tab' => 'updates']))->post(route('masterdata.region-items.store'), [
+            'region_id' => $region->id,
+            'title' => 'Not In Approved List',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'adoption_status' => 'none',
+            'with_expr' => '0',
+            'with_moa' => '0',
+            'with_res' => '0',
+            'included_aip' => '0',
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertSessionHasErrors([
+            'title' => 'Select an approved Social Technology Title from the ST title list.',
+        ]);
+    }
+
     public function test_only_admin_and_sysadmin_can_delete_region_items(): void
     {
         foreach ([

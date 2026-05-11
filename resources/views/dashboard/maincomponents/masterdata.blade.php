@@ -1632,9 +1632,68 @@
 			});
 		}
 
+		function buildSubmitFormData(form) {
+			const formData = new FormData();
+			if (!(form instanceof HTMLFormElement)) {
+				return formData;
+			}
+
+			Array.from(form.elements).forEach(function (element) {
+				if (!element || !element.name || element.disabled) {
+					return;
+				}
+
+				if (element instanceof HTMLButtonElement) {
+					return;
+				}
+
+				if (element instanceof HTMLInputElement) {
+					if (element.type === 'checkbox' || element.type === 'radio') {
+						if (element.checked) {
+							formData.append(element.name, element.value);
+						}
+						return;
+					}
+
+					if (element.type === 'file') {
+						Array.from(element.files || []).forEach(function (file) {
+							formData.append(element.name, file);
+						});
+						return;
+					}
+
+					formData.append(element.name, element.value);
+					return;
+				}
+
+				if (element instanceof HTMLSelectElement) {
+					if (element.multiple) {
+						Array.from(element.selectedOptions).forEach(function (option) {
+							formData.append(element.name, option.value);
+						});
+						return;
+					}
+
+					formData.append(element.name, element.value);
+					return;
+				}
+
+				if (element instanceof HTMLTextAreaElement) {
+					formData.append(element.name, element.value);
+				}
+			});
+
+			const titleInput = form.querySelector('input[name="title"]');
+			if (titleInput) {
+				formData.set('title', titleInput.value.trim());
+			}
+
+			return formData;
+		}
+
 		function buildFormActionUrl(form) {
 			const actionUrl = new URL(form.action, window.location.origin);
-			const searchParams = new URLSearchParams(new FormData(form));
+			const searchParams = new URLSearchParams(buildSubmitFormData(form));
 			actionUrl.search = searchParams.toString();
 			return actionUrl;
 		}
@@ -1694,7 +1753,7 @@
 		}
 
 		async function submitUpdatesForm(form) {
-			const formData = new FormData(form);
+			const formData = buildSubmitFormData(form);
 			form.querySelectorAll('[data-error-for]').forEach(function (el) { el.textContent = ''; el.style.display = 'none'; var input = form.querySelector('[name="' + el.getAttribute('data-error-for') + '"]'); if (input) { input.classList.remove('is-invalid'); } });
 			setFormBusy(form, true);
 			try {
@@ -1788,16 +1847,19 @@
 				}
 				form.dataset.masterdataBound = '1';
 				form.addEventListener('submit', function (event) {
+					const formType = form.getAttribute('data-masterdata-updates-form');
+					if (formType === 'create') {
+						return;
+					}
+
 					event.preventDefault();
 					event.stopPropagation();
-
-					const formType = form.getAttribute('data-masterdata-updates-form');
 					if (formType === 'region' || formType === 'filters' || formType === 'history-filters') {
 						handleUpdatesPanelQuery(form);
 						return;
 					}
 
-					if (formType === 'create' || formType === 'update' || formType === 'delete') {
+					if (formType === 'update' || formType === 'delete') {
 						submitUpdatesForm(form).catch(function (error) {
 							showAjaxFeedback('error', error.message);
 						});

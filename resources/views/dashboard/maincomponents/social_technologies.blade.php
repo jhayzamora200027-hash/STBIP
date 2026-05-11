@@ -15,7 +15,6 @@
 <div class="st-shell">
     <div class="st-hero">
         <h1>Social Technologies - Titles Upload</h1>
-        <p style="margin:6px 0 0; opacity:0.9">Upload a CSV file containing one social technology title per row. Existing exact-title duplicates are skipped.</p>
     </div>
 
     <div id="st-inline-status" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-weight:700;"></div>
