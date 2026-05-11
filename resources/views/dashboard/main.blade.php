@@ -4157,7 +4157,7 @@ if (!document.getElementById('catListTooltip')) {
 			const filteredDissolved = data.filter(row => deriveStatus(row) === 'dissolved').length;
 			const filteredReplicated = data.filter(row => truthy(row.with_replicated)).length;
 			const filteredAdopted = data.filter(row => truthy(row.with_adopted)).length;
-			const totalPages = Math.ceil(data.length / perPage);
+			const totalPages = Math.max(1, Math.ceil(data.length / perPage));
 
 			let html = '<div class="social-listing-summary">';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Filtered Results</div><div class="social-listing-stat-value">' + data.length + '</div></div>';
@@ -4242,15 +4242,21 @@ if (!document.getElementById('catListTooltip')) {
 					html += '</tbody></table></div>';
 					html += '<div class="social-listing-pagination-wrapper">';
 					html += '<div class="social-listing-pagination">';
-					html += `<button class="social-listing-pagination-btn" ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">&#8592; Prev</button>`;
+						html += `<button class="social-listing-pagination-btn" ${page === 1 ? 'disabled' : ''} data-page="${page - 1}">&#8592; Prev</button>`;
 					html += `<span class="social-listing-pagination-indicator">Page ${page} of ${totalPages}</span>`;
-					html += `<button class="social-listing-pagination-btn" ${page === totalPages ? 'disabled' : ''} onclick="changePage(${page + 1})">Next &#8594;</button>`;
+						html += `<button class="social-listing-pagination-btn" ${page === totalPages ? 'disabled' : ''} data-page="${page + 1}">Next &#8594;</button>`;
 					html += '</div>';
 					html += '</div>';
 
 			document.getElementById('title-listing-table-container').innerHTML = sanitizeHtml(html);
 			try {
 				const container = document.getElementById('title-listing-table-container');
+				container.querySelectorAll('.social-listing-pagination-btn[data-page]').forEach(function(button) {
+					button.addEventListener('click', function() {
+						const nextPage = Number(this.getAttribute('data-page'));
+						window.changePage(nextPage);
+					});
+				});
 				const table = container.querySelector('.social-listing-table');
 				if (table) {
 					const tbody = table.querySelector('tbody');
@@ -4274,7 +4280,7 @@ if (!document.getElementById('catListTooltip')) {
 		}
 
 		window.changePage = function(page) {
-			const totalPages = Math.ceil(data.length / perPage);
+			const totalPages = Math.max(1, Math.ceil(data.length / perPage));
 			if (page < 1 || page > totalPages) return;
 			currentPage = page;
 			renderTable(currentPage);
