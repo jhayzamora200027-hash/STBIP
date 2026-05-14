@@ -628,6 +628,7 @@ class MainReportController extends Controller
             'years' => $availableYears,
             'allYears' => $allYears,
             'regionMap' => $regionMap,
+            'fullData' => $data,
             'data' => $filteredData,  
             'regionFilteredData' => $regionFilteredData,
             'galleryCards' => $galleryCards,

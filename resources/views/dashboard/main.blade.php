@@ -128,9 +128,55 @@
 	.guest-mobile-filter-panel .filter-modal-panel { box-shadow: 0 -12px 28px rgba(11,37,64,0.12); }
 	.filter-modal-panel.mobile { width: 100%; max-width: 640px; border-radius: 12px 12px 0 0; }
 	@media (max-width: 767px) {
-		.guest-mobile-filter-panel { display: flex !important; align-items: flex-end; justify-content: center; }
-		.filter-modal-panel.mobile .st-dashboard-card { width: calc(100% - 16px); margin: 0 8px 12px 8px; }
-		.filter-modal-panel.mobile .card-body { max-height: 72vh; overflow-y: auto; }
+		.guest-mobile-filter-panel {
+			display: flex !important;
+			align-items: flex-end;
+			justify-content: center;
+			padding: max(12px, env(safe-area-inset-top)) 0 0;
+			background: rgba(6, 48, 110, 0.34) !important;
+			backdrop-filter: blur(6px);
+			-webkit-backdrop-filter: blur(6px);
+		}
+		.filter-modal-panel.mobile {
+			width: min(100vw, 640px);
+			max-height: min(88dvh, 760px);
+			margin: 0;
+			padding: 0;
+			border-radius: 22px 22px 0 0;
+			overflow: hidden;
+		}
+		.filter-modal-panel.mobile .st-dashboard-card {
+			display: flex !important;
+			flex-direction: column;
+			width: calc(100% - 12px);
+			max-height: min(88dvh, 760px);
+			margin: 0 6px;
+			border-radius: 22px 22px 0 0 !important;
+			overflow: hidden;
+		}
+		.filter-modal-panel.mobile .guest-filter-header {
+			position: sticky;
+			top: 0;
+			z-index: 3;
+			background: linear-gradient(180deg, rgba(248, 252, 255, 0.98) 0%, rgba(243, 249, 252, 0.98) 100%);
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+		}
+		.filter-modal-panel.mobile .guest-filter-body {
+			flex: 1 1 auto;
+			max-height: calc(min(88dvh, 760px) - 104px);
+			overflow-y: auto;
+			overscroll-behavior: contain;
+			padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+		}
+		.filter-modal-panel.mobile .guest-filter-actions {
+			position: sticky;
+			bottom: 0;
+			z-index: 2;
+			padding-top: 12px;
+			padding-bottom: calc(8px + env(safe-area-inset-bottom));
+			background: linear-gradient(180deg, rgba(247, 251, 253, 0) 0%, rgba(247, 251, 253, 0.96) 18%, rgba(247, 251, 253, 1) 100%);
+		}
 	}
 </style>
 <style>
@@ -2282,7 +2328,7 @@ if (!document.getElementById('catListTooltip')) {
 					</div>
 					<div id="title-listing-table-container"></div>
 					<script>
-					window.fullListingData = @json(collect($data)->filter(function($row){
+					window.fullListingData = @json(collect($fullData ?? $data)->filter(function($row){
 						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 					})->values());
 					window.fullListingHeaders = @json($headers ?? []);
@@ -4499,44 +4545,76 @@ window.addEventListener('message', function(e) {
 	}
 });
 
+		function toStringSelection(values) {
+			return (values || []).map(function(value) {
+				return value == null ? '' : String(value);
+			});
+		}
+
+		function sortFilterValues(values) {
+			return (values || []).slice().sort(function(a, b) {
+				return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+			});
+		}
+
+		function rebuildFilterSelect(selector, values, selectedValues) {
+			var $select = $(selector);
+			var normalizedSelected = toStringSelection(selectedValues);
+			$select.empty();
+			sortFilterValues(values).forEach(function(value) {
+				var stringValue = value == null ? '' : String(value);
+				var selected = normalizedSelected.includes(stringValue) ? ' selected' : '';
+				$select.append('<option value="' + stringValue + '"' + selected + '>' + stringValue + '</option>');
+			});
+			$select.trigger('change.select2');
+		}
+
+		function resetGuestFilterCategories() {
+			rebuildFilterSelect('#year-select-modal', window.allYears || [], $('#year-select-modal').val() || []);
+			rebuildFilterSelect('#province-select-modal', window.allProvinces || [], $('#province-select-modal').val() || []);
+			rebuildFilterSelect('#municipality-select-modal', window.allCities || [], $('#municipality-select-modal').val() || []);
+		}
+
+		function getComparableRegionValues(regionText) {
+			var raw = regionText == null ? '' : String(regionText).trim();
+			if (!raw) {
+				return [];
+			}
+			var normalized = inferRegionCodeFromRegionText(raw);
+			var values = [raw];
+			if (normalized && !values.includes(normalized)) {
+				values.push(normalized);
+			}
+			return values;
+		}
+
+		function rowMatchesSelectedRegions(row, selectedRegions) {
+			if (!selectedRegions || selectedRegions.length === 0) {
+				return true;
+			}
+			var rowRegionValues = getComparableRegionValues(row && row.region ? row.region : '');
+			return selectedRegions.some(function(selectedRegion) {
+				return rowRegionValues.includes(selectedRegion);
+			});
+		}
+
 $('#region-select-modal').on('change', function() {
-			var selectedRegions = $(this).val() || [];
+			var selectedRegions = ($(this).val() || []).map(function(region) {
+				return inferRegionCodeFromRegionText(region) || region;
+			});
 			var provinces = [];
 			var cities = [];
 			var years = [];
 
 
 			if (selectedRegions.length === 0) {
-				var $yearAll = $('#year-select-modal');
-				var selectedYearAll = $yearAll.val() || [];
-				$yearAll.empty();
-				(window.allYears || []).forEach(function(yr) {
-					var selected = selectedYearAll.includes(yr) ? 'selected' : '';
-					$yearAll.append('<option value="'+yr+'" '+selected+'>'+yr+'</option>');
-				});
-				$yearAll.trigger('change.select2');
-				var $provAll = $('#province-select-modal');
-				var selProv = $provAll.val() || [];
-				$provAll.empty();
-				(window.allProvinces || []).forEach(function(p) {
-					var selected = selProv.includes(p) ? 'selected' : '';
-					$provAll.append('<option value="'+p+'" '+selected+'>'+p+'</option>');
-				});
-				$provAll.trigger('change.select2');
-				var $cityAll = $('#municipality-select-modal');
-				var selCity = $cityAll.val() || [];
-				$cityAll.empty();
-				(window.allCities || []).forEach(function(c) {
-					var selected = selCity.includes(c) ? 'selected' : '';
-					$cityAll.append('<option value="'+c+'" '+selected+'>'+c+'</option>');
-				});
-				$cityAll.trigger('change.select2');
+				resetGuestFilterCategories();
 				propagateFilters();
 				return;
 			}
 			var allRows = window.fullListingData || [];
 			allRows.forEach(function(row) {
-				if (selectedRegions.includes(row.region)) {
+				if (rowMatchesSelectedRegions(row, selectedRegions)) {
 					if (row.province) provinces.push(row.province);
 					if (row.municipality) cities.push(row.municipality);
 					if (row.year_of_moa) years.push(row.year_of_moa);
@@ -4546,77 +4624,40 @@ $('#region-select-modal').on('change', function() {
 			provinces = [...new Set(provinces)];
 			cities = [...new Set(cities)];
 			years = [...new Set(years)];
-			years.sort();
 
-			var $province = $('#province-select-modal');
-			var selectedProvince = $province.val() || [];
-			$province.empty();
-			provinces.forEach(function(prov) {
-				var selected = selectedProvince.includes(prov) ? 'selected' : '';
-				$province.append('<option value="'+prov+'" '+selected+'>'+prov+'</option>');
-			});
-			$province.trigger('change.select2');
-
-			var $city = $('#municipality-select-modal');
-			var selectedCity = $city.val() || [];
-			$city.empty();
-			cities.forEach(function(city) {
-				var selected = selectedCity.includes(city) ? 'selected' : '';
-				$city.append('<option value="'+city+'" '+selected+'>'+city+'</option>');
-			});
-			$city.trigger('change.select2');
-
-			var $year = $('#year-select-modal');
-			var selectedYear = $year.val() || [];
-			$year.empty();
-			years.forEach(function(yr) {
-				var selected = selectedYear.includes(yr) ? 'selected' : '';
-				$year.append('<option value="'+yr+'" '+selected+'>'+yr+'</option>');
-			});
-			$year.trigger('change.select2');
+			rebuildFilterSelect('#province-select-modal', provinces, []);
+			rebuildFilterSelect('#municipality-select-modal', cities, []);
+			rebuildFilterSelect('#year-select-modal', years, []);
 			propagateFilters();
 		});
 
 		$('#province-select-modal').on('change', function() {
-			var selectedRegions = $('#region-select-modal').val() || [];
+			var selectedRegions = ($('#region-select-modal').val() || []).map(function(region) {
+				return inferRegionCodeFromRegionText(region) || region;
+			});
 			var selectedProvinces = $(this).val() || [];
 			var cities = [];
 			if (selectedRegions.length === 0 && selectedProvinces.length === 0) {
-				var $cityAll = $('#municipality-select-modal');
-				var selCity = $cityAll.val() || [];
-				$cityAll.empty();
-				(window.allCities || []).forEach(function(c) {
-					var sel = selCity.includes(c) ? 'selected' : '';
-					$cityAll.append('<option value="'+c+'" '+sel+'>'+c+'</option>');
-				});
-				$cityAll.trigger('change.select2');
+				rebuildFilterSelect('#municipality-select-modal', window.allCities || [], []);
 				propagateFilters();
 				return;
 			}
 			var allRows = window.fullListingData || [];
 			allRows.forEach(function(row) {
 				if (
-					(selectedRegions.length === 0 || selectedRegions.includes(row.region)) &&
+					rowMatchesSelectedRegions(row, selectedRegions) &&
 					(selectedProvinces.length === 0 || selectedProvinces.includes(row.province))
 				) {
 					if (row.municipality) cities.push(row.municipality);
 				}
 			});
 			cities = [...new Set(cities)];
-			var $city = $('#municipality-select-modal');
-			var selectedCity = $city.val() || [];
-			$city.empty();
-			cities.forEach(function(city) {
-				var selected = selectedCity.includes(city) ? 'selected' : '';
-				$city.append('<option value="'+city+'" '+selected+'>'+city+'</option>');
-			});
-			$city.trigger('change.select2');
+			rebuildFilterSelect('#municipality-select-modal', cities, []);
 		});
 
 		$('#year-select-modal').on('change', propagateFilters);
 
-		$('#region-select-modal').trigger('change');
-		$('#province-select-modal').trigger('change');
+		resetGuestFilterCategories();
 		propagateFilters();
 	});
 
@@ -7422,6 +7463,7 @@ window.closeGuestMobileFilterPanel = function(){
 		}
 	}catch(e){}
 	try{ document.body.classList.remove('modal-open'); }catch(e){}
+	try{ document.body.classList.remove('guest-filter-open'); }catch(e){}
 	return false;
 };
 
@@ -7466,20 +7508,35 @@ window.showGuestFilterDock = function(ev){
 				wrapper.appendChild(inner);
 				document.body.appendChild(wrapper);
 				document.body.classList.add('modal-open');
+				document.body.classList.add('guest-filter-open');
 				inner.addEventListener('click', function(e){ e.stopPropagation(); });
 				wrapper.addEventListener('click', function(e){ if(!window.isGuestFilterInteractionTarget(e.target)){ window.closeGuestMobileFilterPanel(); } });
 				document.addEventListener('keydown', function _esc(e){ if(e.key === 'Escape'){ window.closeGuestMobileFilterPanel(); document.removeEventListener('keydown', _esc); } });
+				var closeBtn = wrapper.querySelector('.guest-filter-close');
+				if (closeBtn) {
+					closeBtn.addEventListener('click', window.closeGuestFilterUi);
+				}
+				if (closeBtn && typeof closeBtn.focus === 'function') {
+					setTimeout(function(){ closeBtn.focus(); }, 0);
+				}
 				console.debug('[showGuestFilterDock] opened mobile panel by cloning guestFilterDock');
 				return false;
 			}
 			var mobile = document.createElement('div');
 			mobile.id = 'guestMobileFilterPanel'; mobile.className='guest-mobile-filter-panel open'; mobile.style.position='fixed'; mobile.style.inset='0'; mobile.style.zIndex='2200'; mobile.style.display='flex'; mobile.style.alignItems='flex-end'; mobile.style.justifyContent='center'; mobile.style.background='rgba(6,48,110,0.12)';
 			mobile.innerHTML = sanitizeHtml('<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-header-top"><div><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button></div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>');
-			document.body.appendChild(mobile); document.body.classList.add('modal-open');
+			document.body.appendChild(mobile); document.body.classList.add('modal-open'); document.body.classList.add('guest-filter-open');
 			var mobilePanel = mobile.querySelector('.filter-modal-panel');
 			if (mobilePanel) mobilePanel.addEventListener('click', function(e){ e.stopPropagation(); });
 			mobile.addEventListener('click', function(e){ if(!window.isGuestFilterInteractionTarget(e.target)){ window.closeGuestMobileFilterPanel(); } });
 			document.addEventListener('keydown', function _esc2(e){ if(e.key === 'Escape'){ window.closeGuestMobileFilterPanel(); document.removeEventListener('keydown', _esc2); } });
+			var mobileCloseBtn = mobile.querySelector('.guest-filter-close');
+			if (mobileCloseBtn) {
+				mobileCloseBtn.addEventListener('click', window.closeGuestFilterUi);
+			}
+			if (mobileCloseBtn && typeof mobileCloseBtn.focus === 'function') {
+				setTimeout(function(){ mobileCloseBtn.focus(); }, 0);
+			}
 			console.debug('[showGuestFilterDock] opened simple mobile fallback');
 			return false;
 		}
@@ -7722,12 +7779,12 @@ window.showGuestFilterDock = function(ev){
 				position: fixed;
 				inset: 0;
 				background: rgba(6,48,110,0.28);
-				align-items: center;
+				align-items: flex-end;
 				justify-content: center;
-				padding: 1rem;
+				padding: max(12px, env(safe-area-inset-top)) 0 0;
 			}
 			#guestFilterDock.open .guest-filter-panel {
-				width: min(1220px, calc(100vw - 2rem));
+				width: min(100vw, 640px);
 				max-width: none;
 				min-width: 0;
 			}
@@ -7960,7 +8017,7 @@ window.showGuestFilterDock = function(ev){
 		}
 		@media (max-width: 767px) {
 			.guest-filter-panel {
-				width: min(100vw - 1rem, 360px);
+				width: min(100vw - 12px, 640px);
 			}
 
 			.guest-filter-grid {
@@ -7974,6 +8031,41 @@ window.showGuestFilterDock = function(ev){
 
 			.guest-filter-actions {
 				flex-direction: column-reverse;
+			}
+
+			.guest-filter-header {
+				padding: 0.95rem 1rem 0.85rem;
+			}
+
+			.guest-filter-title {
+				font-size: 1.05rem;
+			}
+
+			.guest-filter-subtitle {
+				font-size: 0.82rem;
+				line-height: 1.45;
+			}
+
+			.guest-filter-body {
+				padding: 0.9rem 1rem 1rem !important;
+			}
+
+			.guest-filter-field {
+				padding: 0.8rem;
+				border-radius: 16px;
+			}
+
+			#guestFloatingFilter .select2-container--default .select2-selection--multiple {
+				min-height: 52px;
+			}
+
+			.guest-filter-close {
+				position: sticky;
+				top: 0;
+				width: 44px;
+				height: 44px;
+				min-width: 44px;
+				font-size: 1.75rem;
 			}
 		}
 		body.modal-open #floatingBtn {
