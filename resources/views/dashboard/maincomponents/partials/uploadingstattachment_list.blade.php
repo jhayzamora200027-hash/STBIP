@@ -341,8 +341,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 var opener = window._lastSTUploadButton;
                 var msg = 'File too large. Max 30MB.';
                 if (opener) {
-                    try { var p = new bootstrap.Popover(opener, {content: msg, trigger: 'manual', placement: 'top'}); p.show(); setTimeout(function () { p.hide(); p.dispose(); }, 3000); } catch (e) { alert(msg); }
-                } else { alert(msg); }
+                    try { var p = new bootstrap.Popover(opener, {content: msg, trigger: 'manual', placement: 'top'}); p.show(); setTimeout(function () { p.hide(); p.dispose(); }, 3000); } catch (e) { if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', msg); else alert(msg); }
+                } else { if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', msg); else alert(msg); }
                 if (submitBtn) submitBtn.disabled = true;
             } else {
                 if (submitBtn) submitBtn.disabled = false;
@@ -375,10 +375,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         pop.show();
                         setTimeout(function () { pop.hide(); pop.dispose(); }, 3500);
                     } catch (e) {
-                        alert('File too large. Max 30MB.');
+                        if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', 'File too large. Max 30MB.'); else alert('File too large. Max 30MB.');
                     }
                 } else {
-                    alert('File too large. Max 30MB.');
+                    if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', 'File too large. Max 30MB.'); else alert('File too large. Max 30MB.');
                 }
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; }
                 return;
@@ -476,10 +476,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                             var m = new bootstrap.Modal(existing);
                             m.show();
+                            if (typeof showAjaxFeedback === 'function') showAjaxFeedback('success', msg || 'Attachment uploaded successfully.');
                         } catch (e) { try { alert(msg || 'Uploaded'); } catch(_){} }
                     })(data.message || 'Attachment uploaded successfully.');
                 } else {
-                    alert(data.message || 'Upload failed.');
+                    if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', data.message || 'Upload failed.'); else alert(data.message || 'Upload failed.');
                 }
             } else if (xhr.status === 422) {
                 var err = {};
@@ -487,23 +488,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 var msgs = [];
                 if (err.errors) { for (var k in err.errors) msgs.push(err.errors[k].join(' ')); }
                 else if (err.message) msgs.push(err.message);
-                alert(msgs.join('\n') || 'Validation failed.');
+                if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', msgs.join('\n') || 'Validation failed.'); else alert(msgs.join('\n') || 'Validation failed.');
             } else if (xhr.status === 413) {
                 var errText = {};
                 try { errText = JSON.parse(xhr.responseText); } catch (e) {}
                 var message = errText && errText.message ? errText.message : 'Uploaded file exceeds the maximum allowed size of 30MB.';
                 var opener = window._lastSTUploadButton;
                 if (opener) {
-                    try { var pop2 = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'}); pop2.show(); setTimeout(function () { pop2.hide(); pop2.dispose(); }, 3500); } catch (e) { alert(message); }
-                } else { alert(message); }
+                    try { var pop2 = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'}); pop2.show(); setTimeout(function () { pop2.hide(); pop2.dispose(); }, 3500); } catch (e) { if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', message); else alert(message); }
+                } else { if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', message); else alert(message); }
             } else {
-                alert('Upload failed: ' + (xhr.statusText || xhr.responseText));
+                var fallbackMsg = 'Upload failed: ' + (xhr.statusText || xhr.responseText);
+                if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', fallbackMsg); else alert(fallbackMsg);
             }
             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; }
             if (progressWrap) { setTimeout(function () { progressWrap.style.display = 'none'; if (progressBar) progressBar.style.width = '0%'; }, 800); }
         };
 
-        xhr.onerror = function () { alert('Upload error.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; } if (progressWrap) progressWrap.style.display = 'none'; };
+        xhr.onerror = function () { if (typeof showAjaxFeedback === 'function') showAjaxFeedback('error', 'Upload error.'); else alert('Upload error.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; } if (progressWrap) progressWrap.style.display = 'none'; };
         xhr.send(fd);
     });
 });

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\StsAttachment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,54 +19,103 @@ class StsAttachmentController extends Controller
             'municipality' => 'nullable|string|max:255',
             'title' => 'required|string|max:1024',
             'year_of_moa' => 'nullable|string|max:50',
-            // allow up to 30MB (30720 KB)
-            'attachment' => 'required|file|mimes:pdf|max:30720', 
+            'attachment' => 'nullable|file|mimes:pdf|max:30720',
+            'attachments' => 'nullable|array|min:1',
+            'attachments.*' => 'file|mimes:pdf|max:30720',
         ]);
 
-        $file = $request->file('attachment');
-        // enforce server-side size limit (30MB) and return JSON for AJAX
-        $maxBytes = 30 * 1024 * 1024; // 30MB in bytes
-        if ($file && $file->getSize() > $maxBytes) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Uploaded file exceeds the maximum allowed size of 30MB.'
-                ], 413);
-            }
-            return redirect()->back()->withErrors(['attachment' => 'Uploaded file exceeds the maximum allowed size of 30MB.']);
+        $files = $this->extractAttachmentFiles($request);
+        if ($files === []) {
+            return $this->attachmentValidationErrorResponse($request);
         }
-        $storedPath = $file->store('st_attachments', 'public');
 
-        $attachmentModel = StsAttachment::create([
-            'region' => $validated['region'],
-            'province' => $validated['province'] ?? null,
-            'municipality' => $validated['municipality'] ?? null,
-            'title' => $validated['title'],
-            'year_of_moa' => $validated['year_of_moa'] ?? null,
-            'file_path' => $storedPath,
-            'original_filename' => $file->getClientOriginalName(),
-            'mime_type' => $file->getClientMimeType(),
-            'file_size' => $file->getSize(),
-            'created_by' => Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null,
-            'action' => 'added',
-        ]);
+        $maxBytes = 30 * 1024 * 1024; // 30MB in bytes
+        foreach ($files as $file) {
+            if ($file->getSize() > $maxBytes) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Uploaded file exceeds the maximum allowed size of 30MB.'
+                    ], 413);
+                }
 
-        // If request expects JSON (AJAX), return JSON response
+                return redirect()->back()->withErrors(['attachments' => 'Uploaded file exceeds the maximum allowed size of 30MB.']);
+            }
+        }
+
+        $createdBy = Auth::check() ? (string) (Auth::user()->user_id ?? Auth::id()) : null;
+        $attachments = [];
+        foreach ($files as $file) {
+            $storedPath = $file->store('st_attachments', 'public');
+
+            $attachmentModel = StsAttachment::create([
+                'region' => $validated['region'],
+                'province' => $validated['province'] ?? null,
+                'municipality' => $validated['municipality'] ?? null,
+                'title' => $validated['title'],
+                'year_of_moa' => $validated['year_of_moa'] ?? null,
+                'file_path' => $storedPath,
+                'original_filename' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'file_size' => $file->getSize(),
+                'created_by' => $createdBy,
+                'action' => 'added',
+            ]);
+
+            $attachments[] = [
+                'id' => $attachmentModel->id,
+                'title' => $attachmentModel->title,
+                'original_filename' => $attachmentModel->original_filename,
+                'file_size' => $attachmentModel->file_size,
+                'url' => route('sts.attachments.show', $attachmentModel),
+            ];
+        }
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Attachment uploaded successfully.',
-                'attachment' => [
-                    'id' => $attachmentModel->id,
-                    'title' => $attachmentModel->title,
-                    'original_filename' => $attachmentModel->original_filename,
-                    'file_size' => $attachmentModel->file_size,
-                    'url' => Storage::disk('public')->url($storedPath),
-                ],
+                'message' => count($attachments) > 1 ? 'Attachments uploaded successfully.' : 'Attachment uploaded successfully.',
+                'attachment' => $attachments[0],
+                'attachments' => $attachments,
+                'uploader' => Auth::user()?->name,
             ]);
         }
 
-        return redirect()->back()->with('success', 'Attachment uploaded successfully.');
+        return redirect()->back()->with('success', count($attachments) > 1 ? 'Attachments uploaded successfully.' : 'Attachment uploaded successfully.');
+    }
+
+    /**
+     * @return array<int, UploadedFile>
+     */
+    private function extractAttachmentFiles(Request $request): array
+    {
+        $files = $request->file('attachments', []);
+        if (!is_array($files)) {
+            $files = $files ? [$files] : [];
+        }
+
+        $singleFile = $request->file('attachment');
+        if ($singleFile instanceof UploadedFile) {
+            $files[] = $singleFile;
+        }
+
+        return array_values(array_filter($files, fn ($file) => $file instanceof UploadedFile));
+    }
+
+    private function attachmentValidationErrorResponse(Request $request): JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        $message = 'Select at least one PDF attachment.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'message' => $message,
+                'errors' => [
+                    'attachments' => [$message],
+                ],
+            ], 422);
+        }
+
+        return redirect()->back()->withErrors(['attachments' => $message]);
     }
 
     public function show(StsAttachment $attachment)
@@ -81,10 +132,18 @@ class StsAttachmentController extends Controller
         
         $absolutePath = Storage::disk('public')->path($attachment->file_path);
 
-        return response()->file($absolutePath, [
+        $response = response()->file($absolutePath, [
             'Content-Type' => $attachment->mime_type ?: 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . ($attachment->original_filename ?: basename($absolutePath)) . '"',
         ]);
+
+        // Override global CSP frame-ancestors for this response so the PDF can be embedded in our UI iframe.
+        // Keep other CSP directives similar to the default policy but allow framing by same origin.
+        $csp = "default-src 'self'; script-src 'self' https: 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:; object-src 'none'; base-uri 'self'; frame-ancestors 'self';";
+        $response->headers->set('Content-Security-Policy', $csp);
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+
+        return $response;
     }
 
     public function destroy(StsAttachment $attachment)

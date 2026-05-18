@@ -2331,6 +2331,9 @@ if (!document.getElementById('catListTooltip')) {
 					window.fullListingData = @json(collect($fullData ?? $data)->filter(function($row){
 						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 					})->values());
+					window.filteredListingData = @json(collect($data ?? [])->filter(function($row){
+						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
+					})->values());
 					window.fullListingHeaders = @json($headers ?? []);
 					window.serverTotals = {
 					    totalReplicated: {{ $totalReplicated ?? 0 }},
@@ -3248,7 +3251,7 @@ if (!document.getElementById('catListTooltip')) {
 .st-summary-modal-toolbar {
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-start;
 	gap: 1rem;
 	margin-bottom: 14px;
 	padding-bottom: 12px;
@@ -3256,9 +3259,111 @@ if (!document.getElementById('catListTooltip')) {
 	flex-wrap: wrap;
 }
 
+.st-summary-filter-panel {
+	flex: 1 1 640px;
+	display: grid;
+	gap: 0.8rem;
+	padding: 14px 16px;
+	border: 1px solid rgba(14, 75, 131, 0.08);
+	border-radius: 16px;
+	background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.st-summary-filter-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.st-summary-filter-title {
+	color: #0f766e;
+	font-size: 0.94rem;
+	font-weight: 800;
+}
+
+.st-summary-filter-hint {
+	color: #64748b;
+	font-size: 0.84rem;
+	font-weight: 600;
+}
+
+.st-summary-filter-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(140px, 1fr));
+	gap: 0.8rem;
+}
+
+.st-summary-filter-field {
+	display: grid;
+	gap: 0.34rem;
+}
+
+.st-summary-filter-field label {
+	color: #0f766e;
+	font-size: 0.83rem;
+	font-weight: 800;
+	letter-spacing: 0.01em;
+}
+
+.st-summary-filter-field select {
+	width: 100%;
+	height: 42px;
+	padding: 0 12px;
+	border: 1px solid rgba(14, 75, 131, 0.16);
+	border-radius: 12px;
+	background: #fff;
+	color: #16324f;
+	font-size: 0.94rem;
+	font-weight: 600;
+	outline: none;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.st-summary-filter-field select:hover {
+	border-color: rgba(14, 75, 131, 0.3);
+}
+
+.st-summary-filter-field select:focus {
+	border-color: rgba(15, 118, 110, 0.55);
+	box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+}
+
+.st-summary-filter-field select:disabled {
+	background: #f8fafc;
+	color: #94a3b8;
+	cursor: not-allowed;
+}
+
 .st-summary-modal-meta {
 	color: #64748b;
 	font-size: 0.92rem;
+	font-weight: 700;
+}
+
+.st-summary-modal-meta strong {
+	color: #16324f;
+	font-size: 1rem;
+}
+
+.st-summary-modal-side {
+	min-width: 180px;
+	display: grid;
+	gap: 0.75rem;
+	justify-items: end;
+}
+
+.st-summary-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.st-summary-filter-empty {
+	padding: 18px;
+	text-align: center;
+	color: #64748b;
 	font-weight: 700;
 }
 
@@ -3301,6 +3406,31 @@ if (!document.getElementById('catListTooltip')) {
 
 .st-summary-table tbody tr:hover {
 	background: #f8fbff;
+}
+
+@media (max-width: 980px) {
+	.st-summary-filter-grid {
+		grid-template-columns: repeat(2, minmax(140px, 1fr));
+	}
+
+	.st-summary-modal-side {
+		width: 100%;
+		justify-items: stretch;
+	}
+
+	.st-summary-modal-actions {
+		justify-content: flex-start;
+	}
+}
+
+@media (max-width: 640px) {
+	.st-summary-filter-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.st-summary-filter-panel {
+		padding: 12px;
+	}
 }
 
 .st-summary-empty {
@@ -4071,7 +4201,6 @@ if (!document.getElementById('catListTooltip')) {
 			if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
 				return DOMPurify.sanitize(src);
 			}
-			// Fallback sanitizer: parse and strip disallowed nodes/attributes using DOM APIs
 			try {
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(String(src), 'text/html');
@@ -5562,25 +5691,41 @@ $('#region-select-modal').on('change', function() {
 				if (row.updated_at) html += '<span>Updated at: ' + escapeHtml(row.updated_at) + '</span>';
 				html += '</div></div></div>';
 
-				const attUrl = row.attachment_url || '';
+				const attachments = Array.isArray(row.attachments) && row.attachments.length
+					? row.attachments
+					: (row.attachment_url ? [{
+						url: row.attachment_url,
+						uploaded_by: row.attachment_uploaded_by || '',
+						original_filename: row.title || 'Attachment'
+					}] : []);
 				html += '<div class="masterdata-attachment-panel">';
 				html += '<div>';
-				html += '<div class="masterdata-stat-label">MOA ATTACHMENT</div>';
+				html += '<div class="masterdata-stat-label">ATTACHMENTS</div>';
 				html += '<div class="masterdata-item-meta" style="margin-top:8px;">';
-				if (attUrl) {
-					html += '<span>Uploaded PDF available for this item.</span>';
-					if (row.attachment_uploaded_by) html += '<span>Uploaded by: ' + escapeHtml(row.attachment_uploaded_by) + '</span>';
+				if (attachments.length) {
+					html += '<span>' + attachments.length + ' attachment' + (attachments.length === 1 ? '' : 's') + ' uploaded for this item.</span>';
 				} else {
-					html += '<span>No PDF attachment uploaded yet.</span>';
-					if (!row.with_moa || !row.year_of_moa) html += '<span> Enable With MOA and set Year of MOA to upload an attachment.</span>';
+					html += '<span>No attachment uploaded yet.</span>';
 				}
 				html += '</div>';
+				if (attachments.length) {
+					html += '<div style="display:grid; gap:10px; margin-top:12px;">';
+					attachments.forEach(function(attachment) {
+						html += '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">';
+						html += '<span class="masterdata-pill">' + escapeHtml(attachment.original_filename || 'Attachment') + '</span>';
+						if (attachment.uploaded_by) {
+							html += '<span class="masterdata-item-row-cell-muted">Uploaded by ' + escapeHtml(attachment.uploaded_by) + '</span>';
+						}
+						html += '</div>';
+					});
+					html += '</div>';
+				}
 				html += '</div>';
 				html += '<div class="masterdata-attachment-actions">';
-				if (attUrl) {
-					html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + attUrl + '" data-title="' + escapeHtml(row.title || '') + '" data-uploader="' + escapeHtml(row.attachment_uploaded_by || '') + '">View PDF</button>';
-					html += '<a href="' + attUrl + '" class="masterdata-btn" target="_blank" download>Download</a>';
-				}
+				attachments.forEach(function(attachment) {
+					html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + escapeHtml(attachment.url || '') + '" data-title="' + escapeHtml(attachment.original_filename || row.title || '') + '" data-uploader="' + escapeHtml(attachment.uploaded_by || '') + '">View PDF</button>';
+					html += '<a href="' + escapeHtml(attachment.url || '') + '" class="masterdata-btn" target="_blank" download>Download</a>';
+				});
 				html += '</div>';
 				html += '</div>';
 
@@ -5635,32 +5780,170 @@ $('#region-select-modal').on('change', function() {
 			const bodyEl = document.getElementById('st-summary-modal-body');
 			if (!modal || !titleEl || !bodyEl || !config || typeof config.filter !== 'function') return;
 
-			const rows = (window.fullListingData || []).filter(config.filter);
+			const sourceRows = window.filteredListingData || window.fullListingData || [];
+			const rows = sourceRows.filter(config.filter);
 			titleEl.textContent = config.title || 'ST Listing';
 
 			if (!rows.length) {
 				bodyEl.innerHTML = sanitizeHtml('<p class="st-summary-empty">No ST records matched this summary card.</p>');
 			} else {
 				let html = '<div class="st-summary-modal-toolbar">';
-				html += '<div class="st-summary-modal-meta">' + rows.length + ' matching records</div>';
+				html += '<div class="st-summary-filter-panel">';
+				html += '<div class="st-summary-filter-head">';
+				html += '</div>';
+				html += '<div class="st-summary-filter-grid">';
+				html += '<div class="st-summary-filter-field"><label for="ss-region">Region</label><select id="ss-region"><option value="">All regions</option></select></div>';
+				html += '<div class="st-summary-filter-field"><label for="ss-province">Province</label><select id="ss-province"><option value="">All provinces</option></select></div>';
+				html += '<div class="st-summary-filter-field"><label for="ss-city">City/Municipality</label><select id="ss-city"><option value="">All cities</option></select></div>';
+				html += '<div class="st-summary-filter-field"><label for="ss-year">Year of MOA</label><select id="ss-year"><option value="">All years</option></select></div>';
+				html += '</div>';
+				html += '</div>';
+				html += '<div class="st-summary-modal-side">';
+				html += '<div class="st-summary-modal-meta"><strong>' + rows.length + '</strong> matching records</div>';
 				html += '<div class="st-summary-modal-actions"><button class="masterdata-btn masterdata-btn-secondary" id="st-summary-export-btn">Export Titles</button></div>';
+				html += '</div>';
 				html += '</div>';
 				html += '<div class="st-summary-table-wrap">';
 				html += '<table class="st-summary-table">';
-				html += '<thead><tr><th>ST Title</th><th>Region</th><th>Province</th><th>City/Municipality</th><th>Year of MOA</th></tr></thead><tbody>';
-				rows.forEach(function(row, idx) {
-					const safeTitle = escapeHtml(row.title || 'Untitled ST');
-					html += '<tr data-idx="' + idx + '">' +
-						'<td>' + safeTitle + '</td>' +
-						'<td>' + escapeHtml(row.region || '') + '</td>' +
-						'<td>' + escapeHtml(row.province || '') + '</td>' +
-						'<td>' + escapeHtml(row.municipality || '') + '</td>' +
-						'<td>' + escapeHtml(row.year_of_moa || '') + '</td>' +
-					'</tr>';
-				});
-				html += '</tbody></table></div>';
+				html += '<thead><tr><th>ST Title</th><th>Region</th><th>Province</th><th>City/Municipality</th><th>Year of MOA</th></tr></thead><tbody></tbody>';
+				html += '</table></div>';
 				bodyEl.innerHTML = sanitizeHtml(html);
+				modal._allRows = rows;
 				modal._rows = rows;
+				(function(){
+					try {
+						var regionSel = document.getElementById('ss-region');
+						var provinceSel = document.getElementById('ss-province');
+						var citySel = document.getElementById('ss-city');
+						var yearSel = document.getElementById('ss-year');
+						var meta = bodyEl.querySelector('.st-summary-modal-meta');
+						var filterMap = {
+							region: regionSel,
+							province: provinceSel,
+							city: citySel,
+							year: yearSel
+						};
+
+						function getCriteria() {
+							return {
+								region: regionSel ? regionSel.value : '',
+								province: provinceSel ? provinceSel.value : '',
+								city: citySel ? citySel.value : '',
+								year: yearSel ? yearSel.value : ''
+							};
+						}
+
+						function filterRows(criteria, excludeKey) {
+							return rows.filter(function(r){
+								if (excludeKey !== 'region' && criteria.region && (r.region || '') !== criteria.region) return false;
+								if (excludeKey !== 'province' && criteria.province && (r.province || '') !== criteria.province) return false;
+								if (excludeKey !== 'city' && criteria.city && (r.municipality || '') !== criteria.city) return false;
+								if (excludeKey !== 'year' && criteria.year && String(r.year_of_moa || '') !== String(criteria.year)) return false;
+								return true;
+							});
+						}
+
+						function collectOptions(optionRows, key) {
+							var mapped = optionRows.map(function(r){
+								if (key === 'city') return r.municipality || '';
+								if (key === 'year') return r.year_of_moa || '';
+								return r[key] || '';
+							}).filter(Boolean);
+							return Array.from(new Set(mapped)).sort(function(a, b){
+								return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+							});
+						}
+
+						function setSelectOptions(selectEl, key, criteria, placeholder) {
+							if (!selectEl) return;
+							var currentValue = selectEl.value || '';
+							var optionRows = filterRows(criteria, key);
+							var options = collectOptions(optionRows, key);
+							selectEl.innerHTML = '';
+							var baseOption = document.createElement('option');
+							baseOption.value = '';
+							baseOption.textContent = placeholder;
+							selectEl.appendChild(baseOption);
+							options.forEach(function(value){
+								var option = document.createElement('option');
+								option.value = value;
+								option.textContent = value;
+								selectEl.appendChild(option);
+							});
+							if (currentValue && options.indexOf(currentValue) !== -1) {
+								selectEl.value = currentValue;
+							} else {
+								selectEl.value = '';
+							}
+							selectEl.disabled = options.length === 0;
+						}
+
+						function rebuildTable(filteredRows){
+							var tbody = bodyEl.querySelector('.st-summary-table tbody');
+							if (!tbody) return;
+							tbody.innerHTML = '';
+							if (!filteredRows.length) {
+								var emptyRow = document.createElement('tr');
+								var emptyCell = document.createElement('td');
+								emptyCell.colSpan = 5;
+								emptyCell.className = 'st-summary-filter-empty';
+								emptyCell.textContent = 'No ST records match the current filter selection.';
+								emptyRow.appendChild(emptyCell);
+								tbody.appendChild(emptyRow);
+							} else {
+								filteredRows.forEach(function(row, idx){
+									var tr = document.createElement('tr');
+									tr.setAttribute('data-idx', idx);
+									[
+										row.title || 'Untitled ST',
+										row.region || '',
+										row.province || '',
+										row.municipality || '',
+										row.year_of_moa || ''
+									].forEach(function(value){
+										var td = document.createElement('td');
+										td.textContent = value;
+										tr.appendChild(td);
+									});
+									tbody.appendChild(tr);
+								});
+							}
+							if (meta) meta.innerHTML = '<strong>' + filteredRows.length + '</strong> matching records';
+							modal._rows = filteredRows;
+						}
+
+						var filterKeys = [
+							{ key: 'region', el: regionSel, placeholder: 'All regions' },
+							{ key: 'province', el: provinceSel, placeholder: 'All provinces' },
+							{ key: 'city', el: citySel, placeholder: 'All cities' },
+							{ key: 'year', el: yearSel, placeholder: 'All years' }
+						];
+						var refreshTimer = null;
+
+						function syncOptionsAndRows() {
+							var criteriaBefore = getCriteria();
+							filterKeys.forEach(function(item){
+								setSelectOptions(item.el, item.key, criteriaBefore, item.placeholder);
+							});
+							var criteriaAfter = getCriteria();
+							rebuildTable(filterRows(criteriaAfter));
+						}
+
+						function queueRefresh() {
+							if (refreshTimer) {
+								window.clearTimeout(refreshTimer);
+							}
+							refreshTimer = window.setTimeout(syncOptionsAndRows, 120);
+						}
+
+						filterKeys.forEach(function(item){
+							if (!item.el) return;
+							item.el.addEventListener('change', queueRefresh);
+						});
+
+						syncOptionsAndRows();
+					} catch(e) { console.error('st-summary filter init error', e); }
+				})();
 				try {
 					var exportBtn = document.getElementById('st-summary-export-btn');
 					if (exportBtn) {

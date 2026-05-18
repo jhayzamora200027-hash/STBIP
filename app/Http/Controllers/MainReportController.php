@@ -76,20 +76,24 @@ class MainReportController extends Controller
                 $attachment->year_of_moa,
             ]);
 
-            if (!isset($attachmentMap[$key]) || $attachment->id > $attachmentMap[$key]['id']) {
-                $entry = [
+            $fileKey = implode('|', [
+                trim((string) $attachment->file_path),
+                trim((string) $attachment->original_filename),
+                trim((string) $attachment->file_size),
+            ]);
+
+            if (!isset($attachmentMap[$key])) {
+                $attachmentMap[$key] = [];
+            }
+
+            if (!isset($attachmentMap[$key][$fileKey]) || $attachment->id > $attachmentMap[$key][$fileKey]['id']) {
+                $attachmentMap[$key][$fileKey] = [
                     'id' => $attachment->id,
                     'action' => $attachment->action,
-                    'url' => null,
-        
+                    'url' => $attachment->action === 'added' ? route('sts.attachments.show', $attachment->id) : null,
                     'uploaded_by' => $userNames[$attachment->created_by] ?? $attachment->created_by,
+                    'original_filename' => $attachment->original_filename,
                 ];
-
-                if ($attachment->action === 'added') {
-                    $entry['url'] = route('sts.attachments.show', $attachment->id);
-                }
-
-                $attachmentMap[$key] = $entry;
             }
         }
 
@@ -102,13 +106,25 @@ class MainReportController extends Controller
                 $row['year_of_moa'] ?? null,
             ]);
 
-            if (isset($attachmentMap[$mapKey]) &&
-                $attachmentMap[$mapKey]['action'] === 'added' &&
-                !empty($attachmentMap[$mapKey]['url'])
-            ) {
-                $row['attachment_id'] = $attachmentMap[$mapKey]['id'];
-                $row['attachment_url'] = $attachmentMap[$mapKey]['url'];
-                $row['attachment_uploaded_by'] = $attachmentMap[$mapKey]['uploaded_by'];
+            if (isset($attachmentMap[$mapKey])) {
+                $activeAttachments = collect($attachmentMap[$mapKey])
+                    ->filter(fn (array $entry) => $entry['action'] === 'added' && !empty($entry['url']))
+                    ->sortByDesc(fn (array $entry) => $entry['id'])
+                    ->map(fn (array $entry) => [
+                        'id' => $entry['id'],
+                        'url' => $entry['url'],
+                        'uploaded_by' => $entry['uploaded_by'],
+                        'original_filename' => $entry['original_filename'],
+                    ])
+                    ->values()
+                    ->all();
+
+                if ($activeAttachments !== []) {
+                    $row['attachments'] = $activeAttachments;
+                    $row['attachment_id'] = $activeAttachments[0]['id'];
+                    $row['attachment_url'] = $activeAttachments[0]['url'];
+                    $row['attachment_uploaded_by'] = $activeAttachments[0]['uploaded_by'];
+                }
             }
         }
         unset($row);

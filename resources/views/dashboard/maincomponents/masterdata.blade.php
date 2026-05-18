@@ -835,7 +835,6 @@
 				<section class="masterdata-card">
 					<div class="masterdata-card-header">
 						<h2>Upload and Import</h2>
-						<p>The upload source remains available here and imports into the fixed office structure. Matching STs are updated, and new STs are added in bulk.</p>
 					</div>
 					<div class="masterdata-card-body">
 						<form method="POST" action="{{ route('masterdata.import-google-sheet') }}">
@@ -1420,9 +1419,12 @@
 				mdFileInput.addEventListener('change', function () {
 					var maxBytes = 30 * 1024 * 1024;
 					var submitBtn = document.getElementById('masterdataAttachmentSubmitBtn');
-					if (mdFileInput.files && mdFileInput.files.length > 0 && mdFileInput.files[0].size > maxBytes) {
+					var hasLargeFile = Array.from(mdFileInput.files || []).some(function (file) {
+						return file.size > maxBytes;
+					});
+					if (hasLargeFile) {
 						var opener = window._lastSTUploadButton;
-						var msg = 'File too large. Max 30MB.';
+						var msg = 'Each file must be 30MB or smaller.';
 						if (opener) {
 							try { var p = new bootstrap.Popover(opener, {content: msg, trigger: 'manual', placement: 'top'}); p.show(); setTimeout(function () { p.hide(); p.dispose(); }, 3000); } catch (e) { alert(msg); }
 						} else { alert(msg); }
@@ -1440,13 +1442,16 @@
 				if (submitBtn) submitBtn.disabled = true;
 				var origText = submitBtn ? submitBtn.innerHTML : null;
 				if (submitBtn) submitBtn.innerHTML = 'Uploading...';
-				// client-side size check (30MB)
+				// client-side size check (30MB per file)
 				var fileInput = document.getElementById('masterdataAttachmentFile');
 				var maxBytes = 30 * 1024 * 1024;
 				if (fileInput && fileInput.files && fileInput.files.length > 0) {
-					if (fileInput.files[0].size > maxBytes) {
+					var hasLargeFile = Array.from(fileInput.files).some(function (file) {
+						return file.size > maxBytes;
+					});
+					if (hasLargeFile) {
 						var opener = window._lastSTUploadButton;
-						var message = 'File too large. Max 30MB.';
+						var message = 'Each file must be 30MB or smaller.';
 						if (opener) {
 							try {
 								var pop = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'});
@@ -1504,58 +1509,22 @@
 						try { data = JSON.parse(xhr.responseText); } catch (e) {}
 						if (data.success) {
 							if (modalInstance) modalInstance.hide();
-							var opener = window._lastSTUploadButton;
-							try {
-								if (opener) {
-									var wrapper = opener.closest('.masterdata-attachment-actions') || opener.parentElement;
-									// preserve data attributes on wrapper for reconstruction after delete
-									try {
-										var dr = opener.getAttribute('data-region'); if (dr) wrapper.setAttribute('data-region', dr);
-										var dp = opener.getAttribute('data-province'); if (dp) wrapper.setAttribute('data-province', dp);
-										var dm = opener.getAttribute('data-municipality'); if (dm) wrapper.setAttribute('data-municipality', dm);
-										var dt = opener.getAttribute('data-title'); if (dt) wrapper.setAttribute('data-title', dt);
-										var dy = opener.getAttribute('data-year'); if (dy) wrapper.setAttribute('data-year', dy);
-									} catch (e) {}
-									var csrf = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
-									var viewBtn = '<button type="button" class="masterdata-btn masterdata-btn-secondary btn-view-masterdata-attachment" data-url="' + (data.attachment && data.attachment.url ? data.attachment.url : '') + '" data-title="' + (data.attachment && data.attachment.title ? (data.attachment.title.replace(/"/g,'\\"')) : '') + '" data-uploader="' + (data.uploader || '') + '">View PDF</button>';
-									var deleteForm = '<form method="POST" class="attachment-delete-form" action="/sts-attachments/' + (data.attachment && data.attachment.id ? data.attachment.id : '') + '" onsubmit="return false;" style="display:inline-block;margin:0;">' +
-										'<input type="hidden" name="_token" value="' + csrf + '">' +
-										'<input type="hidden" name="_method" value="DELETE">' +
-										'<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete PDF</button>' +
-										'</form>';
-									if (wrapper) wrapper.innerHTML = viewBtn + (data.uploader && data.uploader.length ? '<div style="display:inline-block;margin-left:8px;" class="text-muted">Uploaded</div>' : '') + deleteForm;
-								}
-							} catch (e) { console.log('DOM update failed', e); }
-
-							if (opener) {
-								try { var pop = new bootstrap.Popover(opener, {content: data.message || 'Uploaded', trigger: 'manual', placement: 'top'}); pop.show(); setTimeout(function () { pop.hide(); pop.dispose(); }, 3000); } catch (e) { console.log('Popover failed', e); }
-							}
-
-							// show the page's existing success modal helper if present, else create a small modal
-							try {
+							// Prefer refreshing the updates panel, then reload the page to ensure all UI state is consistent.
+							if (typeof window.refreshMasterdataUpdatesPanel === 'function') {
+								// refresh panel and then reload shortly after to reflect any other page-level changes
+								window.refreshMasterdataUpdatesPanel(data.message || 'Attachment uploaded successfully.').finally(function () {
+									showAjaxFeedback('success', data.message || 'Attachment uploaded successfully.');
+									setTimeout(function () { window.location.reload(); }, 700);
+								});
+							} else {
 								if (typeof showSuccessModal === 'function') {
 									showSuccessModal(data.message || 'Attachment uploaded successfully.');
-								} else {
-									(function (msg) {
-										var existing = document.getElementById('upload-success-modal');
-										if (!existing) {
-											var div = document.createElement('div');
-											div.innerHTML = '<div class="modal fade" id="upload-success-modal" tabindex="-1" aria-hidden="true">' +
-												'<div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-3">' +
-												'<div class="h5 mb-2">' + (msg || 'Uploaded') + '</div>' +
-												'<div><button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">OK</button></div>' +
-												'</div></div></div></div>';
-											document.body.appendChild(div.firstChild);
-											existing = document.getElementById('upload-success-modal');
-										} else {
-											var h = existing.querySelector('.h5'); if (h) h.textContent = msg || 'Uploaded';
-										}
-										var m = new bootstrap.Modal(existing); m.show();
-									})(data.message || 'Attachment uploaded successfully.');
 								}
-							} catch (e) { try { console.log(e); } catch(_){} }
+								showAjaxFeedback('success', data.message || 'Attachment uploaded successfully.');
+								setTimeout(function () { window.location.reload(); }, 700);
+							}
 						} else {
-							alert(data.message || 'Upload failed.');
+							showAjaxFeedback('error', data.message || 'Upload failed.');
 						}
 					} else if (xhr.status === 422) {
 						var err = {};
@@ -1563,20 +1532,20 @@
 						var msgs = [];
 						if (err.errors) { for (var k in err.errors) msgs.push(err.errors[k].join(' ')); }
 						else if (err.message) msgs.push(err.message);
-						alert(msgs.join('\n') || 'Validation failed.');
+						showAjaxFeedback('error', msgs.join('\n') || 'Validation failed.');
 					} else if (xhr.status === 413) {
 						var errText = {};
 						try { errText = JSON.parse(xhr.responseText); } catch (e) {}
 						var message = errText && errText.message ? errText.message : 'Uploaded file exceeds the maximum allowed size of 30MB.';
 						var opener = window._lastSTUploadButton;
-						if (opener) { try { var pop2 = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'}); pop2.show(); setTimeout(function () { pop2.hide(); pop2.dispose(); }, 3500); } catch (e) { alert(message); } }
-						else { alert(message); }
+						if (opener) { try { var pop2 = new bootstrap.Popover(opener, {content: message, trigger: 'manual', placement: 'top'}); pop2.show(); setTimeout(function () { pop2.hide(); pop2.dispose(); }, 3500); } catch (e) { showAjaxFeedback('error', message); } }
+						else { showAjaxFeedback('error', message); }
 					} else { alert('Upload failed: ' + (xhr.statusText || xhr.responseText)); }
 					if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; }
 					if (progressWrap) { setTimeout(function () { progressWrap.style.display = 'none'; if (progressBar) progressBar.style.width = '0%'; }, 800); }
 				};
 
-				xhr.onerror = function () { alert('Upload error.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; } if (progressWrap) progressWrap.style.display = 'none'; };
+				xhr.onerror = function () { showAjaxFeedback('error', 'Upload error.'); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; } if (progressWrap) progressWrap.style.display = 'none'; };
 				xhr.send(fd);
 			});
 		});
@@ -1751,6 +1720,10 @@
 				showSuccessModal(message);
 			}
 		}
+
+		window.refreshMasterdataUpdatesPanel = function (message) {
+			return fetchUpdatesPanel(buildUpdatesPanelUrl(window.location.href), window.location.href, message);
+		};
 
 		async function submitUpdatesForm(form) {
 			const formData = buildSubmitFormData(form);

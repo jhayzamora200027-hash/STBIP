@@ -1418,19 +1418,20 @@ class MasterDataController extends Controller
             );
             $key = $this->buildAttachmentIdentityKey($identity);
 
-            if (!isset($attachmentMap[$key]) || $attachment->id > $attachmentMap[$key]['id']) {
-                $entry = [
+            $fileKey = $this->buildStoredAttachmentKey($attachment);
+            if (!isset($attachmentMap[$key])) {
+                $attachmentMap[$key] = [];
+            }
+
+            if (!isset($attachmentMap[$key][$fileKey]) || $attachment->id > $attachmentMap[$key][$fileKey]['id']) {
+                $attachmentMap[$key][$fileKey] = [
                     'id' => $attachment->id,
                     'action' => $attachment->action,
-                    'url' => null,
+                    'url' => $attachment->action === 'added' ? route('sts.attachments.show', $attachment->id) : null,
                     'uploaded_by' => $userNames[$attachment->created_by] ?? $attachment->created_by,
+                    'original_filename' => $attachment->original_filename,
+                    'created_at' => $attachment->created_at,
                 ];
-
-                if ($attachment->action === 'added') {
-                    $entry['url'] = route('sts.attachments.show', $attachment->id);
-                }
-
-                $attachmentMap[$key] = $entry;
             }
         }
 
@@ -1443,19 +1444,33 @@ class MasterDataController extends Controller
                 continue;
             }
 
-            $entry = $attachmentMap[$key];
-            if ($entry['action'] !== 'added' || empty($entry['url'])) {
-                continue;
-            }
+            $activeAttachments = collect($attachmentMap[$key])
+                ->filter(fn (array $entry) => $entry['action'] === 'added' && !empty($entry['url']))
+                ->sortByDesc(fn (array $entry) => $entry['id'])
+                ->map(fn (array $entry) => [
+                    'id' => $entry['id'],
+                    'url' => $entry['url'],
+                    'uploaded_by' => $entry['uploaded_by'],
+                    'original_filename' => $entry['original_filename'],
+                ])
+                ->values()
+                ->all();
 
-            $attachmentsByItem[$item->id] = [
-                'id' => $entry['id'],
-                'url' => $entry['url'],
-                'uploaded_by' => $entry['uploaded_by'],
-            ];
+            if ($activeAttachments !== []) {
+                $attachmentsByItem[$item->id] = $activeAttachments;
+            }
         }
 
         return $attachmentsByItem;
+    }
+
+    private function buildStoredAttachmentKey(StsAttachment $attachment): string
+    {
+        return implode('|', [
+            trim((string) $attachment->file_path),
+            trim((string) $attachment->original_filename),
+            trim((string) $attachment->file_size),
+        ]);
     }
 
     private function syncRegionItemAttachmentIdentity(array $originalIdentity, RegionItem $regionItem): void

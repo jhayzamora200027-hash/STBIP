@@ -86,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		confirmBtn.addEventListener('click', function () {
 			if (!deleteTarget || !deleteTarget.url) { if (modal) modal.hide(); return; }
 			var url = deleteTarget.url;
-			var wrapper = deleteTarget.wrapper;
 			var token = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
 
 			var xhr = new XMLHttpRequest();
@@ -99,28 +98,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				if (xhr.status >= 200 && xhr.status < 300) {
 					var data = {};
 					try { data = JSON.parse(xhr.responseText); } catch (e) {}
-					try {
-						if (wrapper) {
-							var region = wrapper.getAttribute('data-region') || '';
-							var province = wrapper.getAttribute('data-province') || '';
-							var municipality = wrapper.getAttribute('data-municipality') || '';
-							var title = wrapper.getAttribute('data-title') || '';
-							var year = wrapper.getAttribute('data-year') || '';
-							var uploadBtn = '<button type="button" class="masterdata-btn masterdata-btn-secondary btn-upload-masterdata-attachment" data-region="' + (region.replace(/"/g,'\"')) + '" data-province="' + (province.replace(/"/g,'\"')) + '" data-municipality="' + (municipality.replace(/"/g,'\"')) + '" data-title="' + (title.replace(/"/g,'\"')) + '" data-year="' + (year.replace(/"/g,'\"')) + '">Upload PDF</button>';
-							wrapper.innerHTML = uploadBtn;
-						}
-					} catch (e) { console.log('replace wrapper failed', e); }
-
-					try {
-						var newOpener = wrapper ? wrapper.querySelector('.btn-upload-masterdata-attachment') : null;
-						if (newOpener) {
-							var msg = (data && data.message) ? data.message : 'Attachment deleted';
-							var pop = new bootstrap.Popover(newOpener, {content: msg, trigger: 'manual', placement: 'top'});
-							pop.show(); setTimeout(function () { pop.hide(); pop.dispose(); }, 2500);
-						}
-					} catch (e) {}
-
-					if (modal) modal.hide(); deleteTarget = null;
+					if (modal) modal.hide();
+					deleteTarget = null;
+					if (typeof window.refreshMasterdataUpdatesPanel === 'function') {
+						window.refreshMasterdataUpdatesPanel((data && data.message) ? data.message : 'Attachment deleted successfully.');
+						return;
+					}
+					window.location.reload();
 				} else {
 					var err = {};
 					try { err = JSON.parse(xhr.responseText); } catch (e) {}
@@ -338,8 +322,8 @@ document.addEventListener('DOMContentLoaded', function () {
 					</div>
 					@foreach($regionItems as $item)
 							@php($adoptionStatus = $item->with_adopted ? 'adopted' : ($item->with_replicated ? 'replicated' : 'none'))
-							@php($itemAttachment = $attachmentsByItem[$item->id] ?? null)
-							@php($canManageAttachment = $canWriteMasterData && $item->with_moa && !empty($item->year_of_moa))
+							@php($itemAttachments = $attachmentsByItem[$item->id] ?? [])
+							@php($canManageAttachment = $canWriteMasterData)
 				<div class="masterdata-item-entry">
 					<div class="masterdata-item-row" data-masterdata-item-toggle="item-{{ $item->id }}" role="button" tabindex="0" aria-expanded="false">
 						<div>
@@ -375,20 +359,47 @@ document.addEventListener('DOMContentLoaded', function () {
 
 						<div class="masterdata-attachment-panel">
 							<div>
-								<div class="masterdata-stat-label">MOA Attachment</div>
+								<div class="masterdata-stat-label">Attachments</div>
 								<div class="masterdata-item-meta" style="margin-top: 8px;">
-									@if($itemAttachment)
-										<span>Uploaded PDF available for this item.</span>
-										@if(!empty($itemAttachment['uploaded_by']))
-											<span>Uploaded by: {{ $itemAttachment['uploaded_by'] }}</span>
-										@endif
+									@if(!empty($itemAttachments))
+										<span>{{ count($itemAttachments) }} file{{ count($itemAttachments) === 1 ? '' : 's' }} uploaded for this item.</span>
 									@else
-										<span>No PDF attachment uploaded yet.</span>
-									@endif
-									@if(!$item->with_moa || empty($item->year_of_moa))
-										<span>Enable With MOA and set Year of MOA to upload an attachment.</span>
+										<span>No attachment uploaded yet.</span>
 									@endif
 								</div>
+								@if(!empty($itemAttachments))
+									<div style="display:grid; gap:10px; margin-top:12px;">
+										@foreach($itemAttachments as $attachment)
+											<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+												<span class="masterdata-pill">{{ $attachment['original_filename'] ?: 'Attachment' }}</span>
+												@if(!empty($attachment['uploaded_by']))
+													<span class="masterdata-item-row-cell-muted">Uploaded by {{ $attachment['uploaded_by'] }}</span>
+												@endif
+												<button
+													type="button"
+													class="masterdata-btn masterdata-btn-secondary btn-view-masterdata-attachment"
+													data-url="{{ $attachment['url'] }}"
+													data-title="{{ $attachment['original_filename'] ?: $item->title }}"
+													data-uploader="{{ $attachment['uploaded_by'] ?? '' }}"
+												>
+													View PDF
+												</button>
+												@if($isSysadmin)
+													<form
+														method="POST"
+														action="{{ route('sts.attachments.destroy', ['attachment' => $attachment['id']]) }}"
+														onsubmit="return false;"
+														class="attachment-delete-form"
+													>
+														@csrf
+														@method('DELETE')
+														<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete PDF</button>
+													</form>
+												@endif
+											</div>
+										@endforeach
+									</div>
+								@endif
 							</div>
 							    <div class="masterdata-attachment-actions"
 								    data-region="{{ $item->region?->name ?: $selectedRegionName }}"
@@ -397,29 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
 								    data-title="{{ $item->title }}"
 								    data-year="{{ $item->year_of_moa ?? '' }}"
 							    >
-								@if($itemAttachment)
-									<button
-										type="button"
-										class="masterdata-btn masterdata-btn-secondary btn-view-masterdata-attachment"
-										data-url="{{ $itemAttachment['url'] }}"
-										data-title="{{ $item->title }}"
-										data-uploader="{{ $itemAttachment['uploaded_by'] ?? '' }}"
-									>
-										View PDF
-									</button>
-									@if($isSysadmin)
-										<form
-											method="POST"
-											action="{{ route('sts.attachments.destroy', ['attachment' => $itemAttachment['id']]) }}"
-											onsubmit="return false;"
-											class="attachment-delete-form"
-										>
-											@csrf
-											@method('DELETE')
-											<button type="submit" class="masterdata-btn masterdata-btn-danger">Delete PDF</button>
-										</form>
-									@endif
-								@elseif($canManageAttachment)
+								@if($canManageAttachment)
 									<button
 										type="button"
 										class="masterdata-btn masterdata-btn-secondary btn-upload-masterdata-attachment"
@@ -429,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function () {
 										data-title="{{ $item->title }}"
 										data-year="{{ $item->year_of_moa ?? '' }}"
 									>
-										Upload PDF
+										{{ empty($itemAttachments) ? 'Upload Files' : 'Upload More Files' }}
 									</button>
 								@endif
 							</div>
@@ -762,9 +751,9 @@ document.addEventListener('DOMContentLoaded', function () {
 					<input type="hidden" name="year_of_moa" id="masterdataAttachmentYear">
 
 					<div class="mb-3">
-						<label for="masterdataAttachmentFile" class="form-label">Select PDF file</label>
-						<input type="file" class="form-control" id="masterdataAttachmentFile" name="attachment" accept="application/pdf" required>
-						<div class="form-text">PDF only, max size 30MB.</div>
+						<label for="masterdataAttachmentFile" class="form-label">Select PDF files</label>
+						<input type="file" class="form-control" id="masterdataAttachmentFile" name="attachments[]" accept="application/pdf" multiple required>
+						<div class="form-text">Upload one or more PDFs. Each file must be 30MB or smaller.</div>
 						<div class="progress mt-2" id="masterdataAttachmentProgress" style="height:6px; display:none;">
 							<div class="progress-bar" role="progressbar" style="width:0%" aria-valuemin="0" aria-valuemax="100"></div>
 						</div>

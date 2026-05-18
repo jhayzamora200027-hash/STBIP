@@ -237,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
           if (errorMsg) {
             errorMsg.innerHTML = msg;
             errorMsg.style.display = 'block';
-            // If server indicated captcha is required, unhide the recaptcha container
             try {
               const recaptchaContainer = document.getElementById('loginRecaptchaContainer');
               const recaptchaError = document.getElementById('loginRecaptchaError');
@@ -246,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (recaptchaError) { recaptchaError.textContent = data.errors['g-recaptcha-response'][0]; recaptchaError.style.display = 'block'; }
               }
             } catch (e) {
-              // ignore UI helper errors
             }
             if (loginModal) {
               loginModal.show();
