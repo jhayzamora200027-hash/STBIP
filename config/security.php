@@ -8,6 +8,20 @@ return [
         'referrer_policy' => 'strict-origin-when-cross-origin',
     ],
 
+    // Shared CSP used by both server snippets and application middleware.
+    'content_security_policy' => implode(' ', [
+        "default-src 'self';",
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.google.com https://www.gstatic.com;",
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.bunny.net https://fonts.googleapis.com;",
+        "connect-src 'self' https: https://www.google.com https://www.gstatic.com;",
+        "img-src 'self' data: https:;",
+        "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.bunny.net https://fonts.gstatic.com;",
+        "object-src 'self';",
+        "frame-src 'self' https://www.google.com https://www.gstatic.com;",
+        "base-uri 'self';",
+        "frame-ancestors 'self';",
+    ]),
+
     // Permissions/feature policy default
     'permissions_policy' => "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
 

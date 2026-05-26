@@ -2,6 +2,7 @@
 
 @section('content')
 <div class="container py-4">
+  @php($isAuthenticationModule = request('module') === 'authentication')
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
     .sector-utilities-page { --sector-ink: #12315c; --sector-ink-soft: #5c6f88; --sector-card: rgba(255,255,255,0.92); --sector-accent: #1b6ef3; --sector-shadow: 0 22px 48px rgba(17,53,110,0.12); font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: var(--sector-ink); position: relative; }
@@ -56,9 +57,9 @@
       </div>
       <div class="card-body">
         <form method="GET" class="row g-2 align-items-end">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label">Module</label>
-            <select name="module" class="form-select">
+            <select name="module" class="form-select" id="logs-module-filter">
               <option value="">All</option>
               <option value="master_data" {{ request('module')=='master_data'?'selected':'' }}>Master Data</option>
               <option value="sector_utilities" {{ request('module')=='sector_utilities'?'selected':'' }}>Sector Utilities</option>
@@ -66,8 +67,29 @@
               <option value="social_titles" {{ request('module')=='social_titles'?'selected':'' }}>Social Technology Titles</option>
               <option value="user_management" {{ request('module')=='user_management'?'selected':'' }}>User Management</option>
               <option value="user_approval" {{ request('module')=='user_approval'?'selected':'' }}>User Approval</option>
+              <option value="authentication" {{ request('module')=='authentication'?'selected':'' }}>Authentication</option>
             </select>
           </div>
+
+          <div class="col-md-3 {{ $isAuthenticationModule ? '' : 'd-none' }}" id="logs-action-filter-wrap">
+            <label class="form-label">Action</label>
+            <select name="action" class="form-select" id="logs-action-filter" {{ $isAuthenticationModule ? '' : 'disabled' }}>
+              <option value="">All</option>
+              <option value="login" {{ request('action')=='login'?'selected':'' }}>Login</option>
+              <option value="logout" {{ request('action')=='logout'?'selected':'' }}>Logout</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">From</label>
+            <input type="date" name="from_date" class="form-control" value="{{ $fromDate ?? request('from_date') }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">To</label>
+            <input type="date" name="to_date" class="form-control" value="{{ $toDate ?? request('to_date') }}">
+          </div>
+
           <div class="col-auto">
             <button class="btn btn-primary sector-action-btn">Filter</button>
           </div>
@@ -117,4 +139,29 @@
     <div class="mt-3">Showing {{ $logs->count() }} of {{ $total ?? $logs->count() }} entries</div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var moduleFilter = document.getElementById('logs-module-filter');
+    var actionFilterWrap = document.getElementById('logs-action-filter-wrap');
+    var actionFilter = document.getElementById('logs-action-filter');
+
+    if (!moduleFilter || !actionFilterWrap || !actionFilter) {
+      return;
+    }
+
+    function syncActionFilterVisibility() {
+      var isAuthentication = moduleFilter.value === 'authentication';
+      actionFilterWrap.classList.toggle('d-none', !isAuthentication);
+      actionFilter.disabled = !isAuthentication;
+
+      if (!isAuthentication) {
+        actionFilter.value = '';
+      }
+    }
+
+    moduleFilter.addEventListener('change', syncActionFilterVisibility);
+    syncActionFilterVisibility();
+  });
+</script>
 @endsection

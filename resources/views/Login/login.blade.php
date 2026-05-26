@@ -118,6 +118,10 @@
 </div>
 @include('auth.partials.otp_modal')
 
+@if(config('services.recaptcha.site_key'))
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@endif
+
 <script>
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -190,12 +194,10 @@ document.addEventListener('DOMContentLoaded', function() {
             data = {};
           }
 
-          // If server indicates OTP is required, open the OTP modal and populate it
           if (data.otp_required) {
             if (typeof openOtpModal === 'function') {
-              openOtpModal({ masked_email: data.masked_email, otp_expires_at: data.otp_expires_at });
+              openOtpModal(data);
             }
-            // restore login button state
             if (loginBtn) { loginBtn.disabled = false; loginBtn.innerHTML = sanitizeHtml('Log in'); }
             return;
           }

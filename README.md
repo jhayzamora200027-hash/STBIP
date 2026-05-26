@@ -88,10 +88,10 @@ MAIL_MAILER=smtp
 MAIL_SCHEME=null
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
-MAIL_USERNAME=jayarzamora084@gmail.com
-MAIL_PASSWORD=rhqvpbikcawdotmx
+MAIL_USERNAME=soctech@dswd.gov.ph
+MAIL_PASSWORD=tgpnhpfajqwtocbj
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="stb-portal@dswd.gov.ph"
+MAIL_FROM_ADDRESS="stbdigitalization_no-reply@dswd.gov.ph"
 MAIL_FROM_NAME="STB Inventory Portal"
 
 SESSION_LIFETIME=10
@@ -106,6 +106,19 @@ SESSION_DOMAIN=null
 
 RECAPTCHA_SITE_KEY=6LfN2s0sAAAAAIPGdt23MmAMfUVKsyP5rzNYfFw5
 RECAPTCHA_SECRET_KEY=6LfN2s0sAAAAAFiYttpjnSpSORrF4FgfhafnBhyT
+
+## Please add the following to the HTTPS nginx virtual host for the staging site
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.bunny.net https://fonts.googleapis.com; connect-src 'self' https: https://www.google.com https://www.gstatic.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.bunny.net https://fonts.gstatic.com; object-src 'self'; frame-src 'self' https://www.google.com https://www.gstatic.com; base-uri 'self'; frame-ancestors 'self';" always;
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+ssl_ecdh_curve X25519:secp384r1:prime256v1;
+ssl_session_tickets off;
 =======
 >>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 # STBIP

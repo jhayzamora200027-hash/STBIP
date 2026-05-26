@@ -1,3 +1,20 @@
+<IfModule mod_headers.c>
+    # Prevent Clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+
+    # Prevent MIME Sniffing
+    Header set X-Content-Type-Options "nosniff"
+
+    # Force HTTPS (HSTS) - Requires SSL
+    Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains"
+
+    # Content Security Policy (CSP) - Allow the app's bundled assets, CDN UI libraries, and data-image favicon.
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.bunny.net https://fonts.googleapis.com; connect-src 'self' https: https://www.google.com https://www.gstatic.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.bunny.net https://fonts.gstatic.com; object-src 'self'; frame-src 'self' https://www.google.com https://www.gstatic.com; base-uri 'self'; frame-ancestors 'self';"
+
+    # Referrer Policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

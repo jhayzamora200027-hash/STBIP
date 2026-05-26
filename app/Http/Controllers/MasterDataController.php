@@ -9,8 +9,11 @@ use App\Models\Selectdocslogs;
 use App\Models\StsAttachment;
 use App\Models\Uploadlog;
 use App\Models\User;
+use App\Rules\NoMarkup;
 use App\Services\RegionSheetImportService;
+use App\Support\InputValueGuard;
 use App\Support\MasterDataRegionCatalog;
+use App\Support\PlainTextSanitizer;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -77,13 +80,22 @@ class MasterDataController extends Controller
         ]);
     }
 
-    public function exportRegionItems()
+    public function exportRegionItems(Request $request)
     {
-        $items = RegionItem::query()
+        $selectedRegionName = MasterDataRegionCatalog::normalize($request->query('region_filter'));
+
+        $itemsQuery = RegionItem::query()
             ->with('region:id,name')
             ->orderBy('region_id')
-            ->orderBy('title')
-            ->get();
+            ->orderBy('title');
+
+        if ($selectedRegionName) {
+            $itemsQuery->whereHas('region', function ($q) use ($selectedRegionName) {
+                $q->where('name', $selectedRegionName);
+            });
+        }
+
+        $items = $itemsQuery->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -140,7 +152,12 @@ class MasterDataController extends Controller
         }
 
         $writer = new Xlsx($spreadsheet);
-        $fileName = 'region_items_export_' . date('Ymd_His') . '.xlsx';
+        if ($selectedRegionName) {
+            $safeRegion = preg_replace('/[^A-Za-z0-9_-]/', '_', $selectedRegionName);
+            $fileName = 'region_items_' . $safeRegion . '_export_' . date('Ymd_His') . '.xlsx';
+        } else {
+            $fileName = 'region_items_export_' . date('Ymd_His') . '.xlsx';
+        }
 
         $callback = function () use ($writer) {
             $writer->save('php://output');
@@ -376,6 +393,20 @@ class MasterDataController extends Controller
                 $inactive_remarks = $inr === '' ? null : $inr;
             } else {
                 $inactive_remarks = null;
+            }
+
+            $markupField = $this->detectImportedRegionItemMarkupField([
+                'region' => $regionName,
+                'title' => $title,
+                'province' => $province,
+                'municipality' => $municipality,
+                'inactive_remarks' => $inactive_remarks,
+            ]);
+
+            if ($markupField !== null) {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: {$markupField} contains disallowed HTML or script content.";
+                continue;
             }
 
             $region = null;
@@ -941,6 +972,31 @@ class MasterDataController extends Controller
                 'municipality' => $municipality ?: null,
             ];
 
+            $inactive_status = isset($map['inactive_status']) ? trim((string) ($row[$map['inactive_status']] ?? '')) : null;
+            $inactive_remarks_raw = isset($map['inactive_remarks']) ? ($row[$map['inactive_remarks']] ?? null) : null;
+            if ($inactive_remarks_raw !== null) {
+                $inr = is_scalar($inactive_remarks_raw) ? (string) $inactive_remarks_raw : '';
+                $inr = preg_replace('/[\x00-\x1F\x7F\xA0]+/u', ' ', $inr);
+                $inr = trim(preg_replace('/\s+/u', ' ', $inr));
+                $inactive_remarks = $inr === '' ? null : $inr;
+            } else {
+                $inactive_remarks = null;
+            }
+
+            $markupField = $this->detectImportedRegionItemMarkupField([
+                'region' => $regionName,
+                'title' => $title,
+                'province' => $province,
+                'municipality' => $municipality,
+                'inactive_remarks' => $inactive_remarks,
+            ]);
+
+            if ($markupField !== null) {
+                $skipped++;
+                $warnings[] = "Row {$sheetRowNumber}: {$markupField} contains disallowed HTML or script content.";
+                continue;
+            }
+
             $payload = [
                 'status' => $status,
                 'with_expr' => $with_expr,
@@ -1245,9 +1301,26 @@ class MasterDataController extends Controller
 
         $attachmentsByItem = $this->buildAttachmentMapForRegionItems($pagedItems);
 
+        $pagedItems->transform(fn (RegionItem $item) => $this->sanitizeRegionItemForDisplay($item));
+        $provinceOptions = $provinceOptions
+            ->map(fn ($value) => PlainTextSanitizer::sanitize($value))
+            ->filter(fn ($value) => filled($value))
+            ->unique()
+            ->sort()
+            ->values();
+        $municipalityOptions = $municipalityOptions
+            ->map(fn ($value) => PlainTextSanitizer::sanitize($value))
+            ->filter(fn ($value) => filled($value))
+            ->unique()
+            ->sort()
+            ->values();
+
         $socialTechnologyTitles = SocialTechnologyTitle::query()
             ->orderBy('social_technology')
             ->pluck('social_technology')
+            ->map(fn ($value) => PlainTextSanitizer::sanitize($value))
+            ->filter(fn ($value) => filled($value))
+            ->unique()
             ->values();
 
         $canViewRegionItemHistory = $this->canViewRegionItemHistory();
@@ -1284,6 +1357,12 @@ class MasterDataController extends Controller
                     'tab' => 'updates',
                     'history_modal' => 1,
                 ]));
+
+            $regionItemHistoryLogs->setCollection(
+                $regionItemHistoryLogs->getCollection()->map(
+                    fn (RegionItemHistory $log) => $this->sanitizeRegionItemHistoryLogForDisplay($log)
+                )
+            );
         }
 
         $updatesQuery = $request->query();
@@ -1570,9 +1649,9 @@ class MasterDataController extends Controller
 
         $validator = Validator::make($request->all(), [
             'region_id' => ['required', 'exists:regions,id'],
-            'title' => ['required', 'string', 'max:255', 'exists:social_technology_titles,social_technology'],
-            'province' => ['nullable', 'string', 'max:255'],
-            'municipality' => ['nullable', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255', new NoMarkup(), 'exists:social_technology_titles,social_technology'],
+            'province' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'municipality' => ['nullable', 'string', 'max:255', new NoMarkup()],
             'with_expr' => ['nullable', 'boolean'],
             'with_moa' => ['nullable', 'boolean'],
             'year_of_moa' => ['nullable', 'integer', 'digits:4', 'min:1900', 'max:2100'],
@@ -1582,7 +1661,7 @@ class MasterDataController extends Controller
             'adoption_status' => ['nullable', 'in:none,adopted,replicated'],
             'status' => ['nullable', 'in:ongoing,inactive'],
             'inactive_status' => ['nullable', 'in:pending_document,dissolved'],
-            'inactive_remarks' => ['nullable', 'string', 'max:2000'],
+            'inactive_remarks' => ['nullable', 'string', 'max:2000', new NoMarkup()],
         ], [
             'title.required' => 'Social Technology Title is required.',
             'title.exists' => 'Select an approved Social Technology Title from the ST title list.',
@@ -1663,6 +1742,22 @@ class MasterDataController extends Controller
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $values
+     */
+    private function detectImportedRegionItemMarkupField(array $values): ?string
+    {
+        foreach ($values as $field => $value) {
+            if (!InputValueGuard::containsForbiddenMarkup($value)) {
+                continue;
+            }
+
+            return str_replace('_', ' ', $field);
+        }
+
+        return null;
+    }
+
     private function canViewRegionItemHistory(): bool
     {
         return in_array(Auth::user()?->usergroup, ['admin', 'sysadmin'], true);
@@ -1684,8 +1779,8 @@ class MasterDataController extends Controller
     private function buildRegionItemHistorySnapshot(RegionItem $regionItem, ?string $regionName = null): array
     {
         return [
-            'region_name' => trim((string) ($regionName ?? $regionItem->region?->name ?? '')),
-            'title' => trim((string) $regionItem->title),
+            'region_name' => PlainTextSanitizer::sanitize($regionName ?? $regionItem->region?->name) ?? '',
+            'title' => PlainTextSanitizer::sanitize($regionItem->title) ?? '',
             'province' => $this->normalizeRegionItemHistoryValue($regionItem->province),
             'municipality' => $this->normalizeRegionItemHistoryValue($regionItem->municipality),
             'with_expr' => (bool) $regionItem->with_expr,
@@ -1779,7 +1874,7 @@ class MasterDataController extends Controller
     private function normalizeRegionItemHistoryValue(mixed $value): mixed
     {
         if (is_string($value)) {
-            $value = trim($value);
+            $value = PlainTextSanitizer::sanitize($value);
             return $value === '' ? null : $value;
         }
 
@@ -1823,18 +1918,36 @@ class MasterDataController extends Controller
         RegionItemHistory::query()->create([
             'region_item_id' => $regionItem->id,
             'region_id' => $regionItem->region_id,
-            'region_name' => $regionItem->region?->name,
-            'st_title' => $regionItem->title,
-            'province' => $regionItem->province,
-            'city' => $regionItem->municipality,
-            'updated_by' => $updatedBy,
+            'region_name' => PlainTextSanitizer::sanitize($regionItem->region?->name),
+            'st_title' => PlainTextSanitizer::sanitize($regionItem->title),
+            'province' => PlainTextSanitizer::sanitize($regionItem->province),
+            'city' => PlainTextSanitizer::sanitize($regionItem->municipality),
+            'updated_by' => PlainTextSanitizer::sanitize($updatedBy),
             'action' => $action,
-            'update_row' => empty($changeSet)
+            'update_row' => PlainTextSanitizer::sanitize(empty($changeSet)
                 ? 'No tracked field changes.'
                 : collect($changeSet)
                     ->map(fn (array $change) => $change['field'] . ': ' . $change['from'] . ' -> ' . $change['to'])
-                    ->implode('; '),
+                    ->implode('; ')),
         ]);
+    }
+
+    private function sanitizeRegionItemForDisplay(RegionItem $item): RegionItem
+    {
+        foreach (['title', 'province', 'municipality', 'inactive_remarks', 'createdby', 'updatedby'] as $field) {
+            $item->{$field} = PlainTextSanitizer::sanitize($item->{$field});
+        }
+
+        return $item;
+    }
+
+    private function sanitizeRegionItemHistoryLogForDisplay(RegionItemHistory $log): RegionItemHistory
+    {
+        foreach (['region_name', 'st_title', 'province', 'city', 'updated_by', 'update_row'] as $field) {
+            $log->{$field} = PlainTextSanitizer::sanitize($log->{$field});
+        }
+
+        return $log;
     }
 
     private function buildOverview(Collection $regions, Collection $regionItems): array

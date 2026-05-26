@@ -3968,7 +3968,6 @@ if (!document.getElementById('catListTooltip')) {
 								</div>
 								<button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button>
 							</div>
-							<div class="guest-filter-subtitle">Refine the dashboard by region, year, province, and city or municipality.</div>
 						</div>
 						<div class="card-body guest-filter-body">
 							<form method="GET" action="" class="w-100 d-flex flex-column">
@@ -7850,7 +7849,6 @@ window.showGuestFilterDock = function(ev){
 						<div class="filter-modal-heading">
 							<div class="filter-modal-kicker">Dashboard Filters</div>
 							<div class="filter-modal-title">Filter By Location &amp; Year</div>
-							<div class="filter-modal-subtitle">Refine the dashboard by region, year, province, and city or municipality.</div>
 						</div>
 					</div>
 					<div class="card-body filter-modal-body">

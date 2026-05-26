@@ -11,12 +11,15 @@ class LogsController extends Controller
     public function index(Request $request)
     {
         $module = $request->query('module');
+        $action = $request->query('action');
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
         $perPage = 50;
 
         $results = collect();
         $isSqlite = DB::connection()->getDriverName() === 'sqlite';
 
-        $gather = function (string $table, string $moduleName, array $mapping = []) use (&$results, $isSqlite) {
+        $gather = function (string $table, string $moduleName, array $mapping = []) use (&$results, $isSqlite, $action) {
             if (!DB::getSchemaBuilder()->hasTable($table)) return;
             $cols = DB::getSchemaBuilder()->getColumnListing($table);
 
@@ -42,39 +45,61 @@ class LogsController extends Controller
             $selects = [];
             $qi = $quote('id');
             if (in_array('id', $cols) && $qi) {
-                $selects[] = DB::raw("{$qi} as id");
+                $selects[] = DB::raw("`{$table}`.`id` as id");
             } else {
                 $selects[] = DB::raw('NULL as id');
             }
             if ($actionCol) {
-                $qc = $quote($actionCol);
-                if ($qc) $selects[] = DB::raw("{$qc} as action");
+                // qualify action with the table name to avoid ambiguity when joined
+                $selects[] = DB::raw("`{$table}`.`{$actionCol}` as action");
             }
             if ($userCol) {
                 $qu = $quote($userCol);
-                if ($qu) $selects[] = DB::raw("{$qu} as user_id");
+                if ($qu) {
+                    // For userlogs, prefer the user's name from the users table when available
+                    if ($table === 'userlogs') {
+                        // join users by the user column (which may be user_id or performed_by)
+                        $q->leftJoin('users', 'users.id', '=', "{$table}.{$userCol}");
+                        $fallback = "`{$table}`.`{$userCol}`";
+                        $selects[] = DB::raw("COALESCE(users.name, {$fallback}) as user_id");
+                    } else {
+                        $selects[] = DB::raw("{$qu} as user_id");
+                    }
+                }
             }
             if ($timeCol) {
-                $qt = $quote($timeCol);
-                if ($qt) $selects[] = DB::raw("{$qt} as created_at");
+                // qualify time column with table name to avoid ambiguity
+                $selects[] = DB::raw("`{$table}`.`{$timeCol}` as created_at");
             }
             if ($detailsCol) {
-                $qd = $quote($detailsCol);
-                if ($qd) {
-                    if ($detailsCol === 'excelname') {
-                        if ($isSqlite) {
-                            $selects[] = DB::raw("'excel:' || {$qd} as details");
-                        } else {
-                            $selects[] = DB::raw("CONCAT('excel:', {$qd}) as details");
-                        }
+                if ($table === 'userlogs' && $moduleName === 'authentication') {
+                    if ($isSqlite) {
+                        $selects[] = DB::raw("strftime('%H:%M:%S', `{$table}`.`created_at`) as details");
                     } else {
-                        $selects[] = DB::raw("{$qd} as details");
+                        $selects[] = DB::raw("DATE_FORMAT(`{$table}`.`created_at`, '%H:%i:%s') as details");
                     }
+                } elseif ($detailsCol === 'excelname') {
+                    if ($isSqlite) {
+                        $selects[] = DB::raw("'excel:' || `{$table}`.`{$detailsCol}` as details");
+                    } else {
+                        $selects[] = DB::raw("CONCAT('excel:', `{$table}`.`{$detailsCol}`) as details");
+                    }
+                } else {
+                    $selects[] = DB::raw("`{$table}`.`{$detailsCol}` as details");
                 }
             }
 
             if (!empty($selects)) {
                 $q->addSelect($selects);
+            }
+
+            // apply action filter when requested and the table has an action-like column
+            if (!empty($action) && $actionCol) {
+                $q->whereRaw("`{$table}`.`{$actionCol}` = ?", [$action]);
+            } elseif ($table === 'userlogs' && $moduleName === 'authentication' && $actionCol) {
+                $q->whereIn("{$table}.{$actionCol}", ['login', 'logout']);
+            } elseif ($table === 'userlogs' && $moduleName === 'user_management' && $actionCol) {
+                $q->whereNotIn("{$table}.{$actionCol}", ['login', 'logout']);
             }
 
             $results = $results->concat($q->get());
@@ -103,6 +128,11 @@ class LogsController extends Controller
             $gather('userlogs', 'user_management', ['user' => 'performed_by', 'details' => 'meta']);
         }
 
+        // Authentication-specific view for login/logout entries
+        if (!$module || $module === 'authentication') {
+            $gather('userlogs', 'authentication', ['action' => 'action', 'user' => 'user_id', 'details' => 'meta', 'time' => 'created_at']);
+        }
+
         if (!$module || $module === 'user_approval') {
             if (DB::getSchemaBuilder()->hasTable('approval_histories')) {
                 $q = DB::table('approval_histories')->leftJoin('users', 'approval_histories.user_id', '=', 'users.id');
@@ -126,7 +156,26 @@ class LogsController extends Controller
             }
         }
 
-        $sorted = $results->sortByDesc(function ($r) { return $r->created_at ?? ($r->updated_at ?? null); })->values();
+        $filtered = $results->filter(function ($row) use ($fromDate, $toDate) {
+            $timestamp = $row->created_at ?? ($row->updated_at ?? null);
+            if (!$timestamp) {
+                return true;
+            }
+
+            $date = substr((string) $timestamp, 0, 10);
+
+            if ($fromDate && $date < $fromDate) {
+                return false;
+            }
+
+            if ($toDate && $date > $toDate) {
+                return false;
+            }
+
+            return true;
+        });
+
+        $sorted = $filtered->sortByDesc(function ($r) { return $r->created_at ?? ($r->updated_at ?? null); })->values();
 
         $requiredTables = [
             'child_docno_histories',
@@ -147,6 +196,9 @@ class LogsController extends Controller
         return view('admin.logs.index', [
             'logs' => $slice,
             'module' => $module,
+            'action' => $action,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
             'page' => $page,
             'perPage' => $perPage,
             'total' => $total,

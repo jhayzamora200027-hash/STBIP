@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StsAttachment;
+use App\Rules\NoMarkup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -14,11 +15,11 @@ class StsAttachmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'region' => 'required|string|max:255',
-            'province' => 'nullable|string|max:255',
-            'municipality' => 'nullable|string|max:255',
-            'title' => 'required|string|max:1024',
-            'year_of_moa' => 'nullable|string|max:50',
+            'region' => ['required', 'string', 'max:255', new NoMarkup()],
+            'province' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'municipality' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'title' => ['required', 'string', 'max:1024', new NoMarkup()],
+            'year_of_moa' => ['nullable', 'string', 'max:50', new NoMarkup()],
             'attachment' => 'nullable|file|mimes:pdf|max:30720',
             'attachments' => 'nullable|array|min:1',
             'attachments.*' => 'file|mimes:pdf|max:30720',

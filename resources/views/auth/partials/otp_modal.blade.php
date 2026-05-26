@@ -6,7 +6,27 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">
-        <p class="verification-legend">A verification code has been sent to <strong id="otpMaskedEmail">your email</strong>. Enter it below to complete sign in.</p>
+        <p class="verification-legend" id="otpInstructionText"><span id="otpInstructionPrefix">No verification code has been sent to</span> <strong id="otpMaskedEmail">your email</strong> <span id="otpInstructionSuffix">yet. Confirm the request first, then complete the CAPTCHA to send one.</span></p>
+
+        <div class="otp-send-panel mb-3">
+          <button type="button" class="btn btn-otp-primary w-100" id="otpOpenSendPopoverBtn">Request verification code</button>
+          <div class="otp-send-popover" id="otpSendPopover" hidden>
+            <p class="mb-2"><span id="otpSendPromptPrefix">Send a one-time password to</span> <strong id="otpConfirmMaskedEmail">your email</strong><span id="otpSendPromptSuffix">?</span></p>
+            <p class="text-muted small mb-3">You can request a code up to 3 times. Additional requests will pause OTP access for 5 minutes.</p>
+            @if(config('services.recaptcha.site_key'))
+              <div class="otp-send-captcha-wrap">
+                <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+              </div>
+              <div class="text-danger small mt-2" id="otpSendCaptchaError" style="display:none;"></div>
+            @else
+              <div class="text-muted small mb-3">CAPTCHA is not configured in this environment.</div>
+            @endif
+            <div class="d-flex gap-2 mt-3">
+              <button type="button" class="btn btn-otp-primary flex-fill" id="otpConfirmSendBtn">Confirm request</button>
+              <button type="button" class="btn btn-otp-cancel flex-fill" id="otpCancelSendBtn">Cancel</button>
+            </div>
+          </div>
+        </div>
 
         <form id="otpModalForm" method="POST" action="{{ route('otp.verify') }}" autocomplete="off">
           @csrf
@@ -25,10 +45,10 @@
           </div>
 
           <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-otp-primary">Verify</button>
+            <button type="submit" class="btn btn-otp-primary" id="otpVerifyBtn">Verify</button>
             <button type="button" class="btn btn-otp-cancel" data-bs-dismiss="modal">Cancel</button>
-            <div class="text-center mt-2">
-              <small class="text-muted">Didn't receive the code? <a href="#" id="otpResendBtn" class="otp-resend-link">Resend OTP</a></small>
+            <div class="text-center mt-2" id="otpResendWrap" style="display:none;">
+              <small class="text-muted">Need another code? <a href="#" id="otpResendBtn" class="otp-resend-link">Request another OTP</a></small>
             </div>
           </div>
         </form>
@@ -37,11 +57,31 @@
           <span id="otpModalCountdown">Code expires in —</span>
         </div>
 
+        <div class="mt-2 text-center text-muted small" id="otpSendMeta"></div>
+
         <div id="otpModalError" class="otp-error-box mt-3" role="alert" aria-live="polite" style="display:none;"></div>
       </div>
     </div>
   </div>
 
+</div>
+
+<div class="modal fade" id="otpRestrictionModal" tabindex="-1" aria-labelledby="otpRestrictionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content otp-restriction-card">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title" id="otpRestrictionModalLabel">OTP temporarily restricted</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p class="mb-2" id="otpRestrictionMessage">You have reached the OTP request limit. Please wait 5 minutes before trying again.</p>
+        <div class="otp-restriction-timer" id="otpRestrictionCountdown">Try again in 05:00.</div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-otp-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -52,11 +92,18 @@
   #otpModal .btn-otp-primary { background:#0a66ff; border-color:#0a66ff; color:#fff; }
   #otpModal .btn-otp-cancel { background:#f3f4f6; color:#111827; }
   #otpModal .otp-error-box { background:#fff5f5; border:1px solid #f8d7da; color:#842029; padding:10px; border-radius:6px; display:none; }
+  #otpModal .otp-send-panel { position: relative; }
+  #otpModal .otp-send-popover { position: absolute; inset: calc(100% + 10px) 0 auto 0; z-index: 10; padding: 16px; border-radius: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.12); box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18); }
+  #otpModal .otp-send-popover::before { content: ''; position: absolute; top: -8px; left: 24px; width: 14px; height: 14px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.12); border-left: 1px solid rgba(15, 23, 42, 0.12); transform: rotate(45deg); }
+  #otpModal .otp-send-captcha-wrap { display:flex; justify-content:center; min-height: 78px; }
 
   /* resend link styling */
   #otpModal .otp-resend-link { color: #0a66ff; text-decoration:underline; cursor:pointer; }
   #otpModal .otp-resend-link:hover { color: #064edc; }
   #otpModal .otp-resend-link.disabled, #otpModal .otp-resend-link[aria-disabled='true'] { pointer-events:none; opacity:0.5; cursor:default; text-decoration:none; }
+
+  #otpRestrictionModal .otp-restriction-card { border-radius: 12px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2); }
+  #otpRestrictionModal .otp-restriction-timer { display:flex; align-items:center; justify-content:center; min-height:48px; border-radius:10px; background:#f8fafc; color:#0f172a; font-weight:600; }
 
   /* Blur the page behind the modal via backdrop element */
   .modal-backdrop.show {
@@ -95,19 +142,388 @@
     if (!document.getElementById('otpModal')) return;
     const otpModalEl = document.getElementById('otpModal');
     const otpModal = typeof bootstrap !== 'undefined' ? bootstrap.Modal.getOrCreateInstance(otpModalEl) : null;
+    const otpRestrictionModalEl = document.getElementById('otpRestrictionModal');
+    const otpRestrictionModal = typeof bootstrap !== 'undefined' && otpRestrictionModalEl
+      ? bootstrap.Modal.getOrCreateInstance(otpRestrictionModalEl)
+      : null;
     const otpDigits = Array.from(otpModalEl.querySelectorAll('.otp-digit'));
     const otpHidden = document.getElementById('otp_modal_code_hidden');
     const otpForm = document.getElementById('otpModalForm');
+    const verifyBtn = document.getElementById('otpVerifyBtn');
+    const openSendPopoverBtn = document.getElementById('otpOpenSendPopoverBtn');
+    const sendPopover = document.getElementById('otpSendPopover');
+    const sendPromptPrefixEl = document.getElementById('otpSendPromptPrefix');
+    const sendPromptSuffixEl = document.getElementById('otpSendPromptSuffix');
+    const confirmSendBtn = document.getElementById('otpConfirmSendBtn');
+    const cancelSendBtn = document.getElementById('otpCancelSendBtn');
     const resendBtn = document.getElementById('otpResendBtn');
+    const resendWrap = document.getElementById('otpResendWrap');
     const countdownEl = document.getElementById('otpModalCountdown');
+    const instructionPrefixEl = document.getElementById('otpInstructionPrefix');
+    const instructionSuffixEl = document.getElementById('otpInstructionSuffix');
     const maskedEmailEl = document.getElementById('otpMaskedEmail');
+    const confirmMaskedEmailEl = document.getElementById('otpConfirmMaskedEmail');
+    const sendMetaEl = document.getElementById('otpSendMeta');
     const errorBox = document.getElementById('otpModalError');
+    const restrictionMessageEl = document.getElementById('otpRestrictionMessage');
+    const restrictionCountdownEl = document.getElementById('otpRestrictionCountdown');
+    const sendCaptchaError = document.getElementById('otpSendCaptchaError');
     let _autoSubmitTimer = null;
     let _autoSubmitting = false;
+    let expiryTimer = null;
+    let restrictionTimer = null;
+    let sendRequestActive = false;
+    let sendPopoverMode = 'initial';
+    let restrictionModalShownForLock = null;
+    let otpState = {
+      otp_sent: false,
+      send_count: 0,
+      send_limit: 3,
+      remaining_sends: 3,
+      locked_until: null,
+      otp_expires_at: null,
+      masked_email: null,
+    };
+
+    function getSendCaptchaToken() {
+      const field = sendPopover ? sendPopover.querySelector('textarea[name="g-recaptcha-response"]') : null;
+      return field ? String(field.value || '').trim() : '';
+    }
+
+    function resetSendCaptcha() {
+      @if(config('services.recaptcha.site_key'))
+      try {
+        if (window.grecaptcha && typeof window.grecaptcha.reset === 'function') {
+          window.grecaptcha.reset();
+        }
+      } catch (e) {
+      }
+      const field = sendPopover ? sendPopover.querySelector('textarea[name="g-recaptcha-response"]') : null;
+      if (field) {
+        field.value = '';
+      }
+      @endif
+    }
+
+    function hideSendPopover() {
+      if (sendPopover) {
+        sendPopover.hidden = true;
+      }
+      hideCaptchaError();
+    }
+
+    function showSendPopover(mode) {
+      if (!sendPopover || !openSendPopoverBtn || openSendPopoverBtn.disabled) {
+        return;
+      }
+
+      sendPopoverMode = mode || 'initial';
+      if (sendPromptPrefixEl && sendPromptSuffixEl && confirmSendBtn) {
+        if (sendPopoverMode === 'resend') {
+          sendPromptPrefixEl.textContent = 'Request another one-time password for';
+          sendPromptSuffixEl.textContent = '?';
+          confirmSendBtn.textContent = 'Confirm resend';
+        } else {
+          sendPromptPrefixEl.textContent = 'Send a one-time password to';
+          sendPromptSuffixEl.textContent = '?';
+          confirmSendBtn.textContent = 'Confirm request';
+        }
+      }
+
+      sendPopover.hidden = false;
+      resetSendCaptcha();
+      if (confirmSendBtn) {
+        confirmSendBtn.focus();
+      }
+    }
+
+    function showCaptchaError(message) {
+      if (!sendCaptchaError) {
+        showError(message);
+        return;
+      }
+
+      sendCaptchaError.textContent = message || '';
+      sendCaptchaError.style.display = message ? 'block' : 'none';
+    }
+
+    function hideCaptchaError() {
+      if (!sendCaptchaError) {
+        return;
+      }
+
+      sendCaptchaError.textContent = '';
+      sendCaptchaError.style.display = 'none';
+    }
+
+    function clearOtpDigits() {
+      otpDigits.forEach((input) => {
+        input.value = '';
+      });
+      otpHidden.value = '';
+    }
+
+    function isLocked() {
+      if (!otpState.locked_until) {
+        return false;
+      }
+
+      const lockedUntil = new Date(otpState.locked_until).getTime();
+      return !Number.isNaN(lockedUntil) && lockedUntil > Date.now();
+    }
+
+    function setOtpInputsDisabled(disabled) {
+      otpDigits.forEach((input) => {
+        input.disabled = disabled;
+      });
+      if (verifyBtn) {
+        verifyBtn.disabled = disabled;
+      }
+    }
+
+    function renderSendMeta() {
+      if (!sendMetaEl) {
+        return;
+      }
+
+      if (isLocked()) {
+        sendMetaEl.textContent = 'OTP requests are paused. Wait for the restriction timer to expire.';
+        return;
+      }
+
+      const limit = Number(otpState.send_limit || 3);
+      const count = Number(otpState.send_count || 0);
+      const remaining = Math.max(0, Number(otpState.remaining_sends ?? (limit - count)));
+      sendMetaEl.textContent = 'Requests used: ' + count + ' / ' + limit + '. Remaining before lock: ' + remaining + '.';
+    }
+
+    function updateInstruction() {
+      if (!instructionPrefixEl || !instructionSuffixEl) {
+        return;
+      }
+
+      if (isLocked()) {
+        instructionPrefixEl.textContent = 'OTP input for';
+        instructionSuffixEl.textContent = 'is temporarily restricted. Wait for the timer to expire before requesting another code.';
+        return;
+      }
+
+      if (otpState.otp_sent) {
+        instructionPrefixEl.textContent = 'A verification code was sent to';
+        instructionSuffixEl.textContent = 'Enter it below to complete sign in.';
+        return;
+      }
+
+      instructionPrefixEl.textContent = 'No verification code has been sent to';
+      instructionSuffixEl.textContent = 'yet. Confirm the request first, then complete the CAPTCHA to send one.';
+    }
+
+    function startExpiry(iso) {
+      clearInterval(expiryTimer);
+
+      if (!iso || !otpState.otp_sent || isLocked()) {
+        countdownEl.textContent = otpState.otp_sent ? 'Code expires in —' : 'No verification code has been sent yet.';
+        return;
+      }
+
+      const expiryDate = new Date(iso);
+      if (Number.isNaN(expiryDate.getTime())) {
+        countdownEl.textContent = 'Code expires in —';
+        return;
+      }
+
+      const tick = function() {
+        const diff = Math.max(0, Math.floor((expiryDate.getTime() - Date.now()) / 1000));
+        const minutes = Math.floor(diff / 60);
+        const seconds = diff % 60;
+        countdownEl.textContent = 'Code expires in ' + (minutes > 0 ? minutes + 'm ' : '') + String(seconds).padStart(2, '0') + 's';
+
+        if (diff <= 0) {
+          clearInterval(expiryTimer);
+          otpState.otp_sent = false;
+          otpState.otp_expires_at = null;
+          setOtpInputsDisabled(true);
+          clearOtpDigits();
+          countdownEl.textContent = 'No active verification code. Send a new OTP to continue.';
+          updateInstruction();
+          if (resendWrap) {
+            resendWrap.style.display = 'none';
+          }
+          showError('The verification code has expired. Confirm and send a new code to continue.');
+        }
+      };
+
+      tick();
+      expiryTimer = setInterval(tick, 1000);
+    }
+
+    function startRestrictionCountdown(iso) {
+      clearInterval(restrictionTimer);
+
+      if (!restrictionCountdownEl || !iso) {
+        return;
+      }
+
+      const lockedUntil = new Date(iso);
+      if (Number.isNaN(lockedUntil.getTime())) {
+        restrictionCountdownEl.textContent = 'Try again in 05:00.';
+        return;
+      }
+
+      const tick = function() {
+        const diff = Math.max(0, Math.floor((lockedUntil.getTime() - Date.now()) / 1000));
+        const minutes = Math.floor(diff / 60);
+        const seconds = diff % 60;
+        restrictionCountdownEl.textContent = 'Try again in ' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') + '.';
+
+        if (diff <= 0) {
+          clearInterval(restrictionTimer);
+          otpState.locked_until = null;
+          otpState.otp_sent = false;
+          otpState.otp_expires_at = null;
+          otpState.send_count = 0;
+          otpState.remaining_sends = otpState.send_limit || 3;
+          restrictionModalShownForLock = null;
+          applyOtpState(otpState);
+          hideError();
+        }
+      };
+
+      tick();
+      restrictionTimer = setInterval(tick, 1000);
+    }
+
+    function showRestrictionModal(message, iso) {
+      if (restrictionMessageEl) {
+        restrictionMessageEl.textContent = message || 'You have reached the OTP request limit. Please wait 5 minutes before trying again.';
+      }
+
+      if (iso) {
+        startRestrictionCountdown(iso);
+      }
+
+      if (otpRestrictionModal && restrictionModalShownForLock !== iso) {
+        restrictionModalShownForLock = iso;
+        otpRestrictionModal.show();
+      }
+    }
+
+    function applyOtpState(nextState) {
+      otpState = Object.assign({}, otpState, nextState || {});
+      const maskedEmail = otpState.masked_email || 'your email';
+
+      if (maskedEmailEl) {
+        maskedEmailEl.textContent = maskedEmail;
+      }
+      if (confirmMaskedEmailEl) {
+        confirmMaskedEmailEl.textContent = maskedEmail;
+      }
+
+      const locked = isLocked();
+      const hasActiveCode = !!otpState.otp_sent && !!otpState.otp_expires_at && !locked;
+
+      openSendPopoverBtn.disabled = locked;
+      openSendPopoverBtn.style.display = hasActiveCode ? 'none' : 'block';
+      setOtpInputsDisabled(!hasActiveCode);
+      if (resendWrap) {
+        resendWrap.style.display = hasActiveCode ? 'block' : 'none';
+      }
+      if (resendBtn) {
+        resendBtn.classList.toggle('disabled', locked);
+        if (locked) {
+          resendBtn.setAttribute('aria-disabled', 'true');
+        } else {
+          resendBtn.removeAttribute('aria-disabled');
+        }
+      }
+
+      updateInstruction();
+      renderSendMeta();
+      hideSendPopover();
+      startExpiry(otpState.otp_expires_at || null);
+
+      if (locked) {
+        clearOtpDigits();
+        setOtpInputsDisabled(true);
+      }
+    }
+
+    function requestOtpSend() {
+      if (sendRequestActive || !confirmSendBtn) {
+        return;
+      }
+
+      hideError();
+      hideCaptchaError();
+
+      const captchaToken = getSendCaptchaToken();
+      @if(config('services.recaptcha.site_key'))
+      if (!captchaToken) {
+        showCaptchaError('Please complete the CAPTCHA before sending an OTP.');
+        return;
+      }
+      @endif
+
+      const fd = new FormData();
+      const csrf = document.querySelector('#otpModalForm input[name="_token"]');
+      if (csrf) {
+        fd.append('_token', csrf.value);
+      }
+      if (captchaToken) {
+        fd.append('g-recaptcha-response', captchaToken);
+      }
+
+      sendRequestActive = true;
+      confirmSendBtn.disabled = true;
+      confirmSendBtn.textContent = sendPopoverMode === 'resend' ? 'Resending...' : 'Sending...';
+
+      fetch('{{ route('otp.send') }}', {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json',
+        },
+        body: fd,
+      }).then(async (res) => {
+        const data = await res.json().catch(() => ({ message: 'Unable to process the OTP request.' }));
+        applyOtpState(data);
+
+        if (res.ok) {
+          hideError();
+          hideCaptchaError();
+          if (otpDigits[0] && !otpDigits[0].disabled) {
+            otpDigits[0].focus();
+          }
+          return;
+        }
+
+        if (res.status !== 429) {
+          showSendPopover(sendPopoverMode);
+        }
+        if (data && data.errors && data.errors['g-recaptcha-response']) {
+          showCaptchaError(data.errors['g-recaptcha-response'][0]);
+        }
+        showError(data.message || 'Failed to send the verification code.');
+        if (res.status === 429) {
+          showRestrictionModal(data.message, data.locked_until || otpState.locked_until);
+        }
+      }).catch((err) => {
+        console.error(err);
+        showSendPopover(sendPopoverMode);
+        showError('Failed to send the verification code. Please try again.');
+      }).finally(() => {
+        sendRequestActive = false;
+        confirmSendBtn.disabled = false;
+        confirmSendBtn.textContent = sendPopoverMode === 'resend' ? 'Confirm resend' : 'Confirm request';
+      });
+    }
 
     // digit handlers (same behavior as page version)
     otpDigits.forEach((el, idx) => {
       el.addEventListener('input', (e) => {
+        if (e.target.disabled) {
+          return;
+        }
         const v = (e.target.value || '').replace(/\D/g, '');
         e.target.value = v.slice(0,1);
         if (v && idx < otpDigits.length - 1) otpDigits[idx+1].focus();
@@ -115,9 +531,15 @@
         maybeCheckAutoSubmit();
       });
       el.addEventListener('keydown', (e) => {
+        if (e.target.disabled) {
+          return;
+        }
         if (e.key === 'Backspace' && !e.target.value && idx > 0) otpDigits[idx-1].focus();
       });
       el.addEventListener('paste', (e) => {
+        if (e.target.disabled) {
+          return;
+        }
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text') || '';
         const digits = text.replace(/\D/g, '').slice(0,6).split('');
@@ -132,6 +554,7 @@
     function maybeCheckAutoSubmit(){
       try { clearTimeout(_autoSubmitTimer); } catch(e){}
       if (_autoSubmitting) return;
+      if (verifyBtn && verifyBtn.disabled) return;
       const filled = otpDigits.every(i => (i.value || '').length === 1);
       if (!filled) return;
       // small debounce to allow last input event to settle
@@ -153,6 +576,12 @@
 
     otpForm.addEventListener('submit', function(e){
       e.preventDefault();
+      if (verifyBtn && verifyBtn.disabled) {
+        showError(isLocked()
+          ? 'OTP input is temporarily restricted. Please wait for the lock period to end.'
+          : 'Confirm and send a verification code before entering one.');
+        return;
+      }
       const code = otpDigits.map(i => (i.value || '')).join('');
       if (code.length !== otpDigits.length) {
         showError('Please enter the full 6-digit code.');
@@ -172,6 +601,10 @@
           window.location.href = d.redirect || '/main';
         } else {
           const d = await res.json().catch(()=>({ message: 'Verification failed.' }));
+          if (d && (d.locked_until || res.status === 429)) {
+            applyOtpState(d);
+            showRestrictionModal(d.message, d.locked_until || otpState.locked_until);
+          }
           showError((d.message) || 'Verification failed.');
         }
       }).catch(err => {
@@ -198,36 +631,42 @@
       try { errorBox.style.display = 'none'; while (errorBox.firstChild) errorBox.removeChild(errorBox.firstChild); } catch(e){ try { errorBox.textContent = ''; } catch(_) { errorBox.innerHTML = sanitizeHtml(''); } }
     }
 
-    // Resend
-    resendBtn.addEventListener('click', function(){
-      hideError();
-      fetch('{{ route('otp.resend') }}', {
-        method: 'POST',
-        headers: { 'X-Requested-With':'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('#otpModalForm input[name="_token"]').value, 'Accept':'application/json' },
-      }).then(async res => {
-        if (res.ok) {
-          const d = await res.json().catch(()=>({}));
-          startCooldown(30);
-        } else {
-          const d = await res.json().catch(()=>({ message:'Failed to resend.' }));
-          showError(d.message||'Failed to resend code.');
+    if (openSendPopoverBtn) {
+      openSendPopoverBtn.addEventListener('click', function() {
+        hideError();
+        showSendPopover('initial');
+      });
+    }
+
+    if (cancelSendBtn) {
+      cancelSendBtn.addEventListener('click', function() {
+        hideSendPopover();
+      });
+    }
+
+    if (confirmSendBtn) {
+      confirmSendBtn.addEventListener('click', function() {
+        requestOtpSend();
+      });
+    }
+
+    if (resendBtn) {
+      resendBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (resendBtn.classList.contains('disabled')) {
+          return;
         }
-      }).catch(err=>{ console.error(err); showError('Failed to resend.'); });
-    });
-
-    function startCooldown(sec){ resendBtn.classList.add('disabled'); resendBtn.setAttribute('aria-disabled','true'); let s=sec; const tick=()=>{ if (s<=0){ resendBtn.classList.remove('disabled'); resendBtn.removeAttribute('aria-disabled'); resendBtn.textContent='Resend code'; } else { resendBtn.textContent='Resend in '+s+'s'; s-=1; setTimeout(tick,1000);} }; tick(); }
-
-    // Expiry countdown
-    let expiryTimer = null;
-    function startExpiry(iso){ if (!iso) return; clearInterval(expiryTimer); const expiryDate = new Date(iso); expiryTimer = setInterval(()=>{ const diff = Math.max(0, Math.floor((expiryDate - new Date())/1000)); const m = Math.floor(diff/60); const s = diff%60; countdownEl.textContent = 'Code expires in ' + (m>0? m+'m ':'') + String(s).padStart(2,'0')+'s'; if (diff<=0){ clearInterval(expiryTimer); showError('The verification code has expired. Please resend to get a new one.'); } }, 1000); }
+        hideError();
+        showSendPopover('resend');
+      });
+    }
 
     // Expose helper to open modal with server-provided data
     window.openOtpModal = function(opts){
       hideError();
-      if (opts && opts.masked_email) maskedEmailEl.textContent = opts.masked_email;
-      if (opts && opts.otp_expires_at) startExpiry(opts.otp_expires_at);
-      otpDigits.forEach(i=>i.value='');
-      otpDigits[0].focus();
+      hideCaptchaError();
+      clearOtpDigits();
+      applyOtpState(opts || {});
       // hide login modal if present
       try {
         const loginModalEl = document.getElementById('loginModal');
@@ -239,6 +678,13 @@
         // ignore
       }
       if (otpModal) otpModal.show();
+      if (isLocked()) {
+        showRestrictionModal((opts && opts.message) || 'You have reached the OTP request limit. Please wait 5 minutes before trying again.', otpState.locked_until);
+      } else if (otpState.otp_sent && otpDigits[0] && !otpDigits[0].disabled) {
+        otpDigits[0].focus();
+      } else if (openSendPopoverBtn) {
+        openSendPopoverBtn.focus();
+      }
     }
 
     // Add body class while OTP modal is visible to dim/blur background
@@ -246,6 +692,7 @@
       otpModalEl.addEventListener('shown.bs.modal', function(){ document.body.classList.add('otp-modal-open'); });
       otpModalEl.addEventListener('hidden.bs.modal', function(){
         document.body.classList.remove('otp-modal-open');
+        hideSendPopover();
         try {
           const loginModalEl = document.getElementById('loginModal');
           if (loginModalEl) {
@@ -255,5 +702,7 @@
         } catch (e){}
       });
     }
+
+    applyOtpState(otpState);
   })();
 </script>

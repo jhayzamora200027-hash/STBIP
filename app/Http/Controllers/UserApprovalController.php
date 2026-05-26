@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ApprovalHistory;
+use App\Rules\NoMarkup;
 use App\Models\User;
+use App\Support\PlainTextSanitizer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,6 +61,14 @@ class UserApprovalController extends Controller
                 'history_date_to' => $historyDateTo !== '' ? $historyDateTo : null,
             ]));
 
+        $approvalHistoryLogs->setCollection($approvalHistoryLogs->getCollection()->map(function (ApprovalHistory $log) {
+            foreach (['applicant_name', 'applicant_email', 'reviewed_by_name', 'reviewed_by_email', 'assigned_usergroup', 'rejection_reason'] as $field) {
+                $log->{$field} = PlainTextSanitizer::sanitize($log->{$field});
+            }
+
+            return $log;
+        }));
+
         return view('admin.approvals', compact('pendingUsers', 'approvalHistoryLogs', 'historyEmail', 'historyDateFrom', 'historyDateTo'));
     }
 
@@ -76,7 +86,7 @@ class UserApprovalController extends Controller
             'approval_status' => 'required|in:A,R'
         ];
         if ($request->approval_status === 'R') {
-            $rules['approvalcomment'] = 'required|string|min:3';
+            $rules['approvalcomment'] = ['required', 'string', 'min:3', new NoMarkup()];
         }
         if ($request->approval_status === 'A') {
             $rules['usergroup'] = 'required|in:admin,user,sysadmin';

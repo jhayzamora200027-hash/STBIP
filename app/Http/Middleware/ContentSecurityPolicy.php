@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
 
 class ContentSecurityPolicy
 {
@@ -14,15 +15,11 @@ class ContentSecurityPolicy
     {
         $response = $next($request);
 
-        // Defense-in-depth CSP. Adjust allowed hosts for external CDNs if needed.
-        $policy = "default-src 'self'; ";
-        $policy .= "script-src 'self' https: 'unsafe-inline'; ";
-        $policy .= "style-src 'self' 'unsafe-inline' https:; ";
-        $policy .= "img-src 'self' data: https:; ";
-        $policy .= "font-src 'self' https: data:; ";
-        $policy .= "object-src 'none'; base-uri 'self'; frame-ancestors 'none';";
+        $policy = Config::get('security.content_security_policy');
 
-        $response->headers->set('Content-Security-Policy', $policy);
+        if ($policy) {
+            $response->headers->set('Content-Security-Policy', $policy);
+        }
 
         return $response;
     }

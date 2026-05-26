@@ -42,6 +42,7 @@ Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 
 // OTP verification for optional 2FA (email OTP)
 Route::get('/otp', [UserController::class, 'showOtpForm'])->name('otp.form');
+Route::post('/otp/send', [UserController::class, 'sendOtp'])->name('otp.send')->middleware('throttle:6,1');
 Route::post('/otp', [UserController::class, 'verifyOtp'])->name('otp.verify');
 Route::post('/otp/resend', [UserController::class, 'resendOtp'])->name('otp.resend')->middleware('throttle:6,1');
 

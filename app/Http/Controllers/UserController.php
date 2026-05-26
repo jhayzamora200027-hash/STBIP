@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\NoMarkup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,196 @@ use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
+    private const OTP_SEND_LIMIT = 3;
+    private const OTP_VERIFY_LIMIT = 3;
+    private const OTP_SEND_LOCK_MINUTES = 5;
+
+    private function otpThrottleKey(int|string $userId, string $suffix): string
+    {
+        return 'otp_throttle:' . $suffix . ':' . $userId;
+    }
+
+    private function getOtpSendCount(Request $request, ?int $userId = null): int
+    {
+        $userId = $userId ?? (int) $request->session()->get('otp_user_id');
+        if ($userId > 0) {
+            return (int) Cache::get($this->otpThrottleKey($userId, 'send_count'), 0);
+        }
+
+        return (int) $request->session()->get('otp_send_count', 0);
+    }
+
+    private function getOtpVerifyAttempts(Request $request, ?int $userId = null): int
+    {
+        $userId = $userId ?? (int) $request->session()->get('otp_user_id');
+        if ($userId > 0) {
+            return (int) Cache::get($this->otpThrottleKey($userId, 'verify_attempts'), 0);
+        }
+
+        return (int) $request->session()->get('otp_attempts', 0);
+    }
+
+    private function putOtpSendCount(Request $request, int $userId, int $count, ?Carbon $expiresAt = null): void
+    {
+        $ttl = $expiresAt ?? Carbon::now()->addMinutes(self::OTP_SEND_LOCK_MINUTES);
+        Cache::put($this->otpThrottleKey($userId, 'send_count'), max(0, $count), $ttl);
+        $request->session()->put('otp_send_count', max(0, $count));
+    }
+
+    private function putOtpVerifyAttempts(Request $request, int $userId, int $attempts, ?Carbon $expiresAt = null): void
+    {
+        $ttl = $expiresAt ?? Carbon::now()->addMinutes(self::OTP_SEND_LOCK_MINUTES);
+        Cache::put($this->otpThrottleKey($userId, 'verify_attempts'), max(0, $attempts), $ttl);
+        $request->session()->put('otp_attempts', max(0, $attempts));
+    }
+
+    private function clearOtpThrottle(Request $request, ?int $userId = null): void
+    {
+        $userId = $userId ?? (int) $request->session()->get('otp_user_id');
+        if ($userId > 0) {
+            Cache::forget($this->otpThrottleKey($userId, 'send_count'));
+            Cache::forget($this->otpThrottleKey($userId, 'verify_attempts'));
+            Cache::forget($this->otpThrottleKey($userId, 'locked_until'));
+        }
+
+        $request->session()->forget('otp_send_locked_until');
+        $request->session()->put('otp_send_count', 0);
+        $request->session()->put('otp_attempts', 0);
+    }
+
+    private function maskEmail(?string $email): ?string
+    {
+        if (!$email) {
+            return null;
+        }
+
+        $parts = explode('@', $email);
+        $local = $parts[0] ?? '';
+        $domain = $parts[1] ?? '';
+
+        if (strlen($local) <= 2) {
+            $maskedLocal = substr($local, 0, 1) . '*';
+        } else {
+            $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(1, strlen($local) - 2)) . substr($local, -1);
+        }
+
+        return $maskedLocal . ($domain ? '@' . $domain : '');
+    }
+
+    private function getOtpLockPayload(Request $request): ?array
+    {
+        $userId = (int) $request->session()->get('otp_user_id');
+        $lockedUntil = $userId > 0
+            ? Cache::get($this->otpThrottleKey($userId, 'locked_until'))
+            : $request->session()->get('otp_send_locked_until');
+        if (!$lockedUntil) {
+            return null;
+        }
+
+        try {
+            $lockedUntilAt = Carbon::parse($lockedUntil);
+        } catch (\Exception $e) {
+            $this->clearOtpThrottle($request, $userId ?: null);
+            return null;
+        }
+
+        if (Carbon::now()->gte($lockedUntilAt)) {
+            $this->clearOtpThrottle($request, $userId ?: null);
+            return null;
+        }
+
+        $request->session()->put('otp_send_locked_until', $lockedUntilAt->toDateTimeString());
+
+        return [
+            'locked_until' => $lockedUntilAt->toIso8601String(),
+            'retry_after_seconds' => Carbon::now()->diffInSeconds($lockedUntilAt),
+        ];
+    }
+
+    private function verifyRecaptchaToken(Request $request, ?string $token): bool
+    {
+        $secret = config('services.recaptcha.secret');
+        if (empty($secret)) {
+            return true;
+        }
+
+        if (empty($token)) {
+            return false;
+        }
+
+        try {
+            $verify = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secret,
+                'response' => $token,
+                'remoteip' => $request->ip(),
+            ]);
+
+            return (bool) ($verify->json('success') ?? false);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    private function otpSendStatePayload(Request $request, ?Carbon $expiresAt = null): array
+    {
+        $lock = $this->getOtpLockPayload($request);
+        $sendCount = $this->getOtpSendCount($request);
+        $maskedEmail = null;
+        $userId = $request->session()->get('otp_user_id');
+
+        $request->session()->put('otp_send_count', $sendCount);
+
+        if ($userId) {
+            $user = User::find($userId);
+            $maskedEmail = $this->maskEmail($user?->email);
+        }
+
+        return [
+            'masked_email' => $maskedEmail,
+            'otp_sent' => (bool) $request->session()->get('otp_sent', false),
+            'otp_expires_at' => $expiresAt ? $expiresAt->toIso8601String() : null,
+            'send_count' => $sendCount,
+            'send_limit' => self::OTP_SEND_LIMIT,
+            'remaining_sends' => max(0, self::OTP_SEND_LIMIT - $sendCount),
+            'locked_until' => $lock['locked_until'] ?? null,
+            'retry_after_seconds' => $lock['retry_after_seconds'] ?? null,
+        ];
+    }
+
+    private function otpJsonError(Request $request, string $message, int $status = 422, array $errors = []): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'errors' => $errors,
+        ] + $this->otpSendStatePayload($request), $status);
+    }
+
+    private function sendOtpForPendingLogin(Request $request, User $user): array
+    {
+        try {
+            $otp = random_int(100000, 999999);
+        } catch (\Exception $e) {
+            $otp = rand(100000, 999999);
+        }
+
+        $expires = Carbon::now()->addMinutes(5);
+        $request->session()->put('otp_code', (string) $otp);
+        $request->session()->put('otp_expires_at', $expires->toDateTimeString());
+        $request->session()->put('otp_attempts', 0);
+        $request->session()->put('otp_sent', true);
+        $nextSendCount = $this->getOtpSendCount($request, $user->id) + 1;
+        $this->putOtpSendCount($request, $user->id, $nextSendCount);
+        $this->putOtpVerifyAttempts($request, $user->id, 0, $expires);
+
+        try {
+            Mail::to($user->email)->send(new OtpMail($otp));
+        } catch (\Exception $e) {
+            Log::error('Failed to send OTP email to ' . $user->email . ': ' . $e->getMessage());
+        }
+
+        return $this->otpSendStatePayload($request, $expires);
+    }
+
     
     public function addUser(Request $request)
     {
@@ -32,9 +223,9 @@ class UserController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'firstname' => 'required|string|max:255',
-                'middlename' => 'nullable|string|max:255',
-                'lastname' => 'required|string|max:255',
+                'firstname' => ['required', 'string', 'max:255', new NoMarkup()],
+                'middlename' => ['nullable', 'string', 'max:255', new NoMarkup()],
+                'lastname' => ['required', 'string', 'max:255', new NoMarkup()],
                 'email' => [
                     'required',
                     'string',
@@ -241,9 +432,9 @@ class UserController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'firstname' => 'required|string|max:255',
-                'middlename' => 'nullable|string|max:255',
-                'lastname' => 'required|string|max:255',
+                'firstname' => ['required', 'string', 'max:255', new NoMarkup()],
+                'middlename' => ['nullable', 'string', 'max:255', new NoMarkup()],
+                'lastname' => ['required', 'string', 'max:255', new NoMarkup()],
                 'email' => [
                     'required',
                     'string',
@@ -482,54 +673,23 @@ class UserController extends Controller
         // successful credential check -> reset failed attempts
         Cache::forget($emailKey);
 
-        // Generate one-time 6-digit code and store in session (5 minute lifetime)
-        try {
-            $otp = random_int(100000, 999999);
-        } catch (\Exception $e) {
-            $otp = rand(100000, 999999);
-        }
-
-        $expires = Carbon::now()->addMinutes(5);
         $request->session()->put('otp_user_id', $user->id);
-        $request->session()->put('otp_code', (string) $otp);
-        $request->session()->put('otp_expires_at', $expires->toDateTimeString());
+        $request->session()->forget(['otp_code', 'otp_expires_at']);
         $request->session()->put('otp_attempts', 0);
-
-        // Send OTP via email (plaintext for now)
-        try {
-            Mail::to($user->email)->send(new OtpMail($otp));
-        } catch (\Exception $e) {
-            Log::error('Failed to send OTP email to ' . $user->email . ': ' . $e->getMessage());
+        $request->session()->put('otp_sent', false);
+        $request->session()->put('otp_send_count', $this->getOtpSendCount($request, $user->id));
+        $lock = $this->getOtpLockPayload($request);
+        if ($lock) {
+            $request->session()->put('otp_send_locked_until', Carbon::parse($lock['locked_until'])->toDateTimeString());
         }
 
-        // Prepare masked email and ISO expiry for AJAX flows
-        $masked = null;
-        if ($user && $user->email) {
-            $parts = explode('@', $user->email);
-            $local = $parts[0] ?? '';
-            $domain = $parts[1] ?? '';
-            if (strlen($local) <= 2) {
-                $maskedLocal = substr($local, 0, 1) . '*';
-            } else {
-                $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(1, strlen($local)-2)) . substr($local, -1);
-            }
-            $masked = $maskedLocal . ($domain ? '@' . $domain : '');
-        }
-
-        $isoExpiry = null;
-        try {
-            $isoExpiry = Carbon::parse($expires->toDateTimeString())->toIso8601String();
-        } catch (\Exception $e) {
-            $isoExpiry = $expires->toDateTimeString();
-        }
+        $otpState = $this->otpSendStatePayload($request);
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'otp_required' => true,
-                'masked_email' => $masked,
-                'otp_expires_at' => $isoExpiry,
-            ]);
+            ] + $otpState);
         }
 
         return redirect()->route('otp.form');
@@ -543,47 +703,84 @@ class UserController extends Controller
         }
 
         $expiresAt = $request->session()->get('otp_expires_at');
-        // normalize expiry to ISO-8601 for reliable JS parsing
+        $parsedExpiry = null;
         if ($expiresAt) {
             try {
-                $expiresAt = Carbon::parse($expiresAt)->toIso8601String();
+                $parsedExpiry = Carbon::parse($expiresAt);
             } catch (\Exception $e) {
-                // leave as-is if parse fails
-            }
-        }
-        $user = null;
-        $masked = null;
-        $userId = $request->session()->get('otp_user_id');
-        if ($userId) {
-            $user = User::find($userId);
-            if ($user && $user->email) {
-                $email = $user->email;
-                // mask email for display (e.g. j***@dswd.gov.ph)
-                $parts = explode('@', $email);
-                $local = $parts[0] ?? '';
-                $domain = $parts[1] ?? '';
-                if (strlen($local) <= 2) {
-                    $maskedLocal = substr($local, 0, 1) . '*';
-                } else {
-                    $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(1, strlen($local)-2)) . substr($local, -1);
-                }
-                $masked = $maskedLocal . ($domain ? '@' . $domain : '');
+                $parsedExpiry = null;
             }
         }
 
-        return view('auth.otp_verify', [
-            'otp_expires_at' => $expiresAt,
-            'masked_email' => $masked,
-        ]);
+        return view('auth.otp_verify', $this->otpSendStatePayload($request, $parsedExpiry));
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $userId = $request->session()->get('otp_user_id');
+        if (!$userId) {
+            return $this->otpJsonError($request, 'OTP session not found. Please login again.', 422);
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            $request->session()->forget([
+                'otp_user_id',
+                'otp_code',
+                'otp_expires_at',
+                'otp_attempts',
+                'otp_sent',
+                'otp_send_count',
+                'otp_send_locked_until',
+            ]);
+            return $this->otpJsonError($request, 'Account not found.', 422);
+        }
+
+        $lock = $this->getOtpLockPayload($request);
+        if ($lock) {
+            return $this->otpJsonError($request, 'OTP requests are temporarily restricted. Please wait 5 minutes before trying again.', 429);
+        }
+
+        $sendCount = $this->getOtpSendCount($request, $user->id);
+        if ($sendCount >= self::OTP_SEND_LIMIT) {
+            $lockedUntil = Carbon::now()->addMinutes(self::OTP_SEND_LOCK_MINUTES);
+            Cache::put($this->otpThrottleKey($user->id, 'locked_until'), $lockedUntil->toDateTimeString(), $lockedUntil);
+            $request->session()->put('otp_send_locked_until', $lockedUntil->toDateTimeString());
+            $this->putOtpSendCount($request, $user->id, $sendCount, $lockedUntil);
+            return $this->otpJsonError($request, 'OTP requests are temporarily restricted. Please wait 5 minutes before trying again.', 429);
+        }
+
+        if (!$this->verifyRecaptchaToken($request, $request->input('g-recaptcha-response'))) {
+            return $this->otpJsonError($request, 'Please complete the CAPTCHA before sending an OTP.', 422, [
+                'g-recaptcha-response' => ['Please complete the CAPTCHA before sending an OTP.'],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'A verification code was sent to your email.',
+        ] + $this->sendOtpForPendingLogin($request, $user));
     }
 
     // Verify OTP and complete login
     public function verifyOtp(Request $request)
     {
+        if ($this->getOtpLockPayload($request)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'OTP input is temporarily restricted. Please wait 5 minutes before trying again.',
+                ] + $this->otpSendStatePayload($request), 429);
+            }
+
+            return redirect()->route('landing')->withErrors(['otp' => 'OTP input is temporarily restricted. Please wait 5 minutes before trying again.']);
+        }
+
         $userId = $request->session()->get('otp_user_id');
         $code = $request->session()->get('otp_code');
         $expiresAt = $request->session()->get('otp_expires_at');
-        $attempts = (int) $request->session()->get('otp_attempts', 0);
+        $attempts = $this->getOtpVerifyAttempts($request);
+
+        $request->session()->put('otp_attempts', $attempts);
 
         if (!$userId || !$code || !$expiresAt) {
             return redirect()->route('landing')->withErrors(['otp' => 'OTP session not found. Please login again.']);
@@ -597,9 +794,19 @@ class UserController extends Controller
             return redirect()->route('landing')->withErrors(['otp' => 'The verification code has expired. Please login again.']);
         }
 
-        if ($attempts >= 5) {
-            $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
-            return redirect()->route('landing')->withErrors(['otp' => 'Too many attempts. Please login again.']);
+        if ($attempts >= self::OTP_VERIFY_LIMIT) {
+            $lockedUntil = Carbon::now()->addMinutes(self::OTP_SEND_LOCK_MINUTES);
+            Cache::put($this->otpThrottleKey($userId, 'locked_until'), $lockedUntil->toDateTimeString(), $lockedUntil);
+            $this->putOtpVerifyAttempts($request, (int) $userId, $attempts, $lockedUntil);
+            $this->putOtpSendCount($request, (int) $userId, $this->getOtpSendCount($request, (int) $userId), $lockedUntil);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'OTP input is temporarily restricted. Please wait 5 minutes before trying again.',
+                ] + $this->otpSendStatePayload($request), 429);
+            }
+
+            return redirect()->route('landing')->withErrors(['otp' => 'OTP input is temporarily restricted. Please wait 5 minutes before trying again.']);
         }
 
         $validated = $request->validate([
@@ -616,15 +823,47 @@ class UserController extends Controller
                 return redirect()->route('landing')->withErrors(['otp' => 'Account not found.']);
             }
             Auth::loginUsingId($user->id, false);
+            try {
+                if (Schema::hasTable('userlogs')) {
+                    DB::table('userlogs')->insert([
+                        'user_id' => $user->id,
+                        'action' => 'login',
+                        'performed_by' => $user->id,
+                        'meta' => json_encode(['ip' => $request->ip(), 'user_agent' => $request->userAgent()]),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // best-effort logging; ignore failures
+            }
             $request->session()->regenerate();
             $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
+            $this->clearOtpThrottle($request, $user->id);
             if ($request->expectsJson()) {
                 return response()->json(['success' => true, 'redirect' => url('/main')]);
             }
             return redirect()->intended('main');
         }
 
-        $request->session()->put('otp_attempts', $attempts + 1);
+        $nextAttempts = $attempts + 1;
+        $this->putOtpVerifyAttempts($request, (int) $userId, $nextAttempts);
+
+        if ($nextAttempts >= self::OTP_VERIFY_LIMIT) {
+            $lockedUntil = Carbon::now()->addMinutes(self::OTP_SEND_LOCK_MINUTES);
+            Cache::put($this->otpThrottleKey($userId, 'locked_until'), $lockedUntil->toDateTimeString(), $lockedUntil);
+            $this->putOtpVerifyAttempts($request, (int) $userId, $nextAttempts, $lockedUntil);
+            $this->putOtpSendCount($request, (int) $userId, $this->getOtpSendCount($request, (int) $userId), $lockedUntil);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'OTP input is temporarily restricted. Please wait 5 minutes before trying again.',
+                ] + $this->otpSendStatePayload($request), 429);
+            }
+
+            return redirect()->route('landing')->withErrors(['otp' => 'OTP input is temporarily restricted. Please wait 5 minutes before trying again.']);
+        }
+
         if ($request->expectsJson()) {
             return response()->json(['message' => 'The code is incorrect.'], 422);
         }
@@ -634,37 +873,27 @@ class UserController extends Controller
     // Resend OTP
     public function resendOtp(Request $request)
     {
-        $userId = $request->session()->get('otp_user_id');
-        if (!$userId) {
-            return redirect()->route('landing');
-        }
-        $user = User::find($userId);
-        if (!$user) return redirect()->route('landing');
-
-        try {
-            $otp = random_int(100000, 999999);
-        } catch (\Exception $e) {
-            $otp = rand(100000, 999999);
-        }
-        $expires = Carbon::now()->addMinutes(5);
-        $request->session()->put('otp_code', (string)$otp);
-        $request->session()->put('otp_expires_at', $expires->toDateTimeString());
-        $request->session()->put('otp_attempts', 0);
-
-        try {
-            Mail::to($user->email)->send(new OtpMail($otp));
-        } catch (\Exception $e) {
-            Log::error('Failed to resend OTP email to ' . $user->email . ': ' . $e->getMessage());
-        }
-
-        if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'message' => 'A new verification code was sent to your email.']);
-        }
-        return back()->with('status', 'A new verification code was sent to your email.');
+        return $this->sendOtp($request);
     }
 
     public function logout(Request $request)
     {
+        $uid = Auth::id();
+        if ($uid && Schema::hasTable('userlogs')) {
+            try {
+                DB::table('userlogs')->insert([
+                    'user_id' => $uid,
+                    'action' => 'logout',
+                    'performed_by' => $uid,
+                    'meta' => json_encode(['ip' => $request->ip(), 'user_agent' => $request->userAgent()]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                // best-effort logging
+            }
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -697,9 +926,9 @@ class UserController extends Controller
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
                 'confirmed',
             ],
-            'phonenumber' => 'nullable|string|max:20',
+            'phonenumber' => ['nullable', 'string', 'max:20', new NoMarkup()],
             'gender' => 'nullable|string|in:Male,Female',
-            'address' => 'nullable|string|max:500',
+            'address' => ['nullable', 'string', 'max:500', new NoMarkup()],
             'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ], [
             'new_password.regex' => 'New password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.',
@@ -782,9 +1011,9 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         
         $validator = Validator::make($request->all(), [
-            'firstname' => 'required|string|max:255',
-            'middlename' => 'nullable|string|max:255',
-            'lastname' => 'required|string|max:255',
+            'firstname' => ['required', 'string', 'max:255', new NoMarkup()],
+            'middlename' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'lastname' => ['required', 'string', 'max:255', new NoMarkup()],
             'email' => 'required|email|unique:users,email,' . $user->id,
             'usergroup' => 'required|in:admin,user,sysadmin',
             'active' => 'required|boolean',

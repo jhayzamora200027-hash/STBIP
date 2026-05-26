@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\SocialTechnologyTitle;
+use App\Rules\NoMarkup;
 use App\Models\Uploadlog;
 use App\Models\Selectdocslogs;
+use App\Support\InputValueGuard;
+use App\Support\PlainTextSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +32,18 @@ class SocialTechnologyController extends Controller
         }
 
         $titles = $query->latest('updated_at')->paginate(10)->withQueryString();
+        $titles->setCollection($titles->getCollection()->map(function (SocialTechnologyTitle $title) {
+            foreach ([
+                'sector', 'laws_and_issuances', 'social_technology', 'description', 'objectives', 'components',
+                'pilot_areas', 'year_implemented', 'status_remarks', 'resolution', 'guidelines',
+                'program_manual_outline', 'information_systems_developed', 'session_guide_key_topics',
+                'training_manual_outline', 'createdby', 'updatedby',
+            ] as $field) {
+                $title->{$field} = PlainTextSanitizer::sanitize($title->{$field});
+            }
+
+            return $title;
+        }));
 
         return view('dashboard.maincomponents.social_technologies', [
             'titles' => $titles,
@@ -40,11 +55,12 @@ class SocialTechnologyController extends Controller
         $request->validate([
             'csv_file' => ['nullable', 'file'],
             'google_sheet_url' => ['nullable', 'url'],
-            'stored_excel' => ['nullable', 'string'],
+            'stored_excel' => ['nullable', 'string', new NoMarkup()],
         ]);
 
         $added = 0;
         $updated = 0;
+        $skipped = 0;
         DB::beginTransaction();
         try {
             $inputRows = [];
@@ -178,6 +194,12 @@ class SocialTechnologyController extends Controller
                     $rowData[$fieldName] = isset($row[$colIdx]) ? trim((string) $row[$colIdx]) : '';
                 }
 
+                $violation = InputValueGuard::findFirstViolation($rowData);
+                if ($violation !== null) {
+                    $skipped++;
+                    continue;
+                }
+
                 $titleVal = trim((string) ($rowData['social_technology'] ?? ''));
                 if ($titleVal === '') continue;
 
@@ -237,6 +259,7 @@ class SocialTechnologyController extends Controller
             DB::commit();
             $msg = "Imported $added new title(s)";
             if ($updated) $msg .= ", updated $updated existing";
+            if ($skipped) $msg .= ", skipped $skipped invalid row(s)";
             return redirect()->route('STDashboard')->with('status', $msg . '.');
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -248,8 +271,8 @@ class SocialTechnologyController extends Controller
     {
         $request->validate([
             'social_technologies' => ['nullable', 'array'],
-            'social_technologies.*' => ['required', 'string', 'max:1000'],
-            'social_technology' => ['nullable', 'string', 'max:1000'],
+            'social_technologies.*' => ['required', 'string', 'max:1000', new NoMarkup()],
+            'social_technology' => ['nullable', 'string', 'max:1000', new NoMarkup()],
         ]);
 
         $submitted = [];
@@ -361,21 +384,21 @@ class SocialTechnologyController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'social_technology' => ['required', 'string', 'max:1000'],
-            'sector' => ['nullable', 'string', 'max:255'],
-            'laws_and_issuances' => ['nullable', 'string', 'max:2000'],
-            'description' => ['nullable', 'string', 'max:5000'],
-            'objectives' => ['nullable', 'string', 'max:5000'],
-            'components' => ['nullable', 'string', 'max:2000'],
-            'pilot_areas' => ['nullable', 'string', 'max:1000'],
+            'social_technology' => ['required', 'string', 'max:1000', new NoMarkup()],
+            'sector' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'laws_and_issuances' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'description' => ['nullable', 'string', 'max:5000', new NoMarkup()],
+            'objectives' => ['nullable', 'string', 'max:5000', new NoMarkup()],
+            'components' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'pilot_areas' => ['nullable', 'string', 'max:1000', new NoMarkup()],
             'year_implemented' => ['nullable', 'regex:/^\d{4}(?:\s*-\s*\d{4})?$/'],
-            'status_remarks' => ['nullable', 'string', 'max:2000'],
-            'resolution' => ['nullable', 'string', 'max:2000'],
-            'guidelines' => ['nullable', 'string', 'max:2000'],
-            'program_manual_outline' => ['nullable', 'string', 'max:5000'],
-            'information_systems_developed' => ['nullable', 'string', 'max:2000'],
-            'session_guide_key_topics' => ['nullable', 'string', 'max:5000'],
-            'training_manual_outline' => ['nullable', 'string', 'max:5000'],
+            'status_remarks' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'resolution' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'guidelines' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'program_manual_outline' => ['nullable', 'string', 'max:5000', new NoMarkup()],
+            'information_systems_developed' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'session_guide_key_topics' => ['nullable', 'string', 'max:5000', new NoMarkup()],
+            'training_manual_outline' => ['nullable', 'string', 'max:5000', new NoMarkup()],
         ]);
 
         $title = trim((string) $request->input('social_technology'));

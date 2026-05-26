@@ -97,4 +97,32 @@ class StsAttachmentUploadTest extends TestCase
             $storedAttachments->every(fn (StsAttachment $attachment) => Storage::disk('public')->exists($attachment->file_path))
         );
     }
+
+    public function test_it_rejects_markup_payloads_in_attachment_metadata(): void
+    {
+        Storage::fake('public');
+
+        $user = User::query()->create([
+            'name' => 'Attachment Tester',
+            'email' => 'attachments@example.com',
+            'password' => Hash::make('password'),
+            'user_id' => 'tester-001',
+            'usergroup' => 'sysadmin',
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('sts.attachments.store'), [
+            'region' => 'FO NCR',
+            'province' => 'NCR',
+            'municipality' => 'Quezon City',
+            'title' => '<script>alert(1)</script>',
+            'year_of_moa' => '2026',
+            'attachments' => [
+                UploadedFile::fake()->create('moa.pdf', 100, 'application/pdf'),
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['title']);
+        $this->assertDatabaseCount('stsattachment', 0);
+    }
 }

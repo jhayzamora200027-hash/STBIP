@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\NoMarkup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\GalleryChild;
@@ -13,10 +14,10 @@ class GalleryChildController extends Controller
     public function store(Request $request, GalleryCard $galleryCard)
     {
         $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'url' => 'nullable|string|max:255',
-            'docno' => 'nullable|string|max:255',
+            'title' => ['required', 'string', 'max:255', new NoMarkup()],
+            'description' => ['nullable', 'string', new NoMarkup()],
+            'url' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'docno' => ['nullable', 'string', 'max:255', new NoMarkup()],
             'is_active' => 'nullable|boolean',
             'status' => 'nullable|in:Completed,On going',
             'is_mother' => 'nullable|boolean',
@@ -86,10 +87,10 @@ class GalleryChildController extends Controller
     public function update(Request $request, GalleryChild $galleryChild)
     {
         $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'url' => 'nullable|string|max:255',
-            'docno' => 'nullable|string|max:255',
+            'title' => ['required', 'string', 'max:255', new NoMarkup()],
+            'description' => ['nullable', 'string', new NoMarkup()],
+            'url' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'docno' => ['nullable', 'string', 'max:255', new NoMarkup()],
             'is_active' => 'nullable|boolean',
             'status' => 'nullable|in:Completed,On going',
             'is_mother' => 'nullable|boolean',

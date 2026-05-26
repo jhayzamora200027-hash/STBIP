@@ -7,7 +7,7 @@
 <div class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-body">
 		<div class="masterdata-toolbar">
-			<form method="GET" action="{{ route('masterdata.index') }}" class="d-flex align-items-end gap-3 flex-wrap" data-masterdata-updates-form="region">
+			<form method="GET" action="{{ route('masterdata.index') }}" class="d-flex align-items-start gap-3 flex-wrap" data-masterdata-updates-form="region">
 				<input type="hidden" name="tab" value="updates">
 				@if($historyDateFrom)
 					<input type="hidden" name="history_date_from" value="{{ $historyDateFrom }}">
@@ -18,7 +18,7 @@
 				@if($showRegionItemHistoryModal)
 					<input type="hidden" name="history_modal" value="1">
 				@endif
-				<div class="masterdata-field">
+				<div class="masterdata-field" style="flex:0 0 auto; min-width:240px;">
 					<label for="region-filter">Regional Office</label>
 					<select id="region-filter" name="region_filter" data-masterdata-region-filter="1">
 						@foreach($regions as $region)
@@ -27,9 +27,12 @@
 					</select>
 				</div>
 			</form>
-			<div>
-				<div class="masterdata-stat-label">Selected Office</div>
-				<div class="masterdata-item-title">{{ $selectedRegionName ?: 'No region selected' }}</div>
+			<div class="masterdata-field" style="display:flex; flex-direction:column; gap:8px; margin-left:auto; align-items:flex-end; min-width:260px;">
+				<label>Export</label>
+				<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+					<a id="region-export-link" class="masterdata-btn masterdata-btn-secondary" style="flex:0 0 auto; min-width:120px; padding:10px 12px; font-size:0.92rem;" href="{{ route('masterdata.region-items.export', ['region_filter' => $selectedRegionName]) }}">Selected Region</a>
+					<a id="region-export-all-link" class="masterdata-btn masterdata-btn-secondary" style="flex:0 0 auto; min-width:120px; padding:10px 12px; font-size:0.92rem;" href="{{ route('masterdata.region-items.export') }}">All Regions</a>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -123,9 +126,24 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 });
-</script>
+		</script>
 
-@unless($canWriteMasterData)
+		<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			var sel = document.querySelector('[data-masterdata-region-filter="1"]');
+			var link = document.getElementById('region-export-link');
+			if (!sel || !link) return;
+			sel.addEventListener('change', function () {
+				try {
+					var url = new URL(link.href, window.location.origin);
+					url.searchParams.set('region_filter', sel.value);
+					link.href = url.toString();
+				} catch (e) { }
+			});
+		});
+		</script>
+
+		@unless($canWriteMasterData)
 	<div class="masterdata-fixed-note" style="margin-bottom: 22px;">
 		You currently have read-only access to Region Item Management.
 	</div>

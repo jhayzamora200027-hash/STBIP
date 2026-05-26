@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -118,6 +119,49 @@ class UserApprovalHistoryTest extends TestCase
         $response->assertOk();
         $response->assertSee('target.user@dswd.gov.ph');
         $response->assertDontSee('other.user@dswd.gov.ph');
+    }
+
+    public function test_approval_history_display_sanitizes_legacy_rejection_reason(): void
+    {
+        $admin = $this->makeUser('admin', 'admin@dswd.gov.ph', 'Admin Reviewer');
+        $applicant = $this->makeApplicant('legacy.user@dswd.gov.ph', 'Legacy User');
+
+        \App\Models\ApprovalHistory::query()->create([
+            'user_id' => $applicant->id,
+            'applicant_name' => 'Legacy User',
+            'applicant_email' => 'legacy.user@dswd.gov.ph',
+            'action' => 'rejected',
+            'reviewed_by_name' => 'Admin Reviewer',
+            'reviewed_by_email' => 'admin@dswd.gov.ph',
+            'assigned_usergroup' => null,
+            'rejection_reason' => "<script>alert(1)</script> Need updated requirements.",
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('approvals.index'));
+
+        $response->assertOk();
+        $response->assertSee('Need updated requirements.');
+        $response->assertDontSee('alert(1)');
+    }
+
+    public function test_cleanup_command_sanitizes_approval_history_rows(): void
+    {
+        $applicant = $this->makeApplicant('cleanup.user@dswd.gov.ph', 'Cleanup User');
+
+        \App\Models\ApprovalHistory::query()->create([
+            'user_id' => $applicant->id,
+            'applicant_name' => 'Cleanup User',
+            'applicant_email' => 'cleanup.user@dswd.gov.ph',
+            'action' => 'rejected',
+            'reviewed_by_name' => 'Admin Reviewer',
+            'reviewed_by_email' => 'admin@dswd.gov.ph',
+            'assigned_usergroup' => null,
+            'rejection_reason' => "<script>alert(1)</script>",
+        ]);
+
+        Artisan::call('security:sanitize-stored-inputs');
+
+        $this->assertNull(\App\Models\ApprovalHistory::query()->value('rejection_reason'));
     }
 
     private function makeUser(string $role, string $email, string $name): User

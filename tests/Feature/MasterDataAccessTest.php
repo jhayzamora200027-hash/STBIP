@@ -5,9 +5,13 @@ namespace Tests\Feature;
 use App\Models\Region;
 use App\Models\RegionItem;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 class MasterDataAccessTest extends TestCase
@@ -181,6 +185,89 @@ class MasterDataAccessTest extends TestCase
                 'action' => 'update',
             ]);
         }
+    }
+
+    public function test_region_items_reject_markup_payloads(): void
+    {
+        $region = Region::query()->create(['name' => 'Markup Region']);
+        $user = $this->makeUser('admin');
+
+        $response = $this->actingAs($user)->postJson(route('masterdata.region-items.store'), [
+            'region_id' => $region->id,
+            'title' => '<script>alert(1)</script>',
+            'province' => 'Province A',
+            'municipality' => 'Municipality A',
+            'adoption_status' => 'none',
+            'with_expr' => '0',
+            'with_moa' => '0',
+            'with_res' => '0',
+            'included_aip' => '0',
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('message', 'Unsafe or potentially malicious input was detected. Remove HTML or script content and try again.');
+        $response->assertJsonValidationErrors(['title']);
+        $this->assertDatabaseCount('region_items', 0);
+    }
+
+    public function test_region_item_excel_import_skips_markup_payloads(): void
+    {
+        Region::query()->create(['name' => 'Import Region']);
+        $user = $this->makeUser('sysadmin');
+
+        $response = $this->actingAs($user)
+            ->from(route('masterdata.index', ['tab' => 'overview']))
+            ->post(route('masterdata.region-items.import-excel'), [
+                'region_items_excel' => $this->makeRegionItemImportFile([
+                    ['Region', 'Title', 'Province', 'Municipality', 'Status'],
+                    ['Import Region', '<script>alert(1)</script>', 'Province A', 'City A', 'Ongoing'],
+                ]),
+            ]);
+
+        $response->assertRedirect(route('masterdata.index', ['tab' => 'overview']));
+        $response->assertSessionHas('masterdata_import_warnings', function ($warnings) {
+            return is_array($warnings)
+                && count($warnings) === 1
+                && str_contains($warnings[0], 'disallowed HTML or script content');
+        });
+        $this->assertDatabaseCount('region_items', 0);
+    }
+
+    public function test_cleanup_command_sanitizes_existing_region_item_rows(): void
+    {
+        $region = Region::query()->create(['name' => 'Cleanup Region']);
+
+        $item = RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => "<script>alert('xss')</script>",
+            'municipality' => 'City A',
+            'createdby' => 'Seeder',
+            'updatedby' => 'Seeder',
+        ]);
+
+        DB::table('region_item_histories')->insert([
+            'region_item_id' => $item->id,
+            'region_id' => $region->id,
+            'region_name' => 'Cleanup Region',
+            'st_title' => 'History Item',
+            'province' => "<script>alert('xss')</script>",
+            'city' => 'City A',
+            'updated_by' => 'Seeder',
+            'action' => 'update',
+            'update_row' => "Province: Blank -> <script>alert('xss')</script>",
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Artisan::call('security:sanitize-stored-inputs');
+
+        $item->refresh();
+
+        $this->assertNull($item->province);
+        $this->assertNull(DB::table('region_item_histories')->value('province'));
+        $this->assertSame('Province: Blank ->', DB::table('region_item_histories')->value('update_row'));
     }
 
     public function test_history_logs_are_visible_only_to_admin_and_sysadmin(): void
@@ -442,5 +529,37 @@ class MasterDataAccessTest extends TestCase
             'usergroup' => $role,
             'user_id' => strtoupper($role) . '-001',
         ]);
+    }
+
+    /**
+     * @param  array<int, array<int, string>>  $rows
+     */
+    private function makeRegionItemImportFile(array $rows): UploadedFile
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        foreach ($rows as $rowIndex => $row) {
+            $columnIndex = 1;
+            foreach ($row as $value) {
+                $sheet->setCellValue([$columnIndex, $rowIndex + 1], $value);
+                $columnIndex++;
+            }
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'region-items-');
+        $xlsxPath = $tempPath . '.xlsx';
+        rename($tempPath, $xlsxPath);
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($xlsxPath);
+
+        return new UploadedFile(
+            $xlsxPath,
+            'region-items.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
     }
 }

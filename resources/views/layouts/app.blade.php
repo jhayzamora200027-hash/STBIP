@@ -1560,6 +1560,107 @@
 </head>
 
 <body>
+    <div class="modal fade" id="securityErrorModal" tabindex="-1" aria-labelledby="securityErrorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:16px; overflow:hidden; border:1px solid rgba(220,38,38,0.18); box-shadow:0 16px 44px rgba(15,23,42,0.22);">
+                <div class="modal-header" style="background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%); color:#fff; border:none;">
+                    <h5 class="modal-title" id="securityErrorModalLabel">Input Blocked</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding:20px 22px; color:#1f2937;">
+                    <p id="securityErrorModalMessage" style="margin:0; font-weight:600; line-height:1.5;">{{ session('security_error') }}</p>
+                </div>
+                <div class="modal-footer" style="border:none; padding:0 22px 20px;">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var blockedInputMessage = 'Unsafe or potentially malicious input was detected. Remove HTML or script content and try again.';
+            var lastPrompt = { message: '', time: 0 };
+
+            function shouldSuppressPrompt(message) {
+                var now = Date.now();
+                if (lastPrompt.message === message && (now - lastPrompt.time) < 1200) {
+                    return true;
+                }
+                lastPrompt.message = message;
+                lastPrompt.time = now;
+                return false;
+            }
+
+            window.showSecurityErrorPrompt = function (message) {
+                var promptMessage = message || blockedInputMessage;
+                if (shouldSuppressPrompt(promptMessage)) {
+                    return;
+                }
+                var modalEl = document.getElementById('securityErrorModal');
+                var messageEl = document.getElementById('securityErrorModalMessage');
+                if (!modalEl || !messageEl || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                    alert(promptMessage);
+                    return;
+                }
+                messageEl.textContent = promptMessage;
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            };
+
+            window.isBlockedInputMessage = function (message) {
+                return typeof message === 'string' && message.indexOf(blockedInputMessage) !== -1;
+            };
+
+            function inspectSecurityPayload(payload) {
+                if (!payload || !window.isBlockedInputMessage(payload.message)) {
+                    return;
+                }
+                window.showSecurityErrorPrompt(payload.message);
+            }
+
+            if (window.fetch && !window.fetch.__securityPromptWrapped) {
+                var originalFetch = window.fetch.bind(window);
+                var wrappedFetch = function () {
+                    return originalFetch.apply(window, arguments).then(function (response) {
+                        try {
+                            var contentType = response.headers.get('content-type') || '';
+                            if (response.status === 422 && contentType.indexOf('application/json') !== -1) {
+                                response.clone().json().then(inspectSecurityPayload).catch(function () {});
+                            }
+                        } catch (e) {}
+                        return response;
+                    });
+                };
+                wrappedFetch.__securityPromptWrapped = true;
+                window.fetch = wrappedFetch;
+            }
+
+            if (window.XMLHttpRequest && !window.XMLHttpRequest.prototype.__securityPromptWrapped) {
+                var originalOpen = window.XMLHttpRequest.prototype.open;
+                window.XMLHttpRequest.prototype.open = function () {
+                    this.addEventListener('load', function () {
+                        try {
+                            if (this.status !== 422) {
+                                return;
+                            }
+                            var contentType = this.getResponseHeader('Content-Type') || '';
+                            if (contentType.indexOf('application/json') === -1 || !this.responseText) {
+                                return;
+                            }
+                            inspectSecurityPayload(JSON.parse(this.responseText));
+                        } catch (e) {}
+                    });
+                    return originalOpen.apply(this, arguments);
+                };
+                window.XMLHttpRequest.prototype.__securityPromptWrapped = true;
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                @if(session('security_error'))
+                window.showSecurityErrorPrompt(@json(session('security_error')));
+                @endif
+            });
+        })();
+    </script>
     <script>
     if (window.console) {
         ['log','warn','error','debug','info','trace'].forEach(m=>{console[m]=function(){};});

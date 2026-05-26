@@ -84,11 +84,18 @@
 		background: linear-gradient(135deg, #ecfdf3 0%, #f6fffa 100%);
 		border-bottom: 1px solid #d8f3e4;
 	}
+	.masterdata-modal-header.masterdata-modal-header-danger {
+		background: linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%);
+		border-bottom-color: #fca5a5;
+	}
 	.masterdata-modal-title {
 		margin: 0;
 		font-size: 1.15rem;
 		font-weight: 800;
 		color: #166534;
+	}
+	.masterdata-modal-header-danger .masterdata-modal-title {
+		color: #ffffff;
 	}
 	.masterdata-modal-body {
 		padding: 20px 24px;
@@ -797,6 +804,18 @@
 		</div>
 	</div>
 
+	<div id="masterdata-security-modal" class="masterdata-modal" aria-hidden="true">
+		<div class="masterdata-modal-card" role="dialog" aria-modal="true" aria-labelledby="masterdata-security-modal-title">
+			<div class="masterdata-modal-header masterdata-modal-header-danger">
+				<h2 id="masterdata-security-modal-title" class="masterdata-modal-title">Input Blocked</h2>
+			</div>
+			<div class="masterdata-modal-body" id="masterdata-security-modal-message"></div>
+			<div class="masterdata-modal-actions">
+				<button type="button" class="masterdata-btn masterdata-btn-danger" id="masterdata-security-modal-close">OK</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="masterdata-panel-overview" class="masterdata-panel {{ $activeTab === 'overview' ? 'active' : '' }}">
 		<div class="masterdata-stats">
 			<div class="masterdata-stat-card">
@@ -1209,6 +1228,16 @@
 		const successModal = document.getElementById('masterdata-success-modal');
 		const successModalMessage = document.getElementById('masterdata-success-modal-message');
 		const successModalClose = document.getElementById('masterdata-success-modal-close');
+		if (successModalClose) {
+			successModalClose.addEventListener('click', function () {
+				try { closeSuccessModal(); } catch (e) {}
+				setTimeout(function () { window.location.reload(); }, 150);
+			});
+		}
+		const securityModal = document.getElementById('masterdata-security-modal');
+		const securityModalMessage = document.getElementById('masterdata-security-modal-message');
+		const securityModalClose = document.getElementById('masterdata-security-modal-close');
+		const blockedInputMessage = 'Unsafe or potentially malicious input was detected. Remove HTML or script content and try again.';
 
 		function showAjaxFeedback(type, message) {
 			if (!ajaxFeedback) return;
@@ -1239,6 +1268,34 @@
 			}
 			successModal.classList.remove('is-open');
 			successModal.setAttribute('aria-hidden', 'true');
+		}
+
+		function showSecurityModal(message) {
+			if (typeof window.showSecurityErrorPrompt === 'function') {
+				window.showSecurityErrorPrompt(message);
+				return;
+			}
+			if (!securityModal || !securityModalMessage || !message) {
+				return;
+			}
+			securityModalMessage.textContent = message;
+			securityModal.classList.add('is-open');
+			securityModal.setAttribute('aria-hidden', 'false');
+		}
+
+		function closeSecurityModal() {
+			if (!securityModal) {
+				return;
+			}
+			securityModal.classList.remove('is-open');
+			securityModal.setAttribute('aria-hidden', 'true');
+		}
+
+		function isBlockedInputMessage(message) {
+			if (typeof window.isBlockedInputMessage === 'function') {
+				return window.isBlockedInputMessage(message);
+			}
+			return typeof message === 'string' && message.indexOf(blockedInputMessage) !== -1;
 		}
 
 		function initializeConditionalFields(root) {
@@ -1742,10 +1799,12 @@
 
 				if (!response.ok) {
 					let errorMessage = 'Unable to save item changes.';
+					let shouldShowSecurityModal = false;
 					if (responseType.includes('application/json')) {
 						const errorPayload = await response.json();
 						if (errorPayload.message) {
 							errorMessage = errorPayload.message;
+							shouldShowSecurityModal = isBlockedInputMessage(errorPayload.message);
 						}
 						if (errorPayload.errors) {
 							let placedInline = false;
@@ -1768,6 +1827,9 @@
 								}
 							}
 							if (placedInline) {
+								if (shouldShowSecurityModal) {
+									showSecurityModal(errorMessage);
+								}
 								setFormBusy(form, false);
 								return; 
 							}
@@ -1776,6 +1838,9 @@
 								errorMessage = firstError;
 							}
 						}
+					}
+					if (shouldShowSecurityModal) {
+						showSecurityModal(errorMessage);
 					}
 					throw new Error(errorMessage);
 				}
@@ -1821,10 +1886,6 @@
 				form.dataset.masterdataBound = '1';
 				form.addEventListener('submit', function (event) {
 					const formType = form.getAttribute('data-masterdata-updates-form');
-					if (formType === 'create') {
-						return;
-					}
-
 					event.preventDefault();
 					event.stopPropagation();
 					if (formType === 'region' || formType === 'filters' || formType === 'history-filters') {
@@ -1832,7 +1893,7 @@
 						return;
 					}
 
-					if (formType === 'update' || formType === 'delete') {
+					if (formType === 'create' || formType === 'update' || formType === 'delete') {
 						submitUpdatesForm(form).catch(function (error) {
 							showAjaxFeedback('error', error.message);
 						});
@@ -1879,6 +1940,10 @@
 			successModalClose.addEventListener('click', closeSuccessModal);
 		}
 
+		if (securityModalClose) {
+			securityModalClose.addEventListener('click', closeSecurityModal);
+		}
+
 		if (successModal) {
 			successModal.addEventListener('click', function (event) {
 				if (event.target === successModal) {
@@ -1886,6 +1951,15 @@
 				}
 			});
 		}
+
+		if (securityModal) {
+			securityModal.addEventListener('click', function (event) {
+				if (event.target === securityModal) {
+					closeSecurityModal();
+				}
+			});
+		}
+
 
 		document.addEventListener('click', function (event) {
 			const historyButton = event.target.closest('.btn-open-region-item-history');
