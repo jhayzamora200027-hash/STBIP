@@ -3966,7 +3966,6 @@ if (!document.getElementById('catListTooltip')) {
 									<div class="guest-filter-kicker">Dashboard Filters</div>
 									<div class="guest-filter-title">Filter By Location &amp; Year</div>
 								</div>
-								<button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button>
 							</div>
 						</div>
 						<div class="card-body guest-filter-body">
@@ -4479,12 +4478,14 @@ window.allProvinces = Array.from(new Set(window.allProvinces)).sort();
 window.allCities = Array.from(new Set(window.allCities)).sort();
 window.allYears = @json($allYears ?? $years);
 	$(function() {
-		function initDashboardSelect2() {
+		window.initDashboardSelect2 = function(root) {
 			if (!$.fn || !$.fn.select2) {
 				console && console.warn && console.warn('Select2 plugin is missing for .st-select2');
 				return;
 			}
-			$('.st-select2').each(function () {
+			var $scope = root ? $(root) : $(document);
+			var $targets = $scope.is('.st-select2') ? $scope : $scope.find('.st-select2');
+			$targets.each(function () {
 				var $el = $(this);
 				if ($el.data('select2')) {
 					return; 
@@ -4506,12 +4507,12 @@ window.allYears = @json($allYears ?? $years);
 				}
 				$el.select2(opts);
 			});
-		}
+		};
 
-		initDashboardSelect2();
+		window.initDashboardSelect2();
 
 		$('#filterModal').on('shown.bs.modal', function() {
-			initDashboardSelect2();
+			window.initDashboardSelect2();
 			try{
 				const modal = this;
 				const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -7787,10 +7788,25 @@ window.showGuestFilterDock = function(ev){
 				var inner = document.createElement('div');
 				inner.className = 'filter-modal-panel mobile'; inner.style.display='block'; inner.style.width='100%'; inner.style.maxWidth='640px'; inner.style.borderRadius='12px 12px 0 0'; inner.style.margin='0'; inner.style.padding='0.5rem';
 				inner.innerHTML = sanitizeHtml(existingDock.innerHTML);
+				Array.from(inner.querySelectorAll('.select2')).forEach(function(node){
+					if (node && node.parentNode) {
+						node.parentNode.removeChild(node);
+					}
+				});
+				Array.from(inner.querySelectorAll('.st-select2')).forEach(function(selectEl){
+					selectEl.classList.remove('select2-hidden-accessible');
+					selectEl.removeAttribute('data-select2-id');
+					selectEl.removeAttribute('tabindex');
+					selectEl.removeAttribute('aria-hidden');
+					selectEl.style.display = '';
+				});
 				wrapper.appendChild(inner);
 				document.body.appendChild(wrapper);
 				document.body.classList.add('modal-open');
 				document.body.classList.add('guest-filter-open');
+				if (window.initDashboardSelect2) {
+					window.initDashboardSelect2(inner);
+				}
 				inner.addEventListener('click', function(e){ e.stopPropagation(); });
 				wrapper.addEventListener('click', function(e){ if(!window.isGuestFilterInteractionTarget(e.target)){ window.closeGuestMobileFilterPanel(); } });
 				document.addEventListener('keydown', function _esc(e){ if(e.key === 'Escape'){ window.closeGuestMobileFilterPanel(); document.removeEventListener('keydown', _esc); } });
@@ -7806,7 +7822,7 @@ window.showGuestFilterDock = function(ev){
 			}
 			var mobile = document.createElement('div');
 			mobile.id = 'guestMobileFilterPanel'; mobile.className='guest-mobile-filter-panel open'; mobile.style.position='fixed'; mobile.style.inset='0'; mobile.style.zIndex='2200'; mobile.style.display='flex'; mobile.style.alignItems='flex-end'; mobile.style.justifyContent='center'; mobile.style.background='rgba(6,48,110,0.12)';
-			mobile.innerHTML = sanitizeHtml('<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-header-top"><div><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div><button type="button" class="guest-filter-close" aria-label="Close guest filters" onclick="return window.closeGuestFilterUi && window.closeGuestFilterUi(event)">&times;</button></div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>');
+			mobile.innerHTML = sanitizeHtml('<div class="filter-modal-panel mobile" style="display:block!important;"><div class="card st-dashboard-card guest-filter-card"><div class="guest-filter-header"><div class="guest-filter-header-top"><div><div class="guest-filter-kicker">Dashboard Filters</div><div class="guest-filter-title">Filters (guest)</div></div></div></div><div class="card-body guest-filter-body"><p>Please <a href="/login">log in</a> to access full filters, or reload the page.</p></div></div></div>');
 			document.body.appendChild(mobile); document.body.classList.add('modal-open'); document.body.classList.add('guest-filter-open');
 			var mobilePanel = mobile.querySelector('.filter-modal-panel');
 			if (mobilePanel) mobilePanel.addEventListener('click', function(e){ e.stopPropagation(); });
@@ -8672,12 +8688,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	const states = new WeakMap();
 	movers.forEach(function(el){
-		states.set(el, { scrollOffset: 0, targetX: 0, targetY: 0, currentX: 0, currentY: 0 });
+		states.set(el, { scrollOffset: 0 });
 	});
 
 	function applyTransforms(el) {
-		const s = states.get(el) || { scrollOffset:0, currentX:0, currentY:0 };
-		el.style.transform = `translate(${s.currentX}px, ${s.scrollOffset + s.currentY}px)`;
+		const s = states.get(el) || { scrollOffset: 0 };
+		el.style.transform = `translateY(${s.scrollOffset}px)`;
 	}
 
 	window.addEventListener('scroll', () => {
@@ -8709,39 +8725,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		lastScrollTop = currentScroll;
 	});
 
-	let pointerX = window.innerWidth / 2;
-	let pointerY = window.innerHeight / 2;
-
-	function onPointerMove(e) {
-		const point = e.touches && e.touches[0] ? e.touches[0] : e;
-		pointerX = point.clientX;
-		pointerY = point.clientY;
-		movers.forEach(function(el){
-			if (!el.id || (el.id !== 'floatingBtn' && el.id !== 'guestFloatingBtn' && el.id !== 'guestFilterDock')) return;
-			const rect = el.getBoundingClientRect();
-			const cx = rect.left + rect.width / 2;
-			const cy = rect.top + rect.height / 2;
-			const dx = pointerX - cx;
-			const dy = pointerY - cy;
-			const isGuestDock = el.id === 'guestFilterDock';
-			const limit = isGuestDock ? 10 : 18;
-			const factor = isGuestDock ? 0.025 : 0.06;
-			const targetX = Math.max(-limit, Math.min(limit, dx * factor));
-			const targetY = Math.max(-limit, Math.min(limit, dy * factor));
-			const s = states.get(el);
-			if (s) { s.targetX = targetX; s.targetY = targetY; }
-		});
-	}
-
-	window.addEventListener('mousemove', onPointerMove, { passive: true });
-	window.addEventListener('touchmove', onPointerMove, { passive: true });
-
 	function animate() {
 		movers.forEach(function(el){
 			const s = states.get(el);
 			if (!s) return;
-			s.currentX += (s.targetX - s.currentX) * 0.12;
-			s.currentY += (s.targetY - s.currentY) * 0.12;
 			if (Math.abs(s.scrollOffset) < 0.5) s.scrollOffset = 0;
 			applyTransforms(el);
 		});
