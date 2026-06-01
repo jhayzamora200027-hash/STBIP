@@ -2,37 +2,30 @@
   <div class="modal-dialog modal-dialog-centered otp-modal-dialog-wide">
     <div class="modal-content otp-modal-card">
       <div class="modal-header border-0">
-        <h5 class="modal-title" id="otpModalLabel">Two-step verification</h5>
+        <div>
+          <div class="otp-modal-kicker">Secure sign-in</div>
+          <h5 class="modal-title" id="otpModalLabel">Two-step verification</h5>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">
-        <p class="verification-legend" id="otpInstructionText"><span id="otpInstructionPrefix">No verification code has been sent to</span> <strong id="otpMaskedEmail">your email</strong> <span id="otpInstructionSuffix">yet. Confirm the request first, then complete the CAPTCHA to send one.</span></p>
-
-        <div class="otp-send-panel mb-3">
-          <button type="button" class="btn btn-otp-primary w-100" id="otpOpenSendPopoverBtn">Request verification code</button>
-          <div class="otp-send-popover" id="otpSendPopover" hidden>
-            <p class="mb-2"><span id="otpSendPromptPrefix">Send a one-time password to</span> <strong id="otpConfirmMaskedEmail">your email</strong><span id="otpSendPromptSuffix">?</span></p>
-            <p class="text-muted small mb-3">You can request a code up to 3 times. Additional requests will pause OTP access for 5 minutes.</p>
-            @if(config('services.recaptcha.site_key'))
-              <div class="otp-send-captcha-wrap">
-                <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
-              </div>
-              <div class="text-danger small mt-2" id="otpSendCaptchaError" style="display:none;"></div>
-            @else
-              <div class="text-muted small mb-3">CAPTCHA is not configured in this environment.</div>
-            @endif
-            <div class="d-flex gap-2 mt-3">
-              <button type="button" class="btn btn-otp-primary flex-fill" id="otpConfirmSendBtn">Confirm request</button>
-              <button type="button" class="btn btn-otp-cancel flex-fill" id="otpCancelSendBtn">Cancel</button>
-            </div>
+        <section class="otp-hero" aria-labelledby="otpInstructionText">
+          <div class="otp-hero-badge">2FA</div>
+          <div class="otp-hero-copy">
+            <p class="verification-legend mb-0" id="otpInstructionText"><span id="otpInstructionPrefix">No verification code has been sent to</span> <strong id="otpMaskedEmail">your email</strong> <span id="otpInstructionSuffix">yet. Confirm the request first, then complete the CAPTCHA to send one.</span></p>
+            <div class="otp-inline-restriction-timer" id="otpInlineRestrictionTimer" style="display:none;">Request available again in 05:00.</div>
           </div>
+        </section>
+
+        <div class="otp-send-panel mb-4">
+          <button type="button" class="btn btn-otp-primary w-100" id="otpOpenSendConfirmBtn">Request verification code</button>
         </div>
 
         <form id="otpModalForm" method="POST" action="{{ route('otp.verify') }}" autocomplete="off">
           @csrf
           <input type="hidden" name="otp_code" id="otp_modal_code_hidden">
-          <div class="mb-3 text-center">
-            <label class="form-label d-block mb-2">Verification code</label>
+          <section class="otp-code-panel mb-3 text-center">
+            <label class="form-label d-block mb-2 otp-code-label">Verification code</label>
             <div id="otpModalBoxes" class="d-flex justify-content-center" style="column-gap:12px;">
               <input inputmode="numeric" pattern="\d*" maxlength="1" class="otp-digit text-center" id="otp_modal_digit_1" />
               <input inputmode="numeric" pattern="\d*" maxlength="1" class="otp-digit text-center" id="otp_modal_digit_2" />
@@ -42,28 +35,72 @@
               <input inputmode="numeric" pattern="\d*" maxlength="1" class="otp-digit text-center" id="otp_modal_digit_6" />
             </div>
             <div class="form-text text-center mt-2 otp-help-text">Enter the 6-digit code you received by email.</div>
-          </div>
+          </section>
 
-          <div class="d-grid gap-2">
+          <div class="d-grid gap-2 otp-action-stack">
             <button type="submit" class="btn btn-otp-primary" id="otpVerifyBtn">Verify</button>
             <button type="button" class="btn btn-otp-cancel" data-bs-dismiss="modal">Cancel</button>
             <div class="text-center mt-2" id="otpResendWrap" style="display:none;">
-              <small class="text-muted">Need another code? <a href="#" id="otpResendBtn" class="otp-resend-link">Request another OTP</a></small>
+              <small class="text-muted otp-resend-copy">Need another code? <a href="#" id="otpResendBtn" class="otp-resend-link">Request another OTP</a></small>
             </div>
           </div>
         </form>
 
-        <div class="mt-3 text-center text-muted small">
-          <span id="otpModalCountdown">Code expires in —</span>
+        <div class="otp-status-grid mt-4">
+          <div class="otp-status-card">
+            <div class="otp-status-label">Expiration</div>
+            <div class="otp-status-value" id="otpModalCountdown">Code expires in —</div>
+          </div>
+          <div class="otp-status-card">
+            <div class="otp-status-label">Request status</div>
+            <div class="otp-status-value" id="otpSendMeta"></div>
+          </div>
         </div>
-
-        <div class="mt-2 text-center text-muted small" id="otpSendMeta"></div>
 
         <div id="otpModalError" class="otp-error-box mt-3" role="alert" aria-live="polite" style="display:none;"></div>
       </div>
     </div>
   </div>
 
+</div>
+
+<div class="modal fade" id="otpSendConfirmModal" tabindex="-1" aria-labelledby="otpSendConfirmLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered otp-send-confirm-dialog">
+    <div class="modal-content otp-send-confirm-card">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <div class="otp-send-confirm-kicker">OTP request</div>
+          <h5 class="modal-title" id="otpSendConfirmLabel">Confirm verification code request</h5>
+        </div>
+        <button type="button" class="btn-close" id="otpCloseSendConfirmBtn" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div class="otp-send-confirm-summary">
+          <div class="otp-send-confirm-icon">@</div>
+          <div>
+            <p class="mb-1"><span id="otpSendPromptPrefix">Send a one-time password to</span> <strong id="otpConfirmMaskedEmail">your email</strong><span id="otpSendPromptSuffix">?</span></p>
+            <p class="text-muted small mb-0">You can request a code up to 3 times. Additional requests pause OTP access for 5 minutes.</p>
+          </div>
+        </div>
+
+        @if(config('services.recaptcha.site_key'))
+          <div class="otp-send-captcha-panel mt-3">
+            <div class="otp-send-captcha-title">Security check</div>
+            <div class="otp-send-captcha-wrap">
+              <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+            </div>
+            <div class="text-danger small mt-2" id="otpSendCaptchaError" style="display:none;"></div>
+          </div>
+        @else
+          <div class="text-muted small mt-3">CAPTCHA is not configured in this environment.</div>
+        @endif
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-otp-cancel flex-fill" id="otpCancelSendBtn">Cancel</button>
+        <button type="button" class="btn btn-otp-primary flex-fill" id="otpConfirmSendBtn">Confirm request</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="otpRestrictionModal" tabindex="-1" aria-labelledby="otpRestrictionModalLabel" aria-hidden="true">
@@ -86,18 +123,49 @@
 
 <style>
   /* Make modal card opaque and visually separate from page */
-  #otpModal .modal-content.otp-modal-card { background: #ffffff; border-radius: 8px; box-shadow: 0 8px 24px rgba(4,15,36,0.12); overflow: visible; }
-  #otpModal .modal-dialog { max-width: 520px; }
-  #otpModal .otp-digit { width:56px; height:44px; border-radius:6px; border:1px solid rgba(16,24,40,0.08); background:#f8fbff; font-size:18px; padding:6px; }
-  #otpModal .btn-otp-primary { background:#0a66ff; border-color:#0a66ff; color:#fff; }
-  #otpModal .btn-otp-cancel { background:#f3f4f6; color:#111827; }
+  #otpModal .modal-content.otp-modal-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border-radius: 22px; box-shadow: 0 24px 60px rgba(4,15,36,0.18); overflow: visible; border: 1px solid rgba(148,163,184,0.16); }
+  #otpModal .modal-dialog { max-width: 560px; }
+  #otpModal .modal-header { padding: 1.35rem 1.4rem 0.45rem; }
+  #otpModal .modal-body { padding: 1.1rem 1.4rem 1.45rem !important; }
+  #otpModal .modal-title { font-size: 1.95rem; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; }
+  #otpModal .otp-modal-kicker { color:#2563eb; font-size:0.78rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.3rem; }
+  #otpModal .verification-legend { color:#334155; font-size:1.02rem; line-height:1.6; }
+  #otpModal .otp-hero { display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:18px; background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border:1px solid rgba(59,130,246,0.14); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
+  #otpModal .otp-hero-copy { flex: 1 1 auto; }
+  #otpModal .otp-hero-badge { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:#2563eb; color:#fff; font-size:0.88rem; font-weight:800; letter-spacing:0.04em; flex:0 0 auto; box-shadow:0 12px 24px rgba(37,99,235,0.22); }
+  #otpModal .otp-inline-restriction-timer { display:inline-flex; align-items:center; margin-top:12px; padding:8px 12px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:0.86rem; font-weight:700; line-height:1; }
+  #otpModal .otp-send-panel { position: relative; padding: 16px 18px; border-radius:18px; background:#fff; border:1px solid rgba(15,23,42,0.08); box-shadow:0 10px 30px rgba(15,23,42,0.06); }
+  #otpModal .otp-digit { width:66px; height:56px; border-radius:16px; border:1px solid rgba(148,163,184,0.3); background:#fff; font-size:1.5rem; font-weight:700; color:#0f172a; padding:6px; box-shadow: inset 0 1px 2px rgba(15,23,42,0.04); transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
+  #otpModal .otp-digit:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,0.14); transform:translateY(-1px); }
+  #otpModal .otp-code-panel { padding: 18px 18px 16px; border-radius:18px; background:#fff; border:1px solid rgba(15,23,42,0.08); box-shadow:0 10px 28px rgba(15,23,42,0.05); }
+  #otpModal .otp-code-label { color:#0f172a; font-size:1.05rem; font-weight:700; }
+  #otpModal .otp-help-text { color:#64748b; font-size:0.92rem; }
+  #otpModal .btn-otp-primary { background:linear-gradient(135deg,#2563eb 0%, #1d4ed8 100%); border-color:#1d4ed8; color:#fff; border-radius:14px; min-height:52px; font-weight:700; font-size:1rem; box-shadow:0 14px 28px rgba(37,99,235,0.18); }
+  #otpModal .btn-otp-primary:hover { background:linear-gradient(135deg,#1d4ed8 0%, #1e40af 100%); border-color:#1e40af; color:#fff; }
+  #otpModal .btn-otp-cancel { background:#f8fafc; color:#0f172a; border:1px solid rgba(148,163,184,0.28); border-radius:14px; min-height:52px; font-weight:600; }
   #otpModal .otp-error-box { background:#fff5f5; border:1px solid #f8d7da; color:#842029; padding:10px; border-radius:6px; display:none; }
-  #otpModal .otp-send-panel { position: relative; }
-  #otpModal .otp-send-popover { position: relative; inset: auto; margin-top: 12px; z-index: 1085; padding: 16px; border-radius: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.12); box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18); }
-  #otpModal .otp-send-popover::before { display: none; }
+  #otpModal .otp-send-hint { color:#64748b; font-size:0.84rem; text-align:center; }
   #otpModal .otp-send-captcha-wrap { display:flex; justify-content:center; align-items:center; min-height: 78px; overflow: visible; }
   #otpModal .otp-send-captcha-wrap iframe { position: relative; z-index: 1086; }
-  #otpModal .otp-send-popover[hidden] { display: none !important; }
+  #otpModal .otp-status-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+  #otpModal .otp-status-card { padding:14px 16px; border-radius:16px; background:#fff; border:1px solid rgba(15,23,42,0.08); box-shadow:0 8px 24px rgba(15,23,42,0.05); }
+  #otpModal .otp-status-label { font-size:0.74rem; font-weight:700; color:#64748b; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; }
+  #otpModal .otp-status-value { font-size:0.95rem; font-weight:600; color:#0f172a; line-height:1.45; }
+  #otpModal .otp-resend-copy { display:inline-flex; align-items:center; gap:6px; }
+
+  #otpSendConfirmModal.modal { z-index: 12100 !important; }
+  #otpSendConfirmModal .modal-dialog { max-width: 540px; }
+  #otpSendConfirmModal .modal-content { border:0; border-radius:18px; box-shadow:0 28px 70px rgba(15, 23, 42, 0.28); }
+  #otpSendConfirmModal .modal-header,
+  #otpSendConfirmModal .modal-body,
+  #otpSendConfirmModal .modal-footer { padding-left: 1.35rem; padding-right: 1.35rem; }
+  #otpSendConfirmModal .otp-send-confirm-kicker { color:#2563eb; font-size:0.78rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.35rem; }
+  #otpSendConfirmModal .otp-send-confirm-summary { display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border-radius:14px; background:linear-gradient(180deg,#f8fbff 0%,#f1f5f9 100%); border:1px solid rgba(37,99,235,0.10); }
+  #otpSendConfirmModal .otp-send-confirm-icon { width:42px; height:42px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:#dbeafe; color:#1d4ed8; font-weight:700; flex:0 0 auto; }
+  #otpSendConfirmModal .otp-send-captcha-panel { padding:16px; border-radius:14px; border:1px solid rgba(15,23,42,0.08); background:#fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+  #otpSendConfirmModal .otp-send-captcha-title { font-weight:600; color:#0f172a; margin-bottom:10px; }
+  #otpSendConfirmModal .otp-send-captcha-wrap { display:flex; justify-content:center; align-items:flex-start; min-height:150px; overflow:visible; }
+  #otpSendConfirmModal .modal-footer { gap:10px; }
 
   /* resend link styling */
   #otpModal .otp-resend-link { color: #0a66ff; text-decoration:underline; cursor:pointer; }
@@ -133,22 +201,8 @@
     overflow: visible;
   }
 
-  #otpModal + .modal-backdrop,
   .modal-backdrop.show {
-    z-index: 12040 !important;
-  }
-
-  /* When OTP modal is active, heavily dim/blur the rest of the page.
-     Exclude any other `.modal` elements so other Bootstrap modals
-     remain interactive when opened while the OTP modal class exists. */
-  .otp-modal-open > *:not(#otpModal):not(.modal-backdrop):not(.modal) {
-    /* dim to near-black like the login overlay, but keep layout sharp */
-    filter: none !important;
-    opacity: 0.10 !important;
-    transition: opacity 160ms linear !important;
-    pointer-events: none !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
+    z-index: 1040 !important;
   }
 
   @media (max-width: 576px) {
@@ -161,14 +215,40 @@
       padding: 1rem !important;
     }
 
-    #otpModal .otp-send-popover {
-      padding: 12px;
+    #otpModal .modal-title {
+      font-size: 1.6rem;
+    }
+
+    #otpModal .otp-hero,
+    #otpModal .otp-send-panel,
+    #otpModal .otp-code-panel {
+      padding: 14px;
+    }
+
+    #otpModal .otp-hero {
+      flex-direction: column;
+    }
+
+    #otpModal .otp-status-grid {
+      grid-template-columns: 1fr;
+    }
+
+    #otpModal .otp-digit {
+      width: 48px;
+      height: 52px;
+      border-radius: 14px;
+      font-size: 1.2rem;
     }
 
     #otpModal .otp-send-captcha-wrap {
       justify-content: flex-start;
       overflow-x: auto;
       padding-bottom: 4px;
+    }
+
+    #otpSendConfirmModal .modal-dialog {
+      max-width: calc(100vw - 24px);
+      margin: 0.75rem auto;
     }
   }
 </style>
@@ -178,6 +258,10 @@
     if (!document.getElementById('otpModal')) return;
     const otpModalEl = document.getElementById('otpModal');
     const otpModal = typeof bootstrap !== 'undefined' ? bootstrap.Modal.getOrCreateInstance(otpModalEl) : null;
+    const otpSendConfirmModalEl = document.getElementById('otpSendConfirmModal');
+    const otpSendConfirmModal = typeof bootstrap !== 'undefined' && otpSendConfirmModalEl
+      ? bootstrap.Modal.getOrCreateInstance(otpSendConfirmModalEl)
+      : null;
     const otpRestrictionModalEl = document.getElementById('otpRestrictionModal');
     const otpRestrictionModal = typeof bootstrap !== 'undefined' && otpRestrictionModalEl
       ? bootstrap.Modal.getOrCreateInstance(otpRestrictionModalEl)
@@ -186,10 +270,10 @@
     const otpHidden = document.getElementById('otp_modal_code_hidden');
     const otpForm = document.getElementById('otpModalForm');
     const verifyBtn = document.getElementById('otpVerifyBtn');
-    const openSendPopoverBtn = document.getElementById('otpOpenSendPopoverBtn');
-    const sendPopover = document.getElementById('otpSendPopover');
+    const openSendConfirmBtn = document.getElementById('otpOpenSendConfirmBtn');
     const sendPromptPrefixEl = document.getElementById('otpSendPromptPrefix');
     const sendPromptSuffixEl = document.getElementById('otpSendPromptSuffix');
+    const closeSendConfirmBtn = document.getElementById('otpCloseSendConfirmBtn');
     const confirmSendBtn = document.getElementById('otpConfirmSendBtn');
     const cancelSendBtn = document.getElementById('otpCancelSendBtn');
     const resendBtn = document.getElementById('otpResendBtn');
@@ -203,13 +287,16 @@
     const errorBox = document.getElementById('otpModalError');
     const restrictionMessageEl = document.getElementById('otpRestrictionMessage');
     const restrictionCountdownEl = document.getElementById('otpRestrictionCountdown');
+    const inlineRestrictionCountdownEl = document.getElementById('otpInlineRestrictionTimer');
     const sendCaptchaError = document.getElementById('otpSendCaptchaError');
     let _autoSubmitTimer = null;
     let _autoSubmitting = false;
     let expiryTimer = null;
     let restrictionTimer = null;
     let sendRequestActive = false;
-    let sendPopoverMode = 'initial';
+    let sendConfirmMode = 'initial';
+    let sendConfirmPending = false;
+    let restoreOtpAfterConfirm = false;
     let restrictionModalShownForLock = null;
     let otpState = {
       otp_sent: false,
@@ -222,7 +309,7 @@
     };
 
     function getSendCaptchaToken() {
-      const field = sendPopover ? sendPopover.querySelector('textarea[name="g-recaptcha-response"]') : null;
+      const field = otpSendConfirmModalEl ? otpSendConfirmModalEl.querySelector('textarea[name="g-recaptcha-response"]') : null;
       return field ? String(field.value || '').trim() : '';
     }
 
@@ -234,28 +321,32 @@
         }
       } catch (e) {
       }
-      const field = sendPopover ? sendPopover.querySelector('textarea[name="g-recaptcha-response"]') : null;
+      const field = otpSendConfirmModalEl ? otpSendConfirmModalEl.querySelector('textarea[name="g-recaptcha-response"]') : null;
       if (field) {
         field.value = '';
       }
       @endif
     }
 
-    function hideSendPopover() {
-      if (sendPopover) {
-        sendPopover.hidden = true;
+    function hideSendConfirmModal() {
+      if (otpSendConfirmModal) {
+        otpSendConfirmModal.hide();
       }
       hideCaptchaError();
     }
 
-    function showSendPopover(mode) {
-      if (!sendPopover || !openSendPopoverBtn || openSendPopoverBtn.disabled) {
+    function cancelSendConfirmation() {
+      hideSendConfirmModal();
+    }
+
+    function showSendConfirmModal(mode) {
+      if (!otpSendConfirmModalEl || !openSendConfirmBtn || openSendConfirmBtn.disabled) {
         return;
       }
 
-      sendPopoverMode = mode || 'initial';
+      sendConfirmMode = mode || 'initial';
       if (sendPromptPrefixEl && sendPromptSuffixEl && confirmSendBtn) {
-        if (sendPopoverMode === 'resend') {
+        if (sendConfirmMode === 'resend') {
           sendPromptPrefixEl.textContent = 'Request another one-time password for';
           sendPromptSuffixEl.textContent = '?';
           confirmSendBtn.textContent = 'Confirm resend';
@@ -266,8 +357,18 @@
         }
       }
 
-      sendPopover.hidden = false;
       resetSendCaptcha();
+      hideCaptchaError();
+      if (otpModal && otpModalEl.classList.contains('show')) {
+        restoreOtpAfterConfirm = true;
+        sendConfirmPending = true;
+        otpModal.hide();
+        return;
+      }
+
+      if (otpSendConfirmModal) {
+        otpSendConfirmModal.show();
+      }
       if (confirmSendBtn) {
         confirmSendBtn.focus();
       }
@@ -396,6 +497,10 @@
     function startRestrictionCountdown(iso) {
       clearInterval(restrictionTimer);
 
+      if (inlineRestrictionCountdownEl) {
+        inlineRestrictionCountdownEl.style.display = 'none';
+      }
+
       if (!restrictionCountdownEl || !iso) {
         return;
       }
@@ -410,7 +515,12 @@
         const diff = Math.max(0, Math.floor((lockedUntil.getTime() - Date.now()) / 1000));
         const minutes = Math.floor(diff / 60);
         const seconds = diff % 60;
-        restrictionCountdownEl.textContent = 'Try again in ' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') + '.';
+        const countdownText = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        restrictionCountdownEl.textContent = 'Try again in ' + countdownText + '.';
+        if (inlineRestrictionCountdownEl) {
+          inlineRestrictionCountdownEl.textContent = 'Request available again in ' + countdownText + '.';
+          inlineRestrictionCountdownEl.style.display = 'inline-flex';
+        }
 
         if (diff <= 0) {
           clearInterval(restrictionTimer);
@@ -458,8 +568,12 @@
       const locked = isLocked();
       const hasActiveCode = !!otpState.otp_sent && !!otpState.otp_expires_at && !locked;
 
-      openSendPopoverBtn.disabled = locked;
-      openSendPopoverBtn.style.display = hasActiveCode ? 'none' : 'block';
+      if (inlineRestrictionCountdownEl && !locked) {
+        inlineRestrictionCountdownEl.style.display = 'none';
+      }
+
+      openSendConfirmBtn.disabled = locked;
+      openSendConfirmBtn.style.display = hasActiveCode ? 'none' : 'block';
       setOtpInputsDisabled(!hasActiveCode);
       if (resendWrap) {
         resendWrap.style.display = hasActiveCode ? 'block' : 'none';
@@ -475,12 +589,13 @@
 
       updateInstruction();
       renderSendMeta();
-      hideSendPopover();
+      hideSendConfirmModal();
       startExpiry(otpState.otp_expires_at || null);
 
       if (locked) {
         clearOtpDigits();
         setOtpInputsDisabled(true);
+        startRestrictionCountdown(otpState.locked_until);
       }
     }
 
@@ -511,7 +626,7 @@
 
       sendRequestActive = true;
       confirmSendBtn.disabled = true;
-      confirmSendBtn.textContent = sendPopoverMode === 'resend' ? 'Resending...' : 'Sending...';
+      confirmSendBtn.textContent = sendConfirmMode === 'resend' ? 'Resending...' : 'Sending...';
 
       fetch('{{ route('otp.send') }}', {
         method: 'POST',
@@ -527,6 +642,7 @@
         if (res.ok) {
           hideError();
           hideCaptchaError();
+          hideSendConfirmModal();
           if (otpDigits[0] && !otpDigits[0].disabled) {
             otpDigits[0].focus();
           }
@@ -534,7 +650,7 @@
         }
 
         if (res.status !== 429) {
-          showSendPopover(sendPopoverMode);
+          showSendConfirmModal(sendConfirmMode);
         }
         if (data && data.errors && data.errors['g-recaptcha-response']) {
           showCaptchaError(data.errors['g-recaptcha-response'][0]);
@@ -545,12 +661,12 @@
         }
       }).catch((err) => {
         console.error(err);
-        showSendPopover(sendPopoverMode);
+        showSendConfirmModal(sendConfirmMode);
         showError('Failed to send the verification code. Please try again.');
       }).finally(() => {
         sendRequestActive = false;
         confirmSendBtn.disabled = false;
-        confirmSendBtn.textContent = sendPopoverMode === 'resend' ? 'Confirm resend' : 'Confirm request';
+        confirmSendBtn.textContent = sendConfirmMode === 'resend' ? 'Confirm resend' : 'Confirm request';
       });
     }
 
@@ -667,16 +783,22 @@
       try { errorBox.style.display = 'none'; while (errorBox.firstChild) errorBox.removeChild(errorBox.firstChild); } catch(e){ try { errorBox.textContent = ''; } catch(_) { errorBox.innerHTML = sanitizeHtml(''); } }
     }
 
-    if (openSendPopoverBtn) {
-      openSendPopoverBtn.addEventListener('click', function() {
+    if (openSendConfirmBtn) {
+      openSendConfirmBtn.addEventListener('click', function() {
         hideError();
-        showSendPopover('initial');
+        showSendConfirmModal('initial');
       });
     }
 
     if (cancelSendBtn) {
       cancelSendBtn.addEventListener('click', function() {
-        hideSendPopover();
+        cancelSendConfirmation();
+      });
+    }
+
+    if (closeSendConfirmBtn) {
+      closeSendConfirmBtn.addEventListener('click', function() {
+        cancelSendConfirmation();
       });
     }
 
@@ -693,7 +815,7 @@
           return;
         }
         hideError();
-        showSendPopover('resend');
+        showSendConfirmModal('resend');
       });
     }
 
@@ -718,17 +840,37 @@
         showRestrictionModal((opts && opts.message) || 'You have reached the OTP request limit. Please wait 5 minutes before trying again.', otpState.locked_until);
       } else if (otpState.otp_sent && otpDigits[0] && !otpDigits[0].disabled) {
         otpDigits[0].focus();
-      } else if (openSendPopoverBtn) {
-        openSendPopoverBtn.focus();
+      } else if (openSendConfirmBtn) {
+        openSendConfirmBtn.focus();
       }
     }
 
-    // Add body class while OTP modal is visible to dim/blur background
     if (typeof bootstrap !== 'undefined') {
-      otpModalEl.addEventListener('shown.bs.modal', function(){ document.body.classList.add('otp-modal-open'); });
+      otpSendConfirmModalEl.addEventListener('hidden.bs.modal', function(){
+        hideCaptchaError();
+        if (restoreOtpAfterConfirm) {
+          restoreOtpAfterConfirm = false;
+          if (otpModal) {
+            otpModal.show();
+          }
+          return;
+        }
+
+        if (!otpState.otp_sent && openSendConfirmBtn && !openSendConfirmBtn.disabled) {
+          openSendConfirmBtn.focus();
+        }
+      });
+
       otpModalEl.addEventListener('hidden.bs.modal', function(){
-        document.body.classList.remove('otp-modal-open');
-        hideSendPopover();
+        if (sendConfirmPending) {
+          sendConfirmPending = false;
+          if (otpSendConfirmModal) {
+            otpSendConfirmModal.show();
+          }
+          return;
+        }
+
+        hideSendConfirmModal();
         try {
           const loginModalEl = document.getElementById('loginModal');
           if (loginModalEl) {
