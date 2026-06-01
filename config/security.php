@@ -27,9 +27,9 @@ return [
 
     // Cross-origin and resource policies
     'cross_origin' => [
-        'coop' => 'same-origin',
-        'coep' => 'require-corp',
-        'corp' => 'same-origin',
+        'coop' => env('SECURITY_COOP', 'same-origin'),
+        'coep' => env('SECURITY_COEP'),
+        'corp' => env('SECURITY_CORP'),
     ],
 
     // HSTS (only effective when request is secure). Toggle via env for production/staging.
