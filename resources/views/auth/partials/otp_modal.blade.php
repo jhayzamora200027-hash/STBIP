@@ -1,5 +1,5 @@
 <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-sm modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered otp-modal-dialog-wide">
     <div class="modal-content otp-modal-card">
       <div class="modal-header border-0">
         <h5 class="modal-title" id="otpModalLabel">Two-step verification</h5>
@@ -86,16 +86,18 @@
 
 <style>
   /* Make modal card opaque and visually separate from page */
-  #otpModal .modal-content.otp-modal-card { background: #ffffff; border-radius: 8px; box-shadow: 0 8px 24px rgba(4,15,36,0.12); }
-  #otpModal .modal-dialog { max-width: 480px; }
+  #otpModal .modal-content.otp-modal-card { background: #ffffff; border-radius: 8px; box-shadow: 0 8px 24px rgba(4,15,36,0.12); overflow: visible; }
+  #otpModal .modal-dialog { max-width: 520px; }
   #otpModal .otp-digit { width:56px; height:44px; border-radius:6px; border:1px solid rgba(16,24,40,0.08); background:#f8fbff; font-size:18px; padding:6px; }
   #otpModal .btn-otp-primary { background:#0a66ff; border-color:#0a66ff; color:#fff; }
   #otpModal .btn-otp-cancel { background:#f3f4f6; color:#111827; }
   #otpModal .otp-error-box { background:#fff5f5; border:1px solid #f8d7da; color:#842029; padding:10px; border-radius:6px; display:none; }
   #otpModal .otp-send-panel { position: relative; }
-  #otpModal .otp-send-popover { position: absolute; inset: calc(100% + 10px) 0 auto 0; z-index: 10; padding: 16px; border-radius: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.12); box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18); }
-  #otpModal .otp-send-popover::before { content: ''; position: absolute; top: -8px; left: 24px; width: 14px; height: 14px; background: #ffffff; border-top: 1px solid rgba(15, 23, 42, 0.12); border-left: 1px solid rgba(15, 23, 42, 0.12); transform: rotate(45deg); }
-  #otpModal .otp-send-captcha-wrap { display:flex; justify-content:center; min-height: 78px; }
+  #otpModal .otp-send-popover { position: relative; inset: auto; margin-top: 12px; z-index: 1085; padding: 16px; border-radius: 10px; background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.12); box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18); }
+  #otpModal .otp-send-popover::before { display: none; }
+  #otpModal .otp-send-captcha-wrap { display:flex; justify-content:center; align-items:center; min-height: 78px; overflow: visible; }
+  #otpModal .otp-send-captcha-wrap iframe { position: relative; z-index: 1086; }
+  #otpModal .otp-send-popover[hidden] { display: none !important; }
 
   /* resend link styling */
   #otpModal .otp-resend-link { color: #0a66ff; text-decoration:underline; cursor:pointer; }
@@ -120,7 +122,20 @@
 
   /* ensure the OTP modal itself sits above the backdrop so it's clickable */
   #otpModal.modal {
-    z-index: 1070 !important;
+    z-index: 12050 !important;
+  }
+
+  #otpModal .modal-dialog,
+  #otpModal .modal-content,
+  #otpModal .modal-body {
+    position: relative;
+    z-index: 12051;
+    overflow: visible;
+  }
+
+  #otpModal + .modal-backdrop,
+  .modal-backdrop.show {
+    z-index: 12040 !important;
   }
 
   /* When OTP modal is active, heavily dim/blur the rest of the page.
@@ -134,6 +149,27 @@
     pointer-events: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+  }
+
+  @media (max-width: 576px) {
+    #otpModal .modal-dialog {
+      max-width: calc(100vw - 24px);
+      margin: 0.75rem auto;
+    }
+
+    #otpModal .modal-body {
+      padding: 1rem !important;
+    }
+
+    #otpModal .otp-send-popover {
+      padding: 12px;
+    }
+
+    #otpModal .otp-send-captcha-wrap {
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
   }
 </style>
 

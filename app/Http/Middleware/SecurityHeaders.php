@@ -12,35 +12,40 @@ class SecurityHeaders
     public function handle(Request $request, Closure $next)
     {
         $response = $next($request);
+        $managedEnvs = Config::get('security.app_managed_environments', ['local', 'testing']);
+        $shouldManageHeaders = in_array(app()->environment(), $managedEnvs, true);
 
-        // Basic headers applied everywhere
-        $basic = Config::get('security.basic', []);
-        if (!empty($basic['x_frame_options'])) {
-            $response->headers->set('X-Frame-Options', $basic['x_frame_options']);
-        }
-        if (!empty($basic['x_content_type_options'])) {
-            $response->headers->set('X-Content-Type-Options', $basic['x_content_type_options']);
-        }
-        if (!empty($basic['referrer_policy'])) {
-            $response->headers->set('Referrer-Policy', $basic['referrer_policy']);
-        }
-
-        // Permissions policy (feature policy)
-        $pp = Config::get('security.permissions_policy');
-        if ($pp) {
-            $response->headers->set('Permissions-Policy', $pp, true);
+        if ($shouldManageHeaders) {
+            $basic = Config::get('security.basic', []);
+            if (!empty($basic['x_frame_options'])) {
+                $response->headers->set('X-Frame-Options', $basic['x_frame_options']);
+            }
+            if (!empty($basic['x_content_type_options'])) {
+                $response->headers->set('X-Content-Type-Options', $basic['x_content_type_options']);
+            }
+            if (!empty($basic['referrer_policy'])) {
+                $response->headers->set('Referrer-Policy', $basic['referrer_policy']);
+            }
         }
 
-        // Adobe cross-domain policy
-        $xperm = Config::get('security.x_permitted_cross_domain_policies');
-        if ($xperm) {
-            $response->headers->set('X-Permitted-Cross-Domain-Policies', $xperm, true);
+        if ($shouldManageHeaders) {
+            $pp = Config::get('security.permissions_policy');
+            if ($pp) {
+                $response->headers->set('Permissions-Policy', $pp, true);
+            }
+        }
+
+        if ($shouldManageHeaders) {
+            $xperm = Config::get('security.x_permitted_cross_domain_policies');
+            if ($xperm) {
+                $response->headers->set('X-Permitted-Cross-Domain-Policies', $xperm, true);
+            }
         }
 
         // Apply stricter cross-origin isolation only in configured strict environments
         $strictEnvs = Config::get('security.strict_environments', []);
         $isStrictEnv = in_array(app()->environment(), $strictEnvs, true);
-        if ($isStrictEnv) {
+        if ($shouldManageHeaders && $isStrictEnv) {
             $cross = Config::get('security.cross_origin', []);
             if (!empty($cross['coop'])) {
                 $response->headers->set('Cross-Origin-Opener-Policy', $cross['coop'], true);
@@ -64,7 +69,7 @@ class SecurityHeaders
         }
 
         // Legacy XSS protection header (opt-in via config)
-        if (Config::get('security.x_xss_protection')) {
+        if ($shouldManageHeaders && Config::get('security.x_xss_protection')) {
             $response->headers->set('X-XSS-Protection', '1; mode=block', true);
         }
 

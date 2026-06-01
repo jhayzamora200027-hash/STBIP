@@ -6,6 +6,13 @@ use Tests\TestCase;
 
 class SecurityHeadersTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('security.app_managed_environments', ['testing']);
+    }
+
     public function test_it_adds_the_required_security_headers_to_standard_responses(): void
     {
         $response = $this->get('/');

@@ -14,6 +14,11 @@ class ContentSecurityPolicy
     public function handle(Request $request, Closure $next)
     {
         $response = $next($request);
+        $managedEnvs = Config::get('security.app_managed_environments', ['local', 'testing']);
+
+        if (!in_array(app()->environment(), $managedEnvs, true)) {
+            return $response;
+        }
 
         $policy = Config::get('security.content_security_policy');
 

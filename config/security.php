@@ -1,6 +1,10 @@
 <?php
 
 return [
+    // Environments where Laravel should emit the main security headers.
+    // Production/staging are expected to be handled by the web server.
+    'app_managed_environments' => ['local', 'testing'],
+
     // Basic headers applied to all environments
     'basic' => [
         'x_frame_options' => 'SAMEORIGIN',

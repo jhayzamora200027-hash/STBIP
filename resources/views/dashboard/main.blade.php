@@ -2002,6 +2002,11 @@ if (!document.getElementById('catListTooltip')) {
 	var overlay = document.getElementById('ph-map-loading');
 	var maxWait = 10000; // ms
 	var pollInterval = 200;
+	var timedOut = false;
+	var timeoutId = setTimeout(function(){
+		timedOut = true;
+		hideOverlay();
+	}, maxWait);
 
 	function hideOverlay(){
 		console.debug('map: hideOverlay called');
@@ -2026,6 +2031,11 @@ if (!document.getElementById('catListTooltip')) {
 	function showOverlay(){ if(overlay) overlay.style.display = 'flex'; }
 
 	showOverlay();
+	if(!obj){
+		clearTimeout(timeoutId);
+		hideOverlay();
+		return;
+	}
 	obj.addEventListener('load', function(){
 		try{
 			var svg = obj.contentDocument && obj.contentDocument.querySelector('svg');
@@ -7561,7 +7571,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 					label: 'STs by Region and Year',
 					data: matrixData,
 					backgroundColor: function(context) {
-						const value = context.raw.v || 0;
+						const value = context && context.raw && typeof context.raw.v !== 'undefined' ? context.raw.v : 0;
 						if (!maxVal) {
 							return 'rgba(33, 150, 243, 0)';
 						}

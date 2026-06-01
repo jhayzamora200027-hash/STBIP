@@ -9,11 +9,21 @@
 
 <script>
     function showLoader() {
-        document.getElementById('loading-overlay').classList.remove('hidden');
+        const overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            return;
+        }
+
+        overlay.classList.remove('hidden');
     }
 
     function hideLoader() {
-        document.getElementById('loading-overlay').classList.add('hidden');
+        const overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            return;
+        }
+
+        overlay.classList.add('hidden');
     }
 
 
