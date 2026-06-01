@@ -108,6 +108,7 @@ RECAPTCHA_SITE_KEY=6LfN2s0sAAAAAIPGdt23MmAMfUVKsyP5rzNYfFw5
 RECAPTCHA_SECRET_KEY=6LfN2s0sAAAAAFiYttpjnSpSORrF4FgfhafnBhyT
 
 ## Please add the following to the HTTPS nginx virtual host for the staging site
+APP_URL=https://stbip-staging.dswd.gov.ph
 add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
@@ -119,6 +120,16 @@ ssl_prefer_server_ciphers on;
 ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
 ssl_ecdh_curve X25519:secp384r1:prime256v1;
 ssl_session_tickets off;
+
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+
+If nginx is using php-fpm, also pass:
+fastcgi_param HTTPS on;
+fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
+fastcgi_param HTTP_X_FORWARDED_HOST $host;
 =======
 >>>>>>> 25deac52b6f04163344f61a7eb98cb11bf4c395e
 # STBIP
