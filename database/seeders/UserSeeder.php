@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'name' => 'Jay-ar Zamora',
             'email' => 'jpzamora@dswd.gov.ph',
-            'password' => Hash::make('123456789'), // default password
+            'password' => Hash::make('123456789'), 
             'usergroup' => 'sysadmin',
             'approvalstatus' => 'A',
             'active' => true,

@@ -18,7 +18,7 @@
         </section>
 
         <div class="otp-send-panel mb-4">
-          <button type="button" class="btn btn-otp-primary w-100" id="otpOpenSendConfirmBtn">Request verification code</button>
+          <button type="button" class="btn btn-otp-primary w-100" id="otpOpenSendConfirmBtn">Request One Time Password Code</button>
         </div>
 
         <form id="otpModalForm" method="POST" action="{{ route('otp.verify') }}" autocomplete="off">

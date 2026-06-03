@@ -145,28 +145,46 @@ window.openRsmStDetailsModal = function(row){
         p.textContent = 'No details available.';
         bodyEl.appendChild(p);
     } else {
-        const attUrl = row.attachment_url || '';
-        const uploadedBy = row.attachment_uploaded_by || '';
+        const fallbackAttUrl = row.attachment_url || '';
+        const fallbackUploadedBy = row.attachment_uploaded_by || '';
+        const attachments = Array.isArray(row.attachments) && row.attachments.length
+            ? row.attachments.filter(att => att && att.url)
+            : (fallbackAttUrl ? [{
+                url: fallbackAttUrl,
+                uploaded_by: fallbackUploadedBy,
+                original_filename: 'Attachment.pdf'
+            }] : []);
         let html = '';
         html += '<div class="masterdata-item-head"><div><div class="masterdata-item-title">' + esc(row.title || '-') + '</div>';
         html += '<div class="masterdata-item-meta">';
-        if (uploadedBy) html += '<span>Uploaded by: ' + esc(uploadedBy) + '</span>';
+        if (attachments.length === 1 && attachments[0].uploaded_by) html += '<span>Uploaded by: ' + esc(attachments[0].uploaded_by) + '</span>';
         html += '</div></div></div>';
 
         html += '<div class="masterdata-attachment-panel">';
-        html += '<div><div class="masterdata-stat-label">MOA ATTACHMENT</div><div class="masterdata-item-meta" style="margin-top:8px;">';
-        if (attUrl) {
-            html += '<span>Uploaded PDF available for this item.</span>';
-            if (uploadedBy) html += '<span> Uploaded by: ' + esc(uploadedBy) + '</span>';
+        html += '<div class="masterdata-attachment-summary"><div class="masterdata-stat-label">MOA ATTACHMENT</div><div class="masterdata-item-meta" style="margin-top:8px;">';
+        if (attachments.length) {
+            html += '<span>' + esc(String(attachments.length)) + ' attachment' + (attachments.length === 1 ? '' : 's') + ' available for this item.</span>';
         } else {
             html += '<span>No PDF attachment uploaded yet.</span>';
             if (!row.with_moa || !row.year_of_moa) html += '<span> Enable With MOA and set Year of MOA to upload an attachment.</span>';
         }
-        html += '</div></div>';
-        html += '<div class="masterdata-attachment-actions">';
-        if (attUrl) {
-            html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + esc(attUrl) + '" data-title="' + esc(row.title || '') + '" data-uploader="' + esc(uploadedBy) + '">View PDF</button>';
-            html += '<a href="' + esc(attUrl) + '" class="masterdata-btn" target="_blank" download>Download</a>';
+        html += '</div>';
+        if (attachments.length) {
+            html += '<div class="masterdata-attachment-list">';
+            attachments.forEach(function(att, index) {
+                const fileLabel = att.original_filename || ('Attachment ' + String(index + 1) + '.pdf');
+                html += '<div class="masterdata-attachment-item">';
+                html += '<div class="masterdata-attachment-main">';
+                html += '<span class="masterdata-attachment-name">' + esc(fileLabel) + '</span>';
+                html += '<span class="masterdata-attachment-meta">' + (att.uploaded_by ? ('Uploaded by ' + esc(att.uploaded_by)) : 'Uploader unavailable') + '</span>';
+                html += '</div>';
+                html += '<div class="masterdata-attachment-tools">';
+                html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + esc(att.url || '') + '" data-title="' + esc(fileLabel) + '" data-uploader="' + esc(att.uploaded_by || '') + '">View PDF</button>';
+                html += '<a href="' + esc(att.url || '') + '" class="masterdata-btn" target="_blank" download>Download</a>';
+                html += '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
         }
         html += '</div></div>';
 
@@ -193,8 +211,7 @@ window.openRsmStDetailsModal = function(row){
     try{ document.body.style.overflow = 'hidden'; } catch(e){}
     try {
         setTimeout(function(){
-            const btn = modal.querySelector('.st-attachment-view-btn');
-            if (btn) {
+            modal.querySelectorAll('.st-attachment-view-btn').forEach(function(btn){
                 btn.addEventListener('click', function(ev){
                     ev.preventDefault();
                     const u = btn.getAttribute('data-url');
@@ -202,7 +219,7 @@ window.openRsmStDetailsModal = function(row){
                         try { window.open(u, '_blank'); } catch(e){ location.href = u; }
                     }
                 });
-            }
+            });
         }, 10);
     } catch(e) {}
 };

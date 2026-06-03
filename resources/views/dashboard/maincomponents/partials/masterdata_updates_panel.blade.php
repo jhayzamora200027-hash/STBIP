@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				</div>
 					<div class="masterdata-field">
 						<label for="new-status">Status</label>
-						<select id="new-status" name="status">
+						<select id="new-status" name="status" required>
 							<option value="">Select status</option>
 							<option value="ongoing" @selected(old('status') === 'ongoing')>Ongoing</option>
 							<option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
@@ -224,16 +224,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 	</div>
 				<div class="masterdata-field">
 					<label for="new-province">Province</label>
-					<input id="new-province" type="text" name="province" value="{{ old('province') }}">
+					<input id="new-province" type="text" name="province" value="{{ old('province') }}" required>
 				</div>
 				<div class="masterdata-field">
 					<label for="new-municipality">Municipality</label>
-					<input id="new-municipality" type="text" name="municipality" value="{{ old('municipality') }}">
+					<input id="new-municipality" type="text" name="municipality" value="{{ old('municipality') }}" required>
 				</div>
 				<div class="masterdata-field">
 					<label for="new-adoption-status">Adopted / Replicated</label>
-					<select id="new-adoption-status" name="adoption_status">
-						<option value="none" @selected(old('adoption_status', 'none') === 'none')>None</option>
+					<select id="new-adoption-status" name="adoption_status" required>
+						<option value="" @selected(old('adoption_status') === null)>Select adoption status</option>
 						<option value="adopted" @selected(old('adoption_status') === 'adopted')>Adopted</option>
 						<option value="replicated" @selected(old('adoption_status') === 'replicated')>Replicated</option>
 					</select>
@@ -463,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
 								</div>
 								<div class="masterdata-field">
 									<label>Status</label>
-									<select name="status">
+									<select name="status" required>
 										<option value="">Select status</option>
 										<option value="ongoing" @selected($item->status === 'ongoing')>Ongoing</option>
 										<option value="inactive" @selected(in_array($item->status, ['inactive', 'dissolved'], true))>Inactive</option>
@@ -506,16 +506,16 @@ document.addEventListener('DOMContentLoaded', function () {
 								</div>
 								<div class="masterdata-field">
 									<label>Province</label>
-									<input type="text" name="province" value="{{ $item->province }}">
+									<input type="text" name="province" value="{{ $item->province }}" required>
 								</div>
 								<div class="masterdata-field">
 									<label>Municipality</label>
-									<input type="text" name="municipality" value="{{ $item->municipality }}">
+									<input type="text" name="municipality" value="{{ $item->municipality }}" required>
 								</div>
 								<div class="masterdata-field">
 									<label>Adopted / Replicated</label>
-									<select name="adoption_status">
-										<option value="none" @selected($adoptionStatus === 'none')>None</option>
+									<select name="adoption_status" required>
+										<option value="" @selected($adoptionStatus === 'none')>Select adoption status</option>
 										<option value="adopted" @selected($adoptionStatus === 'adopted')>Adopted</option>
 										<option value="replicated" @selected($adoptionStatus === 'replicated')>Replicated</option>
 									</select>

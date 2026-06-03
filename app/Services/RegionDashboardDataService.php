@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Region;
+use App\Models\StsAttachment;
+use App\Models\User;
 
 class RegionDashboardDataService
 {
@@ -123,6 +125,8 @@ class RegionDashboardDataService
             }
         }
 
+        $data = $this->appendAttachmentInfo($data);
+
         return [
             'regions' => $regionNames,
             'titles' => $titles,
@@ -133,5 +137,148 @@ class RegionDashboardDataService
             'regionMap' => $regionMap,
             'headers' => $headers,
         ];
+    }
+
+    private function appendAttachmentInfo(array $rows): array
+    {
+        if ($rows === []) {
+            return $rows;
+        }
+
+        $rowKeys = [];
+        foreach ($rows as $row) {
+            $rowKeys[$this->buildAttachmentIdentityKey([
+                'region' => $row['region'] ?? null,
+                'province' => $row['province'] ?? null,
+                'municipality' => $row['municipality'] ?? null,
+                'title' => $row['title'] ?? null,
+                'year_of_moa' => $row['year_of_moa'] ?? null,
+            ])] = true;
+        }
+
+        $attachments = StsAttachment::query()
+            ->select([
+                'id',
+                'region',
+                'province',
+                'municipality',
+                'title',
+                'year_of_moa',
+                'file_path',
+                'original_filename',
+                'file_size',
+                'action',
+                'created_by',
+            ])
+            ->orderBy('id')
+            ->get();
+
+        if ($attachments->isEmpty()) {
+            return $rows;
+        }
+
+        $relevantAttachments = $attachments->filter(function (StsAttachment $attachment) use ($rowKeys) {
+            $key = $this->buildAttachmentIdentityKey([
+                'region' => $attachment->region,
+                'province' => $attachment->province,
+                'municipality' => $attachment->municipality,
+                'title' => $attachment->title,
+                'year_of_moa' => $attachment->year_of_moa,
+            ]);
+
+            return isset($rowKeys[$key]);
+        })->values();
+
+        if ($relevantAttachments->isEmpty()) {
+            return $rows;
+        }
+
+        $userNames = [];
+        $userIds = $relevantAttachments->pluck('created_by')->filter()->unique()->values();
+        if ($userIds->isNotEmpty()) {
+            $userNames = User::query()
+                ->whereKey($userIds->all())
+                ->pluck('name', 'id')
+                ->toArray();
+        }
+
+        $attachmentMap = [];
+        foreach ($relevantAttachments as $attachment) {
+            $key = $this->buildAttachmentIdentityKey([
+                'region' => $attachment->region,
+                'province' => $attachment->province,
+                'municipality' => $attachment->municipality,
+                'title' => $attachment->title,
+                'year_of_moa' => $attachment->year_of_moa,
+            ]);
+            $fileKey = implode('|', [
+                trim((string) $attachment->file_path),
+                trim((string) $attachment->original_filename),
+                trim((string) $attachment->file_size),
+            ]);
+
+            if (!isset($attachmentMap[$key])) {
+                $attachmentMap[$key] = [];
+            }
+
+            if (!isset($attachmentMap[$key][$fileKey]) || $attachment->id > $attachmentMap[$key][$fileKey]['id']) {
+                $attachmentMap[$key][$fileKey] = [
+                    'id' => $attachment->id,
+                    'action' => $attachment->action,
+                    'url' => $attachment->action === 'added' ? route('sts.attachments.show', $attachment->id) : null,
+                    'uploaded_by' => $userNames[$attachment->created_by] ?? $attachment->created_by,
+                    'original_filename' => $attachment->original_filename,
+                ];
+            }
+        }
+
+        foreach ($rows as &$row) {
+            $key = $this->buildAttachmentIdentityKey([
+                'region' => $row['region'] ?? null,
+                'province' => $row['province'] ?? null,
+                'municipality' => $row['municipality'] ?? null,
+                'title' => $row['title'] ?? null,
+                'year_of_moa' => $row['year_of_moa'] ?? null,
+            ]);
+
+            if (!isset($attachmentMap[$key])) {
+                continue;
+            }
+
+            $activeAttachments = collect($attachmentMap[$key])
+                ->filter(fn (array $entry) => $entry['action'] === 'added' && !empty($entry['url']))
+                ->sortByDesc(fn (array $entry) => $entry['id'])
+                ->map(fn (array $entry) => [
+                    'id' => $entry['id'],
+                    'url' => $entry['url'],
+                    'uploaded_by' => $entry['uploaded_by'],
+                    'original_filename' => $entry['original_filename'],
+                ])
+                ->values()
+                ->all();
+
+            if ($activeAttachments === []) {
+                continue;
+            }
+
+            $row['attachments'] = $activeAttachments;
+            $row['attachment_id'] = $activeAttachments[0]['id'];
+            $row['attachment_url'] = $activeAttachments[0]['url'];
+            $row['attachment_uploaded_by'] = $activeAttachments[0]['uploaded_by'];
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function buildAttachmentIdentityKey(array $identity): string
+    {
+        return implode('|', [
+            trim((string) ($identity['region'] ?? '')),
+            trim((string) ($identity['province'] ?? '')),
+            trim((string) ($identity['municipality'] ?? '')),
+            trim((string) ($identity['title'] ?? '')),
+            trim((string) ($identity['year_of_moa'] ?? '')),
+        ]);
     }
 }

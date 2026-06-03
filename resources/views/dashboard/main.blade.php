@@ -950,19 +950,71 @@
 		display: flex;
 		justify-content: space-between;
 		gap: 16px;
-		align-items: center;
+		align-items: flex-start;
 		padding: 16px 18px;
 		margin-bottom: 18px;
 		border: 1px solid #dbe4f0;
 		border-radius: 18px;
 		background: linear-gradient(180deg, #f8fbff 0%, #f2f7fc 100%);
 	}
-	.masterdata-attachment-actions {
+	.masterdata-attachment-summary {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.masterdata-attachment-list {
 		display: flex;
+		flex-direction: column;
 		gap: 10px;
+		margin-top: 14px;
+		max-height: 260px;
+		overflow-y: auto;
+		padding-right: 4px;
+	}
+	.masterdata-attachment-list::-webkit-scrollbar {
+		width: 8px;
+	}
+	.masterdata-attachment-list::-webkit-scrollbar-thumb {
+		background: rgba(14,75,131,0.22);
+		border-radius: 999px;
+	}
+	.masterdata-attachment-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 14px;
+		padding: 12px 14px;
+		border: 1px solid rgba(14,75,131,0.12);
+		border-radius: 14px;
+		background: rgba(255,255,255,0.92);
+	}
+	.masterdata-attachment-main {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.masterdata-attachment-name {
+		display: block;
+		font-size: 0.92rem;
+		font-weight: 700;
+		line-height: 1.35;
+		color: #0b2540;
+		word-break: break-word;
+	}
+	.masterdata-attachment-meta {
+		display: block;
+		margin-top: 4px;
+		font-size: 0.8rem;
+		color: #6b7f92;
+	}
+	.masterdata-attachment-tools {
+		display: flex;
 		align-items: center;
 		justify-content: flex-end;
+		gap: 8px;
+		flex: 0 0 auto;
 		flex-wrap: wrap;
+	}
+	.masterdata-attachment-actions {
+		flex: 0 0 220px;
 	}
 	.masterdata-attachment-actions form {
 		margin: 0;
@@ -1039,9 +1091,17 @@
 			align-items: stretch;
 			flex-direction: column;
 		}
+		.masterdata-attachment-item {
+			flex-direction: column;
+			align-items: stretch;
+		}
+		.masterdata-attachment-tools {
+			justify-content: stretch;
+		}
 		.masterdata-attachment-actions,
 		.masterdata-attachment-actions form,
-		.masterdata-attachment-actions .masterdata-btn {
+		.masterdata-attachment-actions .masterdata-btn,
+		.masterdata-attachment-tools .masterdata-btn {
 			width: 100%;
 		}
 	}
@@ -2338,6 +2398,9 @@ if (!document.getElementById('catListTooltip')) {
 					</div>
 					<div id="title-listing-table-container"></div>
 					<script>
+					window.regionFilteredListingData = @json(collect($regionFilteredData ?? $data ?? [])->filter(function($row){
+						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
+					})->values());
 					window.fullListingData = @json(collect($fullData ?? $data)->filter(function($row){
 						return stripos($row['region'], 'Data CY 2020-2022') === false && !empty($row['title']);
 					})->values());
@@ -4186,11 +4249,12 @@ if (!document.getElementById('catListTooltip')) {
 	(function() {
 		const perPage = 10;
 		let currentPage = 1;
-		const allData = window.fullListingData || [];
+		const allData = window.regionFilteredListingData || window.filteredListingData || window.fullListingData || [];
 		let data = allData.slice();
 		let currentSearchTerm = '';
 		let currentStatusFilter = '';
 		let currentAdoptFilter = '';
+		let titleListingInitialized = false;
 
 		function escapeAttr(str) {
 			return (str || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;');
@@ -4300,10 +4364,13 @@ if (!document.getElementById('catListTooltip')) {
 				}
 				return true;
 			});
+			window.filteredListingData = data.slice();
 			currentPage = 1;
 		}
 
-		document.addEventListener('DOMContentLoaded', () => {
+		function initTitleListingFilters() {
+			if (titleListingInitialized) return;
+			titleListingInitialized = true;
 			const inp = document.getElementById('title-listing-search');
 			if (inp) {
 				inp.addEventListener('input', function() {
@@ -4330,7 +4397,13 @@ if (!document.getElementById('catListTooltip')) {
 			}
 			applyFilters();
 			renderTable(currentPage);
-		});
+		}
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', initTitleListingFilters, { once: true });
+		} else {
+			initTitleListingFilters();
+		}
 
 		function renderTable(page) {
 			const start = (page - 1) * perPage;
@@ -5709,7 +5782,7 @@ $('#region-select-modal').on('change', function() {
 						original_filename: row.title || 'Attachment'
 					}] : []);
 				html += '<div class="masterdata-attachment-panel">';
-				html += '<div>';
+				html += '<div class="masterdata-attachment-summary">';
 				html += '<div class="masterdata-stat-label">ATTACHMENTS</div>';
 				html += '<div class="masterdata-item-meta" style="margin-top:8px;">';
 				if (attachments.length) {
@@ -5719,23 +5792,21 @@ $('#region-select-modal').on('change', function() {
 				}
 				html += '</div>';
 				if (attachments.length) {
-					html += '<div style="display:grid; gap:10px; margin-top:12px;">';
+					html += '<div class="masterdata-attachment-list">';
 					attachments.forEach(function(attachment) {
-						html += '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">';
-						html += '<span class="masterdata-pill">' + escapeHtml(attachment.original_filename || 'Attachment') + '</span>';
-						if (attachment.uploaded_by) {
-							html += '<span class="masterdata-item-row-cell-muted">Uploaded by ' + escapeHtml(attachment.uploaded_by) + '</span>';
-						}
+						html += '<div class="masterdata-attachment-item">';
+						html += '<div class="masterdata-attachment-main">';
+						html += '<span class="masterdata-attachment-name">' + escapeHtml(attachment.original_filename || 'Attachment') + '</span>';
+						html += '<span class="masterdata-attachment-meta">' + (attachment.uploaded_by ? ('Uploaded by ' + escapeHtml(attachment.uploaded_by)) : 'Uploader unavailable') + '</span>';
+						html += '</div>';
+						html += '<div class="masterdata-attachment-tools">';
+						html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + escapeHtml(attachment.url || '') + '" data-title="' + escapeHtml(attachment.original_filename || row.title || '') + '" data-uploader="' + escapeHtml(attachment.uploaded_by || '') + '">View PDF</button>';
+						html += '<a href="' + escapeHtml(attachment.url || '') + '" class="masterdata-btn" target="_blank" download>Download</a>';
+						html += '</div>';
 						html += '</div>';
 					});
 					html += '</div>';
 				}
-				html += '</div>';
-				html += '<div class="masterdata-attachment-actions">';
-				attachments.forEach(function(attachment) {
-					html += '<button type="button" class="masterdata-btn masterdata-btn-secondary st-attachment-view-btn" data-url="' + escapeHtml(attachment.url || '') + '" data-title="' + escapeHtml(attachment.original_filename || row.title || '') + '" data-uploader="' + escapeHtml(attachment.uploaded_by || '') + '">View PDF</button>';
-					html += '<a href="' + escapeHtml(attachment.url || '') + '" class="masterdata-btn" target="_blank" download>Download</a>';
-				});
 				html += '</div>';
 				html += '</div>';
 

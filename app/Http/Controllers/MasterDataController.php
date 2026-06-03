@@ -1650,21 +1650,24 @@ class MasterDataController extends Controller
         $validator = Validator::make($request->all(), [
             'region_id' => ['required', 'exists:regions,id'],
             'title' => ['required', 'string', 'max:255', new NoMarkup(), 'exists:social_technology_titles,social_technology'],
-            'province' => ['nullable', 'string', 'max:255', new NoMarkup()],
-            'municipality' => ['nullable', 'string', 'max:255', new NoMarkup()],
+            'province' => ['required', 'string', 'max:255', new NoMarkup()],
+            'municipality' => ['required', 'string', 'max:255', new NoMarkup()],
             'with_expr' => ['nullable', 'boolean'],
             'with_moa' => ['nullable', 'boolean'],
             'year_of_moa' => ['nullable', 'integer', 'digits:4', 'min:1900', 'max:2100'],
             'with_res' => ['nullable', 'boolean'],
             'year_of_resolution' => ['nullable', 'integer', 'digits:4', 'min:1900', 'max:2100'],
             'included_aip' => ['nullable', 'boolean'],
-            'adoption_status' => ['nullable', 'in:none,adopted,replicated'],
+            'adoption_status' => ['required', 'in:adopted,replicated'],
             'status' => ['nullable', 'in:ongoing,inactive'],
             'inactive_status' => ['nullable', 'in:pending_document,dissolved'],
             'inactive_remarks' => ['nullable', 'string', 'max:2000', new NoMarkup()],
         ], [
             'title.required' => 'Social Technology Title is required.',
             'title.exists' => 'Select an approved Social Technology Title from the ST title list.',
+            'province.required' => 'Province is required.',
+            'municipality.required' => 'Municipality is required.',
+            'adoption_status.required' => 'Adopted / Replicated is required.',
         ]);
 
         $validator->after(function ($validator) use ($request, $existingItem) {
@@ -1711,7 +1714,7 @@ class MasterDataController extends Controller
 
     private function buildRegionItemPayload(array $validated, string $actorName, ?RegionItem $existingItem = null): array
     {
-        $adoptionStatus = $validated['adoption_status'] ?? 'none';
+        $adoptionStatus = $validated['adoption_status'];
 
         $withMoa = (bool) ($validated['with_moa'] ?? false);
         $withResolution = (bool) ($validated['with_res'] ?? false);
