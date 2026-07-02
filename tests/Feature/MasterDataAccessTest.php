@@ -211,6 +211,49 @@ class MasterDataAccessTest extends TestCase
         $this->assertDatabaseCount('region_items', 0);
     }
 
+    public function test_update_region_item_preserves_existing_title_when_blank_title_is_submitted(): void
+    {
+        $region = Region::query()->create(['name' => 'Title Fallback Region']);
+        $user = $this->makeUser('admin');
+
+        $item = RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'Municipality A',
+            'with_expr' => false,
+            'with_moa' => false,
+            'with_res' => false,
+            'included_aip' => false,
+            'with_adopted' => true,
+            'with_replicated' => false,
+            'status' => 'ongoing',
+            'createdby' => $user->name,
+            'updatedby' => $user->name,
+        ]);
+
+        $response = $this->actingAs($user)->patch(route('masterdata.region-items.update', $item), [
+            'region_id' => $region->id,
+            'title' => '   ',
+            'province' => 'Province B',
+            'municipality' => 'Municipality B',
+            'adoption_status' => 'adopted',
+            'with_expr' => '0',
+            'with_moa' => '0',
+            'with_res' => '0',
+            'included_aip' => '0',
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertRedirect();
+
+        $item->refresh();
+
+        $this->assertSame('History Item', $item->title);
+        $this->assertSame('Province B', $item->province);
+        $this->assertSame('Municipality B', $item->municipality);
+    }
+
     public function test_region_item_excel_import_skips_markup_payloads(): void
     {
         Region::query()->create(['name' => 'Import Region']);
@@ -279,6 +322,59 @@ class MasterDataAccessTest extends TestCase
 
         $userResponse = $this->actingAs($this->makeUser('user'))->get(route('masterdata.index', ['tab' => 'updates', 'region_filter' => $region->name]));
         $userResponse->assertOk()->assertDontSee('Open History Logs');
+    }
+
+    public function test_updates_panel_does_not_preselect_a_region_when_filter_is_absent(): void
+    {
+        Region::query()->create(['name' => 'FO NCR']);
+        Region::query()->create(['name' => 'FO Region I']);
+
+        $response = $this->actingAs($this->makeUser('admin'))->get(route('masterdata.index', ['tab' => 'updates']));
+
+        $response->assertOk();
+        $response->assertSee('<option value="" selected>Select regional office</option>', false);
+        $response->assertDontSee('<option value="FO NCR" selected>', false);
+        $response->assertSee('Select a regional office to add or manage region items.');
+    }
+
+    public function test_overview_region_cards_show_status_and_adoption_counts(): void
+    {
+        $region = Region::query()->create(['name' => 'FO NCR']);
+        $admin = $this->makeUser('admin');
+
+        RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item',
+            'province' => 'Province A',
+            'municipality' => 'City A',
+            'with_adopted' => true,
+            'with_replicated' => false,
+            'status' => 'ongoing',
+            'createdby' => $admin->name,
+            'updatedby' => $admin->name,
+        ]);
+
+        RegionItem::query()->create([
+            'region_id' => $region->id,
+            'title' => 'History Item Updated',
+            'province' => 'Province B',
+            'municipality' => 'City B',
+            'with_adopted' => false,
+            'with_replicated' => true,
+            'status' => 'dissolved',
+            'createdby' => $admin->name,
+            'updatedby' => $admin->name,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('masterdata.index', ['tab' => 'overview']));
+
+        $response->assertOk();
+        $response->assertSee('Regional Office Overview of Social Technologies');
+        $response->assertSee('Active');
+        $response->assertSee('Inactive');
+        $response->assertSee('Adopted');
+        $response->assertSee('Replicated');
+        $response->assertSee('Total Social Technologies');
     }
 
     public function test_region_item_history_logs_capture_add_and_update_details(): void
@@ -370,7 +466,7 @@ class MasterDataAccessTest extends TestCase
             'region_id' => $region->id,
             'province' => 'Province B',
             'municipality' => 'City B',
-            'adoption_status' => 'none',
+            'adoption_status' => 'adopted',
             'with_expr' => '0',
             'with_moa' => '0',
             'with_res' => '0',

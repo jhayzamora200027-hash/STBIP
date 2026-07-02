@@ -3,6 +3,7 @@
 @php($canWriteMasterData = in_array($userGroup, ['user', 'admin', 'sysadmin'], true))
 @php($canDeleteMasterData = in_array($userGroup, ['admin', 'sysadmin'], true))
 @php($canViewRegionItemHistory = in_array($userGroup, ['admin', 'sysadmin'], true))
+@php($hasSelectedRegion = filled($selectedRegionName) && $selectedRegion)
 
 <div class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-body">
@@ -21,6 +22,7 @@
 				<div class="masterdata-field" style="flex:0 0 auto; min-width:240px;">
 					<label for="region-filter">Regional Office</label>
 					<select id="region-filter" name="region_filter" data-masterdata-region-filter="1">
+						<option value="" @selected(!$hasSelectedRegion)>Select regional office</option>
 						@foreach($regions as $region)
 							<option value="{{ $region->name }}" @selected($selectedRegionName === $region->name)>{{ $region->name }}</option>
 						@endforeach
@@ -30,7 +32,7 @@
 			<div class="masterdata-field" style="display:flex; flex-direction:column; gap:8px; margin-left:auto; align-items:flex-end; min-width:260px;">
 				<label>Export</label>
 				<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-					<a id="region-export-link" class="masterdata-btn masterdata-btn-secondary" style="flex:0 0 auto; min-width:120px; padding:10px 12px; font-size:0.92rem;" href="{{ route('masterdata.region-items.export', ['region_filter' => $selectedRegionName]) }}">Selected Region</a>
+					<a id="region-export-link" class="masterdata-btn masterdata-btn-secondary{{ $hasSelectedRegion ? '' : ' disabled' }}" style="flex:0 0 auto; min-width:120px; padding:10px 12px; font-size:0.92rem;{{ $hasSelectedRegion ? '' : ' pointer-events:none; opacity:0.55;' }}" href="{{ $hasSelectedRegion ? route('masterdata.region-items.export', ['region_filter' => $selectedRegionName]) : route('masterdata.region-items.export') }}" aria-disabled="{{ $hasSelectedRegion ? 'false' : 'true' }}">Selected Region</a>
 					<a id="region-export-all-link" class="masterdata-btn masterdata-btn-secondary" style="flex:0 0 auto; min-width:120px; padding:10px 12px; font-size:0.92rem;" href="{{ route('masterdata.region-items.export') }}">All Regions</a>
 				</div>
 			</div>
@@ -136,7 +138,19 @@ document.addEventListener('DOMContentLoaded', function () {
 			sel.addEventListener('change', function () {
 				try {
 					var url = new URL(link.href, window.location.origin);
-					url.searchParams.set('region_filter', sel.value);
+					if (sel.value) {
+						url.searchParams.set('region_filter', sel.value);
+						link.classList.remove('disabled');
+						link.style.pointerEvents = '';
+						link.style.opacity = '';
+						link.setAttribute('aria-disabled', 'false');
+					} else {
+						url.searchParams.delete('region_filter');
+						link.classList.add('disabled');
+						link.style.pointerEvents = 'none';
+						link.style.opacity = '0.55';
+						link.setAttribute('aria-disabled', 'true');
+					}
 					link.href = url.toString();
 				} catch (e) { }
 			});
@@ -149,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	</div>
 @endunless
 
-@if($canWriteMasterData)
+@if($canWriteMasterData && $hasSelectedRegion)
 <section class="masterdata-card" style="margin-bottom: 22px;">
 	<div class="masterdata-card-header">
 		<h2>Add New Item to {{ $selectedRegionName }}</h2>
@@ -182,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
 						<label for="new-status">Status</label>
 						<select id="new-status" name="status" required>
 							<option value="">Select status</option>
-							<option value="ongoing" @selected(old('status') === 'ongoing')>Ongoing</option>
+							<option value="ongoing" @selected(old('status') === 'ongoing')>Active</option>
 							<option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
 						</select>
 					</div>
@@ -262,6 +276,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		</form>
 	</div>
 </section>
+@elseif($canWriteMasterData)
+<div class="masterdata-fixed-note" style="margin-bottom: 22px;">
+	Select a regional office to add or manage region items.
+</div>
 @endif
 
 <section class="masterdata-card">
@@ -319,7 +337,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		<div class="masterdata-list-meta">
 			<div>
-				Showing {{ $regionItems->count() }} of {{ $regionItems->total() }} item{{ $regionItems->total() === 1 ? '' : 's' }} for {{ $selectedRegionName }}.
+				@if($hasSelectedRegion)
+					Showing {{ $regionItems->count() }} of {{ $regionItems->total() }} item{{ $regionItems->total() === 1 ? '' : 's' }} for {{ $selectedRegionName }}.
+				@else
+					Select a regional office to view region items.
+				@endif
 			</div>
 			<div>
 				Page {{ $regionItems->currentPage() }} of {{ max(1, $regionItems->lastPage()) }}
@@ -351,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
 						<div class="masterdata-item-row-cell {{ $item->municipality ? '' : 'masterdata-item-row-cell-muted' }}">{{ $item->municipality ?: 'No municipality' }}</div>
 						<div>
 							@if($item->status === 'ongoing')
-								<span class="masterdata-pill masterdata-status-ongoing">Ongoing</span>
+								<span class="masterdata-pill masterdata-status-ongoing">Active</span>
 							@elseif(in_array($item->status, ['inactive', 'dissolved'], true))
 								<span class="masterdata-pill masterdata-status-inactive">Inactive</span>
 							@else
@@ -465,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
 									<label>Status</label>
 									<select name="status" required>
 										<option value="">Select status</option>
-										<option value="ongoing" @selected($item->status === 'ongoing')>Ongoing</option>
+										<option value="ongoing" @selected($item->status === 'ongoing')>Active</option>
 										<option value="inactive" @selected(in_array($item->status, ['inactive', 'dissolved'], true))>Inactive</option>
 									</select>
 								</div>
@@ -565,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
 							</div>
 							<div class="masterdata-field">
 								<label>Status</label>
-								<input type="text" value="{{ $item->status ? (in_array($item->status, ['inactive', 'dissolved'], true) ? 'Inactive' : ucfirst($item->status)) : 'Unspecified' }}" readonly>
+								<input type="text" value="{{ $item->status ? ($item->status === 'ongoing' ? 'Active' : (in_array($item->status, ['inactive', 'dissolved'], true) ? 'Inactive' : ucfirst($item->status))) : 'Unspecified' }}" readonly>
 							</div>
 							@if($item->inactive_status)
 								<div class="masterdata-field">
@@ -623,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					@endforeach
 				</div>
 			@else
-				<div class="masterdata-empty">No region items found for {{ $selectedRegionName }} yet. {{ $canWriteMasterData ? 'Add the first one using the form above.' : '' }}</div>
+				<div class="masterdata-empty">{{ $hasSelectedRegion ? 'No region items found for ' . $selectedRegionName . ' yet. ' . ($canWriteMasterData ? 'Add the first one using the form above.' : '') : 'Select a regional office to load region items.' }}</div>
 			@endif
 		</div>
 

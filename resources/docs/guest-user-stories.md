@@ -1,7 +1,7 @@
-# Guest User Stories — STB Inventory Portal
+# Guest User Stories — ST Inventory Portal
 
 ## Overview
-The STB Inventory Portal exposes a public, read-only dashboard so unauthenticated guests can view aggregated Social Technology analytics and filter by location and year. Guests cannot modify master data or access authenticated modules; they may register or log in to request full access.
+The ST Inventory Portal exposes a public, read-only dashboard so unauthenticated guests can view aggregated Social Technology analytics and filter by location and year. Guests cannot modify master data or access authenticated modules; they may register or log in to request full access.
 
 ## User Stories (with human-readable computations)
 
@@ -198,7 +198,7 @@ The STB Inventory Portal exposes a public, read-only dashboard so unauthenticate
 
 ## Regional Monitor — User Stories & Computations
 
-- As a Regional Monitor, I want to register an account so that I can request access to the STB Inventory Portal.
+- As a Regional Monitor, I want to register an account so that I can request access to the ST Inventory Portal.
 - As a Regional Monitor, I want my account to go through an approval process so that only authorized users can access the system.
 - As a Regional Monitor, I want to receive notification of my account approval or rejection so that I am informed of my registration status.
 - As a Regional Monitor, I want to log in using approved credentials so that I can access the authorized features of the system.
@@ -236,7 +236,7 @@ Acceptance & verification: registration and approval flows, middleware-enforced 
 
 ## Admin — User Stories (plain language)
 
-- As an Admin, I want to log in securely so that I can access administrative functions of the STB Inventory Portal.
+- As an Admin, I want to log in securely so that I can access administrative functions of the ST Inventory Portal.
 - As an Admin, I want to review newly registered users so that I can determine whether they should be granted access.
 - As an Admin, I want to approve or reject user registration requests so that only authorized users can use the system.
 - As an Admin, I want to assign user roles during approval so that each account receives the correct level of access.

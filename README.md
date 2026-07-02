@@ -71,7 +71,6 @@ php artisan config:clear
 
 # 3) Front-end (first time or when package.json changes)
 npm install
-npm run dev
 npm run build
 
 

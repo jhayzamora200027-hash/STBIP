@@ -416,6 +416,32 @@
 		color: #175d8f;
 		text-align: center;
 	}
+	.masterdata-region-stats {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+		margin-top: 14px;
+	}
+	.masterdata-region-stat {
+		padding: 10px 12px;
+		border-radius: 14px;
+		background: rgba(255, 255, 255, 0.72);
+		border: 1px solid #d9e6f2;
+		text-align: center;
+	}
+	.masterdata-region-stat-label {
+		font-size: 0.74rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: #607588;
+	}
+	.masterdata-region-stat-value {
+		margin-top: 4px;
+		font-size: 1.15rem;
+		font-weight: 800;
+		color: #0b2540;
+	}
 	.masterdata-region-foot {
 		margin-top: 4px;
 		font-size: 0.86rem;
@@ -836,14 +862,33 @@
 		<div class="masterdata-grid {{ $isSysadmin ? '' : 'masterdata-grid-single' }}">
 			<section class="masterdata-card">
 				<div class="masterdata-card-header">
-					<h2>Regional Office Overview</h2>
+					<h2>Regional Office Overview of Social Technologies</h2>
 				</div>
 				<div class="masterdata-card-body">
 					<div class="masterdata-region-overview">
-						@foreach($regions as $region)
+						@foreach($overview['region_cards'] as $regionCard)
 							<div class="masterdata-region-box">
-								<div class="masterdata-region-name" style="text-align: center;">{{ $region->name }}</div>
-								<div class="masterdata-region-count" style="text-align: center;">{{ $region->items_count }}</div>
+								<div class="masterdata-region-name" style="text-align: center;">{{ $regionCard['name'] }}</div>
+								<div class="masterdata-region-count" style="text-align: center;">{{ $regionCard['items_count'] }}</div>
+								<div class="masterdata-region-foot" style="text-align: center;">Total Social Technologies</div>
+								<div class="masterdata-region-stats">
+									<div class="masterdata-region-stat">
+										<div class="masterdata-region-stat-label">Active</div>
+										<div class="masterdata-region-stat-value">{{ $regionCard['active_count'] }}</div>
+									</div>
+									<div class="masterdata-region-stat">
+										<div class="masterdata-region-stat-label">Inactive</div>
+										<div class="masterdata-region-stat-value">{{ $regionCard['inactive_count'] }}</div>
+									</div>
+									<div class="masterdata-region-stat">
+										<div class="masterdata-region-stat-label">Adopted</div>
+										<div class="masterdata-region-stat-value">{{ $regionCard['adopted_count'] }}</div>
+									</div>
+									<div class="masterdata-region-stat">
+										<div class="masterdata-region-stat-label">Replicated</div>
+										<div class="masterdata-region-stat-value">{{ $regionCard['replicated_count'] }}</div>
+									</div>
+								</div>
 							</div>
 						@endforeach
 					</div>
@@ -939,7 +984,7 @@
 			<section class="masterdata-card masterdata-chart-card">
 				<div class="masterdata-card-header">
 					<h3>Status Distribution</h3>
-					<p>Ongoing, inactive, and unspecified items in the current DB source.</p>
+					<p>Active, inactive, and unspecified items in the current DB source.</p>
 				</div>
 				<div class="masterdata-card-body">
 					<canvas id="masterdataStatusChart"></canvas>
@@ -1015,7 +1060,7 @@
 									<td>{{ $item->createdby ?: '-' }}</td>
 									<td>
 										@if($item->status === 'ongoing')
-											<span class="masterdata-pill masterdata-status-ongoing">Ongoing</span>
+											<span class="masterdata-pill masterdata-status-ongoing">Active</span>
 										@elseif(in_array($item->status, ['inactive','dissolved'], true))
 											<span class="masterdata-pill masterdata-status-inactive">Inactive</span>
 										@else
@@ -1709,9 +1754,24 @@
 				}
 			});
 
-			const titleInput = form.querySelector('input[name="title"]');
-			if (titleInput) {
-				formData.set('title', titleInput.value.trim());
+			let resolvedTitle = '';
+			const namedTitleField = typeof form.elements.namedItem === 'function'
+				? form.elements.namedItem('title')
+				: null;
+
+			if (namedTitleField && typeof namedTitleField.value === 'string') {
+				resolvedTitle = namedTitleField.value;
+			}
+
+			if (!resolvedTitle) {
+				const titleInput = form.querySelector('input[name="title"], input[list="st-titles-list"]');
+				if (titleInput) {
+					resolvedTitle = titleInput.value;
+				}
+			}
+
+			if (resolvedTitle !== '') {
+				formData.set('title', resolvedTitle.trim());
 			}
 
 			return formData;

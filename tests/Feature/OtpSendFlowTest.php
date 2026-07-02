@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\OtpMail;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -182,6 +183,55 @@ class OtpSendFlowTest extends TestCase
         $this->travel(5)->minutes();
 
         $this->postJson(route('otp.send'))->assertOk();
+    }
+
+    public function test_expired_otp_can_be_resent_without_restarting_login(): void
+    {
+        $user = $this->makeApprovedUser('expired-otp.user@dswd.gov.ph');
+
+        $this->postJson(route('login'), [
+            'email' => $user->email,
+            'password' => 'Password123!',
+        ])->assertOk();
+
+        $this->postJson(route('otp.send'))->assertOk()->assertJson([
+            'otp_sent' => true,
+            'send_count' => 1,
+            'remaining_sends' => 2,
+        ]);
+
+        $expiredAt = Carbon::now()->subSecond()->toDateTimeString();
+
+        $this->withSession([
+            'otp_user_id' => $user->id,
+            'otp_code' => '123456',
+            'otp_expires_at' => $expiredAt,
+            'otp_sent' => true,
+            'otp_attempts' => 0,
+            'otp_send_count' => 1,
+        ]);
+
+        $expiredResponse = $this->postJson(route('otp.verify'), [
+            'otp_code' => '123456',
+        ]);
+
+        $expiredResponse->assertStatus(422);
+        $expiredResponse->assertJson([
+            'message' => 'The verification code has expired. Please request a new OTP to continue.',
+            'otp_sent' => false,
+            'send_count' => 1,
+            'remaining_sends' => 2,
+        ]);
+
+        $resendResponse = $this->postJson(route('otp.send'));
+
+        $resendResponse->assertOk();
+        $resendResponse->assertJson([
+            'success' => true,
+            'otp_sent' => true,
+            'send_count' => 2,
+            'remaining_sends' => 1,
+        ]);
     }
 
     private function makeApprovedUser(string $email = 'otp.user@dswd.gov.ph'): User

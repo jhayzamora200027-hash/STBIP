@@ -76,7 +76,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>STB Inventory Portal</title>
+    <title>ST Inventory Portal</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <link href="/css/select2.min.css" rel="stylesheet" />
@@ -232,6 +232,46 @@
             } catch (e) {
                 console.warn('insertAdjacentHTML shim not applied:', e);
             }
+        })();
+    </script>
+    <script>
+        // Defensive: ensure dashboard content is left-aligned and sidebar hidden on narrower laptop screens
+        (function(){
+            function adjustForSmall(){
+                try {
+                    var w = window.innerWidth || document.documentElement.clientWidth;
+                    if (w <= 1440) {
+                        document.body.classList.remove('sidebar-open');
+                        document.documentElement.style.overflowX = 'hidden';
+                        document.body.style.overflowX = 'hidden';
+                        var main = document.querySelector('.stb-main-content');
+                        if (main) {
+                            main.style.marginLeft = '0';
+                            main.style.paddingLeft = '12px';
+                            main.style.paddingRight = '12px';
+                            main.style.width = '100%';
+                            main.style.maxWidth = '100%';
+                            main.style.boxSizing = 'border-box';
+                        }
+                        var container = document.querySelector('.st-dashboard-container');
+                        if (container) {
+                            container.style.marginLeft = '0';
+                            container.style.left = 'auto';
+                            container.style.transform = 'none';
+                            container.style.maxWidth = 'calc(100vw - 24px)';
+                            container.style.width = 'calc(100vw - 24px)';
+                            container.style.boxSizing = 'border-box';
+                        }
+                        var sidebar = document.querySelector('.stb-sidebar');
+                        if (sidebar) { sidebar.style.display = 'none'; }
+                    } else {
+                        var sidebar = document.querySelector('.stb-sidebar');
+                        if (sidebar) sidebar.style.display = '';
+                    }
+                } catch(e) {}
+            }
+            window.addEventListener('resize', adjustForSmall);
+            document.addEventListener('DOMContentLoaded', adjustForSmall);
         })();
     </script>
     <style>
@@ -1800,7 +1840,7 @@
     
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: #06306e; position: fixed; top: 0; left: 0; width: 100%; z-index: 1030;">
         <div class="container-fluid px-3 d-flex align-items-center justify-content-between flex-nowrap">
-            <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}" style="@guest margin-left:0 !important; @endguest; white-space:nowrap;">STB Inventory Portal</a>
+            <a class="navbar-brand fw-bold me-3 flex-shrink-0 stb-navbar-title" href="{{ route('main') }}" style="@guest margin-left:0 !important; @endguest; white-space:nowrap;">ST Inventory Portal</a>
             <div class="d-flex align-items-center ms-auto" style="gap: 0.5rem; position: relative; z-index: 1;">
                 @auth
                     <button class="navbar-toggler d-block d-lg-none order-2" type="button" aria-label="Toggle sidebar" style="z-index:1060;" onclick="document.body.classList.toggle('sidebar-open')">
@@ -2001,6 +2041,28 @@
                 z-index: 1039;
             }
         }
+        /* Hide sidebar by default on medium/smaller laptops to avoid pushing content off-screen */
+        @media (max-width: 1366px) {
+            .stb-sidebar { left: -320px; }
+            body.sidebar-open .stb-sidebar { left: 0; }
+            .stb-main-content { margin-left: 0 !important; }
+        }
+        @media (max-width: 1280px) {
+            .stb-sidebar { left: -320px; }
+            body.sidebar-open .stb-sidebar { left: 0; }
+            .stb-main-content { margin-left: 0 !important; }
+        }
+        @media (max-width: 1440px) {
+            /* Aggressive safety: ensure main content is not offset on smaller laptop screens */
+            .stb-main-content, .container.stb-main-content { margin-left: 0 !important; padding-left: 12px !important; padding-right: 12px !important; width: 100% !important; max-width: 100% !important; }
+            .st-dashboard-container { margin-left: 0 !important; transform: none !important; left: auto !important; }
+            /* Hide decorative frames that sometimes cause horizontal overflow */
+            .ph-frame::before, .st-center-outer::before, .st-dashboard-container::before, .stb-site-footer::before { display: none !important; content: none !important; }
+            /* Keep sidebar visually hidden until explicitly opened */
+            .stb-sidebar { left: -360px !important; display: none !important; }
+            body.sidebar-open .stb-sidebar { display: block !important; left: 0 !important; }
+            html, body { overflow-x: hidden !important; }
+        }
         .stb-main-content {
             margin-left: 320px;
             transition: margin 0.2s;
@@ -2123,7 +2185,7 @@
                         class="stb-site-footer__logo"
                     >
                     <div>
-                        <span class="stb-site-footer__eyebrow">STB Inventory Portal</span>
+                        <span class="stb-site-footer__eyebrow">ST Inventory Portal</span>
                         <p class="stb-site-footer__title">Department of Social Welfare and Development, Social Technology Bureau</p>
                         <p class="stb-site-footer__summary">A centralized workspace for managing social technology records, inventory updates, and reporting across regions and local implementation sites.</p>
                         <div class="stb-site-footer__meta">
@@ -2153,7 +2215,7 @@
             </div>
 
             <div class="stb-site-footer__bottom">
-                <p class="stb-site-footer__bottom-copy">© {{ date('Y') }} DSWD STB Inventory Portal. All rights reserved.</p>
+                <p class="stb-site-footer__bottom-copy">© {{ date('Y') }} DSWD ST Inventory Portal. All rights reserved.</p>
                 <p class="stb-site-footer__bottom-note">Built for Social Technology Bureau operations and regional coordination.</p>
             </div>
         </div>

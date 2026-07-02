@@ -127,7 +127,7 @@ window.openRsmStDetailsModal = function(row){
     let statusLabel = '-';
     try {
         const sLower = status.toLowerCase();
-        if (sLower && (sLower.includes('dissolved') || sLower.includes('inactive') || sLower.includes('completed'))) {
+        if (sLower && (sLower === 'dissolved' || sLower === 'inactive' || sLower === 'completed')) {
             statusLabel = 'Inactive';
         } else if (status && status.trim() !== '') {
             statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -295,9 +295,9 @@ function renderStTitlesFromRows(rows, regionParam) {
             if (normBool(r.with_replicated)) locInfo.replicated += 1;
 
             const stStatus = (r.status || '').toString().toLowerCase();
-            if (stStatus.includes('ongoing') || stStatus === 'on going') {
+            if (stStatus === 'ongoing' || stStatus === 'on going' || stStatus === 'active') {
                 locInfo.ongoing += 1;
-            } else if (stStatus.includes('dissolved') || stStatus.includes('inactive') || stStatus.includes('completed')) {
+            } else if (stStatus === 'dissolved' || stStatus === 'inactive' || stStatus === 'completed') {
                 locInfo.dissolved += 1;
             }
         });
@@ -354,7 +354,7 @@ function renderStTitlesFromRows(rows, regionParam) {
                         if (loc.dissolved > 0 && loc.ongoing === 0) {
                             lifecycleStatus = 'Inactive';
                         } else if (loc.ongoing > 0 && loc.dissolved === 0) {
-                            lifecycleStatus = 'Ongoing';
+                            lifecycleStatus = 'Active';
                         } else if (loc.dissolved > 0 && loc.ongoing > 0) {
                             lifecycleStatus = 'Inactive';
                         }
@@ -635,7 +635,19 @@ function applyRsmFilters(){
         });
         try {
             const headersArr = (payload && payload.headers) ? payload.headers : [];
-            const idxO = headersArr.findIndex(h => h && h.toString().toLowerCase().includes('ongoing'));
+            const normalizeStatusLabel = value => String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+            const isActiveStatus = value => {
+                const status = normalizeStatusLabel(value);
+                return status === 'ongoing' || status === 'on going' || status === 'active';
+            };
+            const isInactiveStatus = value => {
+                const status = normalizeStatusLabel(value);
+                return status === 'dissolved' || status === 'inactive' || status === 'completed';
+            };
+            const idxO = headersArr.findIndex(h => {
+                const header = h && h.toString().toLowerCase().trim();
+                return header && (header.includes('ongoing') || header === 'active');
+            });
             const idxD = headersArr.findIndex(h => h && (h.toString().toLowerCase().includes('dissolved') || h.toString().toLowerCase().includes('inactive')));
             if (idxO !== -1 || idxD !== -1) {
                 filtered.forEach(r => {
@@ -660,7 +672,10 @@ function applyRsmFilters(){
 
         try {
             const headersArr = (payload && payload.headers) ? payload.headers : [];
-            const idxO = headersArr.findIndex(h => h && h.toString().toLowerCase().includes('ongoing'));
+            const idxO = headersArr.findIndex(h => {
+                const header = h && h.toString().toLowerCase().trim();
+                return header && (header.includes('ongoing') || header === 'active');
+            });
             const idxD = headersArr.findIndex(h => h && (h.toString().toLowerCase().includes('dissolved') || h.toString().toLowerCase().includes('inactive')));
             const cellHasStatusMark = v => {
                 if (typeof v === 'boolean') return v;
@@ -697,9 +712,9 @@ function applyRsmFilters(){
                 if (!st && idxO !== -1 && r.row && cellHasStatusMark(r.row[idxO])) st = 'ongoing';
                 if (!st && idxD !== -1 && r.row && cellHasStatusMark(r.row[idxD])) st = 'dissolved';
 
-                if ((st.includes('ongoing') || st === 'on going') && oCnt === 0 && !cellHasStatusMark(r.row && r.row[idxO])) {
+                    if (isActiveStatus(st) && oCnt === 0 && !cellHasStatusMark(r.row && r.row[idxO])) {
                     oCnt = 1;
-                } else if ((st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) && dCnt === 0 && !cellHasStatusMark(r.row && r.row[idxD])) {
+                    } else if (isInactiveStatus(st) && dCnt === 0 && !cellHasStatusMark(r.row && r.row[idxD])) {
                     dCnt = 1;
                 }
 
@@ -710,11 +725,13 @@ function applyRsmFilters(){
             console.error('[RSM] status aggregation failed; falling back to simple counts', e);
             ongoingCount = filtered.reduce((acc,r) => {
                 const st = (r.status || '').toString().toLowerCase();
-                return acc + ((st.includes('ongoing') || st === 'on going') ? 1 : 0);
+                const normalized = st.trim().replace(/\s+/g, ' ');
+                return acc + ((normalized === 'ongoing' || normalized === 'on going' || normalized === 'active') ? 1 : 0);
             }, 0);
             dissolvedCount = filtered.reduce((acc,r) => {
                 const st = (r.status || '').toString().toLowerCase();
-                return acc + ((st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) ? 1 : 0);
+                const normalized = st.trim().replace(/\s+/g, ' ');
+                return acc + ((normalized === 'dissolved' || normalized === 'inactive' || normalized === 'completed') ? 1 : 0);
             }, 0);
         }
         console.debug('[RSM] computed counts', { total: filtered.length, ongoingCount, dissolvedCount });
@@ -800,12 +817,12 @@ function resetRsmFilters(){
             try {
                 const allRows = payload.allRows;
                 const ongoingCount = allRows.reduce((acc,r) => {
-                    const st = (r.status || '').toString().toLowerCase();
-                    return acc + (st.includes('ongoing') ? 1 : 0);
+                    const st = (r.status || '').toString().toLowerCase().trim().replace(/\s+/g, ' ');
+                    return acc + ((st === 'ongoing' || st === 'on going' || st === 'active') ? 1 : 0);
                 }, 0);
                 const dissolvedCount = allRows.reduce((acc,r) => {
-                    const st = (r.status || '').toString().toLowerCase();
-                    return acc + (st.includes('dissolved') ? 1 : 0);
+                    const st = (r.status || '').toString().toLowerCase().trim().replace(/\s+/g, ' ');
+                    return acc + ((st === 'dissolved' || st === 'inactive' || st === 'completed') ? 1 : 0);
                 }, 0);
                 const ongoingEl = fetchEl('rsm-count-ongoing'); if (ongoingEl) ongoingEl.textContent = String(ongoingCount);
                 const dissolvedEl = fetchEl('rsm-count-dissolved'); if (dissolvedEl) dissolvedEl.textContent = String(dissolvedCount);
@@ -2809,9 +2826,9 @@ function createChartHitZones(chart) {
                             'title' => $c->title,
                             'url' => $c->url,
                             'active' => (int) $c->is_active,
-                            'status' => $c->status ?? 'On going',
+                            'status' => $c->status ?? 'Active',
                             'children' => ($c->children && $c->children->count())
-                                ? $c->children->map(function($s){ return ['title' => $s->title, 'url' => $s->url, 'active' => (int) $s->is_active, 'status' => $s->status ?? 'On going']; })->values()
+                                ? $c->children->map(function($s){ return ['title' => $s->title, 'url' => $s->url, 'active' => (int) $s->is_active, 'status' => $s->status ?? 'Active']; })->values()
                                 : []
                         ];
                     })->values();
@@ -2947,22 +2964,32 @@ document.addEventListener('DOMContentLoaded', function(){
 
     popTitle.textContent = title;
     try { popTitle.href = href || '#'; popTitle.setAttribute('aria-label', title); } catch(e) {}
-    function renderChildrenByStatus(list, status){
+        function normalizeGalleryStatusLabel(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (!normalized || normalized === 'ongoing' || normalized === 'on going' || normalized === 'ongoing development' || normalized === 'active') {
+                return 'Active';
+            }
+            if (normalized === 'completed') {
+                return 'Completed';
+            }
+            return String(value || '');
+        }
+        function renderChildrenByStatus(list, status){
       if (!Array.isArray(list)) return '<div class="gcm-empty" style="color:#6b7280;">No items</div>';
       let sections = '';
       list.forEach((m) => {
         const children = Array.isArray(m.children) ? m.children : [];
         const childrenToShow = children.map(c => {
           const subs = Array.isArray(c.children) ? c.children : [];
-          const matchingSubs = subs.filter(sc => (sc.status||'On going') === status);
-          const childMatches = (c.status||'On going') === status;
+                    const matchingSubs = subs.filter(sc => normalizeGalleryStatusLabel(sc.status || 'Active') === status);
+                    const childMatches = normalizeGalleryStatusLabel(c.status || 'Active') === status;
           if (childMatches || matchingSubs.length) return { child: c, matchingSubs };
           return null;
         }).filter(Boolean);
         if (children.length > 0) {
           if (!childrenToShow.length) return;
         } else {
-          if ((m.status || 'On going') !== status) return;
+                    if (normalizeGalleryStatusLabel(m.status || 'Active') !== status) return;
         }
 
         let motherHtml = '<div class="gcm-mother" style="display:flex;flex-direction:column;gap:6px;">';
@@ -2972,7 +2999,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
 
         motherHtml += '<ul style="margin:4px 0 0 12px;padding-left:0;list-style:none;">';
-        if (children.length === 0 && (m.status || 'On going') === status) {
+                if (children.length === 0 && normalizeGalleryStatusLabel(m.status || 'Active') === status) {
           if (m.url && m.url.trim()) {
             motherHtml += `<li style="margin-bottom:6px;"><a href="${escapeAttr(m.url)}" target="_blank" rel="noopener noreferrer" style="color:#0369a1;text-decoration:none;">${escapeHtml(m.title)}</a></li>`;
           } else {
@@ -3015,11 +3042,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const tabHtml = `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
         <button class="gcm-status-btn active" data-status="Completed" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:linear-gradient(180deg,#ffffff,#f8fafc);cursor:pointer;font-weight:600;color:#0b2540;">Completed</button>
-        <button class="gcm-status-btn" data-status="On going" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:transparent;cursor:pointer;font-weight:600;color:#6b7280;">On going</button>
+                <button class="gcm-status-btn" data-status="Active" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:transparent;cursor:pointer;font-weight:600;color:#6b7280;">Active</button>
       </div>
       <div class="gcm-status-views">
         <div class="gcm-status-view" data-status="Completed">${renderChildrenByStatus(items, 'Completed')}</div>
-        <div class="gcm-status-view" data-status="On going" style="display:none">${renderChildrenByStatus(items, 'On going')}</div>
+                <div class="gcm-status-view" data-status="Active" style="display:none">${renderChildrenByStatus(items, 'Active')}</div>
       </div>
     `;
 
@@ -3337,9 +3364,9 @@ document.addEventListener('DOMContentLoaded', function(){
               if (normBool(r.with_replicated)) locInfo.replicated += 1;
 
               const stStatus = (r.status || '').toString().toLowerCase();
-              if (stStatus.includes('ongoing') || stStatus === 'on going') {
+              if (stStatus === 'ongoing' || stStatus === 'on going' || stStatus === 'active') {
                   locInfo.ongoing += 1;
-              } else if (stStatus.includes('dissolved') || stStatus.includes('inactive') || stStatus.includes('completed')) {
+              } else if (stStatus === 'dissolved' || stStatus === 'inactive' || stStatus === 'completed') {
                   locInfo.dissolved += 1;
               }
           });
@@ -3395,7 +3422,7 @@ document.addEventListener('DOMContentLoaded', function(){
                       const statusParts = [];
                       if (loc.adopted > 0) statusParts.push('Adopted');
                       if (loc.replicated > 0) statusParts.push('Replicated');
-                      if (loc.ongoing > 0) statusParts.push('Ongoing');
+                      if (loc.ongoing > 0) statusParts.push('Active');
                         if (loc.dissolved > 0) statusParts.push('Inactive');
                       const statusText = statusParts.join(' · ') || '&nbsp;';
 
@@ -3913,7 +3940,7 @@ document.addEventListener('DOMContentLoaded', function(){
                                 </div>
                                 <div id="rsm-filter-status-card" style="display:flex;gap:16px;margin-top:8px;align-items:center;">
                                     <div class="rsm-stat" style="flex:1; height:145px; background:#f5fef5; border-radius:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                        <div class="rsm-stat-label" style="font-size:1rem; color:#065f46;">Ongoing</div>
+                                        <div class="rsm-stat-label" style="font-size:1rem; color:#065f46;">Active</div>
                                         <div id="rsm-count-ongoing" class="rsm-stat-value" style="font-size:1.1rem;font-weight:700; color:#10b981;">0</div>
                                     </div>
                                     <div class="rsm-stat" style="flex:1; height:145px; background:#fdf6f6; border-radius:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
@@ -3991,7 +4018,7 @@ document.addEventListener('DOMContentLoaded', function(){
         background-color: transparent !important;
     }
 
-.card-gallery { display:flex; justify-content:center; align-items:center; padding:28px 12px; position:relative; z-index:60; pointer-events:auto; width: 120vw; margin-left: 0; overflow-x: auto; -ms-overflow-style: none;  scrollbar-width: none;  }
+.card-gallery { display:flex; justify-content:center; align-items:center; padding:28px 12px; position:relative; z-index:60; pointer-events:auto; width:100%; max-width:1360px; margin:0 auto; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
 .card-gallery::-webkit-scrollbar { display: none;  }
 
 .card-gallery * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -4014,7 +4041,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .container-cards::-webkit-scrollbar{ height:10px; }
 .container-cards::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.08); border-radius:6px; }
 
-.container-cards { display:flex; gap:20px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; overflow-anchor:none; }
+.container-cards { display:flex; gap:20px; flex-wrap:nowrap; justify-content:flex-start; align-items:center; width:100%; max-width:1280px; margin:0 auto; overflow-x:auto; overflow-y:visible; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior:smooth; padding:12px 8px; overflow-anchor:none; }
 .container-cards::-webkit-scrollbar{ display:none; }
 
 .container-cards.gallery-popover-open { scroll-behavior:auto; }
@@ -4166,35 +4193,18 @@ document.addEventListener('DOMContentLoaded', function(){
 @media (hover: none) {
   .container-cards:not(.dragging):not(.is-scrolling) .card:hover { transform: none; box-shadow: 0 6px 24px rgba(2,6,23,0.08); flex-basis: 240px; }
 }
-@if(Auth::check())
 .slider-wrapper {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100vw;
-    left: 50%;
-    right: 50%;
-    margin-left: -60vw;
-    margin-right: -50vw;
+    width: 100%;
+    max-width: 1360px;
+    margin: 2rem auto 0;
+    padding-inline: 12px;
     overflow: visible;
-    margin-top: 2rem;
-} 
-@else
-.slider-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100vw;
-    left: 50%;
-    right: 50%;
-    margin-left: -55vw;
-    margin-right: -50vw;
-    overflow: visible;
-    margin-top: 2rem;
-} 
-@endif
+    box-sizing: border-box;
+}
 
 .gallery-section-label,
 .slider-label,
@@ -4211,7 +4221,7 @@ document.addEventListener('DOMContentLoaded', function(){
     display: block;
     width: max-content;
     text-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    left: 100px;
+    left: 0;
 }
 .section-label::after {
     content: '';
@@ -4238,8 +4248,8 @@ document.addEventListener('DOMContentLoaded', function(){
 .gallery, .container-cards { position: relative; z-index: 10; }
 
 .swiper {
-    width: auto !important;
-    max-width: 1700px !important;
+    width: 100% !important;
+    max-width: 1280px !important;
     height: 300px; 
     max-height: 300px;
     margin: 0 auto; 

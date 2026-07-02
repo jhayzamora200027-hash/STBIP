@@ -14,7 +14,7 @@
                 <p style="color:#9aa0a6;font-size:13px;margin-top:6px;">If you did not attempt to sign in but received this email, please disregard it. The code will remain active for 5 minutes.</p>
                 <hr style="border:none;border-top:1px solid #eef2f3;margin:26px 0" />
                 <p style="color:#9aa0a6;font-size:10px;margin:0">This email notification is auto generated. Please do not reply.</p>
-                <p style="color:#9aa0a6;font-size:12px;margin:0">STB Inventory Portal — an effortless inventory solution with the features you need.</p>
+                <p style="color:#9aa0a6;font-size:12px;margin:0">ST Inventory Portal — an effortless inventory solution with the features you need.</p>
                 <div style="margin-top:12px;color:#b0b7bb;font-size:12px">© {{ date('Y') }} STBIP. All rights reserved.</div>
             </td>
         </tr>

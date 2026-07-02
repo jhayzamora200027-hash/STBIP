@@ -382,7 +382,7 @@ class UserController extends Controller
                 if ($approvedEmailExists) {
                     Mail::send('emails.existing_registration_attempt', [], function ($message) use ($request) {
                         $message->to($request->email)
-                                ->subject('Security notice: Registration attempt - STB Inventory Portal');
+                                ->subject('Security notice: Registration attempt - ST Inventory Portal');
                     });
                 }
             } catch (\Exception $e) {
@@ -536,7 +536,7 @@ class UserController extends Controller
         try {
             Mail::send('emails.registration_submitted', [], function ($message) use ($request) {
                 $message->to($request->email)
-                        ->subject('Registration Received - STB Inventory Portal');
+                        ->subject('Registration Received - ST Inventory Portal');
             });
         } catch (\Exception $e) {
             Log::error('Failed to send registration-submitted email: ' . $e->getMessage());
@@ -552,7 +552,7 @@ class UserController extends Controller
 
             Mail::send('emails.pending_registration', ['pendingCount' => $pendingCount], function ($message) use ($subject) {
                 $message->to('jpzamora@dswd.gov.ph')
-                        ->subject('STB Inventory Portal - ' . $subject);
+                        ->subject('ST Inventory Portal - ' . $subject);
             });
         } catch (\Exception $mailEx) {
             Log::error('Failed sending new registration notification: ' . $mailEx->getMessage());
@@ -787,11 +787,16 @@ class UserController extends Controller
         }
 
         if (Carbon::now()->gt(Carbon::parse($expiresAt))) {
-            $request->session()->forget(['otp_user_id','otp_code','otp_expires_at','otp_attempts']);
+            $request->session()->forget(['otp_code', 'otp_expires_at']);
+            $request->session()->put('otp_attempts', 0);
+            $request->session()->put('otp_sent', false);
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'The verification code has expired. Please login again.'], 422);
+                return response()->json([
+                    'message' => 'The verification code has expired. Please request a new OTP to continue.',
+                ] + $this->otpSendStatePayload($request), 422);
             }
-            return redirect()->route('landing')->withErrors(['otp' => 'The verification code has expired. Please login again.']);
+
+            return back()->withErrors(['otp' => 'The verification code has expired. Please request a new OTP to continue.']);
         }
 
         if ($attempts >= self::OTP_VERIFY_LIMIT) {

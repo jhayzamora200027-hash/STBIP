@@ -479,10 +479,14 @@
           clearInterval(expiryTimer);
           otpState.otp_sent = false;
           otpState.otp_expires_at = null;
+          otpState.locked_until = null;
           setOtpInputsDisabled(true);
           clearOtpDigits();
           countdownEl.textContent = 'No active verification code. Send a new OTP to continue.';
+          openSendConfirmBtn.disabled = false;
+          openSendConfirmBtn.style.display = 'block';
           updateInstruction();
+          renderSendMeta();
           if (resendWrap) {
             resendWrap.style.display = 'none';
           }

@@ -50,9 +50,6 @@ class MasterDataController extends Controller
             ->values();
 
         $selectedRegionName = MasterDataRegionCatalog::normalize($request->query('region_filter'));
-        if (!$selectedRegionName) {
-            $selectedRegionName = $regions->first()?->name;
-        }
 
         $allRegionItems = RegionItem::query()
             ->with('region:id,name')
@@ -123,7 +120,7 @@ class MasterDataController extends Controller
         foreach ($items as $item) {
             $status = Str::lower((string) $item->status);
             if ($status === 'ongoing') {
-                $statusLabel = 'Ongoing';
+                $statusLabel = 'Active';
             } elseif (in_array($status, ['inactive', 'dissolved'], true)) {
                 $statusLabel = 'Inactive';
             } else {
@@ -450,8 +447,8 @@ class MasterDataController extends Controller
             }
             $status = null;
             if ($statusRaw !== '') {
-                $snorm = strtolower($statusRaw);
-                if (str_contains($snorm, 'ongoing') || $snorm === 'on going') {
+                $snorm = strtolower(trim(preg_replace('/\s+/u', ' ', $statusRaw)));
+                if (str_contains($snorm, 'ongoing') || $snorm === 'on going' || preg_match('/\bactive\b/u', $snorm)) {
                     $status = 'ongoing';
                 } elseif (str_contains($snorm, 'dissolved') || str_contains($snorm, 'inactive') || str_contains($snorm, 'completed')) {
                     $status = 'dissolved';
@@ -867,8 +864,8 @@ class MasterDataController extends Controller
             }
             $status = null;
             if ($statusRaw !== '') {
-                $snorm = strtolower($statusRaw);
-                if (str_contains($snorm, 'ongoing') || $snorm === 'on going') {
+                $snorm = strtolower(trim(preg_replace('/\s+/u', ' ', $statusRaw)));
+                if (str_contains($snorm, 'ongoing') || $snorm === 'on going' || preg_match('/\bactive\b/u', $snorm)) {
                     $status = 'ongoing';
                 } elseif (str_contains($snorm, 'dissolved') || str_contains($snorm, 'inactive') || str_contains($snorm, 'completed')) {
                     $status = 'dissolved';
@@ -1233,9 +1230,6 @@ class MasterDataController extends Controller
     private function buildUpdatesPanelData(Request $request, Collection $regions, Collection $allRegionItems): array
     {
         $selectedRegionName = MasterDataRegionCatalog::normalize($request->query('region_filter'));
-        if (!$selectedRegionName) {
-            $selectedRegionName = $regions->first()?->name;
-        }
 
         $selectedRegion = $regions->firstWhere('name', $selectedRegionName);
         $selectedProvince = trim((string) $request->query('province_filter', ''));
@@ -1630,7 +1624,9 @@ class MasterDataController extends Controller
 
     private function validateRegionItem(Request $request, ?RegionItem $existingItem = null): array
     {
-        if ($existingItem !== null && !$request->request->has('title')) {
+        $submittedTitle = trim((string) $request->input('title', ''));
+
+        if ($existingItem !== null && $submittedTitle === '') {
             $request->merge(['title' => $existingItem->title]);
         }
 
@@ -1956,7 +1952,7 @@ class MasterDataController extends Controller
     private function buildOverview(Collection $regions, Collection $regionItems): array
     {
         $statusCounts = [
-            'Ongoing' => 0,
+            'Active' => 0,
             'Inactive' => 0,
             'Unspecified' => 0,
         ];
@@ -1964,7 +1960,7 @@ class MasterDataController extends Controller
         foreach ($regionItems as $item) {
             $status = Str::lower((string) $item->status);
             if ($status === 'ongoing') {
-                $statusCounts['Ongoing']++;
+                $statusCounts['Active']++;
             } elseif (in_array($status, ['inactive', 'dissolved'], true)) {
                 $statusCounts['Inactive']++;
             } else {
@@ -2007,12 +2003,30 @@ class MasterDataController extends Controller
             ->take(10)
             ->values();
 
+        $regionCards = $regions->map(function (Region $region) use ($regionItems) {
+            $items = $regionItems->where('region_id', $region->id);
+
+            return [
+                'name' => $region->name,
+                'items_count' => $items->count(),
+                'active_count' => $items->filter(function (RegionItem $item) {
+                    return Str::lower((string) $item->status) === 'ongoing';
+                })->count(),
+                'inactive_count' => $items->filter(function (RegionItem $item) {
+                    return in_array(Str::lower((string) $item->status), ['inactive', 'dissolved'], true);
+                })->count(),
+                'adopted_count' => $items->where('with_adopted', true)->count(),
+                'replicated_count' => $items->where('with_replicated', true)->count(),
+            ];
+        })->values();
+
         return [
             'total_regions' => $regions->count(),
             'total_items' => $regionItems->count(),
             'with_moa' => $regionItems->where('with_moa', true)->count(),
             'with_resolution' => $regionItems->where('with_res', true)->count(),
             'status_counts' => $statusCounts,
+            'region_cards' => $regionCards->all(),
             'region_counts' => $regions->map(fn (Region $region) => [
                 'label' => $region->name,
                 'count' => (int) $region->items_count,

@@ -3,16 +3,16 @@
 @section('content')
 @guest
 <style>
-    .stb-main-content {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        padding-left: 50px !important;
-		padding-right: 50px !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-        box-sizing: border-box !important;
-        overflow-x: hidden;
-    }
+	.stb-main-content {
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+		padding-left: 24px !important;
+		padding-right: 24px !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		box-sizing: border-box !important;
+		overflow-x: hidden;
+	}
 
 	body.guest-filter-open .stb-main-content {
 		padding-right: 430px !important;
@@ -94,34 +94,63 @@
 }
 
 	.stb-main-content .st-dashboard-container {
-		width: min(1500px, calc(100vw - 100px)) !important;
-		max-width: calc(100vw - 100px) !important;
+		width: calc(100% - 48px) !important;
+		max-width: 1500px !important;
+		margin: 0 auto !important;
+		box-sizing: border-box !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
 	}
 
 	body.guest-filter-open .stb-main-content .st-dashboard-container {
-		width: min(1500px, calc(100vw - 520px)) !important;
-		max-width: calc(100vw - 520px) !important;
+		/* when guest filter is open, reduce available width but remain responsive */
+		width: calc(100% - 64px) !important;
+		max-width: 1500px !important;
 	}
 
 	@media (max-width: 1199px) {
 		.stb-main-content {
-			padding-right: 50px !important;
+			padding-right: 24px !important;
 		}
 
 		.stb-main-content .st-dashboard-container {
-			width: min(1500px, calc(100vw - 100px)) !important;
-			max-width: calc(100vw - 100px) !important;
+			width: calc(100% - 48px) !important;
+			max-width: 1200px !important;
 		}
 
 		body.guest-filter-open .stb-main-content {
-			padding-right: 50px !important;
+			padding-right: 24px !important;
 		}
 
 		body.guest-filter-open .stb-main-content .st-dashboard-container {
-			width: min(1500px, calc(100vw - 100px)) !important;
-			max-width: calc(100vw - 100px) !important;
+			width: calc(100% - 48px) !important;
+			max-width: 1200px !important;
 		}
     }
+
+/* Additional small-laptop breakpoints to improve layout on 1366/1280/1024 screens */
+@media (max-width: 1366px) {
+	.stb-main-content .st-dashboard-container { padding-left: 28px !important; padding-right: 28px !important; width: calc(100% - 56px) !important; }
+	.st-dashboard-container { padding: 48px 36px 36px 36px; }
+	.st-map-card-body { gap: 18px; }
+}
+@media (max-width: 1280px) {
+	.stb-main-content .st-dashboard-container { padding-left: 20px !important; padding-right: 20px !important; width: calc(100% - 40px) !important; max-width: 1200px !important; }
+	.st-dashboard-container { padding: 36px 24px 24px 24px; }
+	.st-map-card-body { grid-template-columns: 1fr !important; padding: 16px !important; }
+	.st-dashboard-card { min-width: 0 !important; max-width: none !important; width: 100% !important; }
+}
+@media (max-width: 1024px) {
+	.stb-main-content .st-dashboard-container { padding-left: 16px !important; padding-right: 16px !important; width: calc(100% - 32px) !important; }
+	.st-dashboard-container { padding: 28px 16px 16px 16px; }
+	.st-map-card-body { grid-template-columns: 1fr !important; gap: 12px !important; }
+}
+
+/* Defensive: ensure dashboard container never exceeds viewport width */
+@media (max-width: 1440px) {
+	.st-dashboard-container, .mobile-dashboard-container, .masterdata-shell { max-width: calc(100vw - 24px) !important; width: calc(100vw - 24px) !important; margin-left: auto !important; margin-right: auto !important; box-sizing: border-box !important; }
+	.st-dashboard-container { padding-left: 12px !important; padding-right: 12px !important; }
+}
 </style>
 <style>
 	.guest-mobile-filter-panel { display: none; }
@@ -1545,7 +1574,7 @@
 </style>
 
 <style>
-		.st-dashboard-header .st-header-logo { width:600px !important; max-width:600px !important; height:140px !important; }
+		.st-dashboard-header .st-header-logo { width: auto !important; max-width: 320px !important; height: auto !important; max-height: 140px !important; }
 		@media (max-width: 767px) {
 			@if(Auth::check())
 			.st-dashboard-header .st-header-logo {
@@ -2131,32 +2160,38 @@ if (!document.getElementById('catListTooltip')) {
 				<div class="card-body total-st-body">
 <div class="formal-st-overview">
 	<div class="formal-st-top-grid">
-		<div class="small-cards-grid formal-st-metrics">
-			<div id="card1" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View ongoing ST listing">
+		<div class="formal-metrics-block">
+			<div class="formal-metrics-heading">
+				<div class="formal-metrics-eyebrow">Dashboard Summary</div>
+				<div class="formal-metrics-title">Total Number Metrics</div>
+			</div>
+			<div class="small-cards-grid formal-st-metrics">
+				<div id="card1" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View active ST listing">
+					<div class="formal-metric-kicker">Operational Status</div>
+					<div class="card-value">{{ $totalOngoingStatus ?? 0 }}</div>
+				<div class="card-label">Active STs</div>
+				<div class="formal-metric-note">Programs with continuing implementation records.</div>
+			</div>
+				<div id="card2" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View dissolved ST listing">
 				<div class="formal-metric-kicker">Operational Status</div>
-				<div class="card-value">{{ $totalOngoingStatus ?? 0 }}</div>
-                <div class="card-label">Ongoing STs</div>
-                <div class="formal-metric-note">Programs with continuing implementation records.</div>
-            </div>
-			<div id="card2" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View dissolved ST listing">
-                <div class="formal-metric-kicker">Operational Status</div>
-				<div class="card-value">{{ $totalDissolvedStatus ?? 0 }}</div>
-				<div class="card-label">Inactive STs</div>
-                <div class="formal-metric-note">Programs tagged as inactive or dissolved.</div>
-            </div>
-			<div id="card3" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View replicated ST listing">
-                <div class="formal-metric-kicker">Adoption Status</div>
-                <div class="card-value">0</div>
-                <div class="card-label">Replicated STs</div>
-                <div class="formal-metric-note">Titles with documented replication activity.</div>
-            </div>
-			<div id="card4" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View adopted ST listing">
-                <div class="formal-metric-kicker">Adoption Status</div>
-                <div class="card-value">0</div>
-                <div class="card-label">Adopted STs</div>
-                <div class="formal-metric-note">Titles formally adopted in target areas.</div>
-            </div>
-        </div>
+					<div class="card-value">{{ $totalDissolvedStatus ?? 0 }}</div>
+					<div class="card-label">Inactive STs</div>
+				<div class="formal-metric-note">Programs tagged as inactive or dissolved.</div>
+			</div>
+				<div id="card3" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View replicated ST listing">
+				<div class="formal-metric-kicker">Adoption Status</div>
+				<div class="card-value">0</div>
+				<div class="card-label">Replicated STs</div>
+				<div class="formal-metric-note">Titles with documented replication activity.</div>
+			</div>
+				<div id="card4" class="small-card formal-metric-card formal-metric-card-clickable" role="button" tabindex="0" aria-label="View adopted ST listing">
+				<div class="formal-metric-kicker">Adoption Status</div>
+				<div class="card-value">0</div>
+				<div class="card-label">Adopted STs</div>
+				<div class="formal-metric-note">Titles formally adopted in target areas.</div>
+			</div>
+			</div>
+		</div>
 
         <div class="formal-st-chart-stack">
 			<div class="formal-chart-panel formal-chart-panel-wide">
@@ -2216,7 +2251,7 @@ if (!document.getElementById('catListTooltip')) {
 				<div class="formal-panel-header formal-panel-header-centered">
 					<div>
 						<div class="formal-panel-eyebrow">Share Analysis</div>
-						<div class="formal-panel-title">Ongoing vs Inactive</div>
+						<div class="formal-panel-title">Active vs Inactive</div>
 					</div>
 				</div>
 				<div class="formal-chart-canvas formal-chart-canvas-mini">
@@ -2225,7 +2260,7 @@ if (!document.getElementById('catListTooltip')) {
 				<div class="formal-share-summary">
 					<div class="formal-share-metrics">
 						<div class="formal-share-stat formal-share-stat-teal">
-							<div class="formal-share-stat-label">Ongoing</div>
+							<div class="formal-share-stat-label">Active</div>
 							<div class="formal-share-stat-value" id="ongoingShareCount">{{ $totalOngoingStatus ?? 0 }}</div>
 							<div class="formal-share-stat-meta" id="ongoingSharePercent">0%</div>
 						</div>
@@ -2383,7 +2418,7 @@ if (!document.getElementById('catListTooltip')) {
 							<div class="social-listing-control">
 								<select id="title-listing-status-filter" class="form-control social-listing-select">
 								<option value="">All statuses</option>
-								<option value="ongoing">Ongoing STs</option>
+								<option value="ongoing">Active STs</option>
 								<option value="dissolved">Inactive STs</option>
 							</select>
 							</div>
@@ -2393,6 +2428,9 @@ if (!document.getElementById('catListTooltip')) {
 								<option value="replicated">With Replicated</option>
 								<option value="adopted">With Adopted</option>
 							</select>
+							</div>
+							<div class="social-listing-control social-listing-control-action">
+								<button type="button" id="title-listing-export-btn" class="social-listing-export-btn">Export CSV</button>
 							</div>
 						</div>
 					</div>
@@ -2445,6 +2483,42 @@ if (!document.getElementById('catListTooltip')) {
 
 .formal-st-metrics {
 	height: 100%;
+}
+
+.formal-metrics-block {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	height: 100%;
+}
+
+.formal-metrics-heading {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 0 4px;
+}
+
+.formal-metrics-eyebrow {
+	color: #6d8296;
+	font-size: 0.72rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.formal-metrics-title {
+	color: #06306e;
+	font-size: clamp(1.1rem, 1rem + 0.4vw, 1.5rem);
+	font-weight: 800;
+	line-height: 1.15;
+}
+
+.formal-metrics-caption {
+	color: #6c7f91;
+	font-size: 0.9rem;
+	line-height: 1.45;
+	max-width: 36ch;
 }
 
 .small-cards-grid {
@@ -2534,7 +2608,7 @@ if (!document.getElementById('catListTooltip')) {
 }
 
 .formal-second-row-wrap {
-	grid-template-columns: minmax(0, 1fr) 260px 260px;
+	grid-template-columns: minmax(0, 1.7fr) minmax(360px, 1fr);
 	width: 100%;
 	max-width: 1480px;
 	align-items: start;
@@ -2575,7 +2649,21 @@ if (!document.getElementById('catListTooltip')) {
 }
 
 .formal-mini-panel-group {
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: stretch;
+	min-width: 0;
+}
+
+.year-chart-wrap,
+.formal-chart-panel-yearly,
+.formal-mini-panel-group,
+.formal-chart-panel-mini {
+	min-width: 0;
+}
+
+.formal-chart-panel-yearly,
+.formal-chart-panel-mini {
+	height: 100%;
 }
 
 .formal-dashboard-row {
@@ -3054,6 +3142,11 @@ if (!document.getElementById('catListTooltip')) {
 	min-width: 160px;
 }
 
+.social-listing-control-action {
+	flex: 0 0 auto;
+	min-width: 0;
+}
+
 .social-listing-control-search {
 	flex: 1 1 320px;
 	min-width: 240px;
@@ -3068,6 +3161,31 @@ if (!document.getElementById('catListTooltip')) {
 	box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
 	color: #1f3b57;
 	font-weight: 600;
+}
+
+.social-listing-export-btn {
+	min-height: 44px;
+	padding: 0 18px;
+	border: 1px solid rgba(11, 70, 143, 0.14);
+	border-radius: 12px;
+	background: linear-gradient(135deg, #0b4fa2 0%, #163f7a 100%);
+	color: #ffffff;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	box-shadow: 0 12px 24px rgba(11, 79, 162, 0.16);
+	transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+	white-space: nowrap;
+}
+
+.social-listing-export-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 16px 28px rgba(11, 79, 162, 0.22);
+	filter: brightness(1.03);
+}
+
+.social-listing-export-btn:focus-visible {
+	outline: 3px solid rgba(59, 130, 246, 0.28);
+	outline-offset: 3px;
 }
 
 .social-listing-summary {
@@ -3777,10 +3895,25 @@ if (!document.getElementById('catListTooltip')) {
 				justify-content: center;
 				height: auto;
 			}
+			.formal-metrics-caption {
+				max-width: none;
+			}
 		}
 		@media (max-width: 767px) {
 			.st-title-listing-card { max-width: 100vw; }
 			.st-title-listing-table { min-width: 600px; font-size: 0.95em; }
+			.formal-metrics-block {
+				gap: 12px;
+			}
+			.formal-metrics-heading {
+				padding: 0;
+			}
+			.formal-metrics-title {
+				font-size: 1.05rem;
+			}
+			.formal-metrics-caption {
+				font-size: 0.84rem;
+			}
 			.small-cards-grid {
 				grid-template-columns: 1fr;
 				grid-template-rows: none;
@@ -3817,6 +3950,12 @@ if (!document.getElementById('catListTooltip')) {
 			.social-listing-control-search {
 				flex: 1 1 auto;
 				min-width: 0;
+			}
+			.social-listing-control-action {
+				width: 100%;
+			}
+			.social-listing-export-btn {
+				width: 100%;
 			}
 			.social-listing-summary {
 				grid-template-columns: 1fr;
@@ -4318,7 +4457,19 @@ if (!document.getElementById('catListTooltip')) {
 
 		const headers = window.fullListingHeaders || [];
 		const lower = h => (h || '').toString().toLowerCase();
-		const idxOngoing = headers.findIndex(h => lower(h).includes('ongoing'));
+		const normalizeStatusToken = value => String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+		const isActiveStatus = value => {
+			const status = normalizeStatusToken(value);
+			return status === 'ongoing' || status === 'on going' || status === 'active';
+		};
+		const isInactiveStatus = value => {
+			const status = normalizeStatusToken(value);
+			return status === 'dissolved' || status === 'inactive' || status === 'completed';
+		};
+		const idxOngoing = headers.findIndex(h => {
+			const lh = lower(h);
+			return lh.includes('ongoing') || lh === 'active';
+		});
 		const idxDissolved = headers.findIndex(h => {
 			const lh = lower(h);
 			return lh.includes('dissolved') || lh.includes('inactive');
@@ -4341,8 +4492,8 @@ if (!document.getElementById('catListTooltip')) {
 				const cell = row.row && row.row[idxDissolved];
 				if (hasStatusMark(cell)) st = 'dissolved';
 			}
-			if (st.includes('ongoing') || st === 'on going') return 'ongoing';
-			if (st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) return 'dissolved';
+			if (isActiveStatus(st)) return 'ongoing';
+			if (isInactiveStatus(st)) return 'dissolved';
 			return '';
 		}
 
@@ -4365,7 +4516,55 @@ if (!document.getElementById('catListTooltip')) {
 				return true;
 			});
 			window.filteredListingData = data.slice();
+			if (typeof window.refreshPhilippinesMapSelection === 'function') {
+				window.refreshPhilippinesMapSelection();
+			}
 			currentPage = 1;
+		}
+
+		function exportTitleListingRows() {
+			try {
+				const rows = Array.isArray(data) ? data : [];
+				const header = '"ST Title","Province","City/Municipality","Status","Year of MOA","Year of Resolution","With Expression of Interest","With MOA","With Resolution","Included AIP","With Replicated","With Adopted"';
+				const csvLines = [header];
+				rows.forEach(function(row) {
+					const resolvedStatus = deriveStatus(row);
+					const exportStatus = resolvedStatus === 'ongoing'
+						? 'Active'
+						: (resolvedStatus === 'dissolved' ? 'Inactive' : '');
+					const cols = [
+						row.title || '',
+						row.province || '',
+						row.municipality || '',
+						exportStatus,
+						row.year_of_moa || '',
+						row.year_of_resolution || '',
+						truthy(row.with_expr) ? 'Yes' : 'No',
+						truthy(row.with_moa) ? 'Yes' : 'No',
+						truthy(row.with_res) ? 'Yes' : 'No',
+						truthy(row.included_aip) ? 'Yes' : 'No',
+						truthy(row.with_replicated) ? 'Yes' : 'No',
+						truthy(row.with_adopted) ? 'Yes' : 'No'
+					];
+					csvLines.push(cols.map(function(value) {
+						return '"' + String(value).replace(/"/g, '""') + '"';
+					}).join(','));
+				});
+				const csv = csvLines.join('\r\n');
+				const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement('a');
+				link.href = url;
+				link.download = 'social_technologies_listing.csv';
+				document.body.appendChild(link);
+				link.click();
+				setTimeout(function() {
+					document.body.removeChild(link);
+					URL.revokeObjectURL(url);
+				}, 150);
+			} catch (error) {
+				console.error('title listing export failed', error);
+			}
 		}
 
 		function initTitleListingFilters() {
@@ -4395,6 +4594,10 @@ if (!document.getElementById('catListTooltip')) {
 					renderTable(currentPage);
 				});
 			}
+			const exportBtn = document.getElementById('title-listing-export-btn');
+			if (exportBtn) {
+				exportBtn.addEventListener('click', exportTitleListingRows);
+			}
 			applyFilters();
 			renderTable(currentPage);
 		}
@@ -4417,7 +4620,7 @@ if (!document.getElementById('catListTooltip')) {
 
 			let html = '<div class="social-listing-summary">';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Filtered Results</div><div class="social-listing-stat-value">' + data.length + '</div></div>';
-			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Ongoing</div><div class="social-listing-stat-value">' + filteredOngoing + '</div></div>';
+			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Active</div><div class="social-listing-stat-value">' + filteredOngoing + '</div></div>';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">Inactive</div><div class="social-listing-stat-value">' + filteredDissolved + '</div></div>';
 			html += '<div class="social-listing-stat"><div class="social-listing-stat-label">With Adoption / Replication</div><div class="social-listing-stat-value">' + Math.max(filteredReplicated, filteredAdopted) + '</div></div>';
 			html += '</div>';
@@ -4451,7 +4654,7 @@ if (!document.getElementById('catListTooltip')) {
 					let primaryLabel = '';
 					let statusClass = '';
 					if (stStatus === 'ongoing') {
-						primaryLabel = 'Ongoing';
+						primaryLabel = 'Active';
 						statusClass = 'social-listing-pill social-listing-pill-status-ongoing';
 					} else if (stStatus === 'dissolved') {
 						primaryLabel = 'Inactive';
@@ -4674,6 +4877,7 @@ window.allYears = @json($allYears ?? $years);
 			}
 			return null;
 		}
+		window.inferRegionCodeFromRegionText = inferRegionCodeFromRegionText;
 
 			function propagateFilters() {
 					var selRegions = $('#region-select-modal').val() || [];
@@ -4822,6 +5026,9 @@ $('#region-select-modal').on('change', function() {
 			if (selectedRegions.length === 0) {
 				resetGuestFilterCategories();
 				propagateFilters();
+				if (typeof window.refreshRegionalPanels === 'function') {
+					window.refreshRegionalPanels();
+				}
 				return;
 			}
 			var allRows = window.fullListingData || [];
@@ -4841,6 +5048,9 @@ $('#region-select-modal').on('change', function() {
 			rebuildFilterSelect('#municipality-select-modal', cities, []);
 			rebuildFilterSelect('#year-select-modal', years, []);
 			propagateFilters();
+			if (typeof window.refreshRegionalPanels === 'function') {
+				window.refreshRegionalPanels();
+			}
 		});
 
 		$('#province-select-modal').on('change', function() {
@@ -4852,6 +5062,9 @@ $('#region-select-modal').on('change', function() {
 			if (selectedRegions.length === 0 && selectedProvinces.length === 0) {
 				rebuildFilterSelect('#municipality-select-modal', window.allCities || [], []);
 				propagateFilters();
+				if (typeof window.refreshRegionalPanels === 'function') {
+					window.refreshRegionalPanels();
+				}
 				return;
 			}
 			var allRows = window.fullListingData || [];
@@ -4865,9 +5078,24 @@ $('#region-select-modal').on('change', function() {
 			});
 			cities = [...new Set(cities)];
 			rebuildFilterSelect('#municipality-select-modal', cities, []);
+			if (typeof window.refreshRegionalPanels === 'function') {
+				window.refreshRegionalPanels();
+			}
 		});
 
-		$('#year-select-modal').on('change', propagateFilters);
+		$('#municipality-select-modal').on('change', function() {
+			propagateFilters();
+			if (typeof window.refreshRegionalPanels === 'function') {
+				window.refreshRegionalPanels();
+			}
+		});
+
+		$('#year-select-modal').on('change', function() {
+			propagateFilters();
+			if (typeof window.refreshRegionalPanels === 'function') {
+				window.refreshRegionalPanels();
+			}
+		});
 
 		resetGuestFilterCategories();
 		propagateFilters();
@@ -5861,7 +6089,9 @@ $('#region-select-modal').on('change', function() {
 			const bodyEl = document.getElementById('st-summary-modal-body');
 			if (!modal || !titleEl || !bodyEl || !config || typeof config.filter !== 'function') return;
 
-			const sourceRows = window.filteredListingData || window.fullListingData || [];
+			const sourceRows = Array.isArray(config.sourceRows)
+				? config.sourceRows
+				: (window.filteredListingData || window.fullListingData || []);
 			const rows = sourceRows.filter(config.filter);
 			titleEl.textContent = config.title || 'ST Listing';
 
@@ -6102,9 +6332,58 @@ $('#region-select-modal').on('change', function() {
 			return s === 'true' || s === 'yes' || s === 'y';
 		};
 
+		const ensureDashboardStatusResolver = function() {
+			if (typeof window.resolveDashboardStatus === 'function') {
+				return window.resolveDashboardStatus;
+			}
+			const headers = window.fullListingHeaders || [];
+			const lower = function(value) {
+				return (value || '').toString().toLowerCase();
+			};
+			const idxOngoing = headers.findIndex(function(header) {
+				const normalized = lower(header);
+				return normalized.includes('ongoing') || normalized === 'active';
+			});
+			const idxDissolved = headers.findIndex(function(header) {
+				const normalized = lower(header);
+				return normalized.includes('dissolved') || normalized.includes('inactive');
+			});
+			const hasStatusMark = function(value) {
+				if (typeof value === 'boolean') return value;
+				if (value == null) return false;
+				const normalized = String(value).trim();
+				if (!normalized || normalized === '0') return false;
+				if (!isNaN(normalized)) return Number(normalized) !== 0;
+				return true;
+			};
+			window.resolveDashboardStatus = function(row) {
+				let status = (row && row.status ? String(row.status) : '').toLowerCase().trim();
+				if (!status && idxOngoing !== -1) {
+					const ongoingCell = row && row.row ? row.row[idxOngoing] : undefined;
+					if (hasStatusMark(ongoingCell)) {
+						status = 'ongoing';
+					}
+				}
+				if (!status && idxDissolved !== -1) {
+					const dissolvedCell = row && row.row ? row.row[idxDissolved] : undefined;
+					if (hasStatusMark(dissolvedCell)) {
+						status = 'dissolved';
+					}
+				}
+				if (status === 'on going' || status === 'active') return 'ongoing';
+				if (status === 'inactive' || status === 'completed') return 'dissolved';
+				return status;
+			};
+			return window.resolveDashboardStatus;
+		};
+
+		const getSummaryStatus = function(row) {
+			return ensureDashboardStatusResolver()(row);
+		};
+
 		const cardBindings = {
-			'card1': { title: 'Ongoing STs', filter: function(r) { return ((r.status||'').toString().toLowerCase().includes('ongoing')) || false; } },
-			'card2': { title: 'Inactive STs', filter: function(r) { const s=(r.status||'').toString().toLowerCase(); return s.includes('dissolved') || s.includes('inactive') || s.includes('completed'); } },
+			'card1': { title: 'Active STs', filter: function(r) { return getSummaryStatus(r) === 'ongoing'; } },
+			'card2': { title: 'Inactive STs', filter: function(r) { return getSummaryStatus(r) === 'dissolved'; } },
 			'card3': { title: 'Replicated STs', filter: function(r) { return parseFlag(r.with_replicated); } },
 			'card4': { title: 'Adopted STs', filter: function(r) { return parseFlag(r.with_adopted); } },
 		};
@@ -6308,7 +6587,12 @@ $('#region-select-modal').on('change', function() {
 		function initPhilippinesMapHover() {
 			const phMapObject = document.getElementById('philippines-map');
 			if (!phMapObject) return;
-			if (phMapObject.dataset.phRegionsBound === '1') return;
+			if (phMapObject.dataset.phRegionsBound === '1') {
+				if (typeof window.refreshPhilippinesMapSelection === 'function') {
+					window.refreshPhilippinesMapSelection();
+				}
+				return;
+			}
 			const mapWrapper = phMapObject.closest('.st-map-figure-wrapper');
 			const regionLabelEl = document.getElementById('map-region-label');
 			const svgDoc = phMapObject.contentDocument || (phMapObject.getSVGDocument && phMapObject.getSVGDocument());
@@ -6549,16 +6833,72 @@ $('#region-select-modal').on('change', function() {
 				}
 			}
 
-	
-			const dataForCounts = window.fullListingData || [];
-			const regionCounts = {};
-			if (Array.isArray(dataForCounts) && dataForCounts.length) {
-				dataForCounts.forEach(function(row) {
-					const rName = inferRegionCodeFromRow(row, provinceRegionIndex);
-					if (!rName) return;
-					regionCounts[rName] = (regionCounts[rName] || 0) + 1;
-				});
-			}
+
+				let regionCounts = {};
+				let activeLockedRegions = [];
+				let lockedProvinceNorms = [];
+
+				function getGuestMapSelections() {
+					return {
+						regions: ($('#region-select-modal').val() || []).map(function(region) {
+							return inferRegionCodeFromRegionText(region) || region;
+						}).filter(Boolean),
+						provinces: ($('#province-select-modal').val() || []).map(function(province) {
+							return province == null ? '' : String(province).trim();
+						}).filter(Boolean),
+						cities: ($('#municipality-select-modal').val() || []).map(function(city) {
+							return city == null ? '' : String(city).trim();
+						}).filter(Boolean),
+						years: ($('#year-select-modal').val() || []).map(function(year) {
+							return year == null ? '' : String(year).trim();
+						}).filter(Boolean)
+					};
+				}
+
+				function hasGuestMapSelections(selections) {
+					return !!(selections && (selections.regions.length || selections.provinces.length || selections.cities.length || selections.years.length));
+				}
+
+				function getActiveMapRows(selections) {
+					if (hasGuestMapSelections(selections) && typeof getRegionalPanelRows === 'function') {
+						return getRegionalPanelRows();
+					}
+					return window.filteredListingData || window.regionFilteredListingData || window.fullListingData || [];
+				}
+
+				function recalculateMapSelectionState() {
+					const selections = getGuestMapSelections();
+					const rows = getActiveMapRows(selections);
+					const nextRegionCounts = {};
+					const nextLockedRegions = new Set(selections.regions);
+					const nextLockedProvinceNorms = new Set(
+						selections.provinces.map(function(province) {
+							return normalizeProvinceName(province);
+						}).filter(Boolean)
+					);
+
+					if (Array.isArray(rows) && rows.length) {
+						rows.forEach(function(row) {
+							const rName = inferRegionCodeFromRow(row, provinceRegionIndex);
+							if (rName) {
+								nextRegionCounts[rName] = (nextRegionCounts[rName] || 0) + 1;
+								if (hasGuestMapSelections(selections)) {
+									nextLockedRegions.add(rName);
+								}
+							}
+							if (hasGuestMapSelections(selections) && row && row.province) {
+								const normalizedProvince = normalizeProvinceName(row.province);
+								if (normalizedProvince) {
+									nextLockedProvinceNorms.add(normalizedProvince);
+								}
+							}
+						});
+					}
+
+					regionCounts = nextRegionCounts;
+					activeLockedRegions = Array.from(nextLockedRegions);
+					lockedProvinceNorms = Array.from(nextLockedProvinceNorms);
+				}
 
 			const mapTooltip = (function() {
 				let el = document.getElementById('catListTooltip');
@@ -6628,10 +6968,7 @@ $('#region-select-modal').on('change', function() {
 
 			function clearMapHoverState() {
 				clearRegionBlinkTimers();
-				highlightGroup(pathInfos[0] || { regionName: null }, false);
-				if (regionLabelEl) {
-					regionLabelEl.textContent = 'Hover a region on the map';
-				}
+				applyLockedMapSelection();
 				hideMapTooltip();
 			}
 
@@ -6647,13 +6984,17 @@ $('#region-select-modal').on('change', function() {
 			}
 
 			function setActiveRegionRow(regionCode) {
+				const activeCodes = Array.isArray(regionCode)
+					? regionCode.filter(Boolean)
+					: (regionCode ? [regionCode] : []);
 				Object.keys(regionRows).forEach(function(code) {
-					regionRows[code].classList.toggle('is-active', !!regionCode && code === regionCode);
+					regionRows[code].classList.toggle('is-active', activeCodes.includes(code));
 				});
 			}
 
 			const regionListEl = document.getElementById('map-region-list');
-			if (regionListEl) {
+			function renderRegionList() {
+				if (!regionListEl) return;
 				const orderedRegions = [
 					'NCR',
 					'Region I',
@@ -6672,10 +7013,15 @@ $('#region-select-modal').on('change', function() {
 					'Region XII',
 					'CARAGA'
 				];
+				Object.keys(regionRows).forEach(function(code) {
+					delete regionRows[code];
+				});
 				let html = '<div class="st-map-region-list-title">Regions (ST title count)</div>';
 				orderedRegions.forEach(function(code) {
 					if (!regionLabels[code]) return;
+					if (activeLockedRegions.length && !activeLockedRegions.includes(code)) return;
 					const count = regionCounts[code] || 0;
+					if (!count && activeLockedRegions.length) return;
 					const color = regionColors[code] || '#cbd5e1';
 					html += '<div class="st-map-region-row" data-region="' + code + '">';
 					html += '<div class="st-map-region-row-main">';
@@ -6709,7 +7055,7 @@ $('#region-select-modal').on('change', function() {
 						if (isVisible) {
 							highlightGroup(info, true, { color: '#dff8f4', stroke: '#0b2540' });
 						} else {
-							highlightGroup(info, false);
+							applyLockedMapSelection();
 						}
 					}, 650);
 				}
@@ -6721,7 +7067,7 @@ $('#region-select-modal').on('change', function() {
 					}
 					const info = getRegionRepresentativeInfo(regionCode);
 					if (info) {
-						highlightGroup(info, false);
+						applyLockedMapSelection();
 					}
 				}
 				const listRows = regionListEl.querySelectorAll('.st-map-region-row');
@@ -6743,9 +7089,6 @@ $('#region-select-modal').on('change', function() {
 					});
 					row.addEventListener('mouseleave', function() {
 						stopRegionBlink(code);
-						if (regionLabelEl) {
-							regionLabelEl.textContent = 'Hover a region on the map';
-						}
 						hideMapTooltip();
 					});
 					row.addEventListener('click', function() {
@@ -6759,6 +7102,62 @@ $('#region-select-modal').on('change', function() {
 					});
 				});
 			}
+
+			function applyLockedMapSelection() {
+				const hasSpecificProvinceLock = lockedProvinceNorms.length > 0;
+				if (!activeLockedRegions.length && !hasSpecificProvinceLock) {
+					highlightGroup(pathInfos[0] || { regionName: null }, false);
+					if (regionLabelEl) {
+						regionLabelEl.textContent = 'Hover a region on the map';
+					}
+					return;
+				}
+
+				pathInfos.forEach(function(info) {
+					info.path.style.fill = info.originalFill;
+					info.path.style.stroke = info.originalStroke;
+					info.path.style.strokeWidth = '0.8';
+					info.path.style.opacity = '0.22';
+					info.path.style.filter = 'saturate(0.75) brightness(1.02)';
+				});
+
+				pathInfos.forEach(function(info) {
+					const normalizedProvince = normalizeProvinceName(info.path.getAttribute('title') || '');
+					const matchesProvince = hasSpecificProvinceLock && normalizedProvince && lockedProvinceNorms.includes(normalizedProvince);
+					const matchesRegion = !hasSpecificProvinceLock && info.regionName && activeLockedRegions.includes(info.regionName);
+					if (!matchesProvince && !matchesRegion) {
+						return;
+					}
+					if (svgRoot && info.path.parentNode === svgRoot) {
+						svgRoot.appendChild(info.path);
+					}
+					info.path.style.fill = '#dff8f4';
+					info.path.style.stroke = '#0b2540';
+					info.path.style.strokeWidth = '2.4';
+					info.path.style.opacity = '1';
+					info.path.style.filter = 'drop-shadow(0 0 10px rgba(16, 174, 181, 0.38)) brightness(1.08) saturate(1.18)';
+				});
+
+				setActiveRegionRow(activeLockedRegions);
+				if (regionLabelEl) {
+					if (activeLockedRegions.length === 1 && regionLabels[activeLockedRegions[0]]) {
+						regionLabelEl.textContent = regionLabels[activeLockedRegions[0]];
+					} else if (activeLockedRegions.length > 1) {
+						regionLabelEl.textContent = activeLockedRegions.length + ' filtered regions';
+					} else {
+						regionLabelEl.textContent = 'Filtered map selection';
+					}
+				}
+			}
+
+			recalculateMapSelectionState();
+			renderRegionList();
+			applyLockedMapSelection();
+			window.refreshPhilippinesMapSelection = function() {
+				recalculateMapSelectionState();
+				renderRegionList();
+				applyLockedMapSelection();
+			};
 
 			function highlightGroup(targetInfo, isHover, options) {
 				const regionName = targetInfo.regionName;
@@ -6856,6 +7255,7 @@ $('#region-select-modal').on('change', function() {
 				}
 				return null;
 			}
+			window.inferRegionCodeFromRegionText = inferRegionCodeFromRegionText;
 
 			function inferRegionCodeFromRow(row, provinceRegionIndex) {
 				if (!row) return null;
@@ -7122,60 +7522,58 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 }
 
 	window.onload = function() {
-	let yearStats = window.initialYearStats || {};
-	console.log('server yearStats', yearStats);
-	if (!yearStats || Object.keys(yearStats).length === 0) {
-		const allData = window.fullListingData || [];
-		console.log('fullListingData sample', allData.slice(0,20));
-		const headers = window.fullListingHeaders || [];
-		const lower = h => (h || '').toString().toLowerCase();
-		const idxOngoing = headers.findIndex(h => lower(h).includes('ongoing'));
-		const idxDissolved = headers.findIndex(h => {
-			const lh = lower(h);
-			return lh.includes('dissolved') || lh.includes('inactive');
-		});
-		console.log('status column indexes', idxOngoing, idxDissolved, headers);
-		const hasStatusMark = v => {
-			if (typeof v === 'boolean') return v;
-			if (v == null) return false;
-			const s = String(v).trim();
-			if (!s || s === '0') return false;
-			if (!isNaN(s)) return Number(s) !== 0;
-			return true;
-		};
+	const allData = window.fullListingData || [];
+	const headers = window.fullListingHeaders || [];
+	const lower = h => (h || '').toString().toLowerCase();
+	const normalizeStatusToken = value => String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+	let ongoingTrendChart = null;
+	let years = [];
+	let totalCounts = [];
+	let ongoingCounts = [];
+	let dissolvedCounts = [];
+	const isActiveStatus = value => {
+		const status = normalizeStatusToken(value);
+		return status === 'ongoing' || status === 'on going' || status === 'active';
+	};
+	const isInactiveStatus = value => {
+		const status = normalizeStatusToken(value);
+		return status === 'dissolved' || status === 'inactive' || status === 'completed';
+	};
+	const idxOngoing = headers.findIndex(h => {
+		const lh = lower(h);
+		return lh.includes('ongoing') || lh === 'active';
+	});
+	const idxDissolved = headers.findIndex(h => {
+		const lh = lower(h);
+		return lh.includes('dissolved') || lh.includes('inactive');
+	});
+	const chartHasStatusMark = v => {
+		if (typeof v === 'boolean') return v;
+		if (v == null) return false;
+		const s = String(v).trim();
+		if (!s || s === '0') return false;
+		if (!isNaN(s)) return Number(s) !== 0;
+		return true;
+	};
 
-		yearStats = {};
-		allData.forEach(r => {
-			const yr = r.year_of_moa || 'Unknown';
-			if (!yearStats[yr]) {
-				yearStats[yr] = { total: 0, ongoing: 0, dissolved: 0 };
+	window.resolveDashboardStatus = function(row) {
+		let status = (row && row.status ? String(row.status) : '').toLowerCase();
+		if (!status && idxOngoing !== -1) {
+			const ongoingCell = row && row.row ? row.row[idxOngoing] : undefined;
+			if (chartHasStatusMark(ongoingCell)) {
+				status = 'ongoing';
 			}
-			yearStats[yr].total++;
-			let st = (r.status || '').toString().toLowerCase();
-			if (!st && idxOngoing !== -1) {
-				const cell = r.row && r.row[idxOngoing];
-				if (hasStatusMark(cell)) {
-					st = 'ongoing';
-				}
+		}
+		if (!status && idxDissolved !== -1) {
+			const dissolvedCell = row && row.row ? row.row[idxDissolved] : undefined;
+			if (chartHasStatusMark(dissolvedCell)) {
+				status = 'dissolved';
 			}
-			if (!st && idxDissolved !== -1) {
-				const cell = r.row && r.row[idxDissolved];
-				if (hasStatusMark(cell)) {
-					st = 'dissolved';
-				}
-			}
-			if (st.includes('ongoing') || st === 'on going') {
-				yearStats[yr].ongoing++;
-			} else if (st.includes('dissolved') || st.includes('inactive') || st.includes('completed')) {
-				yearStats[yr].dissolved++;
-			}
-		});
-		console.log('computed yearStats', yearStats);
-	}
-    const years = Object.keys(yearStats).sort();
-    const totalCounts = years.map(y => yearStats[y].total);
-    const ongoingCounts = years.map(y => yearStats[y].ongoing);
-    const dissolvedCounts = years.map(y => yearStats[y].dissolved);
+		}
+		if (isActiveStatus(status)) return 'ongoing';
+		if (isInactiveStatus(status)) return 'dissolved';
+		return '';
+	};
 
 	const peakYearEl = document.getElementById('yearSummaryPeakYear');
 	const peakCountEl = document.getElementById('yearSummaryPeakCount');
@@ -7183,28 +7581,71 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	const latestYearEl = document.getElementById('yearSummaryLatestYear');
 	const latestCountEl = document.getElementById('yearSummaryLatestCount');
 	const spanEl = document.getElementById('yearSummarySpan');
-	if (years.length > 0) {
-		const peakCount = Math.max(...totalCounts);
-		const peakIndex = totalCounts.indexOf(peakCount);
-		const peakYear = years[peakIndex];
-		const numericYears = years.filter(year => /^\d{4}$/.test(String(year)));
-		const latestYear = numericYears.length > 0 ? numericYears[numericYears.length - 1] : years[years.length - 1];
-		const latestCount = yearStats[latestYear] ? yearStats[latestYear].total : totalCounts[totalCounts.length - 1];
-		const averageCount = totalCounts.reduce((sum, count) => sum + count, 0) / totalCounts.length;
-		const firstYearSource = numericYears.length > 0 ? numericYears[0] : years[0];
-		const firstYearNumeric = Number(firstYearSource);
-		const latestYearNumeric = Number(latestYear);
-		const spanText = Number.isFinite(firstYearNumeric) && Number.isFinite(latestYearNumeric)
-			? ((latestYearNumeric - firstYearNumeric) + 1) + ' years'
-			: years.length + ' years';
 
-		if (peakYearEl) peakYearEl.textContent = peakYear;
-		if (peakCountEl) peakCountEl.textContent = peakCount + ' recorded MOAs';
-		if (averageEl) averageEl.textContent = averageCount.toFixed(1);
-		if (latestYearEl) latestYearEl.textContent = latestYear;
-		if (latestCountEl) latestCountEl.textContent = latestCount + ' recorded MOAs';
-		if (spanEl) spanEl.textContent = spanText;
+	function syncYearTrendRows(rows) {
+		const yearStats = {};
+		const yearStatusRows = { ongoing: {}, dissolved: {} };
+		(rows || []).forEach(function(row) {
+			const yr = row && row.year_of_moa ? String(row.year_of_moa).trim() : 'Unknown';
+			if (!yearStats[yr]) {
+				yearStats[yr] = { total: 0, ongoing: 0, dissolved: 0 };
+			}
+			yearStats[yr].total++;
+			const resolvedStatus = window.resolveDashboardStatus(row);
+			if (resolvedStatus === 'ongoing') {
+				yearStats[yr].ongoing++;
+				(yearStatusRows.ongoing[yr] = yearStatusRows.ongoing[yr] || []).push(row);
+			} else if (resolvedStatus === 'dissolved') {
+				yearStats[yr].dissolved++;
+				(yearStatusRows.dissolved[yr] = yearStatusRows.dissolved[yr] || []).push(row);
+			}
+		});
+
+		window.dashboardYearStatusRows = yearStatusRows;
+		years = Object.keys(yearStats).sort();
+		totalCounts = years.map(function(year) { return yearStats[year].total; });
+		ongoingCounts = years.map(function(year) { return yearStats[year].ongoing; });
+		dissolvedCounts = years.map(function(year) { return yearStats[year].dissolved; });
+
+		if (years.length > 0) {
+			const peakCount = Math.max.apply(null, totalCounts);
+			const peakIndex = totalCounts.indexOf(peakCount);
+			const peakYear = years[peakIndex];
+			const numericYears = years.filter(function(year) { return /^\d{4}$/.test(String(year)); });
+			const latestYear = numericYears.length > 0 ? numericYears[numericYears.length - 1] : years[years.length - 1];
+			const latestCount = yearStats[latestYear] ? yearStats[latestYear].total : totalCounts[totalCounts.length - 1];
+			const averageCount = totalCounts.reduce(function(sum, count) { return sum + count; }, 0) / totalCounts.length;
+			const firstYearSource = numericYears.length > 0 ? numericYears[0] : years[0];
+			const firstYearNumeric = Number(firstYearSource);
+			const latestYearNumeric = Number(latestYear);
+			const spanText = Number.isFinite(firstYearNumeric) && Number.isFinite(latestYearNumeric)
+				? ((latestYearNumeric - firstYearNumeric) + 1) + ' years'
+				: years.length + ' years';
+
+			if (peakYearEl) peakYearEl.textContent = peakYear;
+			if (peakCountEl) peakCountEl.textContent = peakCount + ' recorded MOAs';
+			if (averageEl) averageEl.textContent = averageCount.toFixed(1);
+			if (latestYearEl) latestYearEl.textContent = latestYear;
+			if (latestCountEl) latestCountEl.textContent = latestCount + ' recorded MOAs';
+			if (spanEl) spanEl.textContent = spanText;
+		} else {
+			if (peakYearEl) peakYearEl.textContent = '-';
+			if (peakCountEl) peakCountEl.textContent = '0 recorded MOAs';
+			if (averageEl) averageEl.textContent = '0.0';
+			if (latestYearEl) latestYearEl.textContent = '-';
+			if (latestCountEl) latestCountEl.textContent = '0 recorded MOAs';
+			if (spanEl) spanEl.textContent = '0 years';
+		}
+
+		if (ongoingTrendChart) {
+			ongoingTrendChart.data.labels = years;
+			ongoingTrendChart.data.datasets[0].data = ongoingCounts;
+			ongoingTrendChart.data.datasets[1].data = dissolvedCounts;
+			ongoingTrendChart.update();
+		}
 	}
+
+	syncYearTrendRows(typeof getRegionalPanelRows === 'function' ? getRegionalPanelRows() : allData);
 
 	const totalOngoing = ongoingCounts.reduce((a,b)=>a+b, 0);
 	const totalDissolved = dissolvedCounts.reduce((a,b)=>a+b, 0);
@@ -7213,8 +7654,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
     const card3 = document.getElementById('card3');
     const card4 = document.getElementById('card4');
 
-    const server = window.serverTotals || {};
-    const allData = window.fullListingData || [];
+	const server = window.serverTotals || {};
     const truthy = v => (typeof v === 'boolean') ? v : (String(v||'').toLowerCase().trim() === 'true');
     const totalReplicated = (typeof server.totalReplicated === 'number') ? server.totalReplicated :
             allData.reduce((a,r)=> a + (truthy(r.with_replicated) ? 1 : 0), 0);
@@ -7247,7 +7687,7 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		if (totalOngoing === totalDissolved) {
 			ongoingLeadEl.textContent = 'Operational status is evenly split between active and dissolved records.';
 		} else if (totalOngoing > totalDissolved) {
-			ongoingLeadEl.textContent = 'Ongoing STs lead by ' + (totalOngoing - totalDissolved) + ' records.';
+			ongoingLeadEl.textContent = 'Active STs lead by ' + (totalOngoing - totalDissolved) + ' records.';
 		} else {
 			ongoingLeadEl.textContent = 'Inactive STs lead by ' + (totalDissolved - totalOngoing) + ' records.';
 		}
@@ -7268,17 +7708,21 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 	}
 
 	bindSummaryCard(card1, {
-		title: 'Ongoing STs',
+		title: 'Active STs',
 		filter: function(row) {
-			const status = String(row.status || '').toLowerCase();
-			return status.includes('ongoing') || status === 'on going';
+			const status = typeof window.resolveDashboardStatus === 'function'
+				? window.resolveDashboardStatus(row)
+				: String(row.status || '').toLowerCase();
+			return isActiveStatus(status);
 		}
 	});
 	bindSummaryCard(card2, {
 		title: 'Inactive STs',
 		filter: function(row) {
-			const status = String(row.status || '').toLowerCase();
-			return status.includes('dissolved') || status.includes('inactive') || status.includes('completed');
+			const status = typeof window.resolveDashboardStatus === 'function'
+				? window.resolveDashboardStatus(row)
+				: String(row.status || '').toLowerCase();
+			return isInactiveStatus(status);
 		}
 	});
 	bindSummaryCard(card3, {
@@ -7294,35 +7738,13 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		}
 	});
 
-	const centerTextPlugin = {
-		id: 'centerText',
-		afterDraw(chart, args, pluginOptions) {
-			const { ctx, chartArea: { left, right, top, bottom } } = chart;
-			const text = pluginOptions && pluginOptions.text ? pluginOptions.text : '';
-			if (!text) return;
-			ctx.save();
-			const x = (left + right) / 2;
-			const y = (top + bottom) / 2;
-			ctx.font = (pluginOptions.font && pluginOptions.font.size ? pluginOptions.font.size : 32) + 'px ' + (pluginOptions.font && pluginOptions.font.family ? pluginOptions.font.family : 'sans-serif');
-			ctx.fillStyle = pluginOptions.color || '#06306e';
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'middle';
-			ctx.fillText(text, x, y);
-			ctx.restore();
-		}
-	};
-
-	if (window.Chart && Chart.register) {
-		Chart.register(centerTextPlugin);
-	}
-
 	const ongoingDoughnutCanvas = document.getElementById('ongoingDoughnut');
 	if (ongoingDoughnutCanvas && ongoingDoughnutCanvas.getContext) {
 		const doughnutCtx = ongoingDoughnutCanvas.getContext('2d');
 		new Chart(doughnutCtx, {
 			type: 'doughnut',
 			data: {
-				labels: ['Ongoing STs', 'Inactive STs'],
+				labels: ['Active STs', 'Inactive STs'],
 				datasets: [{
 					data: [totalOngoing, totalDissolved],
 					backgroundColor: [
@@ -7355,11 +7777,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 								return `${context.label}: ${value} (${pct}%)`;
 							}
 						}
-					},
-					centerText: {
-						text: ongoingPercent + '%',
-						color: '#06306e',
-						font: { size: 30, family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 					}
 				}
 			}
@@ -7428,86 +7845,17 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 								return `${context.label}: ${value} (${pct}%)`;
 							}
 						}
-					},
-					centerText: {
-						text: replicatedPercent + '%',
-						color: '#06306e',
-						font: { size: 30, family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 					}
 				}
 			}
 		});
 	}
-
-	const overallTotalsData = [
-		{ label: 'Expression of Interest', color: '#2dd4bf', value: allData.reduce((count, row) => count + (truthy(row.with_expr) ? 1 : 0), 0) },
-		{ label: 'SB Resolution', color: '#38bdf8', value: allData.reduce((count, row) => count + (truthy(row.with_res) ? 1 : 0), 0) },
-		{ label: 'Memorandum of Agreement', color: '#818cf8', value: allData.reduce((count, row) => count + (truthy(row.with_moa) ? 1 : 0), 0) },
-		{ label: 'Ongoing STs', color: '#34d399', value: totalOngoing },
-		{ label: 'Inactive STs', color: '#fb7185', value: totalDissolved },
-		{ label: 'Replicated STs', color: '#f472b6', value: totalReplicated },
-		{ label: 'Adopted STs', color: '#fbbf24', value: totalAdopted }
-	];
 
 	const documentCoverageCanvas = document.getElementById('documentCoverageChart');
-	if (documentCoverageCanvas && documentCoverageCanvas.getContext) {
-		const docCtx = documentCoverageCanvas.getContext('2d');
-		new Chart(docCtx, {
-			type: 'bar',
-			data: {
-				labels: overallTotalsData.map(item => item.label),
-				datasets: [{
-					data: overallTotalsData.map(item => item.value),
-					backgroundColor: overallTotalsData.map(item => item.color),
-					borderRadius: 12,
-					maxBarThickness: 56
-				}]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				indexAxis: 'y',
-				plugins: {
-					legend: { display: false },
-					tooltip: {
-						callbacks: {
-							label(context) {
-								return context.label + ': ' + context.parsed.x + ' records';
-							}
-						}
-					}
-				},
-				scales: {
-					x: {
-						beginAtZero: true,
-						ticks: {
-							color: '#64748b',
-							font: { size: 11, weight: '600' },
-						},
-						grid: { color: 'rgba(148, 163, 184, 0.18)' }
-					},
-					y: {
-						ticks: {
-							color: '#50657a',
-							font: { size: 11, weight: '600' }
-						},
-						grid: { display: false }
-					}
-				}
-			}
-		});
-	}
 
 	const docLeaderEl = document.getElementById('docCoverageLeader');
 	const docLowestEl = document.getElementById('docCoverageLowest');
-	const sortedMilestones = overallTotalsData.slice().sort((left, right) => right.value - left.value);
-	if (docLeaderEl && sortedMilestones.length) {
-		docLeaderEl.textContent = sortedMilestones[0].label + ' (' + sortedMilestones[0].value + ')';
-	}
-	if (docLowestEl && sortedMilestones.length) {
-		const lowest = sortedMilestones[sortedMilestones.length - 1];
-		docLowestEl.textContent = lowest.label + ' (' + lowest.value + ')';
-	}
+	let documentCoverageChart = null;
 
 	function renderRankingList(elementId, items, noun) {
 		const container = document.getElementById(elementId);
@@ -7528,11 +7876,14 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		}).join(''));
 	}
 
-	function buildTopCounts(fieldName) {
+	function buildTopCounts(fieldName, rows) {
 		const counts = {};
-		allData.forEach(row => {
+		(rows || []).forEach(row => {
 			const rawValue = row[fieldName];
-			const value = (rawValue == null ? '' : String(rawValue)).trim();
+			const normalizedValue = fieldName === 'region'
+				? ((window.inferRegionCodeFromRegionText ? window.inferRegionCodeFromRegionText(rawValue) : null) || rawValue)
+				: rawValue;
+			const value = (normalizedValue == null ? '' : String(normalizedValue)).trim();
 			if (!value || value.toLowerCase() === 'unknown') return;
 			counts[value] = (counts[value] || 0) + 1;
 		});
@@ -7546,9 +7897,6 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 				share: total > 0 ? ((count / total) * 100).toFixed(1) : '0.0'
 			}));
 	}
-
-	renderRankingList('topRegionsList', buildTopCounts('region'), 'regional');
-	renderRankingList('topProvincesList', buildTopCounts('province'), 'provincial');
 
 	function makeLineConfig(label, dataArray, color) {
 		return {
@@ -7571,14 +7919,28 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		};
 	}
 
+	function openYearStatusSummary(yearLabel, statusKey, statusLabel) {
+		if (!window.openStSummaryModal) return;
+		const buckets = window.dashboardYearStatusRows || {};
+		const normalizedYear = yearLabel == null ? '' : String(yearLabel).trim();
+		const sourceRows = (buckets[statusKey] && buckets[statusKey][normalizedYear]) || [];
+		window.openStSummaryModal({
+			title: statusLabel + ' - ' + normalizedYear,
+			sourceRows: sourceRows,
+			filter: function(row) {
+				return !!row;
+			}
+		});
+	}
+
 	const ongoingCtx = document.getElementById('onGoing').getContext('2d');
-	new Chart(ongoingCtx, {
+	ongoingTrendChart = new Chart(ongoingCtx, {
 		type: 'line',
 		data: {
 			labels: years,
 			datasets: [
 				{
-					label: 'Ongoing STs',
+					label: 'Active STs',
 					data: ongoingCounts,
 					borderColor: 'rgb(75, 192, 192)',
 					backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -7598,116 +7960,362 @@ if (typeof showReplicateConfirmPopover !== 'function') {
 		options: {
 			responsive: true,
 			maintainAspectRatio: false,
+			onClick: function(evt, elements) {
+				if (!elements || !elements.length) return;
+				const point = elements[0];
+				const chartYears = this.data && Array.isArray(this.data.labels) ? this.data.labels : [];
+				const yearLabel = chartYears[point.index];
+				const dataset = this.data && this.data.datasets ? this.data.datasets[point.datasetIndex] : null;
+				if (!dataset || !yearLabel) return;
+				const statusLabel = String(dataset.label || '').trim();
+				const statusKey = /inactive/i.test(statusLabel) ? 'dissolved' : 'ongoing';
+				openYearStatusSummary(yearLabel, statusKey, statusLabel);
+			},
 			scales: { y: { beginAtZero: true } }
 		}
 	});
+	if (ongoingTrendChart && ongoingTrendChart.canvas) {
+		ongoingTrendChart.canvas.style.cursor = 'pointer';
+	}
 
 	const regionYearCanvas = document.getElementById('regionYearLines');
-	if (regionYearCanvas && regionYearCanvas.getContext) {
-		const regionYearCtx = regionYearCanvas.getContext('2d');
-		const allDataForRegions = window.fullListingData || [];
-		const regionYearMap = {};
-		allDataForRegions.forEach(function(row) {
-			const regionRaw = (row.region || '').toString().trim();
-			const year = (row.year_of_moa || '').toString().trim();
-			if (!regionRaw || !year) return;
-			if (!regionYearMap[regionRaw]) {
-				regionYearMap[regionRaw] = {};
-			}
-			if (!regionYearMap[regionRaw][year]) {
-				regionYearMap[regionRaw][year] = 0;
-			}
-			regionYearMap[regionRaw][year]++;
-		});
-		const regionNames = Object.keys(regionYearMap).sort();
-		const matrixData = [];
-		let maxVal = 0;
-		regionNames.forEach(function(region) {
-			const yearMap = regionYearMap[region] || {};
-			years.forEach(function(y) {
-				const v = yearMap[y] || 0;
-				if (v > 0) {
-					matrixData.push({ x: y, y: region, v: v });
-					if (v > maxVal) maxVal = v;
-				}
-			});
-		});
-		if (matrixData.length && maxVal === 0) {
-			maxVal = 1;
+	let regionYearChart = null;
+	let regionYearMaxVal = 0;
+	let regionYearLabels = [];
+	let regionYearNames = [];
+	const dashboardHeaders = window.fullListingHeaders || [];
+	const dashboardHeaderLower = h => (h || '').toString().toLowerCase();
+	const normalizeRegionalPanelStatus = value => String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+	const isRegionalPanelActiveStatus = value => {
+		const status = normalizeRegionalPanelStatus(value);
+		return status === 'ongoing' || status === 'on going' || status === 'active';
+	};
+	const isRegionalPanelInactiveStatus = value => {
+		const status = normalizeRegionalPanelStatus(value);
+		return status === 'dissolved' || status === 'inactive' || status === 'completed';
+	};
+	const dashboardOngoingIndex = dashboardHeaders.findIndex(h => {
+		const lowerHeader = dashboardHeaderLower(h);
+		return lowerHeader.includes('ongoing') || lowerHeader === 'active';
+	});
+	const dashboardDissolvedIndex = dashboardHeaders.findIndex(h => {
+		const lowerHeader = dashboardHeaderLower(h);
+		return lowerHeader.includes('dissolved') || lowerHeader.includes('inactive');
+	});
+
+	function dashboardTruthy(value) {
+		if (typeof value === 'boolean') return value;
+		if (typeof value === 'number') return value !== 0;
+		const text = String(value || '').toLowerCase().trim();
+		if (!text) return false;
+		if (text === '0' || text === 'false' || text === 'no') return false;
+		return true;
+	}
+
+	function hasStatusMark(value) {
+		if (typeof value === 'boolean') return value;
+		if (value == null) return false;
+		const text = String(value).trim();
+		if (!text || text === '0') return false;
+		if (!isNaN(text)) return Number(text) !== 0;
+		return true;
+	}
+
+	function normalizeStatusCount(value) {
+		if (typeof value === 'number' && Number.isFinite(value)) {
+			return Math.max(0, Math.trunc(value));
 		}
-		new Chart(regionYearCtx, {
-			type: 'matrix',
-			data: {
-				datasets: [{
-					label: 'STs by Region and Year',
-					data: matrixData,
-					backgroundColor: function(context) {
-						const value = context && context.raw && typeof context.raw.v !== 'undefined' ? context.raw.v : 0;
-						if (!maxVal) {
-							return 'rgba(33, 150, 243, 0)';
-						}
-						const ratio = Math.min(1, value / maxVal);
-						const alpha = 0.15 + 0.75 * ratio;
-						return `rgba(33, 150, 243, ${alpha})`;
+		const text = String(value == null ? '' : value).trim();
+		if (text === '') return 0;
+		if (!isNaN(text)) return Math.max(0, parseInt(text, 10) || 0);
+		return dashboardTruthy(text) ? 1 : 0;
+	}
+
+	function getRegionalPanelComparableRegionValues(regionText) {
+		const raw = regionText == null ? '' : String(regionText).trim();
+		if (!raw) return [];
+		const normalized = window.inferRegionCodeFromRegionText ? window.inferRegionCodeFromRegionText(raw) : null;
+		const values = [raw];
+		if (normalized && !values.includes(normalized)) {
+			values.push(normalized);
+		}
+		return values;
+	}
+
+	function rowMatchesRegionalPanelRegions(row, selectedRegions) {
+		if (!selectedRegions.length) return true;
+		const rowRegionValues = getRegionalPanelComparableRegionValues(row && row.region ? row.region : '');
+		return selectedRegions.some(function(selectedRegion) {
+			return rowRegionValues.includes(selectedRegion);
+		});
+	}
+
+	function getRegionalPanelRows() {
+		const selectedRegions = ($('#region-select-modal').val() || []).map(function(region) {
+			return (window.inferRegionCodeFromRegionText ? window.inferRegionCodeFromRegionText(region) : null) || region;
+		}).filter(Boolean);
+		const selectedProvinces = ($('#province-select-modal').val() || []).map(function(province) {
+			return province == null ? '' : String(province).trim();
+		}).filter(Boolean);
+		const selectedMunicipalities = ($('#municipality-select-modal').val() || []).map(function(municipality) {
+			return municipality == null ? '' : String(municipality).trim();
+		}).filter(Boolean);
+		const selectedYears = ($('#year-select-modal').val() || []).map(function(year) {
+			return year == null ? '' : String(year).trim();
+		}).filter(Boolean);
+		const allRows = window.fullListingData || [];
+
+		return allRows.filter(function(row) {
+			const province = row && row.province != null ? String(row.province).trim() : '';
+			const municipality = row && row.municipality != null ? String(row.municipality).trim() : '';
+			const year = row && row.year_of_moa != null ? String(row.year_of_moa).trim() : '';
+			if (!rowMatchesRegionalPanelRegions(row, selectedRegions)) return false;
+			if (selectedProvinces.length && !selectedProvinces.includes(province)) return false;
+			if (selectedMunicipalities.length && !selectedMunicipalities.includes(municipality)) return false;
+			if (selectedYears.length && !selectedYears.includes(year)) return false;
+			return true;
+		});
+	}
+
+	function getRegionalPanelStatusTotals(rows) {
+		return (rows || []).reduce(function(totals, row) {
+			let ongoing = 0;
+			let dissolved = 0;
+			if (dashboardOngoingIndex !== -1 && row && row.row && typeof row.row[dashboardOngoingIndex] !== 'undefined') {
+				ongoing = normalizeStatusCount(row.row[dashboardOngoingIndex]);
+			}
+			if (dashboardDissolvedIndex !== -1 && row && row.row && typeof row.row[dashboardDissolvedIndex] !== 'undefined') {
+				dissolved = normalizeStatusCount(row.row[dashboardDissolvedIndex]);
+			}
+			if (ongoing === 0 && dissolved === 0) {
+				const status = String(row && row.status ? row.status : '').toLowerCase();
+				if (isRegionalPanelActiveStatus(status)) {
+					ongoing = 1;
+				} else if (isRegionalPanelInactiveStatus(status)) {
+					dissolved = 1;
+				}
+			}
+			totals.ongoing += ongoing;
+			totals.dissolved += dissolved;
+			return totals;
+		}, { ongoing: 0, dissolved: 0 });
+	}
+
+	function getRegionalOverallTotals(rows) {
+		const statusTotals = getRegionalPanelStatusTotals(rows);
+		return [
+			{ label: 'Expression of Interest', color: '#2dd4bf', value: rows.reduce((count, row) => count + (dashboardTruthy(row.with_expr) ? 1 : 0), 0) },
+			{ label: 'SB Resolution', color: '#38bdf8', value: rows.reduce((count, row) => count + (dashboardTruthy(row.with_res) ? 1 : 0), 0) },
+			{ label: 'Memorandum of Agreement', color: '#818cf8', value: rows.reduce((count, row) => count + (dashboardTruthy(row.with_moa) ? 1 : 0), 0) },
+			{ label: 'Active STs', color: '#34d399', value: statusTotals.ongoing },
+			{ label: 'Inactive STs', color: '#fb7185', value: statusTotals.dissolved },
+			{ label: 'Replicated STs', color: '#f472b6', value: rows.reduce((count, row) => count + (dashboardTruthy(row.with_replicated) ? 1 : 0), 0) },
+			{ label: 'Adopted STs', color: '#fbbf24', value: rows.reduce((count, row) => count + (dashboardTruthy(row.with_adopted) ? 1 : 0), 0) }
+		];
+	}
+
+	function updateDocumentCoveragePanel(rows) {
+		const overallTotalsData = getRegionalOverallTotals(rows);
+		if (documentCoverageCanvas && documentCoverageCanvas.getContext) {
+			if (!documentCoverageChart) {
+				const docCtx = documentCoverageCanvas.getContext('2d');
+				documentCoverageChart = new Chart(docCtx, {
+					type: 'bar',
+					data: {
+						labels: overallTotalsData.map(item => item.label),
+						datasets: [{
+							data: overallTotalsData.map(item => item.value),
+							backgroundColor: overallTotalsData.map(item => item.color),
+							borderRadius: 12,
+							maxBarThickness: 56
+						}]
 					},
-					borderColor: 'rgba(255,255,255,0.8)',
-					borderWidth: 1,
-					width: function(context) {
-						const chart = context.chart;
-						const a = chart.chartArea;
-						if (!a) {
-							return 0;
-						}
-						return (a.right - a.left) / years.length - 2;
-					},
-					height: function(context) {
-						const chart = context.chart;
-						const a = chart.chartArea;
-						if (!a) {
-							return 0;
-						}
-						return (a.bottom - a.top) / Math.max(1, regionNames.length) - 2;
-					}
-				}]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				plugins: {
-					legend: { display: false },
-					tooltip: {
-						callbacks: {
-							title: function(items) {
-								if (!items || !items.length) return '';
-								const raw = items[0].raw || {};
-								return `${raw.y} – ${raw.x}`;
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						indexAxis: 'y',
+						plugins: {
+							legend: { display: false },
+							tooltip: {
+								callbacks: {
+									label(context) {
+										return context.label + ': ' + context.parsed.x + ' records';
+									}
+								}
+							}
+						},
+						scales: {
+							x: {
+								beginAtZero: true,
+								ticks: {
+									color: '#64748b',
+									font: { size: 11, weight: '600' },
+								},
+								grid: { color: 'rgba(148, 163, 184, 0.18)' }
 							},
-							label: function(context) {
-								const raw = context.raw || {};
-								return `${raw.v || 0} STs`;
+							y: {
+								ticks: {
+									color: '#50657a',
+									font: { size: 11, weight: '600' }
+								},
+								grid: { display: false }
 							}
 						}
 					}
+				});
+			} else {
+				documentCoverageChart.data.labels = overallTotalsData.map(item => item.label);
+				documentCoverageChart.data.datasets[0].data = overallTotalsData.map(item => item.value);
+				documentCoverageChart.data.datasets[0].backgroundColor = overallTotalsData.map(item => item.color);
+				documentCoverageChart.update();
+			}
+		}
+
+		const sortedMilestones = overallTotalsData.slice().sort((left, right) => right.value - left.value);
+		if (docLeaderEl) {
+			docLeaderEl.textContent = sortedMilestones.length ? (sortedMilestones[0].label + ' (' + sortedMilestones[0].value + ')') : '-';
+		}
+		if (docLowestEl) {
+			if (sortedMilestones.length) {
+				const lowest = sortedMilestones[sortedMilestones.length - 1];
+				docLowestEl.textContent = lowest.label + ' (' + lowest.value + ')';
+			} else {
+				docLowestEl.textContent = '-';
+			}
+		}
+	}
+
+	function updateRegionYearHeatmap(rows) {
+		if (!(regionYearCanvas && regionYearCanvas.getContext)) return;
+		const selectedYears = ($('#year-select-modal').val() || []).map(function(year) {
+			return year == null ? '' : String(year).trim();
+		}).filter(Boolean);
+		const heatmapYears = selectedYears.length
+			? selectedYears
+			: (window.allYears || years || []).map(function(year) {
+				return year == null ? '' : String(year).trim();
+			}).filter(Boolean);
+		const regionYearMap = {};
+		(rows || []).forEach(function(row) {
+			const regionRaw = (row.region || '').toString().trim();
+			const regionName = (window.inferRegionCodeFromRegionText ? window.inferRegionCodeFromRegionText(regionRaw) : null) || regionRaw;
+			const year = (row.year_of_moa || '').toString().trim();
+			if (!regionName || !year) return;
+			if (!regionYearMap[regionName]) {
+				regionYearMap[regionName] = {};
+			}
+			regionYearMap[regionName][year] = (regionYearMap[regionName][year] || 0) + 1;
+		});
+
+		regionYearNames = Object.keys(regionYearMap).sort();
+		regionYearLabels = heatmapYears;
+		const matrixData = [];
+		regionYearMaxVal = 0;
+		regionYearNames.forEach(function(region) {
+			const yearMap = regionYearMap[region] || {};
+			regionYearLabels.forEach(function(year) {
+				const value = yearMap[year] || 0;
+				if (value > 0) {
+					matrixData.push({ x: year, y: region, v: value });
+					if (value > regionYearMaxVal) regionYearMaxVal = value;
+				}
+			});
+		});
+		if (matrixData.length && regionYearMaxVal === 0) {
+			regionYearMaxVal = 1;
+		}
+
+		if (!regionYearChart) {
+			const regionYearCtx = regionYearCanvas.getContext('2d');
+			regionYearChart = new Chart(regionYearCtx, {
+				type: 'matrix',
+				data: {
+					datasets: [{
+						label: 'STs by Region and Year',
+						data: matrixData,
+						backgroundColor: function(context) {
+							const value = context && context.raw && typeof context.raw.v !== 'undefined' ? context.raw.v : 0;
+							if (!regionYearMaxVal) {
+								return 'rgba(33, 150, 243, 0)';
+							}
+							const ratio = Math.min(1, value / regionYearMaxVal);
+							const alpha = 0.15 + 0.75 * ratio;
+							return `rgba(33, 150, 243, ${alpha})`;
+						},
+						borderColor: 'rgba(255,255,255,0.8)',
+						borderWidth: 1,
+						width: function(context) {
+							const chart = context.chart;
+							const area = chart.chartArea;
+							if (!area) return 0;
+							return (area.right - area.left) / Math.max(1, regionYearLabels.length) - 2;
+						},
+						height: function(context) {
+							const chart = context.chart;
+							const area = chart.chartArea;
+							if (!area) return 0;
+							return (area.bottom - area.top) / Math.max(1, regionYearNames.length) - 2;
+						}
+					}]
 				},
-				scales: {
-					x: {
-						type: 'category',
-						labels: years,
-						offset: true,
-						title: { display: true, text: 'Year of MOA' },
-						grid: { display: false }
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { display: false },
+						tooltip: {
+							callbacks: {
+								title: function(items) {
+									if (!items || !items.length) return '';
+									const raw = items[0].raw || {};
+									return `${raw.y} – ${raw.x}`;
+								},
+								label: function(context) {
+									const raw = context.raw || {};
+									return `${raw.v || 0} STs`;
+								}
+							}
+						}
 					},
-					y: {
-						type: 'category',
-						labels: regionNames,
-						offset: true,
-						reverse: true,
-						title: { display: true, text: 'Region' }
+					scales: {
+						x: {
+							type: 'category',
+							labels: regionYearLabels,
+							offset: true,
+							title: { display: true, text: 'Year of MOA' },
+							grid: { display: false }
+						},
+						y: {
+							type: 'category',
+							labels: regionYearNames,
+							offset: true,
+							reverse: true,
+							title: { display: true, text: 'Region' }
+						}
 					}
 				}
-			}
-		});
+			});
+		} else {
+			regionYearChart.data.datasets[0].data = matrixData;
+			regionYearChart.options.scales.x.labels = regionYearLabels;
+			regionYearChart.options.scales.y.labels = regionYearNames;
+			regionYearChart.update();
+		}
 	}
+
+	window.refreshRegionalPanels = function() {
+		const filteredRows = getRegionalPanelRows();
+		syncYearTrendRows(filteredRows);
+		updateDocumentCoveragePanel(filteredRows);
+		renderRankingList('topRegionsList', buildTopCounts('region', filteredRows), 'regional');
+		renderRankingList('topProvincesList', buildTopCounts('province', filteredRows), 'provincial');
+		updateRegionYearHeatmap(filteredRows);
+		if (typeof window.refreshPhilippinesMapSelection === 'function') {
+			window.refreshPhilippinesMapSelection();
+		}
+	};
+
+	window.refreshRegionalPanels();
 
 	};
         
