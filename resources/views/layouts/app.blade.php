@@ -565,7 +565,6 @@
         }
 
         body {
-            background: url('{{ request()->isSecure() ? secure_asset('images/dattachments/STBIP cover white.png') : asset('images/dattachments/STBIP cover white.png') }}') no-repeat center center fixed;
             background-size: cover;
             background-attachment: fixed;
         }
@@ -1765,7 +1764,6 @@
             } catch (e) {
             }
 
-            var bgUrl = '{{ request()->isSecure() ? secure_asset('images/dattachments/STBIP cover white.png') : asset('images/dattachments/STBIP cover white.png') }}';
             var img = new window.Image();
             img.src = bgUrl;
 
@@ -2016,6 +2014,9 @@
             padding: 2.2rem 1rem 1rem 1rem;
             transition: left 0.3s;
             overflow-y: auto;
+        }
+        body.modal-open .stb-sidebar {
+            z-index: 1020 !important;
         }
         @media (max-width: 900px) {
             .stb-sidebar {

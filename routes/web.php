@@ -5,6 +5,7 @@ use App\Http\Controllers\TableController;
 use App\Http\Controllers\UserApprovalController;
 use App\Http\Controllers\ExcelController;
 use App\Http\Controllers\MainReportController;
+use App\Http\Controllers\MainVersion1Controller;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\StsMoaListingwithUploadingController;
 use App\Http\Controllers\StsAttachmentController;
@@ -19,11 +20,14 @@ use App\Http\Controllers\GalleryCardController;
 
 // Home / Login entry (dashboard front page) — render `dashboard.main` but reuse MainReportController data
 Route::get('/', function () {
-    $controller = app(\App\Http\Controllers\MainReportController::class);
-    $view = $controller->index(request());
-    return view('dashboard.main', $view->getData());
+    return app(MainVersion1Controller::class)->index(request());
 })->name('landing')->middleware('guest');
 
+Route::get('/old', function(){
+    $controller = app(MainReportController::class);
+    $view = $controller->index(request());
+    return view('dashboard.main', $view->getData());
+});
 
 
 // Profile (authenticated users)
@@ -50,11 +54,7 @@ Route::post('/otp/resend', [UserController::class, 'resendOtp'])->name('otp.rese
 // ==================== DASHBOARD ROUTES ====================
 
 // Main dashboard page (dashboard front page)
-Route::get('/main', function () {
-    $controller = app(\App\Http\Controllers\MainReportController::class);
-    $view = $controller->index(request());
-    return view('dashboard.main', $view->getData());
-})->name('main');
+Route::get('/main', [MainVersion1Controller::class, 'index'])->name('main');
 Route::get('/stbmain', function () {
     $controller = app(\App\Http\Controllers\MainReportController::class);
     $view = $controller->index(request());
