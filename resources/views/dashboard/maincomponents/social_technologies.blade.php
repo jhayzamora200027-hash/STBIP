@@ -48,6 +48,7 @@
                 <div class="st-field">
                     <label for="csv-file">Or upload CSV / Excel</label>
                     <input id="csv-file" type="file" name="csv_file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+                    <small style="color:#607588;">Use the exported file as your upload template. It includes the <strong>Operational Status</strong> column.</small>
                 </div>
                 <div style="display:flex; gap:12px; align-items:center;">
                     <button class="st-btn st-btn-primary" type="submit">Upload and Import</button>
@@ -89,16 +90,20 @@
         <div style="overflow:auto">
             <table class="st-table">
                 <thead>
-                    <tr><th>ID</th><th>Social Technology</th><th>Created By</th><th>Updated At</th><th>Actions</th></tr>
+                    <tr><th>ID</th><th>Social Technology</th><th>Operational Status</th><th>Created By</th><th>Updated At</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     @forelse($titles as $t)
                         <tr>
                             <td>{{ $t->id }}</td>
                             <td>{{ $t->social_technology }}</td>
+                            <td>{{ $t->operational_status ?: 'Operational' }}</td>
                             <td>{{ $t->createdby ?: '-' }}</td>
                             <td>{{ $t->updated_at?->format('M d, Y h:i A') ?: '-' }}</td>
                             <td style="display:flex; gap:6px;">
+                                <button class="st-btn operational-toggle" type="button" data-id="{{ $t->id }}" data-action="toggle-operational" data-social_technology="{{ $t->social_technology }}" data-operational_status="{{ $t->operational_status ?: 'Operational' }}" aria-pressed="{{ ($t->operational_status ?: 'Operational') === 'Operational' ? 'true' : 'false' }}" style="background:{{ ($t->operational_status ?: 'Operational') === 'Operational' ? '#dcfce7' : '#f1f5f9' }}; border:1px solid {{ ($t->operational_status ?: 'Operational') === 'Operational' ? '#86efac' : '#cbd5e1' }};">
+                                    {{ ($t->operational_status ?: 'Operational') === 'Operational' ? 'Operational' : 'Not Operational' }}
+                                </button>
                                 <button class="st-btn edit-title" type="button" data-id="{{ $t->id }}" data-social_technology="{{ $t->social_technology }}" data-action="edit"
                                     data-sector="{{ $t->sector }}"
                                     data-laws_and_issuances="{{ $t->laws_and_issuances }}"
@@ -108,6 +113,7 @@
                                     data-pilot_areas="{{ $t->pilot_areas }}"
                                     data-year_implemented="{{ $t->year_implemented }}"
                                     data-status_remarks="{{ $t->status_remarks }}"
+                                    data-operational_status="{{ $t->operational_status }}"
                                     data-resolution="{{ $t->resolution }}"
                                     data-guidelines="{{ $t->guidelines }}"
                                     data-program_manual_outline="{{ $t->program_manual_outline }}"
@@ -119,7 +125,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">No titles yet.</td></tr>
+                        <tr><td colspan="6">No titles yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -160,6 +166,13 @@
 
                 <label>Status / Remarks</label>
                 <textarea id="edit-status-remarks-input" rows="2" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%"></textarea>
+
+                <label>Operational Status</label>
+                <select id="edit-operational-status-input" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%">
+                    <option value="">Not specified</option>
+                    <option value="Operational">Operational</option>
+                    <option value="Not Operational">Not Operational</option>
+                </select>
 
                 <label>Resolution</label>
                 <textarea id="edit-resolution-input" rows="2" style="padding:8px; border:1px solid #e6eef7; border-radius:8px; width:100%"></textarea>
@@ -254,6 +267,7 @@
             document.getElementById('edit-pilot-areas-input').value = btn.getAttribute('data-pilot_areas') || '';
             document.getElementById('edit-year-implemented-input').value = btn.getAttribute('data-year_implemented') || '';
             document.getElementById('edit-status-remarks-input').value = btn.getAttribute('data-status_remarks') || '';
+            document.getElementById('edit-operational-status-input').value = btn.getAttribute('data-operational_status') || '';
             document.getElementById('edit-resolution-input').value = btn.getAttribute('data-resolution') || '';
             document.getElementById('edit-guidelines-input').value = btn.getAttribute('data-guidelines') || '';
             document.getElementById('edit-program-manual-outline-input').value = btn.getAttribute('data-program_manual_outline') || '';
@@ -277,7 +291,46 @@
         document.querySelectorAll('button[data-id]').forEach(btn => {
             const action = btn.getAttribute('data-action');
             const id = btn.getAttribute('data-id');
-            if (action === 'delete') {
+            if (action === 'toggle-operational') {
+                btn.addEventListener('click', async () => {
+                    const wasOperational = btn.getAttribute('data-operational_status') === 'Operational';
+                    const nextStatus = wasOperational ? 'Not Operational' : 'Operational';
+                    btn.disabled = true;
+                    try {
+                        const res = await fetch(`/social-technologies/${id}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                social_technology: btn.getAttribute('data-social_technology') || '',
+                                operational_status: nextStatus
+                            })
+                        });
+                        if (!res.ok) {
+                            throw new Error('Toggle failed');
+                        }
+
+                        const row = btn.closest('tr');
+                        if (row) row.querySelectorAll('td')[2].textContent = nextStatus;
+                        btn.setAttribute('data-operational_status', nextStatus);
+                        btn.setAttribute('aria-pressed', nextStatus === 'Operational' ? 'true' : 'false');
+                        btn.textContent = nextStatus;
+                        btn.style.background = nextStatus === 'Operational' ? '#dcfce7' : '#f1f5f9';
+                        btn.style.borderColor = nextStatus === 'Operational' ? '#86efac' : '#cbd5e1';
+                        showToast(`Operational status set to ${nextStatus}.`, 'success');
+                        showInlineStatus(`Operational status set to ${nextStatus}.`, 'success');
+                    } catch (err) {
+                        showToast('Operational status update failed.', 'error');
+                        showInlineStatus('Operational status update failed.', 'error');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            } else if (action === 'delete') {
                 btn.addEventListener('click', async () => {
                     if (!confirm('Delete this title?')) return;
                     const rowForDelete = btn.closest('tr');
@@ -335,6 +388,7 @@
                 pilot_areas: document.getElementById('edit-pilot-areas-input').value.trim(),
                 year_implemented: document.getElementById('edit-year-implemented-input').value.trim() || null,
                 status_remarks: document.getElementById('edit-status-remarks-input').value.trim(),
+                operational_status: document.getElementById('edit-operational-status-input').value,
                 resolution: document.getElementById('edit-resolution-input').value.trim(),
                 guidelines: document.getElementById('edit-guidelines-input').value.trim(),
                 program_manual_outline: document.getElementById('edit-program-manual-outline-input').value.trim(),
@@ -370,6 +424,7 @@
                         editBtn.setAttribute('data-pilot_areas', payload.pilot_areas || '');
                         editBtn.setAttribute('data-year_implemented', payload.year_implemented ?? '');
                         editBtn.setAttribute('data-status_remarks', payload.status_remarks || '');
+                        editBtn.setAttribute('data-operational_status', payload.operational_status || '');
                         editBtn.setAttribute('data-resolution', payload.resolution || '');
                         editBtn.setAttribute('data-guidelines', payload.guidelines || '');
                         editBtn.setAttribute('data-program_manual_outline', payload.program_manual_outline || '');

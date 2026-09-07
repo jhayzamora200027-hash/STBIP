@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
         <style>
+            :root {
+                --stb-sidebar-offset: 320px;
+            }
             .stb-navbar-title {
                 transition: all 0.2s;
             }
             .stb-nav-avatar {
                 width: 30px;
                 height: 30px;
-                border-radius: 10px;
+                border-radius: 10px;                                        
                 object-fit: cover;
                 border: 1px solid rgba(255,255,255,0.28);
                 box-shadow: 0 6px 12px rgba(0,0,0,0.14);
@@ -51,10 +54,13 @@
             }
             @media (min-width: 901px) {
                 .stb-navbar-title {
-                    margin-left: 300px !important;
+                    margin-left: var(--stb-sidebar-offset) !important;
                 }
             }
             @media (max-width: 900px) {
+                :root {
+                    --stb-sidebar-offset: 0px;
+                }
                 .stb-navbar-title {
                     margin-left: 0 !important;
                 }
@@ -235,12 +241,12 @@
         })();
     </script>
     <script>
-        // Defensive: ensure dashboard content is left-aligned and sidebar hidden on narrower laptop screens
+        // Keep the sidebar available until the mobile breakpoint.
         (function(){
             function adjustForSmall(){
                 try {
                     var w = window.innerWidth || document.documentElement.clientWidth;
-                    if (w <= 1440) {
+                    if (w <= 900) {
                         document.body.classList.remove('sidebar-open');
                         document.documentElement.style.overflowX = 'hidden';
                         document.body.style.overflowX = 'hidden';
@@ -253,7 +259,7 @@
                             main.style.maxWidth = '100%';
                             main.style.boxSizing = 'border-box';
                         }
-                        var container = document.querySelector('.st-dashboard-container');
+                        var container = document.querySelector('.dashboard-layout');
                         if (container) {
                             container.style.marginLeft = '0';
                             container.style.left = 'auto';
@@ -263,7 +269,7 @@
                             container.style.boxSizing = 'border-box';
                         }
                         var sidebar = document.querySelector('.stb-sidebar');
-                        if (sidebar) { sidebar.style.display = 'none'; }
+                        if (sidebar) { sidebar.style.display = ''; }
                     } else {
                         var sidebar = document.querySelector('.stb-sidebar');
                         if (sidebar) sidebar.style.display = '';
@@ -1598,7 +1604,7 @@
     </style>
 </head>
 
-<body>
+<body class="{{ Auth::check() ? 'authenticated-layout' : 'guest-layout' }}">
     <div class="modal fade" id="securityErrorModal" tabindex="-1" aria-labelledby="securityErrorModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius:16px; overflow:hidden; border:1px solid rgba(220,38,38,0.18); box-shadow:0 16px 44px rgba(15,23,42,0.22);">
@@ -1764,14 +1770,19 @@
             } catch (e) {
             }
 
-            var img = new window.Image();
-            img.src = bgUrl;
-
-            if (typeof showLoader === 'function') showLoader();
-
             var bgReady = false;
             var cssReady = false;
             var maxTotalWaitMs = 8000;
+            var backgroundImage = document.body ? getComputedStyle(document.body).backgroundImage : 'none';
+            var bgMatch = backgroundImage.match(/url\(["']?([^"')]+)["']?\)/);
+            var img = new window.Image();
+            if (bgMatch && bgMatch[1]) {
+                img.src = bgMatch[1];
+            } else {
+                bgReady = true;
+            }
+
+            if (typeof showLoader === 'function') showLoader();
 
             function markPreloaded() {
                 try {
@@ -2015,6 +2026,93 @@
             transition: left 0.3s;
             overflow-y: auto;
         }
+        .stb-sidebar-toggle {
+            align-self: flex-end;
+            width: 34px;
+            height: 34px;
+            margin: -0.8rem -0.35rem 0.8rem 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .stb-sidebar-toggle:hover {
+            background: #e0e7ff;
+        }
+        body.sidebar-compact .stb-sidebar {
+            width: 76px;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        body.sidebar-compact {
+            --stb-sidebar-offset: 96px;
+        }
+        body.sidebar-compact .stb-main-content {
+            margin-left: var(--stb-sidebar-offset) !important;
+            width: calc(100% - var(--stb-sidebar-offset)) !important;
+            max-width: calc(100% - var(--stb-sidebar-offset)) !important;
+        }
+        body.sidebar-compact .sidebar-logo {
+            width: 42px;
+            height: 42px;
+            object-fit: cover;
+            object-position: left;
+            margin: 0 auto 1.2rem;
+        }
+        body.sidebar-compact .stb-sidebar .nav-link {
+            justify-content: center;
+            padding-left: 0.6rem;
+            padding-right: 0.6rem;
+            gap: 0;
+        }
+        body.sidebar-compact .stb-sidebar .nav-link .sidebar-link-label,
+        body.sidebar-compact #sidebarRedirectLabel {
+            display: none;
+        }
+        body.sidebar-compact .stb-sidebar .nav-link i {
+            margin-right: 0 !important;
+            font-size: 1.35rem;
+        }
+        body.sidebar-compact .stb-sidebar-toggle {
+            align-self: center;
+            margin-right: 0;
+        }
+        body.sidebar-compact .stb-sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+        @media (max-width: 900px) {
+            .stb-sidebar-toggle {
+                display: none;
+            }
+            body.sidebar-compact .stb-sidebar {
+                width: 300px;
+                padding: 2.2rem 1rem 1rem 1rem;
+            }
+            body.sidebar-compact .stb-main-content {
+                --stb-sidebar-offset: 0px;
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            body.sidebar-compact .stb-sidebar .nav-link {
+                justify-content: flex-start;
+                padding-left: 1rem;
+                padding-right: 1rem;
+                gap: 0.7em;
+            }
+            body.sidebar-compact .stb-sidebar .nav-link .sidebar-link-label,
+            body.sidebar-compact #sidebarRedirectLabel {
+                display: inline;
+            }
+            body.sidebar-compact .stb-sidebar .nav-link i {
+                margin-right: 0.5rem !important;
+                font-size: 1.2em;
+            }
+        }
         body.modal-open .stb-sidebar {
             z-index: 1020 !important;
         }
@@ -2042,35 +2140,26 @@
                 z-index: 1039;
             }
         }
-        /* Hide sidebar by default on medium/smaller laptops to avoid pushing content off-screen */
-        @media (max-width: 1366px) {
-            .stb-sidebar { left: -320px; }
-            body.sidebar-open .stb-sidebar { left: 0; }
-            .stb-main-content { margin-left: 0 !important; }
-        }
-        @media (max-width: 1280px) {
-            .stb-sidebar { left: -320px; }
-            body.sidebar-open .stb-sidebar { left: 0; }
-            .stb-main-content { margin-left: 0 !important; }
-        }
         @media (max-width: 1440px) {
-            /* Aggressive safety: ensure main content is not offset on smaller laptop screens */
-            .stb-main-content, .container.stb-main-content { margin-left: 0 !important; padding-left: 12px !important; padding-right: 12px !important; width: 100% !important; max-width: 100% !important; }
-            .st-dashboard-container { margin-left: 0 !important; transform: none !important; left: auto !important; }
+            .dashboard-layout { margin-left: 0 !important; transform: none !important; left: auto !important; }
             /* Hide decorative frames that sometimes cause horizontal overflow */
-            .ph-frame::before, .st-center-outer::before, .st-dashboard-container::before, .stb-site-footer::before { display: none !important; content: none !important; }
-            /* Keep sidebar visually hidden until explicitly opened */
-            .stb-sidebar { left: -360px !important; display: none !important; }
-            body.sidebar-open .stb-sidebar { display: block !important; left: 0 !important; }
+            .ph-frame::before, .st-center-outer::before, .dashboard-layout::before, .stb-site-footer::before { display: none !important; content: none !important; }
             html, body { overflow-x: hidden !important; }
-        }
-        .stb-main-content {
-            margin-left: 320px;
-            transition: margin 0.2s;
         }
         @media (max-width: 900px) {
             .stb-main-content {
                 margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+        @media (min-width: 901px) {
+            .authenticated-layout .stb-main-content {
+                margin-left: 320px;
+                width: calc(100% - 320px);
+                max-width: calc(100% - 320px);
+                box-sizing: border-box;
+                transition: margin 0.2s;
             }
         }
     </style>
@@ -2084,6 +2173,26 @@
         });
         document.addEventListener('DOMContentLoaded', function(){
             try {
+                var sidebar = document.getElementById('stbSidebar');
+                var toggle = document.getElementById('sidebarCompactToggle');
+                var compactKey = 'stbSidebarCompact';
+                var setCompactState = function(compact) {
+                    document.body.classList.toggle('sidebar-compact', compact);
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', compact ? 'false' : 'true');
+                        toggle.setAttribute('aria-label', compact ? 'Expand sidebar' : 'Collapse sidebar');
+                        toggle.setAttribute('title', compact ? 'Expand sidebar' : 'Collapse sidebar');
+                    }
+                };
+                if (sidebar && toggle) {
+                    var savedCompact = window.localStorage && localStorage.getItem(compactKey) === 'true';
+                    setCompactState(savedCompact);
+                    toggle.addEventListener('click', function() {
+                        var compact = !document.body.classList.contains('sidebar-compact');
+                        setCompactState(compact);
+                        try { localStorage.setItem(compactKey, compact ? 'true' : 'false'); } catch(e) {}
+                    });
+                }
                 var label = document.getElementById('sidebarRedirectLabel');
                 var btn = document.getElementById('sidebarRedirectSetter');
                 var current = (window.localStorage && localStorage.getItem('stbGlobalRedirect')) || '/';
@@ -2117,15 +2226,18 @@
     </script>
 @auth
     <div class="stb-sidebar" id="stbSidebar" style="z-index: 1040;">
+        <button type="button" class="stb-sidebar-toggle" id="sidebarCompactToggle" aria-expanded="true" aria-label="Collapse sidebar" title="Collapse sidebar">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        </button>
         <img src="{{ asset('images/dattachments/social technology bureau innovating solution logo.png') }}" alt="STB Innovating Solution Logo" class="sidebar-logo">
         <nav class="nav flex-column w-100">
-            <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
+            <a class="nav-link {{ request()->routeIs('main') ? 'active' : '' }}" href="{{ route('main') }}" title="Dashboard"><i class="bi bi-house-door me-2"></i><span class="sidebar-link-label">Dashboard</span></a>
             @if(Auth::check() && in_array(Auth::user()->usergroup, ['user', 'admin', 'sysadmin']))
-            <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}"><i class="bi bi-database-gear me-2"></i>Master Data</a>
-            <a class="nav-link {{ request()->routeIs('sttitles.all') ? 'active' : '' }}" href="{{ route('sttitles.all') }}"><i class="bi bi-journal-text me-2"></i>Inventory for Social Technologies</a>
+            <a class="nav-link {{ request()->routeIs('masterdata.*') ? 'active' : '' }}" href="{{ route('masterdata.index') }}" title="Master Data"><i class="bi bi-database-gear me-2"></i><span class="sidebar-link-label">Master Data</span></a>
+            <a class="nav-link {{ request()->routeIs('sttitles.all') ? 'active' : '' }}" href="{{ route('sttitles.all') }}" title="Inventory for Social Technologies"><i class="bi bi-journal-text me-2"></i><span class="sidebar-link-label">Inventory for Social Technologies</span></a>
             @endif
             @if(Auth::check() && Auth::user()->usergroup === 'sysadmin')
-            <a id="sidebarRedirectSetter" class="nav-link" href="#" title="Set global page redirect"><i class="bi bi-link-45deg me-2"></i>Page Redirect <span id="sidebarRedirectLabel" style="font-weight:600; float:right; color:#2563eb; font-size:0.86rem;">/</span></a>
+            <a id="sidebarRedirectSetter" class="nav-link" href="#" title="Set global page redirect"><i class="bi bi-link-45deg me-2"></i><span class="sidebar-link-label">Page Redirect</span> <span id="sidebarRedirectLabel" style="font-weight:600; float:right; color:#2563eb; font-size:0.86rem;">/</span></a>
             @endif
         </nav>
         <style>

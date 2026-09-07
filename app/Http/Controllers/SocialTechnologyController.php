@@ -36,6 +36,7 @@ class SocialTechnologyController extends Controller
             foreach ([
                 'sector', 'laws_and_issuances', 'social_technology', 'description', 'objectives', 'components',
                 'pilot_areas', 'year_implemented', 'status_remarks', 'resolution', 'guidelines',
+                'operational_status',
                 'program_manual_outline', 'information_systems_developed', 'session_guide_key_topics',
                 'training_manual_outline', 'createdby', 'updatedby',
             ] as $field) {
@@ -161,6 +162,9 @@ class SocialTechnologyController extends Controller
                 'pilot_areas' => 'pilot_areas',
                 'year_implemented' => 'year_implemented',
                 'status_remarks' => 'status_remarks',
+                'operational_status' => 'operational_status',
+                'operational' => 'operational_status',
+                'is_operational' => 'operational_status',
                 'resolution' => 'resolution',
                 'guidelines' => 'guidelines',
                 'program_manual_outline' => 'program_manual_outline',
@@ -192,6 +196,10 @@ class SocialTechnologyController extends Controller
                 $rowData = [];
                 foreach ($fieldMap as $colIdx => $fieldName) {
                     $rowData[$fieldName] = isset($row[$colIdx]) ? trim((string) $row[$colIdx]) : '';
+                }
+
+                if (!array_key_exists('operational_status', $rowData) || trim((string) $rowData['operational_status']) === '') {
+                    $rowData['operational_status'] = 'Operational';
                 }
 
                 $violation = InputValueGuard::findFirstViolation($rowData);
@@ -293,6 +301,7 @@ class SocialTechnologyController extends Controller
             if ($exists) continue;
             $created = SocialTechnologyTitle::create([
                 'social_technology' => $title,
+                    'operational_status' => 'Operational',
                 'createdby' => Auth::check() ? Auth::user()->name : null,
                 'updatedby' => Auth::check() ? Auth::user()->name : null,
             ]);
@@ -334,6 +343,7 @@ class SocialTechnologyController extends Controller
             'Pilot Areas',
             'Year Implemented',
             'Status Remarks',
+            'Operational Status',
             'Resolution',
             'Guidelines',
             'Program Manual Outline',
@@ -353,6 +363,7 @@ class SocialTechnologyController extends Controller
                 $t->pilot_areas ?? '',
                 $t->year_implemented ?? '',
                 $t->status_remarks ?? '',
+                $t->operational_status ?? '',
                 $t->resolution ?? '',
                 $t->guidelines ?? '',
                 $t->program_manual_outline ?? '',
@@ -393,6 +404,7 @@ class SocialTechnologyController extends Controller
             'pilot_areas' => ['nullable', 'string', 'max:1000', new NoMarkup()],
             'year_implemented' => ['nullable', 'regex:/^\d{4}(?:\s*-\s*\d{4})?$/'],
             'status_remarks' => ['nullable', 'string', 'max:2000', new NoMarkup()],
+            'operational_status' => ['nullable', 'in:Operational,Not Operational'],
             'resolution' => ['nullable', 'string', 'max:2000', new NoMarkup()],
             'guidelines' => ['nullable', 'string', 'max:2000', new NoMarkup()],
             'program_manual_outline' => ['nullable', 'string', 'max:5000', new NoMarkup()],
@@ -434,6 +446,7 @@ class SocialTechnologyController extends Controller
             'pilot_areas',
             'year_implemented',
             'status_remarks',
+            'operational_status',
             'resolution',
             'guidelines',
             'program_manual_outline',

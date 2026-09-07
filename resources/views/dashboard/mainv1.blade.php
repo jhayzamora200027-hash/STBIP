@@ -26,11 +26,11 @@
     @auth
     .stb-main-content {
         box-sizing: border-box;
-        margin-left: 320px !important;
-        max-width: calc(100% - 320px) !important;
+        margin-left: var(--stb-sidebar-offset, 320px) !important;
+        max-width: calc(100% - var(--stb-sidebar-offset, 320px)) !important;
         padding-right: 1.5rem !important;
         padding-left: 1.5rem !important;
-        width: calc(100% - 320px) !important;
+        width: calc(100% - var(--stb-sidebar-offset, 320px)) !important;
     }
 
     @media (max-width: 900px) {
@@ -59,7 +59,7 @@
 
     .mainv1-row {
         display: grid !important;
-        grid-template-columns: minmax(450px, 0.85fr) minmax(600px, 1.15fr);
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
         align-items: start;
         justify-content: start;
         gap: clamp(1.5rem, 2.5vw, 3rem);
@@ -94,6 +94,8 @@
 
     .mainv1-row > :last-child {
         margin-left: 0;
+        width: 100%;
+        min-width: 0;
     }
 
     .mainv1-logo {
@@ -579,7 +581,7 @@
         align-items: flex-start;
         width: max-content;
         gap: 1.15rem;
-        animation: mainv1-gallery-scroll 70s linear infinite;
+        animation: mainv1-gallery-scroll 350s linear infinite;
     }
 
     .mainv1-category-track:hover .mainv1-gallery-marquee,
@@ -700,7 +702,9 @@
         font-size: 0.75rem;
         line-height: 1.35;
         max-height: 92px;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding-right: 0.25rem;
     }
 
     .mainv1-gallery-popover {
@@ -803,16 +807,16 @@
 
     .mainv1-region-modal.is-open {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
     }
 
     .mainv1-region-dialog {
         position: relative;
         width: min(1440px, 100%);
-        height: min(900px, calc(100vh - 1.5rem));
-        max-height: calc(100vh - 1.5rem);
-        overflow: hidden;
+        height: auto;
+        max-height: none;
+        overflow: visible;
         border: 1px solid #dbe6ed;
         border-radius: 12px;
         background: #fff;
@@ -846,14 +850,51 @@
         font-size: 1.25rem;
     }
 
+    .mainv1-replication-settings {
+        display: flex;
+        align-items: end;
+        gap: 0.55rem;
+        margin-top: 0.7rem;
+        max-width: 760px;
+    }
+
+    .mainv1-replication-settings label {
+        display: grid;
+        flex: 1 1 auto;
+        gap: 0.25rem;
+        color: #49627d;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+
+    .mainv1-replication-settings input {
+        min-height: 34px;
+        padding: 0.4rem 0.55rem;
+        border: 1px solid #bccbd4;
+        border-radius: 4px;
+        color: #17324d;
+    }
+
+    .mainv1-replication-settings button {
+        min-height: 34px;
+        padding: 0.4rem 0.7rem;
+        border: 1px solid #1769aa;
+        border-radius: 4px;
+        background: #1769aa;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
     .mainv1-region-modal-body {
         display: grid;
         grid-template-columns: minmax(250px, 0.9fr) minmax(320px, 1.05fr) minmax(330px, 1.35fr);
         gap: 1rem;
         padding: 1rem;
-        height: calc(100% - 62px);
+        height: auto;
         box-sizing: border-box;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .mainv1-region-panel {
@@ -867,8 +908,8 @@
     .mainv1-region-panel.title-panel {
         display: flex;
         flex-direction: column;
-        height: 100%;
-        min-height: 560px;
+        height: auto;
+        min-height: 0;
         box-sizing: border-box;
     }
 
@@ -1086,7 +1127,8 @@
         grid-auto-rows: max-content;
         align-content: start;
         gap: 0.55rem;
-        flex: 1 1 auto;
+        flex: 0 0 520px;
+        height: 520px;
         min-height: 0;
         overflow-y: auto;
     }
@@ -1229,12 +1271,10 @@
     @media (max-width: 1100px) {
         .mainv1-region-modal-body {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            overflow-y: auto;
         }
 
         .mainv1-region-panel.title-panel {
             grid-column: 1 / -1;
-            height: 420px;
             min-height: 0;
         }
 
@@ -1243,17 +1283,16 @@
 
     @media (max-width: 900px) {
         .mainv1-region-modal-body { grid-template-columns: 1fr; }
-        .mainv1-region-dialog {
-            height: min(900px, calc(100vh - 1rem));
-            max-height: calc(100vh - 1rem);
-        }
         .mainv1-region-map { height: 250px; }
         .mainv1-region-panel.title-panel {
             grid-column: auto;
-            height: min(420px, 55vh);
             min-height: 220px;
         }
-        .mainv1-region-title-list { min-height: 180px; max-height: 360px; }
+        .mainv1-region-title-list {
+            flex-basis: 420px;
+            height: 420px;
+            min-height: 180px;
+        }
     }
 
     @media (max-width: 600px) {
@@ -1263,7 +1302,10 @@
         .mainv1-region-panel { padding: 0.65rem; }
         .mainv1-region-map { height: 190px; }
         .mainv1-region-chart canvas { height: 190px; }
-        .mainv1-region-title-list { max-height: 300px; }
+        .mainv1-region-title-list {
+            flex-basis: 300px;
+            height: 300px;
+        }
 
         .mainv1-region-title-row {
             grid-template-columns: 30px minmax(0, 1fr) 16px;
@@ -1326,7 +1368,7 @@
     .mainv1-regional-track {
         position: relative;
         width: 100%;
-        height: 480px;
+        height: 350px;
         overflow: hidden;
         padding-top: 2.5rem;
         box-sizing: border-box;
@@ -1659,7 +1701,7 @@
         }
 
         .mainv1-gallery-marquee {
-            animation-duration: 75s;
+            animation-duration: 500s;
         }
 
         .mainv1-category-card:hover,
@@ -1682,6 +1724,7 @@
     @php
         $mainv1Items = collect($regionItems ?? []);
         $mainv1FilterItems = collect($filterItems ?? $regionItems ?? []);
+        $mainv1ReplicationTitles = $mainv1FilterItems->pluck('title')->filter()->unique()->sort()->values();
         $mainv1DashboardItems = $mainv1Items;
         $mainv1FilterData = $mainv1FilterItems->map(fn ($item) => [
             'region' => $item->region?->name,
@@ -1689,6 +1732,7 @@
             'municipality' => $item->municipality,
             'year' => $item->year_of_moa,
             'title' => $item->title,
+            'operational_status' => $item->operational_status ?: 'Operational',
         ])->values();
         $mainv1RegionCounts = $mainv1DashboardItems
             ->filter(fn ($item) => filled($item->region?->name))
@@ -1828,8 +1872,20 @@
         <div class="mainv1-metric-dialog">
             <div class="mainv1-metric-modal-header">
                 <div><span>Social Technologies</span><h2 id="mainv1MetricModalTitle">Metric records</h2><p id="mainv1MetricModalSummary"></p></div>
-                <button class="mainv1-metric-modal-close" type="button" aria-label="Close metric records">&times;</button>
+                <div class="mainv1-metric-modal-header-actions">
+                    <button class="mainv1-metric-replicate" id="mainv1MetricReplicate" type="button">Replicate Program?</button>
+                    <button class="mainv1-metric-modal-close" type="button" aria-label="Close metric records">&times;</button>
+                </div>
             </div>
+            @if(auth()->check() && auth()->user()->usergroup === 'sysadmin')
+                <form class="mainv1-replication-settings mainv1-metric-replication-settings" method="POST" action="{{ route('settings.replication-redirect.update') }}">
+                    @csrf
+                    <label for="mainv1MetricReplicationRedirectUrl">Replication redirect destination
+                        <input id="mainv1MetricReplicationRedirectUrl" name="replication_redirect_url" type="text" inputmode="url" value="{{ old('replication_redirect_url', $replicationRedirectUrl) }}" placeholder="youtube.com or https://example.com/replicate" maxlength="2048">
+                    </label>
+                    <button type="submit">Save destination</button>
+                </form>
+            @endif
             <div class="mainv1-metric-filters" aria-label="Filter metric records">
                 <input id="mainv1MetricTitleSearch" type="search" placeholder="Search ST title" aria-label="Search ST title">
                 <select id="mainv1MetricProvince" aria-label="Filter by province"><option value="">All provinces</option></select>
@@ -1840,6 +1896,66 @@
             <div class="mainv1-metric-list-wrap"><div class="mainv1-metric-list" id="mainv1MetricList"></div></div>
         </div>
     </div>
+    <div class="mainv1-replication-confirm-modal"
+     id="mainv1ReplicationConfirmModal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="mainv1ReplicationConfirmTitle"
+     aria-describedby="mainv1ReplicationConfirmMessage"
+     aria-hidden="true">
+
+    <div class="mainv1-replication-confirm-dialog">
+
+        <div class="mainv1-replication-confirm-icon">
+            <i class="bi bi-copy"></i>
+        </div>
+
+        <h2 id="mainv1ReplicationConfirmTitle">
+            Confirm Replication
+        </h2>
+
+        <p id="mainv1ReplicationConfirmMessage">
+            You are about to replicate this Social Technology record.
+            This action will redirect you to the replication destination.
+        </p>
+
+        <form id="mainv1ReplicationRecordForm" method="POST" action="{{ route('replication-records.store') }}">
+            @csrf
+            <label class="mainv1-replication-select-label" for="mainv1ReplicationTitle">Social Technology you want to replicate</label>
+            <select id="mainv1ReplicationTitle" name="social_technology_title" required>
+                <option value="">Select a Social Technology</option>
+                @foreach($mainv1ReplicationTitles as $replicationTitle)
+                    <option value="{{ $replicationTitle }}">{{ $replicationTitle }}</option>
+                @endforeach
+            </select>
+            <p class="mainv1-replication-field-error" id="mainv1ReplicationTitleError" role="alert" hidden>Please select a Social Technology program.</p>
+        </form>
+
+        <div class="mainv1-replication-info">
+            <span>
+                <i class="bi bi-info-circle"></i>
+                Please review the destination details before proceeding.
+            </span>
+        </div>
+
+        <div class="mainv1-replication-confirm-actions">
+            <button type="button"
+                    class="mainv1-replication-cancel"
+                    id="mainv1ReplicationCancel">
+                Cancel
+            </button>
+
+            <button type="button"
+                    class="mainv1-replication-continue"
+                    id="mainv1ReplicationContinue">
+                Continue Replication
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+
+    </div>
+
+</div>
     <div class="mainv1-st-detail-modal" id="mainv1StDetailModal" role="dialog" aria-modal="true" aria-labelledby="mainv1StDetailTitle" aria-hidden="true">
         <div class="mainv1-st-detail-dialog">
             <header class="mainv1-st-detail-header"><h2 id="mainv1StDetailTitle">ST Details</h2><button type="button" class="mainv1-st-detail-close" aria-label="Close ST details">&times;</button></header>
@@ -1933,6 +2049,7 @@
             'adopted' => $item->with_adopted,
             'replicated' => $item->with_replicated,
             'status' => $item->status,
+            'operational_status' => $item->operational_status ?: 'Operational',
         ])->values();
     @endphp
     <section class="mainv1-regional-overview" aria-labelledby="mainv1RegionalOverviewTitle">
@@ -1955,6 +2072,15 @@
             <button class="mainv1-region-modal-close" type="button" data-close-region-modal aria-label="Close region overview">&times;</button>
             <header class="mainv1-region-modal-header">
                 <h2 id="mainv1RegionModalTitle">Region Overview</h2>
+                @if(auth()->check() && auth()->user()->usergroup === 'sysadmin')
+                    <form class="mainv1-replication-settings" method="POST" action="{{ route('settings.replication-redirect.update') }}">
+                        @csrf
+                        <label for="mainv1ReplicationRedirectUrl">Replication redirect destination
+                            <input id="mainv1ReplicationRedirectUrl" name="replication_redirect_url" type="text" inputmode="url" value="{{ old('replication_redirect_url', $replicationRedirectUrl) }}" placeholder="youtube.com or https://example.com/replicate" maxlength="2048">
+                        </label>
+                        <button type="submit">Save destination</button>
+                    </form>
+                @endif
             </header>
             <div class="mainv1-region-modal-body">
                 <section class="mainv1-region-panel left-panel">
@@ -1992,6 +2118,7 @@
         'municipality' => $item->municipality,
         'year' => $item->year_of_moa,
         'status' => strtolower(trim((string) ($item->status ?? ''))),
+        'operational_status' => $item->operational_status ?: 'Operational',
         'expr' => $mainv1Truthy($item->with_expr),
         'res' => $mainv1Truthy($item->with_res),
         'moa' => $mainv1Truthy($item->with_moa),
@@ -2011,15 +2138,20 @@
         <div>
             <span class="mainv1-analytics-eyebrow">Trend overview</span>
             <h2 id="mainv1AnalyticsTitle">Social Technology Analytics</h2>
-            <p>See status movement, coverage, regional concentration, and implementation records at a glance.</p>
         </div>
         <div class="mainv1-analytics-badge"><span class="mainv1-live-dot"></span><span id="mainv1AnalyticsCount">{{ $mainv1AnalyticsRows->count() }} filtered records</span></div>
     </div>
 
-    <div class="mainv1-analytics-top">
-        <article class="mainv1-analytics-panel mainv1-trend-panel">
-            <div class="mainv1-panel-heading"><div><span>Trend overview</span><h3>Status movement over time</h3></div></div>
+    <div class="row g-3 mainv1-analytics-top p-2">
+        <article class="col-md-6 mainv1-analytics-panel mainv1-trend-panel">
             <div class="mainv1-chart-wrap"><canvas id="mainv1StatusChart"></canvas></div>
+        </article>
+        <article class="col-md-6 mainv1-analytics-panel mainv1-title-count-panel">
+            <div class="mainv1-panel-heading"><div><span>Distribution</span><h3>Social Technology Titles</h3></div></div>
+            <div class="mainv1-title-composition">
+                <div class="mainv1-chart-wrap mainv1-title-count-chart-wrap"><canvas id="mainv1TitleCountChart" aria-label="Social Technology title distribution chart"></canvas></div>
+                <div class="mainv1-title-reference"><div class="mainv1-title-reference-header"><span class="mainv1-title-reference-heading">All ST titles</span><span id="mainv1TitleReferenceCount" class="mainv1-title-reference-count"></span></div><div id="mainv1TitleCountLegend" class="mainv1-title-count-legend" aria-label="Social technology titles" aria-live="polite"></div><div class="mainv1-title-pagination"><button type="button" id="mainv1TitlePrevious" aria-label="Previous titles page">Previous</button><span id="mainv1TitlePage" aria-live="polite">Page 1 of 1</span><button type="button" id="mainv1TitleNext" aria-label="Next titles page">Next</button></div></div>
+            </div>
         </article>
     </div>
 
@@ -2041,7 +2173,21 @@
     </div>
 
     <article class="mainv1-analytics-panel mainv1-directory-panel">
-        <div class="mainv1-directory-heading"><div class="mainv1-panel-heading"><div><span>Directory view</span><h3>Social Technologies</h3><p>Search and review social technology implementations.</p></div></div><div class="mainv1-directory-controls"><input id="mainv1DirectorySearch" type="search" placeholder="Search ST title" aria-label="Search ST title"><select id="mainv1DirectoryProvince" aria-label="Filter by province"><option value="">All provinces</option></select><select id="mainv1DirectoryMunicipality" aria-label="Filter by city or municipality"><option value="">All cities / municipalities</option></select><select id="mainv1DirectoryYear" aria-label="Filter by year of MOA"><option value="">All years</option></select><select id="mainv1DirectoryStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="ongoing">Ongoing STs</option><option value="inactive">Inactive STs</option></select><select id="mainv1DirectoryType" aria-label="Filter by type"><option value="">All types</option><option value="replicated">With replicated</option><option value="adopted">With adopted</option></select><button type="button" id="mainv1DirectoryExport">Export CSV</button></div></div>
+        <div class="mainv1-directory-heading">
+            <div>
+                <span class="mainv1-analytics-eyebrow">Record directory</span>
+                <p>Filter the social technology records shown below.</p>
+            </div>
+            <div class="mainv1-directory-controls" aria-label="Filter directory records">
+                <input id="mainv1DirectorySearch" type="search" placeholder="Search title" aria-label="Search social technology title">
+                <select id="mainv1DirectoryProvince" aria-label="Filter by province"><option value="">All provinces</option></select>
+                <select id="mainv1DirectoryMunicipality" aria-label="Filter by city or municipality"><option value="">All cities / municipalities</option></select>
+                <select id="mainv1DirectoryYear" aria-label="Filter by year of MOA"><option value="">All years</option></select>
+                <select id="mainv1DirectoryStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="ongoing">Active</option><option value="inactive">Inactive</option></select>
+                <select id="mainv1DirectoryType" aria-label="Filter by coverage"><option value="">All coverage</option><option value="expr">Expression of Interest</option><option value="res">SB Resolution</option><option value="moa">MOA</option><option value="replicated">Replicated</option><option value="adopted">Adopted</option></select>
+                <button type="button" id="mainv1DirectoryExport">Export CSV</button>
+            </div>
+        </div>
         <div class="mainv1-directory-table-wrap"><table class="mainv1-directory-table"><thead><tr><th>Title</th><th>Province</th><th>City / Municipality</th><th>Status</th><th>Coverage</th><th>Attachment</th></tr></thead><tbody id="mainv1DirectoryRows"></tbody></table></div>
         <div class="mainv1-directory-footer"><span id="mainv1DirectorySummary"></span><div><button type="button" id="mainv1DirectoryPrev" aria-label="Previous page">&#8592; Prev</button><strong id="mainv1DirectoryPage">Page 1</strong><button type="button" id="mainv1DirectoryNext" aria-label="Next page">Next &#8594;</button></div></div>
     </article>
@@ -2051,9 +2197,39 @@
 </style>
 <style>
 .mainv1-metric-trigger{cursor:pointer}.mainv1-metric-trigger:focus-visible{outline:3px solid rgba(46,111,216,.28);outline-offset:3px}.mainv1-metric-modal{position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;padding:1rem;background:rgba(11,35,59,.45)}.mainv1-metric-modal.is-open{display:flex}.mainv1-metric-dialog{width:min(920px,100%);max-height:min(760px,calc(100vh - 2rem));overflow:hidden;border:1px solid #d7e5ef;border-radius:16px;background:#fff;box-shadow:0 24px 70px rgba(8,43,81,.24)}.mainv1-metric-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.15rem 1.25rem;border-bottom:1px solid #e4edf3;background:linear-gradient(135deg,#f7fbff,#fff)}.mainv1-metric-modal-header span{color:#6d8296;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.mainv1-metric-modal-header h2{margin:.25rem 0;color:#123f70;font-size:1.25rem}.mainv1-metric-modal-header p{margin:0;color:#6b8197;font-size:.78rem}.mainv1-metric-modal-close{display:grid;width:34px;height:34px;place-items:center;border:1px solid #d5e3ed;border-radius:8px;background:#fff;color:#496780;font-size:1.35rem;line-height:1;cursor:pointer}.mainv1-metric-list-wrap{max-height:calc(min(760px,100vh - 2rem) - 100px);overflow:auto;padding:.75rem 1.25rem 1.25rem}.mainv1-metric-list{display:grid;gap:.55rem}.mainv1-metric-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(100px,.65fr) minmax(120px,.8fr) auto;gap:.75rem;align-items:center;padding:.75rem;border:1px solid #e1ebf2;border-radius:10px;background:#fbfdff}.mainv1-metric-row strong{overflow:hidden;color:#173d68;font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}.mainv1-metric-row span{overflow:hidden;color:#607990;font-size:.72rem;text-overflow:ellipsis;white-space:nowrap}.mainv1-metric-status{padding:.25rem .5rem;border-radius:99px;background:#dff7ed;color:#168456;font-size:.64rem;font-weight:800;text-align:center}.mainv1-metric-status.inactive{background:#ffe5ec;color:#dc4968}.mainv1-metric-empty{padding:2rem;text-align:center;color:#6b8197;border:1px dashed #d5e3ed;border-radius:10px}@media(max-width:576px){.mainv1-metric-dialog{max-height:calc(100vh - 1rem)}.mainv1-metric-modal-header{padding:.9rem}.mainv1-metric-list-wrap{padding:.65rem;max-height:calc(100vh - 100px)}.mainv1-metric-row{grid-template-columns:1fr;gap:.3rem}.mainv1-metric-row strong,.mainv1-metric-row span{white-space:normal}.mainv1-metric-status{width:max-content}}
-.mainv1-analytics-top{grid-template-columns:1fr}
+.mainv1-analytics-top{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mainv1-analytics-top > .col-md-6{width:auto;max-width:none;min-width:0}
+.mainv1-trend-panel .mainv1-chart-wrap{height:330px}
+.mainv1-title-composition{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;align-items:stretch;min-width:0}
+.mainv1-title-count-chart-wrap{display:flex;width:100%;max-width:100%;min-width:0;height:clamp(220px,24vw,300px);align-items:center;justify-content:center;margin-top:0;padding:.5rem;box-sizing:border-box;aspect-ratio:1;overflow:hidden}
+.mainv1-title-count-chart-wrap canvas{display:block;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;aspect-ratio:1}
+.mainv1-title-count-panel{min-width:0;overflow:hidden}
+.mainv1-title-reference{display:flex;min-width:0;height:clamp(220px,24vw,300px);flex-direction:column;overflow:hidden;padding-left:1rem;border-left:1px solid #e3edf3}
+.mainv1-title-reference-header{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin:.25rem 0 .6rem}
+.mainv1-title-reference-heading{margin:0;color:#6d8296;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.mainv1-title-reference-count{color:#8aa0b2;font-size:.62rem;white-space:nowrap}
+.mainv1-title-count-legend{display:grid;align-content:start;gap:.42rem;height:210px;overflow-y:auto;overflow-x:hidden;padding:.1rem .4rem .1rem 0;scrollbar-color:#9bcbd1 #f1f7fa;scrollbar-width:thin}
+.mainv1-title-count-legend-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.45rem;align-items:center;min-width:0;padding:.25rem .35rem;color:#536b81;font-size:.68rem;line-height:1.25;border:1px solid transparent;border-radius:7px;cursor:pointer;transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+.mainv1-title-count-legend-item:hover,.mainv1-title-count-legend-item:focus-visible,.mainv1-title-count-legend-item.is-highlighted{border-color:#a9dfe1;background:#eaf9f8;color:#173d68;outline:none}
+.mainv1-title-count-legend-item i{width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 2px #eef7fa}
+.mainv1-title-count-legend-item span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mainv1-title-count-legend-item strong{color:#173d68;font-size:.68rem;white-space:nowrap}
+.mainv1-title-pagination{display:flex;align-items:center;justify-content:space-between;gap:.35rem;margin-top:.65rem;padding-top:.6rem;border-top:1px solid #e3edf3;color:#607990;font-size:.65rem}
+.mainv1-title-pagination button{padding:.35rem .5rem;border:1px solid #cfe0ec;border-radius:7px;background:#fff;color:#245b87;font-size:.66rem;font-weight:700;cursor:pointer}
+.mainv1-title-pagination button:hover:not(:disabled),.mainv1-title-pagination button:focus-visible{border-color:#42b9ba;background:#effafa}
+.mainv1-title-pagination button:disabled{cursor:not-allowed;opacity:.45}
+@media (max-width: 1100px) and (min-width: 577px) {.mainv1-title-composition{grid-template-columns:1fr}.mainv1-title-reference{height:300px;padding:0;border-top:1px solid #e3edf3;border-left:0}.mainv1-title-count-chart-wrap{height:280px}}
+@media (max-width: 576px) {.mainv1-title-composition{grid-template-columns:1fr}.mainv1-title-reference{height:240px;padding:0;border-top:1px solid #e3edf3;border-left:0}.mainv1-title-count-chart-wrap{height:280px}.mainv1-title-count-legend{height:165px}}
 .mainv1-share-summary{margin-top:.9rem}.mainv1-share-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.mainv1-share-stat{min-width:0;padding:.75rem;border:1px solid #dce8f0;border-top:3px solid #42b9ba;border-radius:12px;background:linear-gradient(180deg,#fff,#f8fbff)}.mainv1-share-stat span,.mainv1-share-insight span{display:block;color:#71869a;font-size:.67rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.mainv1-share-stat strong{display:block;margin:.2rem 0;color:#173d68;font-size:1.45rem}.mainv1-share-stat small{display:block;color:#6b8197;font-size:.68rem;line-height:1.4}.mainv1-share-stat.share-stat-rose{border-top-color:#ff6682}.mainv1-share-stat.share-stat-rose strong{color:#ff4d6d}.mainv1-share-stat.share-stat-blue{border-top-color:#3398dc}.mainv1-share-stat.share-stat-blue strong{color:#2588c9}.mainv1-share-stat.share-stat-gold{border-top-color:#ffc34f}.mainv1-share-stat.share-stat-gold strong{color:#d99c1c}.mainv1-share-insight{margin-top:.7rem;padding:.75rem;border:1px solid #d8e7f3;border-radius:12px;background:#f4f9ff}.mainv1-share-insight strong{display:block;margin-top:.25rem;color:#173d68;font-size:.8rem;line-height:1.35}
 @media (min-width: 577px) and (max-width: 1100px) {
+    .mainv1-analytics-grid-lower {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mainv1-coverage-panel {
+        grid-column: span 1;
+    }
+
     .mainv1-analytics-grid-secondary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -2064,6 +2240,14 @@
 }
 
 @media (max-width: 576px) {
+    .mainv1-analytics-grid-lower {
+        grid-template-columns: 1fr;
+    }
+
+    .mainv1-analytics-top {
+        grid-template-columns: 1fr;
+    }
+
     .mainv1-analytics-grid-secondary {
         grid-template-columns: 1fr;
     }
@@ -2187,6 +2371,170 @@
 
     .mainv1-coverage-empty { color: #8ca0b1; font-size: .68rem; }
 
+    .mainv1-metric-modal-header-actions {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .mainv1-metric-replicate {
+        padding: .35rem .55rem;
+        border: 1px solid #1769aa;
+        border-radius: 6px;
+        background: #1769aa;
+        color: #fff;
+        cursor: pointer;
+        font-size: .68rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .mainv1-metric-replicate:hover,
+    .mainv1-metric-replicate:focus-visible {
+        background: #0d4f83;
+    }
+
+    .mainv1-replication-confirm-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 3400;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(8, 28, 49, .58);
+        backdrop-filter: blur(3px);
+    }
+
+    .mainv1-replication-confirm-modal.is-open { display: flex; }
+
+    .mainv1-replication-confirm-dialog {
+        width: min(410px, 100%);
+        padding: 1.35rem;
+        border: 1px solid #d5e4ef;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 22px 60px rgba(8, 43, 81, .28);
+        color: #17324d;
+    }
+
+    .mainv1-replication-confirm-icon {
+        display: grid;
+        width: 2.4rem;
+        height: 2.4rem;
+        margin-bottom: .8rem;
+        place-items: center;
+        border-radius: 50%;
+        background: #e8f4ff;
+        color: #1769aa;
+        font-size: 1.25rem;
+        font-weight: 800;
+    }
+
+    .mainv1-replication-confirm-dialog h2 {
+        margin: 0;
+        color: #123f70;
+        font-size: 1.15rem;
+    }
+
+    .mainv1-replication-confirm-dialog p {
+        margin: .55rem 0 1.2rem;
+        color: #627b92;
+        font-size: .8rem;
+        line-height: 1.5;
+    }
+
+    .mainv1-replication-select-label {
+        display: block;
+        margin-bottom: .35rem;
+        color: #315574;
+        font-size: .72rem;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .mainv1-replication-confirm-dialog select {
+        width: 100%;
+        min-height: 2.35rem;
+        margin-bottom: 1rem;
+        padding: .45rem .6rem;
+        border: 1px solid #cbdce8;
+        border-radius: 7px;
+        background: #fff;
+        color: #17324d;
+        font: inherit;
+        font-size: .75rem;
+    }
+
+    .mainv1-replication-confirm-dialog select:focus {
+        border-color: #4b9bd4;
+        outline: 3px solid rgba(75, 155, 212, .18);
+        outline-offset: 1px;
+    }
+
+    .mainv1-replication-confirm-dialog select.is-invalid {
+        border-color: #dc4968;
+        outline: 3px solid rgba(220, 73, 104, .15);
+    }
+
+    .mainv1-replication-field-error {
+        margin: -.65rem 0 1rem;
+        color: #c93656;
+        font-size: .72rem;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .mainv1-replication-confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: .55rem;
+    }
+
+    .mainv1-replication-confirm-actions button {
+        min-height: 2.2rem;
+        padding: .45rem .8rem;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: .75rem;
+        font-weight: 700;
+    }
+
+    .mainv1-replication-cancel {
+        border: 1px solid #cbdce8;
+        background: #fff;
+        color: #496780;
+    }
+
+    .mainv1-replication-continue {
+        border: 1px solid #1769aa;
+        background: #1769aa;
+        color: #fff;
+    }
+
+    .mainv1-replication-cancel:hover,
+    .mainv1-replication-cancel:focus-visible { background: #f2f7fb; }
+
+    .mainv1-replication-continue:hover,
+    .mainv1-replication-continue:focus-visible { background: #0d4f83; }
+
+    .mainv1-coverage-panel,
+    .mainv1-coverage-list,
+    .mainv1-coverage-item {
+        min-width: 0;
+    }
+
+    .mainv1-coverage-item {
+        grid-template-columns: minmax(0, 1fr) minmax(24px, .65fr) auto;
+        gap: .35rem;
+    }
+
+    .mainv1-coverage-item span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+
     .mainv1-status-pill.ongoing {
         font-size: 0;
     }
@@ -2208,11 +2556,241 @@
     @media (max-width: 576px) {
         .mainv1-directory-table-wrap { height: 420px; }
     }
+
+    .mainv1-replication-confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(6px);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    opacity: 0;
+    visibility: hidden;
+
+    transition: all .25s ease;
+    z-index: 9999;
+}
+
+
+.mainv1-replication-confirm-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+
+.mainv1-replication-confirm-dialog {
+
+    width: 420px;
+    max-width: calc(100% - 32px);
+
+    background: #ffffff;
+    border-radius: 20px;
+
+    padding: 32px;
+
+    text-align: center;
+
+    box-shadow:
+        0 20px 40px rgba(0,0,0,.15);
+
+    transform: translateY(20px) scale(.96);
+
+    transition: .25s ease;
+}
+
+
+.mainv1-replication-confirm-modal.active
+.mainv1-replication-confirm-dialog {
+
+    transform: translateY(0) scale(1);
+}
+
+
+/* ICON */
+
+.mainv1-replication-confirm-icon {
+
+    width: 70px;
+    height: 70px;
+
+    margin: 0 auto 20px;
+
+    border-radius: 50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:#e0f2fe;
+
+    color:#0284c7;
+
+    font-size:32px;
+}
+
+
+/* TITLE */
+
+.mainv1-replication-confirm-dialog h2 {
+
+    margin:0;
+
+    font-size:24px;
+    font-weight:700;
+
+    color:#0f172a;
+}
+
+
+/* DESCRIPTION */
+
+.mainv1-replication-confirm-dialog p {
+
+    margin-top:12px;
+
+    line-height:1.6;
+
+    font-size:15px;
+
+    color:#64748b;
+}
+
+
+/* INFO BOX */
+
+.mainv1-replication-info {
+
+    margin-top:20px;
+
+    padding:12px 15px;
+
+    border-radius:12px;
+
+    background:#f8fafc;
+
+    color:#475569;
+
+    font-size:13px;
+
+    text-align:left;
+}
+
+
+.mainv1-replication-info i {
+    color:#0284c7;
+    margin-right:6px;
+}
+
+
+
+/* BUTTONS */
+
+.mainv1-replication-confirm-actions {
+
+    display:flex;
+
+    gap:12px;
+
+    margin-top:28px;
+}
+
+
+.mainv1-replication-confirm-actions button {
+
+    flex:1;
+
+    height:45px;
+
+    border-radius:10px;
+
+    font-size:14px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.2s ease;
+
+}
+
+
+
+/* CANCEL */
+
+.mainv1-replication-cancel {
+
+    background:#f1f5f9;
+
+    border:1px solid #e2e8f0;
+
+    color:#475569;
+}
+
+
+.mainv1-replication-cancel:hover {
+
+    background:#e2e8f0;
+
+}
+
+
+
+/* CONTINUE */
+
+.mainv1-replication-continue {
+
+    border:none;
+
+    background:#2563eb;
+
+    color:white;
+
+}
+
+
+.mainv1-replication-continue:hover {
+
+    background:#1d4ed8;
+
+    transform:translateY(-1px);
+
+}
+
+
+.mainv1-replication-continue i {
+
+    margin-left:6px;
+
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (() => {
     const rows = @json($mainv1AnalyticsRows);
+    const titleOperationalStatuses = @json($mainv1FilterData->pluck('operational_status', 'title'));
+    const decorateOperationalIndicators = () => {
+        document.querySelectorAll('.mainv1-metric-row, .mainv1-region-title-row').forEach(item => {
+            if (item.querySelector('.mainv1-operational-indicator')) return;
+            const title = item.dataset.title || item.querySelector('strong')?.textContent || '';
+            const normalizedTitle = String(title || '').trim().toLowerCase();
+            const row = rows.find(candidate => String(candidate.title || '').trim().toLowerCase() === normalizedTitle);
+            const titleStatusEntry = Object.entries(titleOperationalStatuses).find(([candidateTitle]) => String(candidateTitle || '').trim().toLowerCase() === normalizedTitle);
+            const operationalStatus = row?.operational_status || titleStatusEntry?.[1] || 'Operational';
+            if (String(operationalStatus) === 'Operational') return;
+            const indicator = document.createElement('span');
+            indicator.className = 'mainv1-operational-indicator';
+            indicator.textContent = 'Not Operational';
+            indicator.style.cssText = 'display:inline-flex;align-items:center;width:max-content;padding:.25rem .5rem;border-radius:99px;background:#fee2e2;color:#b91c1c;font-size:.64rem;font-weight:800;line-height:1.2;';
+            item.appendChild(indicator);
+        });
+    };
+    const operationalIndicatorObserver = new MutationObserver(decorateOperationalIndicators);
+    operationalIndicatorObserver.observe(document.body, { childList: true, subtree: true });
+    decorateOperationalIndicators();
+    const replicationRedirectUrl = @json($replicationRedirectUrl);
     const truthy = value => value === true || String(value).toLowerCase() === 'true';
     const metricModal = document.getElementById('mainv1MetricModal');
     const metricModalTitle = document.getElementById('mainv1MetricModalTitle');
@@ -2224,6 +2802,63 @@
     const metricYear = document.getElementById('mainv1MetricYear');
     const metricTitleSearch = document.getElementById('mainv1MetricTitleSearch');
     const metricExport = document.getElementById('mainv1MetricExport');
+    const metricReplicate = document.getElementById('mainv1MetricReplicate');
+    const replicationConfirmModal = document.getElementById('mainv1ReplicationConfirmModal');
+    const replicationConfirmMessage = document.getElementById('mainv1ReplicationConfirmMessage');
+    const replicationRecordForm = document.getElementById('mainv1ReplicationRecordForm');
+    const replicationTitle = document.getElementById('mainv1ReplicationTitle');
+    const replicationTitleError = document.getElementById('mainv1ReplicationTitleError');
+    const replicationCancel = document.getElementById('mainv1ReplicationCancel');
+    const replicationContinue = document.getElementById('mainv1ReplicationContinue');
+    if (replicationConfirmModal && replicationConfirmModal.parentElement !== document.body) document.body.appendChild(replicationConfirmModal);
+    let replicationPreviousFocus = null;
+    const closeReplicationConfirm = () => {
+        replicationConfirmModal?.classList.remove('active');
+        replicationConfirmModal?.setAttribute('aria-hidden', 'true');
+        replicationPreviousFocus?.focus();
+    };
+    const replicateMetric = () => {
+        replicationPreviousFocus = document.activeElement;
+        if (replicationTitle) replicationTitle.value = '';
+        replicationTitle?.classList.remove('is-invalid');
+        replicationTitle?.setAttribute('aria-invalid', 'false');
+        if (replicationTitleError) replicationTitleError.hidden = true;
+        if (!replicationRedirectUrl) {
+            if (replicationConfirmMessage) replicationConfirmMessage.textContent = 'A sysadmin must configure the replication destination before this action can continue.';
+            if (replicationContinue) replicationContinue.hidden = false;
+        } else {
+            if (replicationConfirmMessage) replicationConfirmMessage.textContent = 'You are about to leave this portal and continue to the configured replication destination.';
+            if (replicationContinue) replicationContinue.hidden = false;
+        }
+        replicationConfirmModal?.classList.add('active');
+        replicationConfirmModal?.setAttribute('aria-hidden', 'false');
+        replicationTitle?.focus();
+    };
+    replicationCancel?.addEventListener('click', closeReplicationConfirm);
+    replicationContinue?.addEventListener('click', () => {
+        if (!replicationTitle?.value) {
+            replicationTitle?.focus();
+            replicationTitle?.classList.add('is-invalid');
+            replicationTitle?.setAttribute('aria-invalid', 'true');
+            if (replicationTitleError) replicationTitleError.hidden = false;
+            return;
+        }
+        replicationRecordForm?.requestSubmit();
+    });
+    replicationTitle?.addEventListener('change', () => {
+        if (!replicationTitle.value) return;
+        replicationTitle.classList.remove('is-invalid');
+        replicationTitle.setAttribute('aria-invalid', 'false');
+        if (replicationTitleError) replicationTitleError.hidden = true;
+    });
+    replicationConfirmModal?.addEventListener('click', event => {
+        if (event.target === replicationConfirmModal) closeReplicationConfirm();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && replicationConfirmModal?.classList.contains('active')) closeReplicationConfirm();
+    });
+    metricReplicate?.addEventListener('click', replicateMetric);
+    window.openMainv1ReplicationConfirm = replicateMetric;
     let currentMetricKey = 'all';
     let currentMetricRegion = '';
     const matchingMetricRows = () => { const regionAliases = currentMetricRegion ? [currentMetricRegion, `FO ${currentMetricRegion}`, currentMetricRegion.replace(/^Region /, 'FO ')] : []; return rows.filter(metricMatches[currentMetricKey] || metricMatches.all).filter(row => !currentMetricRegion || regionAliases.includes(String(row.region || ''))); };
@@ -2235,7 +2870,8 @@
     metricExport?.addEventListener('click', () => { const titleQuery = String(metricTitleSearch?.value || '').trim().toLowerCase(); const matchingRows = matchingMetricRows().filter(row => (!titleQuery || String(row.title || '').toLowerCase().includes(titleQuery)) && (!metricProvince?.value || String(row.province || '') === metricProvince.value) && (!metricMunicipality?.value || String(row.municipality || '') === metricMunicipality.value) && (!metricYear?.value || String(row.year || '') === metricYear.value)); const quote = value => `"${String(value ?? '').replace(/"/g, '""')}"`; const csv = [['Social Technology Title', 'Province', 'City / Municipality', 'Year of MOA', 'Region', 'Status'], ...matchingRows.map(row => [row.title, row.province, row.municipality, row.year, row.region, row.status === 'ongoing' ? 'Ongoing' : 'Inactive'])].map(row => row.map(quote).join(',')).join('\r\n'); const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); const link = document.createElement('a'); link.href = url; link.download = `metric-social-technologies-${new Date().toISOString().slice(0, 10)}.csv`; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); });
     const metricLabels = { all: 'Total Adopted and Replicated', expr: 'Total Expression of Interest', res: 'Total SB Resolution', moa: 'Total Memorandum of Agreement', active: "Total Active Region's Social Technologies", inactive: "Total Inactive Region's Social Technologies", replicated: 'Total Replicated', adopted: 'Total Adopted' };
     const metricMatches = { all: () => true, expr: row => truthy(row.expr), res: row => truthy(row.res), moa: row => truthy(row.moa), active: row => row.status === 'ongoing', inactive: row => row.status === 'inactive' || row.status === 'dissolved', replicated: row => truthy(row.replicated), adopted: row => truthy(row.adopted) };
-    const openMetricModal = (metric) => { const matchingRows = rows.filter(metricMatches[metric] || metricMatches.all); metricModalTitle.textContent = metricLabels[metric] || 'Metric records'; metricModalSummary.textContent = `${matchingRows.length} social technology records`; metricList.replaceChildren(); matchingRows.forEach(row => { const item = document.createElement('div'); item.className = 'mainv1-metric-row'; const title = document.createElement('strong'); title.textContent = row.title || 'Untitled social technology'; const location = document.createElement('span'); location.textContent = [row.province, row.municipality].filter(Boolean).join(' / ') || 'Location not specified'; const region = document.createElement('span'); region.textContent = row.region || 'Region not specified'; const status = document.createElement('span'); const isInactive = row.status === 'inactive' || row.status === 'dissolved'; status.className = `mainv1-metric-status${isInactive ? ' inactive' : ''}`; status.textContent = isInactive ? 'Inactive' : 'Ongoing'; item.append(title, location, region, status); metricList.appendChild(item); }); if (!matchingRows.length) { const empty = document.createElement('div'); empty.className = 'mainv1-metric-empty'; empty.textContent = 'No social technologies match this metric.'; metricList.appendChild(empty); } metricModal.classList.add('is-open'); metricModal.setAttribute('aria-hidden', 'false'); document.body.classList.add('mainv1-modal-open'); metricModal.querySelector('.mainv1-metric-modal-close').focus(); };
+    const openMetricModal = (metric) => { metricTitleSearch.value = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; const matchingRows = rows.filter(metricMatches[metric] || metricMatches.all); metricModalTitle.textContent = metricLabels[metric] || 'Metric records'; metricModalSummary.textContent = `${matchingRows.length} social technology records`; metricList.replaceChildren(); matchingRows.forEach(row => { const item = document.createElement('div'); item.className = 'mainv1-metric-row'; item.dataset.title = String(row.title || '').toLowerCase(); item.dataset.province = row.province || ''; item.dataset.municipality = row.municipality || ''; item.dataset.year = String(row.year || ''); const title = document.createElement('strong'); title.textContent = row.title || 'Untitled social technology'; const location = document.createElement('span'); location.textContent = [row.province, row.municipality].filter(Boolean).join(' / ') || 'Location not specified'; const region = document.createElement('span'); region.textContent = row.region || 'Region not specified'; const status = document.createElement('span'); const isInactive = row.status === 'inactive' || row.status === 'dissolved'; status.className = `mainv1-metric-status${isInactive ? ' inactive' : ''}`; status.textContent = isInactive ? 'Inactive' : 'Ongoing'; item.append(title, location, region, status); metricList.appendChild(item); }); if (!matchingRows.length) { const empty = document.createElement('div'); empty.className = 'mainv1-metric-empty'; empty.textContent = 'No social technologies match this metric.'; metricList.appendChild(empty); } metricModal.classList.add('is-open'); metricModal.setAttribute('aria-hidden', 'false'); document.body.classList.add('mainv1-modal-open'); metricModal.querySelector('.mainv1-metric-modal-close').focus(); };
+    const openTitleRecords = title => { if (!metricModal || !metricTitleSearch) return; currentMetricKey = 'all'; currentMetricRegion = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; openMetricModal('all'); syncMetricFilters(); metricTitleSearch.value = title; applyMetricFilters(); metricModalTitle.textContent = title; metricModalSummary.textContent = `${rows.filter(row => String(row.title || '').trim() === title).length} records for this social technology`; };
     window.openMainv1RegionRecords = region => { currentMetricKey = 'all'; currentMetricRegion = region || ''; const matchingRows = matchingMetricRows(); metricModalTitle.textContent = `${region} Social Technologies`; metricModalSummary.textContent = `${matchingRows.length} social technology records`; metricList.replaceChildren(); matchingRows.forEach(row => { const item = document.createElement('div'); item.className = 'mainv1-metric-row'; const title = document.createElement('strong'); title.textContent = row.title || 'Untitled social technology'; const location = document.createElement('span'); location.textContent = [row.province, row.municipality].filter(Boolean).join(' / ') || 'Location not specified'; const regionName = document.createElement('span'); regionName.textContent = row.region || 'Region not specified'; const status = document.createElement('span'); const isInactive = row.status === 'inactive' || row.status === 'dissolved'; status.className = `mainv1-metric-status${isInactive ? ' inactive' : ''}`; status.textContent = isInactive ? 'Inactive' : 'Ongoing'; item.dataset.title = String(row.title || '').toLowerCase(); item.dataset.province = row.province || ''; item.dataset.municipality = row.municipality || ''; item.dataset.year = String(row.year || ''); item.append(title, location, regionName, status); metricList.appendChild(item); }); if (!matchingRows.length) { const empty = document.createElement('div'); empty.className = 'mainv1-metric-empty'; empty.textContent = 'No social technologies are recorded for this region.'; metricList.appendChild(empty); } refillMetricSelect(metricProvince, metricFilterValues('province')); refillMetricSelect(metricMunicipality, metricFilterValues('municipality')); refillMetricSelect(metricYear, metricFilterValues('year')); metricTitleSearch.value = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; metricModal.classList.add('is-open'); metricModal.setAttribute('aria-hidden', 'false'); document.body.classList.add('mainv1-modal-open'); metricModal.querySelector('.mainv1-metric-modal-close').focus(); };
     window.openMainv1MetricRecords = metric => { currentMetricKey = metric; currentMetricRegion = ''; metricTitleSearch.value = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; openMetricModal(metric); syncMetricFilters(); };
     window.openMainv1YearRecords = year => { currentMetricKey = 'all'; currentMetricRegion = ''; openMetricModal('all'); syncMetricFilters(); metricModalTitle.textContent = `Social Technologies in ${year}`; metricYear.value = String(year); applyMetricFilters(); };
@@ -2275,6 +2911,62 @@
     const chartDefaults = { responsive: true, maintainAspectRatio: false, onClick: (_, elements, chartInstance) => { const index = elements[0]?.index; const label = chartInstance.data.labels?.[index]; const year = Number(label); if (Number.isFinite(year) && year > 1900 && window.openMainv1YearRecords) return window.openMainv1YearRecords(year); const metricByLabel = { Ongoing: 'active', Inactive: 'inactive', Replicated: 'replicated', Adopted: 'adopted' }; if (metricByLabel[label] && window.openMainv1MetricRecords) window.openMainv1MetricRecords(metricByLabel[label]); }, onHover: (event, elements, chartInstance) => { const index = elements[0]?.index; const label = chartInstance.data.labels?.[index]; const year = Number(label); const metricByLabel = { Ongoing: true, Inactive: true, Replicated: true, Adopted: true }; chartInstance.canvas.style.cursor = (Number.isFinite(year) && year > 1900) || metricByLabel[label] ? 'pointer' : 'default'; }, plugins: { legend: { display: false } } };
     const chart = (id, config) => { const canvas = document.getElementById(id); return canvas && window.Chart ? new Chart(canvas, config) : null; };
     chart('mainv1StatusChart', { type: 'line', data: { labels: years, datasets: [{ label: 'Ongoing STs', data: years.map(year => count(row => Number(row.year) === year && row.status === 'ongoing')), borderColor: '#42b9ba', backgroundColor: 'rgba(66,185,186,.12)', fill: true, tension: .35 }, { label: 'Inactive STs', data: years.map(year => count(row => Number(row.year) === year && (row.status === 'inactive' || row.status === 'dissolved'))), borderColor: '#ff6682', backgroundColor: 'rgba(255,102,130,.08)', fill: true, tension: .35 }] }, options: { ...chartDefaults, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 22, font: { size: 10 } } } } } });
+    const titleCounts = Object.entries(rows.reduce((result, row) => { const title = String(row.title || 'Untitled social technology').trim() || 'Untitled social technology'; result[title] = (result[title] || 0) + 1; return result; }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const titleColors = ['#12a8b0','#20d8ad','#9bdde7','#ffb347','#ee5b91','#8d70cf','#55b7a8','#f08080','#61a7e5','#a78b7a','#c4a7d9','#7abf7b'];
+    const titleLegend = document.getElementById('mainv1TitleCountLegend');
+    const titlePrevious = document.getElementById('mainv1TitlePrevious');
+    const titleNext = document.getElementById('mainv1TitleNext');
+    const titlePage = document.getElementById('mainv1TitlePage');
+    const titleReferenceCount = document.getElementById('mainv1TitleReferenceCount');
+    const titlePageSize = 13;
+    let titlePageNumber = 1;
+    let titleChart = null;
+    const highlightTitleChart = (title) => {
+        if (!titleChart) return;
+        const largerIndex = largerTitleCounts.findIndex(item => item[0] === title);
+        const smallerIndex = smallerTitleCounts.findIndex(item => item[0] === title);
+        const active = largerIndex >= 0 ? [{ datasetIndex: 0, index: largerIndex }] : (smallerIndex >= 0 ? [{ datasetIndex: 1, index: smallerIndex }] : []);
+        titleChart.setActiveElements(active);
+        titleChart.tooltip?.setActiveElements(active, { x: 0, y: 0 });
+        titleChart.update();
+    };
+    const clearTitleChartHighlight = () => { if (titleChart) { titleChart.setActiveElements([]); titleChart.tooltip?.setActiveElements([], { x: 0, y: 0 }); titleChart.update(); } };
+    const renderTitlePage = () => {
+        if (!titleLegend) return;
+        const totalTitleRecords = titleCounts.reduce((sum, item) => sum + item[1], 0);
+        const totalPages = Math.max(1, Math.ceil(titleCounts.length / titlePageSize));
+        titlePageNumber = Math.min(Math.max(titlePageNumber, 1), totalPages);
+        titleLegend.replaceChildren();
+        titleCounts.slice((titlePageNumber - 1) * titlePageSize, titlePageNumber * titlePageSize).forEach((item, index) => {
+            const absoluteIndex = (titlePageNumber - 1) * titlePageSize + index;
+            const entry = document.createElement('div'); entry.className = 'mainv1-title-count-legend-item';
+            const swatch = document.createElement('i'); swatch.style.backgroundColor = titleColors[absoluteIndex % titleColors.length];
+            const label = document.createElement('span'); label.textContent = item[0];
+            const value = document.createElement('strong'); value.textContent = `${totalTitleRecords ? ((item[1] / totalTitleRecords) * 100).toFixed(1) : '0.0'}% (${item[1]})`;
+            entry.dataset.title = item[0]; entry.tabIndex = 0;
+            entry.addEventListener('mouseenter', () => { entry.classList.add('is-highlighted'); highlightTitleChart(item[0]); });
+            entry.addEventListener('mouseleave', () => { entry.classList.remove('is-highlighted'); clearTitleChartHighlight(); });
+            entry.addEventListener('focus', () => { entry.classList.add('is-highlighted'); highlightTitleChart(item[0]); });
+            entry.addEventListener('blur', () => { entry.classList.remove('is-highlighted'); clearTitleChartHighlight(); });
+            entry.addEventListener('click', () => openTitleRecords(item[0]));
+            entry.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openTitleRecords(item[0]); } });
+            entry.append(swatch, label, value); titleLegend.appendChild(entry);
+        });
+        if (titlePage) titlePage.textContent = `Page ${titlePageNumber} of ${totalPages}`;
+        if (titleReferenceCount) titleReferenceCount.textContent = `${titleCounts.length} titles`;
+        if (titlePrevious) titlePrevious.disabled = titlePageNumber === 1;
+        if (titleNext) titleNext.disabled = titlePageNumber === totalPages;
+    };
+    if (titleLegend) {
+        renderTitlePage();
+    }
+    titlePrevious?.addEventListener('click', () => { titlePageNumber -= 1; renderTitlePage(); });
+    titleNext?.addEventListener('click', () => { titlePageNumber += 1; renderTitlePage(); });
+    const totalTitleRecords = titleCounts.reduce((sum, item) => sum + item[1], 0);
+    const titleShare = item => totalTitleRecords ? (item[1] / totalTitleRecords) * 100 : 0;
+    const largerTitleCounts = titleCounts.filter(item => titleShare(item) > 0.5);
+    const smallerTitleCounts = titleCounts.filter(item => titleShare(item) <= 0.5);
+    titleChart = chart('mainv1TitleCountChart', { type: 'doughnut', data: { labels: titleCounts.map(item => item[0]), datasets: [{ label: 'Titles above 0.5%', data: largerTitleCounts.map(item => item[1]), backgroundColor: largerTitleCounts.map((_, index) => titleColors[index % titleColors.length]), borderColor: '#fff', borderWidth: 2, hoverOffset: 8, hoverBorderWidth: 3 }, { label: 'Titles at or below 0.5%', data: smallerTitleCounts.map(item => item[1]), backgroundColor: smallerTitleCounts.map((_, index) => titleColors[(index + largerTitleCounts.length) % titleColors.length]), borderColor: '#fff', borderWidth: 2, hoverOffset: 8, hoverBorderWidth: 3 }] }, options: { ...chartDefaults, cutout: '48%', onClick: (_, elements) => { const element = elements[0]; if (!element) return; const source = element.datasetIndex === 1 ? smallerTitleCounts : largerTitleCounts; const title = source[element.index]?.[0]; if (title) openTitleRecords(title); }, onHover: (event, elements, chartInstance) => { chartInstance.canvas.style.cursor = elements.length ? 'pointer' : 'default'; }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => { const source = context.datasetIndex === 1 ? smallerTitleCounts : largerTitleCounts; const title = source[context.dataIndex]?.[0] || ''; return ` ${title}: ${context.parsed} social technolog${context.parsed === 1 ? 'y' : 'ies'}`; } } } } } });
     chart('mainv1YearChart', { type: 'bar', data: { labels: years, datasets: [{ data: yearCounts, backgroundColor: ['#2db6b0','#42b9ba','#77cce0','#ffbd51','#8b82e8','#ee70aa'], borderRadius: 4 }] }, options: { ...chartDefaults, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
     chart('mainv1StatusDonut', { type: 'doughnut', data: { labels: ['Ongoing', 'Inactive'], datasets: [{ data: [ongoing, inactive], backgroundColor: ['#42b9ba','#ff6682'], borderWidth: 0 }] }, options: { ...chartDefaults, cutout: '68%' } });
     chart('mainv1AdoptionDonut', { type: 'doughnut', data: { labels: ['Replicated', 'Adopted'], datasets: [{ data: [replicated, adopted], backgroundColor: ['#3398dc','#ffc34f'], borderWidth: 0 }] }, options: { ...chartDefaults, cutout: '68%' } });
@@ -2286,7 +2978,7 @@
     ranking('mainv1TopRegions', grouped('region')); ranking('mainv1TopProvinces', grouped('province'));
     const coverage = [['Expression of Interest', count(row => truthy(row.expr))], ['SB Resolution', count(row => truthy(row.res))], ['Memorandum of Agreement', count(row => truthy(row.moa))], ['Ongoing STs', ongoing], ['Inactive STs', inactive], ['Replicated STs', replicated], ['Adopted STs', adopted]]; const coverageMax = Math.max(1, ...coverage.map(item => item[1])); document.getElementById('mainv1Coverage').innerHTML = coverage.map(item => `<div class="mainv1-coverage-item"><span>${item[0]}</span><div class="mainv1-coverage-bar"><i style="width:${(item[1] / coverageMax) * 100}%"></i></div><b>${item[1]}</b></div>`).join('');
     const heatmap = document.getElementById('mainv1Heatmap'); const heatYears = years.slice(-8); const regionRows = grouped('region').slice(0, 10); if (heatmap) heatmap.innerHTML = regionRows.map(entry => `<div class="mainv1-heatmap-row"><span class="mainv1-heatmap-label">${entry[0]}</span>${heatYears.map(year => { const value = count(row => row.region === entry[0] && Number(row.year) === year); return `<i class="mainv1-heat-cell" data-level="${value >= 5 ? 3 : value >= 2 ? 2 : value ? 1 : 0}" title="${entry[0]} ${year}: ${value}"></i>`; }).join('')}</div>`).join('') || '<small>No regional year records found.</small>';
-    const pageSize = 8; let page = 1; const search = document.getElementById('mainv1DirectorySearch'); const status = document.getElementById('mainv1DirectoryStatus'); const type = document.getElementById('mainv1DirectoryType'); const filtered = () => rows.filter(row => (!search.value || String(row.title || '').toLowerCase().includes(search.value.toLowerCase())) && (!status.value || (status.value === 'ongoing' ? row.status === 'ongoing' : row.status === 'inactive' || row.status === 'dissolved')) && (!type.value || truthy(row[type.value]))); const renderDirectory = () => { const data = filtered(); const pages = Math.max(1, Math.ceil(data.length / pageSize)); page = Math.min(page, pages); const visible = data.slice((page - 1) * pageSize, page * pageSize); const body = document.getElementById('mainv1DirectoryRows'); body.replaceChildren(); visible.forEach(row => { const tableRow = document.createElement('tr'); const values = [row.title || 'Untitled', row.province || '-', row.municipality || '-']; values.forEach(value => { const cell = document.createElement('td'); cell.textContent = value; tableRow.appendChild(cell); }); const statusCell = document.createElement('td'); const statusPill = document.createElement('span'); statusPill.className = `mainv1-status-pill ${row.status === 'ongoing' ? 'ongoing' : 'inactive'}`; statusPill.textContent = row.status === 'ongoing' ? 'Ongoing' : 'Inactive'; statusCell.appendChild(statusPill); tableRow.appendChild(statusCell); const coverageCell = document.createElement('td'); coverageCell.textContent = [row.expr && 'EOI', row.res && 'Resolution', row.moa && 'MOA', row.replicated && 'Replicated', row.adopted && 'Adopted'].filter(Boolean).join(', ') || '-'; tableRow.appendChild(coverageCell); body.appendChild(tableRow); }); if (!visible.length) { const emptyRow = document.createElement('tr'); const emptyCell = document.createElement('td'); emptyCell.colSpan = 5; emptyCell.textContent = 'No records match the current filters.'; emptyRow.appendChild(emptyCell); body.appendChild(emptyRow); } setText('mainv1DirectorySummary', `${data.length} records`); setText('mainv1DirectoryPage', `Page ${page} of ${pages}`); document.getElementById('mainv1DirectoryPrev').disabled = page <= 1; document.getElementById('mainv1DirectoryNext').disabled = page >= pages; }; [search, status, type].forEach(input => input.addEventListener('input', () => { page = 1; renderDirectory(); })); document.getElementById('mainv1DirectoryPrev').addEventListener('click', () => { page -= 1; renderDirectory(); }); document.getElementById('mainv1DirectoryNext').addEventListener('click', () => { page += 1; renderDirectory(); }); renderDirectory();
+    const pageSize = 8; let page = 1; const search = document.getElementById('mainv1DirectorySearch'); const status = document.getElementById('mainv1DirectoryStatus'); const type = document.getElementById('mainv1DirectoryType'); const filtered = () => rows.filter(row => (!search.value || String(row.title || '').toLowerCase().includes(search.value.toLowerCase())) && (!status.value || (status.value === 'ongoing' ? row.status === 'ongoing' : row.status === 'inactive' || row.status === 'dissolved')) && (!type.value || truthy(row[type.value]))); const renderDirectory = () => { const data = filtered(); const pages = Math.max(1, Math.ceil(data.length / pageSize)); page = Math.min(page, pages); const visible = data.slice((page - 1) * pageSize, page * pageSize); const body = document.getElementById('mainv1DirectoryRows'); body.replaceChildren(); visible.forEach(row => { const tableRow = document.createElement('tr'); const values = [row.title || 'Untitled', row.province || '-', row.municipality || '-']; values.forEach(value => { const cell = document.createElement('td'); cell.textContent = value; tableRow.appendChild(cell); }); const statusCell = document.createElement('td'); const statusPill = document.createElement('span'); statusPill.className = `mainv1-status-pill ${row.status === 'ongoing' ? 'ongoing' : 'inactive'}`; statusPill.textContent = row.status === 'ongoing' ? 'Ongoing' : 'Inactive'; statusCell.appendChild(statusPill); tableRow.appendChild(statusCell); const coverageCell = document.createElement('td'); coverageCell.textContent = [row.expr && 'EOI', row.res && 'Resolution', row.moa && 'MOA', row.replicated && 'Replicated', row.adopted && 'Adopted'].filter(Boolean).join(', ') || '-'; tableRow.appendChild(coverageCell); body.appendChild(tableRow); }); if (!visible.length) { const emptyRow = document.createElement('tr'); const emptyCell = document.createElement('td'); emptyCell.colSpan = 5; emptyCell.textContent = 'No records match the current filters.'; emptyRow.appendChild(emptyCell); body.appendChild(emptyRow); } setText('mainv1DirectorySummary', `${data.length} records`); setText('mainv1DirectoryPage', `Page ${page} of ${pages}`); document.getElementById('mainv1DirectoryPrev').disabled = page <= 1; document.getElementById('mainv1DirectoryNext').disabled = page >= pages; }; [search, status, type].filter(Boolean).forEach(input => input.addEventListener('input', () => { page = 1; renderDirectory(); })); document.getElementById('mainv1DirectoryPrev').addEventListener('click', () => { page -= 1; renderDirectory(); }); document.getElementById('mainv1DirectoryNext').addEventListener('click', () => { page += 1; renderDirectory(); });
     const provinceFilter = document.getElementById('mainv1DirectoryProvince');
     const municipalityFilter = document.getElementById('mainv1DirectoryMunicipality');
     const yearFilter = document.getElementById('mainv1DirectoryYear');
@@ -2306,14 +2998,22 @@
     directoryPrevious?.addEventListener('click', () => { directoryFilteredPage -= 1; renderFilteredDirectory(); }); directoryNext?.addEventListener('click', () => { directoryFilteredPage += 1; renderFilteredDirectory(); });
     exportButton?.addEventListener('click', () => { const escapeCsv = value => `"${String(value ?? '').replace(/"/g, '""')}"`; const csvRows = [['Social Technology Title', 'Province', 'City / Municipality', 'Year of MOA', 'Region', 'Status', 'Expression of Interest', 'SB Resolution', 'MOA', 'Replicated', 'Adopted'], ...directoryFilteredRows().map(row => [row.title, row.province, row.municipality, row.year, row.region, row.status === 'ongoing' ? 'Ongoing' : 'Inactive', truthy(row.expr) ? 'Yes' : 'No', truthy(row.res) ? 'Yes' : 'No', truthy(row.moa) ? 'Yes' : 'No', truthy(row.replicated) ? 'Yes' : 'No', truthy(row.adopted) ? 'Yes' : 'No'])].map(row => row.map(escapeCsv).join(',')); const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `social-technologies-${new Date().toISOString().slice(0, 10)}.csv`; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); });
     const directoryBody = document.getElementById('mainv1DirectoryRows');
+    const enhanceOperationalCells = () => { directoryBody?.querySelectorAll('tr').forEach(tableRow => { const cell = tableRow.cells[3]; if (!cell || cell.dataset.operationalEnhanced === 'true') return; const row = rows.find(candidate => String(candidate.title || '').trim().toLowerCase() === String(tableRow.cells[0]?.textContent || '').trim().toLowerCase() && String(candidate.province || '') === String(tableRow.cells[1]?.textContent || '') && String(candidate.municipality || '') === String(tableRow.cells[2]?.textContent || '')); if (!row || String(row.operational_status || 'Operational') === 'Operational') { if (cell) cell.dataset.operationalEnhanced = 'true'; return; } cell.style.display = 'flex'; cell.style.flexDirection = 'column'; cell.style.alignItems = 'flex-start'; cell.style.gap = '.3rem'; const indicator = document.createElement('span'); indicator.className = 'mainv1-operational-indicator'; indicator.textContent = 'Not Operational'; indicator.title = 'This program is no longer operational'; indicator.setAttribute('aria-label', 'This program is no longer operational'); indicator.style.cssText = 'display:inline-flex;align-items:center;width:max-content;margin:0;padding:.25rem .5rem;border-radius:99px;background:#fee2e2;color:#b91c1c;font-size:.64rem;font-weight:800;line-height:1.2;white-space:nowrap;'; cell.appendChild(indicator); cell.dataset.operationalEnhanced = 'true'; }); };
     const enhanceCoverageCells = () => { directoryBody?.querySelectorAll('tr').forEach(tableRow => { const cell = tableRow.cells[4]; if (!cell || cell.dataset.coverageEnhanced === 'true') return; const labels = cell.textContent.split(',').map(value => value.trim()).filter(Boolean); cell.replaceChildren(); if (!labels.length || labels[0] === '-') { const empty = document.createElement('span'); empty.className = 'mainv1-coverage-empty'; empty.textContent = 'None'; cell.appendChild(empty); } else { const badges = document.createElement('div'); badges.className = 'mainv1-coverage-badges'; labels.forEach(label => { const badge = document.createElement('span'); const className = { EOI: 'coverage-eoi', Resolution: 'coverage-resolution', MOA: 'coverage-moa', Replicated: 'coverage-replicated', Adopted: 'coverage-adopted' }[label]; badge.className = `mainv1-coverage-badge ${className || ''}`; badge.textContent = label; badges.appendChild(badge); }); cell.appendChild(badges); } cell.dataset.coverageEnhanced = 'true'; }); };
+    const normalizeOperationalCellLayout = () => { directoryBody?.querySelectorAll('td[data-operational-enhanced="true"]').forEach(cell => { cell.style.display = 'table-cell'; cell.style.verticalAlign = 'middle'; cell.style.whiteSpace = 'normal'; cell.style.overflow = 'visible'; }); };
     const addDirectoryAttachmentCells = () => { directoryBody?.querySelectorAll('tr').forEach(tableRow => { if (tableRow.cells.length !== 5) return; const title = tableRow.cells[0].textContent; const row = rows.find(candidate => candidate.title === title && candidate.province === tableRow.cells[1].textContent && candidate.municipality === tableRow.cells[2].textContent); const cell = document.createElement('td'); if (row?.attachment_url) { const button = document.createElement('button'); button.type = 'button'; button.className = 'mainv1-attachment-button'; button.textContent = 'View attachment'; button.addEventListener('click', () => openAttachmentModal(row)); cell.appendChild(button); } else { const empty = document.createElement('span'); empty.className = 'mainv1-attachment-empty'; empty.textContent = 'None'; cell.appendChild(empty); } tableRow.appendChild(cell); }); };
     const directoryObserver = directoryBody ? new MutationObserver(addDirectoryAttachmentCells) : null;
     directoryObserver?.observe(directoryBody, { childList: true });
+    const operationalObserver = directoryBody ? new MutationObserver(enhanceOperationalCells) : null;
+    operationalObserver?.observe(directoryBody, { childList: true, subtree: true });
+    const operationalLayoutObserver = directoryBody ? new MutationObserver(normalizeOperationalCellLayout) : null;
+    operationalLayoutObserver?.observe(directoryBody, { childList: true, subtree: true });
     const coverageObserver = directoryBody ? new MutationObserver(enhanceCoverageCells) : null;
     coverageObserver?.observe(directoryBody, { childList: true, subtree: true });
     renderFilteredDirectory();
     addDirectoryAttachmentCells();
+    enhanceOperationalCells();
+    normalizeOperationalCellLayout();
     enhanceCoverageCells();
     attachmentModal?.querySelector('.mainv1-st-detail-close')?.addEventListener('click', closeAttachmentModal);
     attachmentModal?.addEventListener('click', event => { if (event.target === attachmentModal) closeAttachmentModal(); });
@@ -2333,6 +3033,7 @@
             if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
             const modalImage = document.getElementById('mainv1RegionModalImage');
             const modalTitle = document.getElementById('mainv1RegionModalTitle');
+            const replicationRedirectUrl = @json($replicationRedirectUrl);
             const regionRows = @json($mainv1RegionRows);
             const filterElements = Object.fromEntries(
                 [...document.querySelectorAll('[data-region-filter]')]
@@ -2390,12 +3091,9 @@
                     });
                     titleRow.querySelector('.mainv1-replicate-confirm')?.addEventListener('click', (event) => {
                         event.stopPropagation();
-                        const popover = titleRow.querySelector('.mainv1-replicate-popover');
-                        if (popover) {
-                            popover.classList.add('is-confirmed');
-                            popover.innerHTML = '<span>Replication selected for this ST.</span>';
-                        }
+                        titleRow.classList.remove('is-replicate-open');
                         window.dispatchEvent(new CustomEvent('st-replication-confirmed', { detail: { title: titleRow.dataset.title || '' } }));
+                        window.openMainv1ReplicationConfirm?.();
                     });
                     titleRow.addEventListener('keydown', (event) => {
                         if (event.key === 'Enter' || event.key === ' ') {

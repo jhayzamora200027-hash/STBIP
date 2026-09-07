@@ -11,6 +11,7 @@ use App\Http\Controllers\StsMoaListingwithUploadingController;
 use App\Http\Controllers\StsAttachmentController;
 use App\Http\Controllers\STsReportController;
 use App\Http\Controllers\GalleryCardController;
+use App\Http\Controllers\ReplicationSettingsController;
 
 
 
@@ -43,6 +44,13 @@ Route::put('/profile', [UserController::class, 'updateProfile'])
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/register', [UserController::class, 'register'])->name('register')->middleware('throttle:10,1');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
+
+Route::post('/settings/replication-redirect', [ReplicationSettingsController::class, 'update'])
+    ->name('settings.replication-redirect.update')
+    ->middleware(['auth', \App\Http\Middleware\SysAdminMiddleware::class]);
+
+Route::post('/replication-records', [ReplicationSettingsController::class, 'record'])
+    ->name('replication-records.store');
 
 // OTP verification for optional 2FA (email OTP)
 Route::get('/otp', [UserController::class, 'showOtpForm'])->name('otp.form');

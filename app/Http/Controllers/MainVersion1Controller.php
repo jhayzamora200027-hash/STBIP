@@ -6,10 +6,17 @@ use Illuminate\Http\Request;
 use App\Models\RegionItem;
 use App\Models\GalleryCard;
 use App\Models\StsAttachment;
+use App\Models\AppSetting;
+use App\Models\SocialTechnologyTitle;
 class MainVersion1Controller extends Controller
 {
     public function index(Request $request){
         $filterItems = RegionItem::with('region:id,name')->get();
+        $operationalStatuses = SocialTechnologyTitle::query()
+            ->pluck('operational_status', 'social_technology');
+        $filterItems->each(function ($item) use ($operationalStatuses) {
+            $item->setAttribute('operational_status', $operationalStatuses->get($item->title, 'Operational') ?: 'Operational');
+        });
         $attachmentMap = [];
         foreach (StsAttachment::query()->orderBy('id')->get() as $attachment) {
             $key = implode('|', [
@@ -50,6 +57,7 @@ class MainVersion1Controller extends Controller
         $selectedMunicipalities = array_values(array_filter((array) $request->input('municipality', [])));
         $selectedYears = array_values(array_filter((array) $request->input('year_of_moa', [])));
         $selectedTitles = array_values(array_filter((array) $request->input('title', [])));
+        $replicationRedirectUrl = AppSetting::where('key', 'replication_redirect_url')->value('value');
 
         $regionItems = $filterItems->filter(function ($item) use ($request) {
             $regions = array_values(array_filter((array) $request->input('region', [])));
@@ -73,7 +81,8 @@ class MainVersion1Controller extends Controller
             'selectedProvinces',
             'selectedMunicipalities',
             'selectedYears',
-            'selectedTitles'
+            'selectedTitles',
+            'replicationRedirectUrl'
         ));
     }
 }

@@ -3080,8 +3080,8 @@ document.addEventListener('DOMContentLoaded', function(){
     } catch(e){}
 
     try { _clearAutoResume(); } catch(e){}
-    try { running = false; scroller.classList.add('autoscroll-paused'); } catch(e){}
-    try { const track = document.querySelector('.marquee-track'); if (track) { track.style.animationPlayState = 'paused'; track.dataset.frozen = '1'; } } catch(e){}
+    try { running = false; /* visual pause suppressed; only hover should pause */ } catch(e){}
+    try { const track = document.querySelector('.marquee-track'); if (track) { /* do not force animationPlayState here */ track.dataset.frozen = '1'; } } catch(e){}
     try { cancelHoverSnap(card); } catch(e){}
     try { scroller.classList.add('gallery-popover-open'); } catch(e){}
     const rect = card.getBoundingClientRect();
@@ -4025,7 +4025,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .card-gallery .container-cards, .card-gallery .container-cards .card, .card-gallery .container-cards .imgContainer { pointer-events: auto; }
 
 .card-gallery .container-cards.autoscroll-paused { opacity:0.94; }
-.card-gallery .container-cards.autoscroll-paused::after { content: 'Paused'; position:absolute; right:20px; top:10px; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; padding:6px 8px; border-radius:999px; z-index:9999; pointer-events:none; }
+.card-gallery .container-cards.autoscroll-paused::after { content: ''; display: none; }
 
 
 .marquee-force { overflow:hidden; }
@@ -4996,7 +4996,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                     track.style.transform = `translateX(${-finalPos}px)`;
                                     hoverSnap.active = false;
                                     running = false;
-                                    scroller.classList.add('autoscroll-paused');
                                     currentSpeed = baseSpeed;
                                     try { startTypingSequence(snappedCard); } catch(e){}
                                     try { _scheduleAutoResume(); } catch(e){}
@@ -5029,7 +5028,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 let _autoResumeTimer = null;
 
                 function _clearAutoResume(){ if (_autoResumeTimer) { clearTimeout(_autoResumeTimer); _autoResumeTimer = null; } }
-                function _scheduleAutoResume(){ _clearAutoResume(); _autoResumeTimer = setTimeout(()=>{ try { if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ if (!hoverSnap.active) { running = true; scroller.classList.remove('autoscroll-paused'); } } _autoResumeTimer = null; }, AUTO_RESUME_MS); }
+                function _scheduleAutoResume(){ _clearAutoResume(); _autoResumeTimer = setTimeout(()=>{ try { if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); } else { running = false; /* visual pause suppressed */ } } catch(e){ if (!hoverSnap.active) { running = true; scroller.classList.remove('autoscroll-paused'); } } _autoResumeTimer = null; }, AUTO_RESUME_MS); }
 
                 function startHoverSnap(card){
                     _clearAutoResume();
@@ -5069,7 +5068,6 @@ document.addEventListener('DOMContentLoaded', function(){
                         } catch(e) {  }
 
                         running = false;
-                        scroller.classList.add('autoscroll-paused');
                         try { startTypingSequence(card); } catch(e){}
                         _scheduleAutoResume();
                         return;
@@ -5086,7 +5084,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     currentSpeed = Math.max(MIN_HOVER_SPEED, Math.min(MAX_HOVER_SPEED, Math.round(desiredSpeed)));
                     try {
                         if (!isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); }
-                        else { running = false; scroller.classList.add('autoscroll-paused'); }
+                        else { running = false; }
                     } catch(e) { running = true; scroller.classList.remove('autoscroll-paused'); }
                 }
 
@@ -5104,7 +5102,6 @@ document.addEventListener('DOMContentLoaded', function(){
                             scroller.classList.remove('autoscroll-paused');
                         } else {
                             running = false;
-                            scroller.classList.add('autoscroll-paused');
                         }
                     } catch(e){ running = true; scroller.classList.remove('autoscroll-paused'); }
                 }
@@ -5190,7 +5187,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                     const snappedCard = hoverSnap.card;
                                     hoverSnap.active = false;
                                     running = false;
-                                    scroller.classList.add('autoscroll-paused');
                                     scroller.classList.remove('lift-in-progress');
                                     try {
                                         const pop = document.getElementById('galleryPopover');
@@ -5248,7 +5244,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                 scroller.scrollLeft = finalPos;
                                 hoverSnap.active = false;
                                 running = false;
-                                scroller.classList.add('autoscroll-paused');
                                 currentSpeed = baseSpeed;
                                 try { startTypingSequence(snappedCard); } catch(e){}
                                 try { _scheduleAutoResume(); } catch(e){}
@@ -5263,9 +5258,9 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
 
                 scroller.addEventListener('mouseenter', ()=> { running = false; scroller.classList.add('autoscroll-paused'); });
-                scroller.addEventListener('mouseleave', ()=> { cancelLift(); try { if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ if (!hoverSnap.active) { running = true; scroller.classList.remove('autoscroll-paused'); } } lastTs = null; });
+                scroller.addEventListener('mouseleave', ()=> { cancelLift(); try { running = true; scroller.classList.remove('autoscroll-paused'); } catch(e){ running = true; } lastTs = null; });
                 scroller.addEventListener('focusin', ()=> { if (!hoverSnap.active) running = false; });
-                scroller.addEventListener('focusout', ()=> { cancelHoverSnap(); try { if (!isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ running = true; scroller.classList.remove('autoscroll-paused'); } lastTs = null; });
+                scroller.addEventListener('focusout', ()=> { cancelHoverSnap(); try { running = true; scroller.classList.remove('autoscroll-paused'); } catch(e){ running = true; } lastTs = null; });
                 (function bindAutoOpenOnExpand(){
                     if (window.__galleryAutoOpenBound) return; window.__galleryAutoOpenBound = true;
                     const _autoOpenTimestamps = new WeakMap();
@@ -5302,12 +5297,11 @@ document.addEventListener('DOMContentLoaded', function(){
                     cancelLift(leftCard);
                     cancelHoverSnap(leftCard);
                     try {
-                        if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); }
-                        else { running = false; scroller.classList.add('autoscroll-paused'); }
-                    } catch(e){ if (!hoverSnap.active) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } }
+                        running = true; lastTs = null; scroller.classList.remove('autoscroll-paused');
+                    } catch(e){ running = true; }
                 });
-                scroller.addEventListener('touchstart', ()=> { running = false; scroller.classList.add('autoscroll-paused'); });
-                scroller.addEventListener('touchend', ()=> { try { if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } else { running = false; scroller.classList.add('autoscroll-paused'); } } catch(e){ if (!hoverSnap.active) { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } } });
+                scroller.addEventListener('touchstart', ()=> { /* ignore touch — only hover should pause */ });
+                scroller.addEventListener('touchend', ()=> { try { running = true; lastTs = null; scroller.classList.remove('autoscroll-paused'); } catch(e){ running = true; } });
                 let _isPointerDragging = false;
                 let _pointerDragStartX = 0;
                 let _pointerDragStartScroll = 0;
@@ -5337,7 +5331,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     scroller.dataset.pointerDragging = '0';
                     try { scroller.setPointerCapture(ev.pointerId); } catch(e){}
                     running = false;
-                    scroller.classList.add('autoscroll-paused');
                 });
 
                 scroller.addEventListener('pointermove', (ev) => {
@@ -5403,7 +5396,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     const WHEEL_SPEED = 1.0;
                     const delta = dy * WHEEL_SPEED;
                     running = false;
-                    scroller.classList.add('autoscroll-paused');
                     _clearAutoResume();
                     const wrap = (v) => {
                         if (!originalWidth || !isFinite(originalWidth)) return Math.max(0, v);
@@ -5437,7 +5429,6 @@ document.addEventListener('DOMContentLoaded', function(){
                     const card = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
                     if (card && scroller.contains(card)) {
                         running = false;
-                        scroller.classList.add('autoscroll-paused');
                     }
                 }
                 function docOutHandler(ev){
@@ -5450,7 +5441,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     cancelHoverSnap(card);
                     try {
                         if (!hoverSnap.active && !isPopoverOpen() && !_isGalleryExpanded()) { running = true; scroller.classList.remove('autoscroll-paused'); }
-                        else { running = false; scroller.classList.add('autoscroll-paused'); }
+                        else { running = false; }
                     } catch(e){ if (!hoverSnap.active) { running = true; scroller.classList.remove('autoscroll-paused'); } }
                 }
                 document.addEventListener('mouseover', docOverHandler, true);

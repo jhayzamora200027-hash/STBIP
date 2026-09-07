@@ -23,6 +23,7 @@ class SocialTechnologyTitle extends Model
         'pilot_areas',
         'year_implemented',
         'status_remarks',
+        'operational_status',
         'resolution',
         'guidelines',
         'program_manual_outline',

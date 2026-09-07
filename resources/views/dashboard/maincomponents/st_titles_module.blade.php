@@ -8,7 +8,6 @@
     .st-card { background:#fff; border:1px solid #e6eef7; border-radius:12px; padding:16px; }
     .st-table { width:100%; border-collapse:collapse; margin-top:12px; }
     .st-table th, .st-table td { padding:10px; border-bottom:1px solid #eef4fb; text-align:left; }
-    /* masterdata expandable row styles (copied from masterdata view) */
     .masterdata-item-list {
         border: 1px solid #dbe4f0;
         border-radius: 20px;
@@ -20,7 +19,7 @@
     .masterdata-item-list-head,
     .masterdata-item-row {
         display: grid;
-        grid-template-columns: minmax(750px, 1fr) repeat(4, minmax(120px, 1fr)) 56px;
+        grid-template-columns: minmax(750px, 1fr) repeat(5, minmax(120px, 1fr)) 56px;
         gap: 12px;
         align-items: center;
         padding: 14px 18px;
@@ -254,6 +253,7 @@
                 <div class="masterdata-item-list-head">
                     <div>ST Title</div>
                     <div>Sector</div>
+                    <div>Operational Status</div>
                     <div>Created By</div>
                     <div>Updated At</div>
                     <div></div>
@@ -268,6 +268,10 @@
                             <div class="masterdata-item-row-cell {{ $t->sector ? '' : 'masterdata-item-row-cell-muted' }}">
                                 <span class="masterdata-mobile-label">Sector</span>
                                 <span class="masterdata-item-row-value">{{ $t->sector ?: 'No sector' }}</span>
+                            </div>
+                            <div class="masterdata-item-row-cell">
+                                <span class="masterdata-mobile-label">Operational Status</span>
+                                <span class="masterdata-item-row-value">{{ $t->operational_status ?: 'Operational' }}</span>
                             </div>
                             <div class="masterdata-item-row-cell {{ $t->createdby ? '' : 'masterdata-item-row-cell-muted' }}">
                                 <span class="masterdata-mobile-label">Created By</span>
@@ -330,6 +334,11 @@
                                 <div class="masterdata-field">
                                     <label>Status / Remarks</label>
                                     <input type="text" value="{{ $t->status_remarks ?: '-' }}" readonly>
+                                </div>
+
+                                <div class="masterdata-field">
+                                    <label>Operational Status</label>
+                                    <input type="text" value="{{ $t->operational_status ?: 'Operational' }}" readonly>
                                 </div>
 
                                 <div class="masterdata-field">
