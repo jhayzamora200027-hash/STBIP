@@ -165,6 +165,64 @@
         font-size: 1rem;
     }
 
+    .mainv1-filter-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 36px;
+        border: 1px solid #d2e0e8;
+        border-radius: 7px;
+        padding: 0.45rem 0.7rem;
+        background: #fff;
+        color: #17324d;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .mainv1-filter-toggle:hover,
+    .mainv1-filter-toggle:focus-visible {
+        border-color: #4b9bd4;
+        background: #eef4fa;
+    }
+
+    .mainv1-filter-toggle::after {
+        content: '';
+        width: 0.42rem;
+        height: 0.42rem;
+        margin-top: -0.2rem;
+        border-right: 2px solid #49627d;
+        border-bottom: 2px solid #49627d;
+        transform: rotate(45deg);
+        transition: transform 0.2s ease;
+    }
+
+    .mainv1-filter.is-collapsed .mainv1-filter-toggle::after {
+        margin-top: 0.2rem;
+        transform: rotate(-135deg);
+    }
+
+    .mainv1-filter.is-collapsed .mainv1-filter-grid {
+        display: none !important;
+    }
+
+    .mainv1-filter.is-collapsed .mainv1-filter-heading {
+        margin-bottom: 0;
+    }
+
+    @media (min-width: 1101px) {
+        .mainv1-filter-toggle {
+            display: none;
+        }
+
+        .mainv1-filter-grid,
+        .mainv1-filter.is-collapsed .mainv1-filter-grid {
+            display: grid !important;
+        }
+    }
+
     .mainv1-filter-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -465,6 +523,26 @@
         line-height: 1 !important;
     }
 
+    .mainv1-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; width: 100%; }
+    .mainv1-metric-grid .mainv1-total-list { display: contents; }
+    .mainv1-metric-card { align-items: flex-start; min-height: 158px; padding: 1rem 1.15rem; text-align: left; padding:30px;}
+    .mainv1-metric-card span { min-height: 2.2em; line-height: 1.35; text-align: left; }
+    .mainv1-metric-value { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; width: 100%; margin-top: 0.45rem; }
+    .mainv1-metric-card .mainv1-metric-value strong { margin-top: 0; }
+    .mainv1-metric-percent { flex: 0 0 auto; color: #56728a; font-size: 0.78rem; font-weight: 800; }
+    .mainv1-metric-progress { width: 100%; height: 5px; margin-top: auto; overflow: hidden; border-radius: 999px; background: #dce7ee; }
+    .mainv1-metric-progress span { display: block; width: var(--mainv1-metric-progress, 0%); min-height: 0; height: 100%; border-radius: inherit; background: #2789d9; }
+    [data-mainv1-metric="all"] .mainv1-metric-progress { display: none; }
+    .mainv1-metric-caption { min-height: 0 !important; margin-top: 0.45rem; color: #71849a !important; font-size: 0.72rem !important; font-weight: 600 !important; }
+    .mainv1-secondary-card { display: grid; grid-template-columns: 2.8rem minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 0.8rem; min-height: 86px; padding: 0.75rem 1rem; align-items: center; }
+    .mainv1-secondary-card .mainv1-metric-icon { grid-row: 1 / span 2; display: grid; width: 2.8rem; height: 2.8rem; place-items: center; border-radius: 0.85rem; background: rgba(39, 137, 217, 0.12); color: #2789d9; font-size: 1.25rem; }
+    .mainv1-secondary-card .mainv1-metric-label { grid-column: 2; min-height: 0; color: #56728a; font-size: 0.75rem; font-weight: 700; }
+    .mainv1-secondary-card .mainv1-metric-value { grid-column: 2; justify-content: flex-start; gap: 0.65rem; margin-top: 0.1rem; }
+    .mainv1-secondary-card .mainv1-metric-value strong { font-size: 2rem !important; }
+    .mainv1-secondary-card .mainv1-metric-progress,
+    .mainv1-secondary-card .mainv1-metric-caption { display: none; }
+    .mainv1-overview-dashboard { width: 100%; }
+
     .mainv1-map-panel h2,
     .mainv1-region-panel h2 {
         margin: 0 0 0.85rem;
@@ -483,12 +561,29 @@
         text-align: center;
     }
 
-    .mainv1-map-panel object {
+    .mainv1-svg-map-wrap {
+        position: relative;
         display: block;
-        width: min(100%, 700px);
+        width: 100%;
         height: clamp(460px, 52vw, 700px);
         margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid #dce8ee;
+        border-radius: 10px;
+        background: #eaf5f7;
+        text-align: left;
     }
+    .mainv1-svg-map-stage { display: grid; width: 100%; height: 100%; min-width: 0; min-height: 0; place-items: center; transform-origin: center; transition: transform 0.25s ease; }
+    .mainv1-svg-map-stage object { display: block; width: min(100%, 700px); height: 100%; min-width: 0; min-height: 0; margin: 0 auto; }
+    .mainv1-map-panel .mainv1-svg-map-stage object { width: auto !important; max-width: 100%; height: 100% !important; max-height: 100%; }
+    .mainv1-map-controls { position: absolute; z-index: 2; top: 0.7rem; right: 0.7rem; display: inline-flex; gap: 0.25rem; padding: 0.25rem; border: 1px solid #d2e0e8; border-radius: 8px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 2px 8px rgba(23, 50, 77, 0.12); }
+    .mainv1-map-control { width: 2rem; height: 2rem; border: 0; border-radius: 5px; background: transparent; color: #17324d; font-size: 1.05rem; font-weight: 800; line-height: 1; cursor: pointer; }
+    .mainv1-map-control:hover, .mainv1-map-control:focus-visible { background: #e8f6f4; outline: none; }
+    .mainv1-map-control:disabled { color: #9aabba; cursor: not-allowed; opacity: 0.55; }
+    .mainv1-svg-map-wrap { cursor: grab; touch-action: none; }
+    .mainv1-svg-map-wrap.is-panning { cursor: grabbing; }
+    .mainv1-svg-map-wrap,
+    .mainv1-svg-map-wrap object { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
 
     .mainv1-map-panel p {
         margin: 0.35rem 0 0;
@@ -496,6 +591,8 @@
         font-size: 0.76rem;
         font-weight: 700;
     }
+
+    .mainv1-map-panel { position: relative; }
 
     .mainv1-region-panel {
         min-width: 0;
@@ -1512,6 +1609,8 @@
     }
 
     @media (max-width: 1100px) {
+        .mainv1-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
         .mainv1-overview-row {
             display: flex;
             flex-wrap: wrap;
@@ -1569,6 +1668,8 @@
     }
 
     @media (max-width: 576px) {
+        .mainv1-metric-grid { grid-template-columns: 1fr; }
+
         .mainv1-overview-row > .col-md-3 {
             width: 100%;
             max-width: 100%;
@@ -1765,12 +1866,13 @@
                 <h1 class="mainv1-brand-title">Social Technologies Dashboard</h1>
             </div>
         </div>
-        <div class="pe-4">
-            <form class="mainv1-filter" aria-label="Filter region items" method="GET" action="{{ auth()->check() ? route('main') : route('landing') }}">
+        <div class="pe-4 ps-3">
+            <form class="mainv1-filter is-collapsed" aria-label="Filter region items" method="GET" action="{{ auth()->check() ? route('main') : route('landing') }}">
                 <div class="mainv1-filter-heading">
                     <h2>Dashboard Filters</h2>
+                    <button class="mainv1-filter-toggle" type="button" aria-expanded="false" aria-controls="mainv1Filters">Show filters</button>
                 </div>
-                <div class="mainv1-filter-grid" id="mainv1Filters">
+                <div class="mainv1-filter-grid" id="mainv1Filters" hidden>
                     @foreach([
                         ['key' => 'region', 'label' => 'Region', 'placeholder' => 'All regions'],
                         ['key' => 'province', 'label' => 'Province', 'placeholder' => 'All provinces'],
@@ -1805,33 +1907,123 @@
             </form>
         </div>
     </div>
-    <div class="row mainv1-overview-row ps-3">
-        <div class="col-md-3" style="padding-top: 22px;">
+    <script>
+        (() => {
+            const filterPanel = document.querySelector('.mainv1-filter');
+            const filterToggle = filterPanel?.querySelector('.mainv1-filter-toggle');
+            const filterGrid = document.getElementById('mainv1Filters');
+            if (!filterPanel || !filterToggle || !filterGrid) return;
+            const collapsibleViewport = window.matchMedia('(max-width: 1100px)');
+            const syncFilterViewport = () => {
+                const isDesktop = !collapsibleViewport.matches;
+                filterToggle.hidden = isDesktop;
+                if (isDesktop) {
+                    filterPanel.classList.remove('is-collapsed');
+                    filterGrid.hidden = false;
+                    filterToggle.setAttribute('aria-expanded', 'true');
+                }
+            };
+            syncFilterViewport();
+            collapsibleViewport.addEventListener?.('change', syncFilterViewport);
+            filterToggle.addEventListener('click', () => {
+                const isCollapsed = filterPanel.classList.toggle('is-collapsed');
+                filterGrid.hidden = isCollapsed;
+                filterToggle.setAttribute('aria-expanded', String(!isCollapsed));
+                filterToggle.firstChild.textContent = isCollapsed ? 'Show filters' : 'Hide filters';
+            });
+        })();
+    </script>
+    @php
+        $mainv1TotalCount = $mainv1DashboardItems->count();
+        $mainv1ExprCount = $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_expr))->count();
+        $mainv1ResolutionCount = $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_res))->count();
+        $mainv1MoaCount = $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_moa))->count();
+        $mainv1ActiveCount = $mainv1DashboardItems->filter($mainv1Active)->count();
+        $mainv1InactiveCount = $mainv1DashboardItems->filter($mainv1Inactive)->count();
+        $mainv1ReplicatedCount = $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_replicated))->count();
+        $mainv1AdoptedCount = $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_adopted))->count();
+        $mainv1AdoptedReplicatedTotal = $mainv1TotalCount;
+        $mainv1MetricPercent = fn ($value) => $mainv1AdoptedReplicatedTotal > 0
+            ? min(100, round(($value / $mainv1AdoptedReplicatedTotal) * 100))
+            : 0;
+        $mainv1RegionLocations = $mainv1DashboardItems->map(fn ($item) => [
+            'region' => $item->region?->name,
+            'province' => $item->province,
+            'city' => $item->municipality,
+        ])->values();
+    @endphp
+    <div class="mainv1-overview-row">
+        <div class="mainv1-metric-grid" aria-label="ST inventory metrics">
             <div class="mainv1-total-list">
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="all" role="button" tabindex="0" aria-label="View all adopted and replicated social technologies">
+                <div class="mainv1-total-card mainv1-metric-card mainv1-metric-trigger" data-mainv1-metric="all" role="button" tabindex="0" aria-label="View all adopted and replicated social technologies">
                     <span>TOTAL ADOPTED AND REPLICATED</span>
-                    <strong>{{ $mainv1DashboardItems->count() }}</strong>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1TotalCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1TotalCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1TotalCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">Complete inventory of records</span>
                 </div>
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="expr" role="button" tabindex="0" aria-label="View social technologies with expression of interest">
+                <div class="mainv1-total-card mainv1-metric-card mainv1-metric-trigger" data-mainv1-metric="expr" role="button" tabindex="0" aria-label="View social technologies with expression of interest">
                     <span>TOTAL EXPRESSION OF INTEREST</span>
-                    <strong>{{ $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_expr))->count() }}</strong>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1ExprCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1ExprCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1ExprCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
                 </div>
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="res" role="button" tabindex="0" aria-label="View social technologies with SB resolution">
+                <div class="mainv1-total-card mainv1-metric-card mainv1-metric-trigger" data-mainv1-metric="res" role="button" tabindex="0" aria-label="View social technologies with SB resolution">
                     <span>TOTAL SB RESOLUTION</span>
-                    <strong>{{ $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_res))->count() }}</strong>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1ResolutionCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1ResolutionCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1ResolutionCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
                 </div>
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="moa" role="button" tabindex="0" aria-label="View social technologies with memorandum of agreement">
+                <div class="mainv1-total-card mainv1-metric-card mainv1-metric-trigger" data-mainv1-metric="moa" role="button" tabindex="0" aria-label="View social technologies with memorandum of agreement">
                     <span>TOTAL MEMORANDUM OF AGREEMENT</span>
-                    <strong>{{ $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_moa))->count() }}</strong>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1MoaCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1MoaCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1MoaCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
+                </div>
+                <div class="mainv1-total-card mainv1-metric-card mainv1-secondary-card mainv1-metric-trigger" data-mainv1-metric="active" role="button" tabindex="0" aria-label="View active region social technologies">
+                    <span class="mainv1-metric-icon" aria-hidden="true"><i class="bi bi-activity"></i></span>
+                    <span class="mainv1-metric-label">Active</span>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1ActiveCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1ActiveCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1ActiveCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
+                </div>
+                <div class="mainv1-total-card mainv1-metric-card mainv1-secondary-card mainv1-metric-trigger" data-mainv1-metric="inactive" role="button" tabindex="0" aria-label="View inactive region social technologies">
+                    <span class="mainv1-metric-icon" aria-hidden="true"><i class="bi bi-pause-circle-fill"></i></span>
+                    <span class="mainv1-metric-label">Inactive</span>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1InactiveCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1InactiveCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1InactiveCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
+                </div>
+                <div class="mainv1-total-card mainv1-metric-card mainv1-secondary-card mainv1-metric-trigger" data-mainv1-metric="replicated" role="button" tabindex="0" aria-label="View replicated social technologies">
+                    <span class="mainv1-metric-icon" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+                    <span class="mainv1-metric-label">Replicated</span>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1ReplicatedCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1ReplicatedCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1ReplicatedCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
+                </div>
+                <div class="mainv1-total-card mainv1-metric-card mainv1-secondary-card mainv1-metric-trigger" data-mainv1-metric="adopted" role="button" tabindex="0" aria-label="View adopted social technologies">
+                    <span class="mainv1-metric-icon" aria-hidden="true"><i class="bi bi-check-circle-fill"></i></span>
+                    <span class="mainv1-metric-label">Adopted</span>
+                    <div class="mainv1-metric-value"><strong>{{ $mainv1AdoptedCount }}</strong><span class="mainv1-metric-percent">{{ $mainv1MetricPercent($mainv1AdoptedCount) }}%</span></div>
+                    <div class="mainv1-metric-progress" aria-hidden="true" style="--mainv1-metric-progress: {{ $mainv1MetricPercent($mainv1AdoptedCount) }}%;"><span></span></div>
+                    <span class="mainv1-metric-caption">of adopted and replicated records</span>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="mainv1-overview-dashboard">
             <section class="mainv1-dashboard" aria-label="ST inventory overview">
                 <div class="mainv1-map-panel">
                     <h2>PHILIPPINES MAP &amp; REGIONS</h2>
-                    <object data="{{ asset('images/philippines.svg') }}" type="image/svg+xml" aria-label="Philippines map"></object>
-                    <p>Hover a region on the map</p>
+                    <div class="mainv1-svg-map-wrap" id="mainv1SvgMapWrap">
+                        <div class="mainv1-map-controls" aria-label="Map controls">
+                            <button class="mainv1-map-control" id="mainv1SvgMapZoomOut" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button>
+                            <button class="mainv1-map-control" id="mainv1SvgMapReset" type="button" aria-label="Reset map view" title="Reset map view">&#8634;</button>
+                            <button class="mainv1-map-control" id="mainv1SvgMapZoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+                        </div>
+                        <div class="mainv1-svg-map-stage" id="mainv1SvgMapStage">
+                            <object data="{{ asset('images/philippines.svg') }}" type="image/svg+xml" aria-label="Interactive Philippines map"></object>
+                        </div>
+                    </div>
+                    <p id="mainv1MapHint">Select a region on the map or in the list to view records</p>
                 </div>
                 <div class="mainv1-region-panel">
                     <h2>Regions (Social Technologies)</h2>
@@ -1846,26 +2038,6 @@
                     @endforeach
                 </div>
             </section>
-        </div>
-        <div class="col-md-3" style="padding-top: 22px;">
-            <div class="mainv1-total-list">
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="active" role="button" tabindex="0" aria-label="View active region social technologies">
-                    <span>TOTAL ACTIVE REGION'S SOCIAL TECHNOLOGIES</span>
-                    <strong>{{ $mainv1DashboardItems->filter($mainv1Active)->count() }}</strong>
-                </div>
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="inactive" role="button" tabindex="0" aria-label="View inactive region social technologies">
-                    <span>TOTAL INACTIVE REGION'S SOCIAL TECHNOLOGIES</span>
-                    <strong>{{ $mainv1DashboardItems->filter($mainv1Inactive)->count() }}</strong>
-                </div>
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="replicated" role="button" tabindex="0" aria-label="View replicated social technologies">
-                    <span>TOTAL REPLICATED</span>
-                    <strong>{{ $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_replicated))->count() }}</strong>
-                </div>
-                <div class="mainv1-total-card mainv1-metric-trigger" data-mainv1-metric="adopted" role="button" tabindex="0" aria-label="View adopted social technologies">
-                    <span>TOTAL ADOPTED</span>
-                    <strong>{{ $mainv1DashboardItems->filter(fn ($item) => $mainv1Truthy($item->with_adopted))->count() }}</strong>
-                </div>
-            </div>
         </div>
     </div>
     <div class="mainv1-metric-modal" id="mainv1MetricModal" role="dialog" aria-modal="true" aria-labelledby="mainv1MetricModalTitle" aria-hidden="true">
@@ -1942,7 +2114,6 @@
             <button type="button"
                     class="mainv1-replication-cancel"
                     id="mainv1ReplicationCancel">
-                Cancel
             </button>
 
             <button type="button"
@@ -2139,37 +2310,44 @@
             <span class="mainv1-analytics-eyebrow">Trend overview</span>
             <h2 id="mainv1AnalyticsTitle">Social Technology Analytics</h2>
         </div>
-        <div class="mainv1-analytics-badge"><span class="mainv1-live-dot"></span><span id="mainv1AnalyticsCount">{{ $mainv1AnalyticsRows->count() }} filtered records</span></div>
+        <div class="mainv1-analytics-heading-tools">
+            <div class="mainv1-analytics-badge"><span class="mainv1-live-dot"></span><span id="mainv1AnalyticsCount">{{ $mainv1AnalyticsRows->count() }} filtered records</span></div>
+            <div class="mainv1-view-tabs" role="tablist" aria-label="Analytics views">
+                <button type="button" class="mainv1-view-tab is-active" role="tab" aria-selected="true" aria-controls="mainv1-view-summary" data-mainv1-tab="summary">Summary</button>
+                <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-trends" data-mainv1-tab="trends">Trends</button>
+                <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-titles" data-mainv1-tab="titles">Titles</button>
+                <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-geography" data-mainv1-tab="geography">Geography</button>
+            </div>
+        </div>
     </div>
 
     <div class="row g-3 mainv1-analytics-top p-2">
-        <article class="col-md-6 mainv1-analytics-panel mainv1-trend-panel">
+        <article class="col-md-6 mainv1-analytics-panel mainv1-trend-panel" data-mainv1-view="trends">
             <div class="mainv1-chart-wrap"><canvas id="mainv1StatusChart"></canvas></div>
         </article>
-        <article class="col-md-6 mainv1-analytics-panel mainv1-title-count-panel">
-            <div class="mainv1-panel-heading"><div><span>Distribution</span><h3>Social Technology Titles</h3></div></div>
+        <article class="col-md-6 mainv1-analytics-panel mainv1-title-count-panel" data-mainv1-view="titles">
             <div class="mainv1-title-composition">
-                <div class="mainv1-chart-wrap mainv1-title-count-chart-wrap"><canvas id="mainv1TitleCountChart" aria-label="Social Technology title distribution chart"></canvas></div>
-                <div class="mainv1-title-reference"><div class="mainv1-title-reference-header"><span class="mainv1-title-reference-heading">All ST titles</span><span id="mainv1TitleReferenceCount" class="mainv1-title-reference-count"></span></div><div id="mainv1TitleCountLegend" class="mainv1-title-count-legend" aria-label="Social technology titles" aria-live="polite"></div><div class="mainv1-title-pagination"><button type="button" id="mainv1TitlePrevious" aria-label="Previous titles page">Previous</button><span id="mainv1TitlePage" aria-live="polite">Page 1 of 1</span><button type="button" id="mainv1TitleNext" aria-label="Next titles page">Next</button></div></div>
+                <div class="mainv1-title-card mainv1-chart-wrap mainv1-title-count-chart-wrap"><div class="mainv1-title-card-heading"><span>Share by social technology</span></div><canvas id="mainv1TitleCountChart" aria-label="Social Technology title distribution chart"></canvas></div>
+                <div class="mainv1-title-card mainv1-title-reference"><div class="mainv1-title-reference-header"><span class="mainv1-title-reference-heading">Top titles by volume</span><span id="mainv1TitleReferenceCount" class="mainv1-title-reference-count"></span></div><div id="mainv1TitleCountLegend" class="mainv1-title-count-legend" aria-label="Social technology titles" aria-live="polite"></div><div class="mainv1-title-pagination"><button type="button" id="mainv1TitlePrevious" aria-label="Previous titles page">Previous</button><span id="mainv1TitlePage" aria-live="polite">Page 1 of 1</span><button type="button" id="mainv1TitleNext" aria-label="Next titles page">Next</button></div></div>
             </div>
         </article>
     </div>
 
     <div class="mainv1-analytics-grid mainv1-analytics-grid-secondary">
-        <article class="mainv1-analytics-panel mainv1-year-panel">
+        <article class="mainv1-analytics-panel mainv1-year-panel" data-mainv1-view="trends">
             <div class="mainv1-panel-heading"><div><span>Distribution</span><h3>Year of MOAs</h3></div></div>
             <div class="mainv1-chart-wrap"><canvas id="mainv1YearChart"></canvas></div>
             <div class="mainv1-insight-strip"><div><span>Peak year</span><strong id="mainv1PeakYear">-</strong><small id="mainv1PeakMeta">No records yet</small></div><div><span>Average volume</span><strong id="mainv1AverageYear">-</strong><small>Records per year</small></div><div><span>Latest year</span><strong id="mainv1LatestYear">-</strong><small id="mainv1LatestMeta">No records yet</small></div></div>
         </article>
-        <article class="mainv1-analytics-panel mainv1-share-panel"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Ongoing vs inactive</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1StatusDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-teal"></i>Ongoing <b id="mainv1StatusOngoingPercent">0%</b></span><span><i class="legend-rose"></i>Inactive <b id="mainv1StatusInactivePercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-teal"><span>Ongoing</span><strong id="mainv1StatusOngoingValue">0</strong><small id="mainv1StatusOngoingSummary">0% of status records</small></div><div class="mainv1-share-stat share-stat-rose"><span>Inactive</span><strong id="mainv1StatusInactiveValue">0</strong><small id="mainv1StatusInactiveSummary">0% of status records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1StatusLead">Awaiting summary</strong></div></div></article>
-        <article class="mainv1-analytics-panel mainv1-share-panel"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Replicated vs adopted</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1AdoptionDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-blue"></i>Replicated <b id="mainv1ReplicatedPercent">0%</b></span><span><i class="legend-gold"></i>Adopted <b id="mainv1AdoptedPercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-blue"><span>Replicated</span><strong id="mainv1ReplicatedValue">0</strong><small id="mainv1ReplicatedSummary">0% of replicated records</small></div><div class="mainv1-share-stat share-stat-gold"><span>Adopted</span><strong id="mainv1AdoptedValue">0</strong><small id="mainv1AdoptedSummary">0% of adoption records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1AdoptionLead">Awaiting summary</strong></div></div></article>
+        <article class="mainv1-analytics-panel mainv1-share-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Ongoing vs inactive</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1StatusDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-teal"></i>Ongoing <b id="mainv1StatusOngoingPercent">0%</b></span><span><i class="legend-rose"></i>Inactive <b id="mainv1StatusInactivePercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-teal"><span>Ongoing</span><strong id="mainv1StatusOngoingValue">0</strong><small id="mainv1StatusOngoingSummary">0% of status records</small></div><div class="mainv1-share-stat share-stat-rose"><span>Inactive</span><strong id="mainv1StatusInactiveValue">0</strong><small id="mainv1StatusInactiveSummary">0% of status records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1StatusLead">Awaiting summary</strong></div></div></article>
+        <article class="mainv1-analytics-panel mainv1-share-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Replicated vs adopted</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1AdoptionDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-blue"></i>Replicated <b id="mainv1ReplicatedPercent">0%</b></span><span><i class="legend-gold"></i>Adopted <b id="mainv1AdoptedPercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-blue"><span>Replicated</span><strong id="mainv1ReplicatedValue">0</strong><small id="mainv1ReplicatedSummary">0% of replicated records</small></div><div class="mainv1-share-stat share-stat-gold"><span>Adopted</span><strong id="mainv1AdoptedValue">0</strong><small id="mainv1AdoptedSummary">0% of adoption records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1AdoptionLead">Awaiting summary</strong></div></div></article>
+        <article class="mainv1-analytics-panel mainv1-coverage-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Overall totals</span><h3>Social technology coverage</h3></div></div><div id="mainv1Coverage" class="mainv1-coverage-list"></div></article>
     </div>
 
     <div class="mainv1-analytics-grid mainv1-analytics-grid-lower">
-        <article class="mainv1-analytics-panel mainv1-heatmap-panel"><div class="mainv1-panel-heading"><div><span>Regional pattern</span><h3>Regional year activity</h3></div></div><div id="mainv1Heatmap" class="mainv1-heatmap"></div></article>
-        <article class="mainv1-analytics-panel mainv1-coverage-panel"><div class="mainv1-panel-heading"><div><span>Overall totals</span><h3>Social technology coverage</h3></div></div><div id="mainv1Coverage" class="mainv1-coverage-list"></div></article>
-        <article class="mainv1-analytics-panel mainv1-ranking-panel"><div class="mainv1-panel-heading"><div><span>Geographic reach</span><h3>Top regions</h3></div></div><div id="mainv1TopRegions" class="mainv1-ranking-list"></div></article>
-        <article class="mainv1-analytics-panel mainv1-ranking-panel"><div class="mainv1-panel-heading"><div><span>Local concentration</span><h3>Top provinces</h3></div></div><div id="mainv1TopProvinces" class="mainv1-ranking-list"></div></article>
+        <article class="mainv1-analytics-panel mainv1-heatmap-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Regional pattern</span><h3>Regional year activity</h3></div></div><div id="mainv1Heatmap" class="mainv1-heatmap"></div></article>
+        <article class="mainv1-analytics-panel mainv1-ranking-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Geographic reach</span><h3>Top regions</h3></div></div><div id="mainv1TopRegions" class="mainv1-ranking-list"></div></article>
+        <article class="mainv1-analytics-panel mainv1-ranking-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Local concentration</span><h3>Top provinces</h3></div></div><div id="mainv1TopProvinces" class="mainv1-ranking-list"></div></article>
     </div>
 
     <article class="mainv1-analytics-panel mainv1-directory-panel">
@@ -2192,6 +2370,113 @@
         <div class="mainv1-directory-footer"><span id="mainv1DirectorySummary"></span><div><button type="button" id="mainv1DirectoryPrev" aria-label="Previous page">&#8592; Prev</button><strong id="mainv1DirectoryPage">Page 1</strong><button type="button" id="mainv1DirectoryNext" aria-label="Next page">Next &#8594;</button></div></div>
     </article>
 </section>
+<script>
+(function () {
+    const dashboard = document.querySelector('.mainv1-analytics');
+    if (!dashboard) return;
+
+    const tabs = dashboard.querySelectorAll('[data-mainv1-tab]');
+    const panels = dashboard.querySelectorAll('[data-mainv1-view]');
+    const directory = dashboard.querySelector('.mainv1-directory-panel');
+    const viewRows = {};
+    ['summary', 'trends', 'titles', 'geography'].forEach(function (view) {
+        const row = document.createElement('div');
+        row.className = 'mainv1-view-row mainv1-view-row-' + view;
+        row.dataset.mainv1Row = view;
+        viewRows[view] = row;
+        if (directory) dashboard.insertBefore(row, directory);
+        else dashboard.appendChild(row);
+    });
+    panels.forEach(function (panel) {
+        if (viewRows[panel.dataset.mainv1View]) viewRows[panel.dataset.mainv1View].appendChild(panel);
+    });
+    dashboard.querySelectorAll('.mainv1-analytics-top, .mainv1-analytics-grid').forEach(function (grid) {
+        if (!grid.children.length) grid.remove();
+    });
+    const selectView = function (view, updateHash) {
+        const selectedView = ['summary', 'trends', 'titles', 'geography'].includes(view) ? view : 'summary';
+        tabs.forEach(function (tab) {
+            const selected = tab.dataset.mainv1Tab === selectedView;
+            tab.classList.toggle('is-active', selected);
+            tab.setAttribute('aria-selected', String(selected));
+        });
+        panels.forEach(function (panel) {
+            panel.hidden = panel.dataset.mainv1View !== selectedView;
+        });
+        Object.keys(viewRows).forEach(function (view) {
+            viewRows[view].hidden = view !== selectedView;
+        });
+        dashboard.classList.toggle('mainv1-summary-active', selectedView === 'summary');
+        if (updateHash) history.replaceState(null, '', '#' + selectedView);
+        requestAnimationFrame(function () {
+            if (!window.Chart) return;
+            dashboard.querySelectorAll('[data-mainv1-view="' + selectedView + '"] canvas').forEach(function (canvas) {
+                const chart = Chart.getChart ? Chart.getChart(canvas) : null;
+                if (chart) chart.resize();
+            });
+        });
+    };
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () { selectView(tab.dataset.mainv1Tab, true); });
+    });
+    selectView(window.location.hash.replace('#', '').toLowerCase(), false);
+})();
+</script>
+<style>
+.mainv1-analytics-heading-tools{display:flex;align-items:flex-end;gap:.75rem;flex-direction:column}
+.mainv1-view-tabs{display:flex;gap:4px;padding:4px;border:1px solid #e2e7ed;border-radius:12px;background:#f1f2f5}
+.mainv1-view-tab{border:0;border-radius:9px;padding:.62rem 1.1rem;background:transparent;color:#6c7079;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease}
+.mainv1-view-tab:hover,.mainv1-view-tab:focus-visible{background:#fff;color:#173d68;outline:none}
+.mainv1-view-tab.is-active{background:#fff;color:#173d68;box-shadow:0 1px 4px rgba(23,50,77,.1)}
+@media (min-width: 1101px) {
+    .mainv1-view-row-titles .mainv1-title-count-panel{width:100%;max-width:none;flex:0 0 100%}
+    .mainv1-view-row-trends .mainv1-trend-panel,
+    .mainv1-view-row-trends .mainv1-year-panel{width:100%;max-width:none;flex:0 0 auto}
+    .mainv1-view-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .mainv1-view-row-trends {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mainv1-view-row-titles {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mainv1-summary-active .mainv1-analytics-grid-secondary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.mainv1-analytics [data-mainv1-view][hidden]{display:none!important}
+
+.mainv1-view-row[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 1100px) {
+    .mainv1-analytics-heading-tools{width:100%;align-items:stretch}
+    .mainv1-view-tabs{width:100%;box-sizing:border-box}
+    .mainv1-view-tab{flex:1 1 0;padding:.55rem .65rem;font-size:.76rem}
+    .mainv1-view-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 700px) {
+    .mainv1-analytics-heading{align-items:stretch;flex-direction:column}
+    .mainv1-view-tabs{gap:2px}
+    .mainv1-view-tab{padding:.55rem .35rem;font-size:.7rem}
+    .mainv1-view-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 <style>
 .mainv1-analytics{display:grid;gap:1rem;margin:2rem 0 0;padding:clamp(1rem,2vw,2rem);border:1px solid #d8e5ef;border-radius:18px;background:linear-gradient(145deg,#f7fbfe,#fff 48%,#f4f9fc);box-shadow:0 16px 40px rgba(23,50,77,.07);color:#17324d}.mainv1-analytics-heading,.mainv1-directory-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem}.mainv1-analytics-eyebrow,.mainv1-panel-heading span{display:block;color:#6d8296;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.mainv1-analytics-heading h2{margin:.2rem 0;color:#103d70;font-size:clamp(1.35rem,2vw,2rem)}.mainv1-analytics-heading p,.mainv1-directory-heading p{margin:.25rem 0 0;color:#6c7f91;font-size:.82rem}.mainv1-analytics-badge{display:flex;align-items:center;gap:.45rem;padding:.55rem .75rem;border:1px solid #cfe3ef;border-radius:999px;background:#fff;color:#45627d;font-size:.75rem;white-space:nowrap}.mainv1-live-dot{width:7px;height:7px;border-radius:50%;background:#20b6a8;box-shadow:0 0 0 4px #d9f5f0}.mainv1-analytics-top,.mainv1-analytics-grid{display:grid;gap:1rem}.mainv1-analytics-top{grid-template-columns:minmax(280px,.78fr) minmax(0,1.7fr)}.mainv1-analytics-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.mainv1-analytics-stat,.mainv1-analytics-panel{border:1px solid #dce8f0;border-radius:13px;background:rgba(255,255,255,.9);box-shadow:0 8px 22px rgba(23,50,77,.055)}.mainv1-analytics-stat{display:flex;min-height:150px;flex-direction:column;padding:1rem;border-top:3px solid #2e6fd8}.mainv1-analytics-stat span{color:#70859a;font-size:.63rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.mainv1-analytics-stat strong{margin:.35rem 0;color:#0e3e74;font-size:2rem}.mainv1-analytics-stat b{font-size:.78rem}.mainv1-analytics-stat small{margin-top:auto;color:#788b9c;font-size:.68rem;line-height:1.35}.mainv1-analytics-stat.stat-rose{border-color:#ff6682}.mainv1-analytics-stat.stat-rose strong{color:#ff4d6d}.mainv1-analytics-stat.stat-teal{border-color:#22b8aa}.mainv1-analytics-stat.stat-teal strong{color:#119e94}.mainv1-analytics-stat.stat-gold{border-color:#efb844}.mainv1-analytics-stat.stat-gold strong{color:#d49616}.mainv1-analytics-panel{min-width:0;padding:1rem}.mainv1-panel-heading{display:flex;justify-content:space-between;gap:.75rem}.mainv1-panel-heading h3{margin:.18rem 0 0;color:#173d68;font-size:.95rem}.mainv1-chart-wrap{position:relative;height:270px;margin-top:.65rem}.mainv1-analytics-grid-secondary{grid-template-columns:minmax(0,1.4fr) minmax(210px,.58fr) minmax(210px,.58fr)}.mainv1-analytics-grid-lower{grid-template-columns:minmax(0,1.15fr) minmax(0,1.15fr) minmax(210px,.8fr) minmax(210px,.8fr)}.mainv1-donut-wrap{position:relative;height:170px;margin:.3rem auto;width:min(100%,190px)}.mainv1-share-legend{display:grid;gap:.4rem;color:#526d85;font-size:.7rem}.mainv1-share-legend span{display:flex;align-items:center;justify-content:space-between}.mainv1-share-legend i{width:8px;height:8px;margin-right:.35rem;border-radius:50%}.mainv1-share-legend span b{margin-left:auto}.legend-teal{background:#42b9ba}.legend-rose{background:#ff6682}.legend-blue{background:#3398dc}.legend-gold{background:#ffc34f}.mainv1-insight-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.75rem}.mainv1-insight-strip div{padding:.55rem;border:1px solid #e4edf3;border-radius:8px}.mainv1-insight-strip span,.mainv1-insight-strip small{display:block;color:#70859a;font-size:.62rem}.mainv1-insight-strip strong{display:block;margin:.15rem 0;color:#123f70;font-size:1rem}.mainv1-heatmap{display:grid;gap:.3rem;margin-top:.8rem;max-height:240px;overflow:auto}.mainv1-heatmap-row{display:grid;grid-template-columns:72px repeat(8,1fr);gap:3px;align-items:center;font-size:.58rem}.mainv1-heatmap-label{overflow:hidden;color:#526d85;white-space:nowrap;text-overflow:ellipsis}.mainv1-heat-cell{height:17px;border-radius:3px;background:#edf4f8}.mainv1-heat-cell[data-level="1"]{background:#c5e6f6}.mainv1-heat-cell[data-level="2"]{background:#80c8ee}.mainv1-heat-cell[data-level="3"]{background:#369be0}.mainv1-coverage-list,.mainv1-ranking-list{display:grid;gap:.55rem;margin-top:.8rem}.mainv1-coverage-item{display:grid;grid-template-columns:135px 1fr 32px;gap:.45rem;align-items:center;color:#526d85;font-size:.68rem}.mainv1-coverage-bar{height:8px;overflow:hidden;border-radius:99px;background:#e7eff5}.mainv1-coverage-bar i{display:block;height:100%;border-radius:inherit;background:#38bdb1}.mainv1-ranking-item{display:grid;grid-template-columns:24px 1fr auto;gap:.5rem;align-items:center;padding:.55rem .65rem;border:1px solid #e4edf3;border-radius:9px;background:#fbfdff;font-size:.7rem}.mainv1-ranking-item em{display:grid;width:21px;height:21px;place-items:center;border-radius:50%;background:#e8f2ff;color:#347bc5;font-style:normal;font-weight:800}.mainv1-ranking-item b{color:#138f87}.mainv1-directory-panel{padding:1.1rem}.mainv1-directory-heading{align-items:center}.mainv1-directory-controls{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(2,minmax(120px,1fr));gap:.5rem;width:min(560px,100%)}.mainv1-directory-controls input,.mainv1-directory-controls select{width:100%;min-height:36px;padding:.45rem .6rem;border:1px solid #d5e3ed;border-radius:7px;background:#fff;color:#17324d;font-size:.75rem}.mainv1-directory-table-wrap{margin-top:1rem;overflow:auto;border:1px solid #e1ebf2;border-radius:10px}.mainv1-directory-table{width:100%;min-width:680px;border-collapse:collapse;font-size:.7rem}.mainv1-directory-table th{padding:.65rem;text-align:left;color:#58728a;background:#f5f9fc;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase}.mainv1-directory-table td{padding:.65rem;border-top:1px solid #edf2f5;color:#34536f}.mainv1-directory-table td:first-child{max-width:260px;color:#173d68;font-weight:700}.mainv1-status-pill{display:inline-flex;padding:.2rem .45rem;border-radius:99px;font-size:.62rem;font-weight:800}.mainv1-status-pill.ongoing{background:#dff7ed;color:#168456}.mainv1-status-pill.inactive{background:#ffe5ec;color:#dc4968}.mainv1-directory-footer{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:.75rem;color:#6b8296;font-size:.7rem}.mainv1-directory-footer div{display:flex;align-items:center;gap:.5rem}.mainv1-directory-footer button{padding:.4rem .65rem;border:1px solid #d5e3ed;border-radius:7px;background:#fff;color:#194878;font-size:.7rem;cursor:pointer}.mainv1-directory-footer button:disabled{opacity:.45;cursor:not-allowed}.mainv1-directory-footer strong{font-size:.7rem;color:#173d68;white-space:nowrap}@media(max-width:1100px){.mainv1-analytics-top,.mainv1-analytics-grid-secondary{grid-template-columns:1fr}.mainv1-analytics-grid-lower{grid-template-columns:repeat(2,minmax(0,1fr))}.mainv1-directory-heading{align-items:stretch;flex-direction:column}.mainv1-directory-controls{width:100%}}@media(max-width:576px){.mainv1-analytics{margin-top:1rem;padding:.75rem;border-radius:12px}.mainv1-analytics-heading{align-items:flex-start;flex-direction:column}.mainv1-analytics-metrics,.mainv1-analytics-grid-lower{grid-template-columns:1fr}.mainv1-chart-wrap{height:220px}.mainv1-insight-strip{grid-template-columns:1fr}.mainv1-directory-controls{grid-template-columns:1fr}.mainv1-directory-footer{align-items:flex-start;flex-direction:column}.mainv1-analytics-badge{white-space:normal}}
 </style>
@@ -2204,7 +2489,16 @@
 .mainv1-title-count-chart-wrap{display:flex;width:100%;max-width:100%;min-width:0;height:clamp(220px,24vw,300px);align-items:center;justify-content:center;margin-top:0;padding:.5rem;box-sizing:border-box;aspect-ratio:1;overflow:hidden}
 .mainv1-title-count-chart-wrap canvas{display:block;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;aspect-ratio:1}
 .mainv1-title-count-panel{min-width:0;overflow:hidden}
-.mainv1-title-reference{display:flex;min-width:0;height:clamp(220px,24vw,300px);flex-direction:column;overflow:hidden;padding-left:1rem;border-left:1px solid #e3edf3}
+.mainv1-title-count-panel{padding:0;border:0;background:transparent;box-shadow:none;overflow:visible}
+.mainv1-title-card{box-sizing:border-box;border:1px solid #dce8f0;border-radius:13px;background:rgba(255,255,255,.94);box-shadow:0 8px 22px rgba(23,50,77,.055)}
+.mainv1-title-card-heading{align-self:stretch;margin-bottom:.4rem;color:#173d68;font-size:.95rem;font-weight:700;text-align:left}
+.mainv1-title-count-chart-wrap{height:420px!important;flex-direction:column;gap:.35rem;padding:1.15rem!important;aspect-ratio:auto}
+.mainv1-title-count-chart-wrap canvas{flex:1;min-height:0;height:100%!important}
+.mainv1-title-reference{height:420px;padding:1.15rem; border-left:1px solid #dce8f0}
+.mainv1-title-reference-header{margin:0 0 .75rem;padding-bottom:.75rem;border-bottom:1px solid #e3edf3}
+.mainv1-title-reference-heading{color:#173d68;font-size:.95rem;letter-spacing:0;text-transform:none}
+.mainv1-title-count-legend{height:auto;flex:1;gap:.15rem}
+.mainv1-title-reference{display:flex;min-width:0;height:420px;flex-direction:column;overflow:hidden;padding-left:1rem;border-left:1px solid #e3edf3}
 .mainv1-title-reference-header{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin:.25rem 0 .6rem}
 .mainv1-title-reference-heading{margin:0;color:#6d8296;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .mainv1-title-reference-count{color:#8aa0b2;font-size:.62rem;white-space:nowrap}
@@ -2873,6 +3167,17 @@
     const openMetricModal = (metric) => { metricTitleSearch.value = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; const matchingRows = rows.filter(metricMatches[metric] || metricMatches.all); metricModalTitle.textContent = metricLabels[metric] || 'Metric records'; metricModalSummary.textContent = `${matchingRows.length} social technology records`; metricList.replaceChildren(); matchingRows.forEach(row => { const item = document.createElement('div'); item.className = 'mainv1-metric-row'; item.dataset.title = String(row.title || '').toLowerCase(); item.dataset.province = row.province || ''; item.dataset.municipality = row.municipality || ''; item.dataset.year = String(row.year || ''); const title = document.createElement('strong'); title.textContent = row.title || 'Untitled social technology'; const location = document.createElement('span'); location.textContent = [row.province, row.municipality].filter(Boolean).join(' / ') || 'Location not specified'; const region = document.createElement('span'); region.textContent = row.region || 'Region not specified'; const status = document.createElement('span'); const isInactive = row.status === 'inactive' || row.status === 'dissolved'; status.className = `mainv1-metric-status${isInactive ? ' inactive' : ''}`; status.textContent = isInactive ? 'Inactive' : 'Ongoing'; item.append(title, location, region, status); metricList.appendChild(item); }); if (!matchingRows.length) { const empty = document.createElement('div'); empty.className = 'mainv1-metric-empty'; empty.textContent = 'No social technologies match this metric.'; metricList.appendChild(empty); } metricModal.classList.add('is-open'); metricModal.setAttribute('aria-hidden', 'false'); document.body.classList.add('mainv1-modal-open'); metricModal.querySelector('.mainv1-metric-modal-close').focus(); };
     const openTitleRecords = title => { if (!metricModal || !metricTitleSearch) return; currentMetricKey = 'all'; currentMetricRegion = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; openMetricModal('all'); syncMetricFilters(); metricTitleSearch.value = title; applyMetricFilters(); metricModalTitle.textContent = title; metricModalSummary.textContent = `${rows.filter(row => String(row.title || '').trim() === title).length} records for this social technology`; };
     window.openMainv1RegionRecords = region => { currentMetricKey = 'all'; currentMetricRegion = region || ''; const matchingRows = matchingMetricRows(); metricModalTitle.textContent = `${region} Social Technologies`; metricModalSummary.textContent = `${matchingRows.length} social technology records`; metricList.replaceChildren(); matchingRows.forEach(row => { const item = document.createElement('div'); item.className = 'mainv1-metric-row'; const title = document.createElement('strong'); title.textContent = row.title || 'Untitled social technology'; const location = document.createElement('span'); location.textContent = [row.province, row.municipality].filter(Boolean).join(' / ') || 'Location not specified'; const regionName = document.createElement('span'); regionName.textContent = row.region || 'Region not specified'; const status = document.createElement('span'); const isInactive = row.status === 'inactive' || row.status === 'dissolved'; status.className = `mainv1-metric-status${isInactive ? ' inactive' : ''}`; status.textContent = isInactive ? 'Inactive' : 'Ongoing'; item.dataset.title = String(row.title || '').toLowerCase(); item.dataset.province = row.province || ''; item.dataset.municipality = row.municipality || ''; item.dataset.year = String(row.year || ''); item.append(title, location, regionName, status); metricList.appendChild(item); }); if (!matchingRows.length) { const empty = document.createElement('div'); empty.className = 'mainv1-metric-empty'; empty.textContent = 'No social technologies are recorded for this region.'; metricList.appendChild(empty); } refillMetricSelect(metricProvince, metricFilterValues('province')); refillMetricSelect(metricMunicipality, metricFilterValues('municipality')); refillMetricSelect(metricYear, metricFilterValues('year')); metricTitleSearch.value = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; metricModal.classList.add('is-open'); metricModal.setAttribute('aria-hidden', 'false'); document.body.classList.add('mainv1-modal-open'); metricModal.querySelector('.mainv1-metric-modal-close').focus(); };
+    window.openMainv1LocationRecords = (region, province) => {
+        if (!region || !province || !window.openMainv1RegionRecords) return;
+        window.openMainv1RegionRecords(region);
+        if (!metricProvince) return;
+        const normalizeProvince = value => String(value || '').toLowerCase().replace(/^metropolitan manila$/, 'metro manila').replace(/^province of\s+/, '').replace(/\s+/g, ' ').trim();
+        const regionAliases = [region, `FO ${region}`, String(region).replace(/^Region /, 'FO ')];
+        const matchingProvince = [...new Set(rows.filter(row => regionAliases.includes(String(row.region || ''))).map(row => String(row.province || '').trim()).filter(Boolean))].find(value => normalizeProvince(value) === normalizeProvince(province)) || province;
+        metricProvince.value = matchingProvince;
+        applyMetricFilters();
+        if (metricModalTitle) metricModalTitle.textContent = `${province} Social Technologies`;
+    };
     window.openMainv1MetricRecords = metric => { currentMetricKey = metric; currentMetricRegion = ''; metricTitleSearch.value = ''; metricProvince.value = ''; metricMunicipality.value = ''; metricYear.value = ''; openMetricModal(metric); syncMetricFilters(); };
     window.openMainv1YearRecords = year => { currentMetricKey = 'all'; currentMetricRegion = ''; openMetricModal('all'); syncMetricFilters(); metricModalTitle.textContent = `Social Technologies in ${year}`; metricYear.value = String(year); applyMetricFilters(); };
     document.querySelectorAll('.mainv1-metric-trigger').forEach(card => card.addEventListener('click', () => { currentMetricRegion = ''; }));
@@ -3526,6 +3831,107 @@
 </script>
 <script>
     (() => {
+        const initializeLeafletMap = () => {
+        const mapElement = document.getElementById('mainv1GeoMap');
+        const mapHint = document.getElementById('mainv1MapHint');
+        const resetButton = document.getElementById('mainv1MapReset');
+        if (!mapElement) return;
+
+        const rowRegionCodes = {
+            'FO I': 'Region I', 'FO CAR': 'CAR', 'FO II': 'Region II', 'FO III': 'Region III',
+            'FO IV-A': 'Region IV-A', 'FO IV-B': 'Region IV-B', 'FO NCR': 'NCR', 'FO V': 'Region V',
+            'FO VI': 'Region VI', 'FO VII': 'Region VII', 'FO VIII': 'Region VIII', 'FO IX': 'Region IX',
+            'FO X': 'Region X', 'FO XI': 'Region XI', 'FO XII': 'Region XII', 'FO CARAGA': 'CARAGA'
+        };
+        const regionCoordinates = {
+            'Region I': [17.25, 120.55], CAR: [17.55, 120.85], 'Region II': [17.35, 121.75],
+            'Region III': [15.25, 120.75], 'Region IV-A': [14.05, 121.35], 'Region IV-B': [12.35, 121.35],
+            NCR: [14.60, 120.98], 'Region V': [13.35, 123.35], 'Region VI': [10.75, 122.55],
+            'Region VII': [10.25, 123.80], 'Region VIII': [11.25, 125.05], 'Region IX': [7.85, 123.35],
+            'Region X': [8.55, 124.75], 'Region XI': [7.10, 125.60], 'Region XII': [6.35, 124.85],
+            CARAGA: [8.75, 125.75], BARMM: [7.20, 124.35]
+        };
+        const colors = {
+            'Region I': '#ffb74d', CAR: '#9575cd', 'Region II': '#4db6ac', 'Region III': '#81c784',
+            'Region IV-A': '#f06292', 'Region IV-B': '#64b5f6', NCR: '#ff8a65', 'Region V': '#ba68c8',
+            'Region VI': '#aed581', 'Region VII': '#4fc3f7', 'Region VIII': '#ffcc80', 'Region IX': '#ce93d8',
+            'Region X': '#80cbc4', 'Region XI': '#ffab91', 'Region XII': '#9fa8da', CARAGA: '#a5d6a7', BARMM: '#ffecb3'
+        };
+        const counts = @json($mainv1RegionCounts);
+        const philippinesBounds = L.latLngBounds([4.5, 116.8], [21.3, 126.7]);
+        const geographicMap = L.map(mapElement, { zoomControl: true, minZoom: 5, maxZoom: 12, maxBounds: philippinesBounds.pad(0.12), maxBoundsViscosity: 1, worldCopyJump: false });
+        geographicMap.fitBounds(philippinesBounds, { padding: [8, 8] });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(geographicMap);
+
+        const markers = new Map();
+        const setActiveRegion = (region) => {
+            document.querySelectorAll('.mainv1-region-row').forEach((row) => {
+                row.classList.toggle('is-active', row.dataset.mapRegion === region);
+            });
+            if (mapHint) mapHint.textContent = region ? `${region} selected` : 'Zoom and pan the Philippines map, then click a region marker to view records';
+        };
+        const focusRegion = (region, openPopup = false) => {
+            const marker = markers.get(region);
+            const coordinates = regionCoordinates[region];
+            if (!marker || !coordinates) return;
+            geographicMap.setView(coordinates, Math.max(geographicMap.getZoom(), 7), { animate: true });
+            setActiveRegion(region);
+            if (openPopup) marker.openPopup();
+        };
+
+        Object.entries(counts).forEach(([label, count]) => {
+            const region = rowRegionCodes[label] || label;
+            const coordinates = regionCoordinates[region];
+            if (!coordinates) return;
+            const color = colors[region] || '#2789d9';
+            const marker = L.circleMarker(coordinates, {
+                radius: Math.max(8, Math.min(18, 7 + Number(count || 0) / 12)),
+                color,
+                fillColor: color,
+                fillOpacity: 0.82,
+                weight: 2
+            }).addTo(geographicMap);
+            marker.bindTooltip(`${label} · ${count} records`, { direction: 'top', offset: [0, -8] });
+            marker.bindPopup(`<strong>${label}</strong><br>${count} social technologies<br><button type="button" class="mainv1-map-popup-action">View records</button>`);
+            marker.on('mouseover', () => setActiveRegion(region));
+            marker.on('mouseout', () => setActiveRegion(''));
+            marker.on('click', () => {
+                setActiveRegion(region);
+                window.openMainv1RegionRecords?.(region);
+            });
+            marker.on('popupopen', () => marker.getPopup().getElement()?.querySelector('.mainv1-map-popup-action')?.addEventListener('click', () => window.openMainv1RegionRecords?.(region)));
+            markers.set(region, marker);
+        });
+        document.querySelectorAll('.mainv1-region-row').forEach((row) => {
+            const region = rowRegionCodes[row.textContent.trim().replace(/\s+\d+$/, '')] || '';
+            row.dataset.mapRegion = region;
+            row.addEventListener('mouseenter', () => setActiveRegion(region));
+            row.addEventListener('mouseleave', () => setActiveRegion(''));
+            row.addEventListener('focus', () => setActiveRegion(region));
+            row.addEventListener('blur', () => setActiveRegion(''));
+            row.addEventListener('click', () => { focusRegion(region, true); window.openMainv1RegionRecords?.(region); });
+            row.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); row.click(); }
+            });
+        });
+        resetButton?.addEventListener('click', () => {
+            geographicMap.fitBounds(philippinesBounds, { padding: [8, 8], animate: true });
+            setActiveRegion('');
+        });
+        window.addEventListener('resize', () => geographicMap.invalidateSize());
+        };
+        if (typeof L === 'undefined') {
+            window.addEventListener('load', initializeLeafletMap, { once: true });
+        } else {
+            initializeLeafletMap();
+        }
+    })();
+</script>
+<script>
+    (() => {
         const map = document.querySelector('.mainv1-map-panel object');
         const label = document.querySelector('.mainv1-map-panel p');
         if (!map) return;
@@ -3556,12 +3962,72 @@
             'Agusan del Norte': 'CARAGA', 'Agusan del Sur': 'CARAGA', 'Dinagat Islands': 'CARAGA', 'Surigao del Norte': 'CARAGA', 'Surigao del Sur': 'CARAGA',
             Basilan: 'BARMM', 'Lanao del Sur': 'BARMM', Maguindanao: 'BARMM', Sulu: 'BARMM', 'Tawi-Tawi': 'BARMM'
         };
+        const locationRows = @json($mainv1RegionLocations);
+        const normalizeRegion = (value) => String(value || '').toLowerCase().replace(/^fo\s*/, '').replace(/^region\s*/, '').replace(/\s+/g, '');
+        const normalizeProvince = (value) => String(value || '').toLowerCase().replace(/^metropolitan manila$/, 'metro manila').replace(/^province of\s+/, '').replace(/\s+/g, ' ').trim();
+        const showLocations = (region, path, locationLayer) => {
+            if (!region || !path || !locationLayer) return;
+            const province = String(path.getAttribute('title') || '').trim();
+            const cities = [...new Set(locationRows
+                .filter((row) => normalizeRegion(row.region) === normalizeRegion(region) && normalizeProvince(row.province) === normalizeProvince(province))
+                .map((row) => String(row.city || '').trim()).filter(Boolean))].sort();
+            const bounds = path.getBBox();
+            const centerX = bounds.x + bounds.width / 2;
+            const centerY = bounds.y + bounds.height / 2;
+            const cityText = cities.length ? cities.join(', ') : 'No city records';
+            const cityLines = cityText.match(/.{1,52}(?:\s|$)/g)?.map((line) => line.trim()).filter(Boolean) || [cityText];
+            const lineTexts = [province || region, ...cityLines];
+            locationLayer.replaceChildren();
+            locationLayer.setAttribute('transform', 'translate(0 0)');
+            const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '8');
+            text.setAttribute('y', '16');
+            text.setAttribute('fill', '#17324d');
+            text.setAttribute('font-family', 'Arial, sans-serif');
+            text.setAttribute('font-size', '12');
+            text.setAttribute('font-weight', '700');
+            lineTexts.forEach((line, index) => {
+                const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                tspan.setAttribute('x', '8');
+                tspan.setAttribute('dy', index ? '15' : '0');
+                tspan.setAttribute('font-size', index ? '10' : '12');
+                tspan.setAttribute('font-weight', index ? '500' : '700');
+                tspan.textContent = line;
+                text.appendChild(tspan);
+            });
+            locationLayer.append(background, text);
+            const textBox = text.getBBox();
+            background.setAttribute('x', String(textBox.x - 6));
+            background.setAttribute('y', String(textBox.y - 6));
+            background.setAttribute('width', String(textBox.width + 12));
+            background.setAttribute('height', String(textBox.height + 12));
+            background.setAttribute('rx', '6');
+            background.setAttribute('fill', '#ffffff');
+            background.setAttribute('fill-opacity', '0.94');
+            background.setAttribute('stroke', colors[region] || '#2789d9');
+            background.setAttribute('stroke-width', '1.5');
+            const viewBox = (map.contentDocument.documentElement.getAttribute('viewBox') || '0 0 1 1').split(/\s+/).map(Number);
+            const padding = 8;
+            const labelBox = { x: textBox.x - 6, y: textBox.y - 6, width: textBox.width + 12, height: textBox.height + 12 };
+            const minX = viewBox[0] + padding - labelBox.x;
+            const maxX = viewBox[0] + viewBox[2] - padding - labelBox.x - labelBox.width;
+            const minY = viewBox[1] + padding - labelBox.y;
+            const maxY = viewBox[1] + viewBox[3] - padding - labelBox.y - labelBox.height;
+            const labelX = Math.max(minX, Math.min(maxX, centerX + 12));
+            const labelY = Math.max(minY, Math.min(maxY, centerY - 18));
+            locationLayer.setAttribute('transform', `translate(${labelX} ${labelY})`);
+        };
 
         const setup = () => {
             const svg = map.contentDocument;
             if (!svg) return;
             const paths = [...svg.querySelectorAll('path')];
             if (!paths.length) return;
+            const locationLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            locationLayer.setAttribute('class', 'mainv1-svg-location-label');
+            locationLayer.style.pointerEvents = 'none';
+            svg.documentElement.appendChild(locationLayer);
             const infos = paths.map((path) => {
                 const region = provinces[path.getAttribute('title') || ''];
                 const color = colors[region] || '#cbd5e1';
@@ -3570,6 +4036,35 @@
                 path.style.cursor = 'pointer';
                 return { path, region, color };
             });
+            const pointLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            pointLayer.setAttribute('class', 'mainv1-svg-location-points');
+            pointLayer.style.pointerEvents = 'none';
+            infos.forEach(({ path, region, color }) => {
+                const province = String(path.getAttribute('title') || '').trim();
+                if (!province || !region) return;
+                const bounds = path.getBBox();
+                const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                point.setAttribute('cx', String(bounds.x + bounds.width / 2));
+                point.setAttribute('cy', String(bounds.y + bounds.height / 2));
+                point.setAttribute('r', '3.5');
+                point.setAttribute('fill', '#ffffff');
+                point.setAttribute('stroke', color);
+                point.setAttribute('stroke-width', '2');
+                const name = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                name.setAttribute('x', String(bounds.x + bounds.width / 2 + 6));
+                name.setAttribute('y', String(bounds.y + bounds.height / 2 + 3));
+                name.setAttribute('fill', '#17324d');
+                name.setAttribute('font-family', 'Arial, sans-serif');
+                name.setAttribute('font-size', '8');
+                name.setAttribute('font-weight', '700');
+                name.setAttribute('paint-order', 'stroke');
+                name.setAttribute('stroke', '#ffffff');
+                name.setAttribute('stroke-width', '2.5');
+                name.textContent = province;
+                pointLayer.append(point, name);
+            });
+            svg.documentElement.appendChild(pointLayer);
+            svg.documentElement.appendChild(locationLayer);
             const reset = () => infos.forEach(({ path, color }) => {
                 path.style.fill = color;
                 path.style.opacity = '1';
@@ -3594,27 +4089,34 @@
             infos.forEach(({ path, region }) => {
                 path.addEventListener('mouseenter', () => {
                     highlightRegion(region);
+                    showLocations(region, path, locationLayer);
                     if (label && !region) label.textContent = `Province: ${path.getAttribute('title') || ''}`;
                 });
                 path.addEventListener('mouseleave', () => {
                     reset();
+                    locationLayer.replaceChildren();
                     document.querySelectorAll('.mainv1-region-row').forEach((row) => row.classList.remove('is-active'));
                     if (label) label.textContent = 'Hover a region on the map';
                 });
                 path.addEventListener('click', () => {
-                    if (region && window.openMainv1RegionRecords) window.openMainv1RegionRecords(region);
+                    const province = String(path.getAttribute('title') || '').trim();
+                    if (region && province && window.openMainv1LocationRecords) {
+                        window.openMainv1LocationRecords(region, province);
+                    } else if (region && window.openMainv1RegionRecords) {
+                        window.openMainv1RegionRecords(region);
+                    }
                 });
             });
             document.querySelectorAll('.mainv1-region-row').forEach((row) => {
                 const code = rowRegionCodes[row.textContent.trim().replace(/\s+\d+$/, '')];
                 row.dataset.mapRegion = code || '';
-                row.addEventListener('mouseenter', () => highlightRegion(code));
+                row.addEventListener('mouseenter', () => { highlightRegion(code); showLocations(code); });
                 row.addEventListener('mouseleave', () => {
                     reset();
                     row.classList.remove('is-active');
                     if (label) label.textContent = 'Hover a region on the map';
                 });
-                row.addEventListener('focus', () => highlightRegion(code));
+                row.addEventListener('focus', () => { highlightRegion(code); showLocations(code); });
                 row.addEventListener('blur', () => {
                     reset();
                     row.classList.remove('is-active');
@@ -3634,6 +4136,101 @@
         map.addEventListener('load', setup, { once: true });
         if (map.contentDocument) setup();
     })();
+
+        (() => {
+            const mapWrap = document.getElementById('mainv1SvgMapWrap');
+            const mapStage = document.getElementById('mainv1SvgMapStage');
+            const zoomIn = document.getElementById('mainv1SvgMapZoomIn');
+            const zoomOut = document.getElementById('mainv1SvgMapZoomOut');
+            const reset = document.getElementById('mainv1SvgMapReset');
+            if (mapWrap && mapStage) {
+                const mapObject = mapStage.querySelector('object');
+                let scale = 1;
+                let panX = 0;
+                let panY = 0;
+                let pointerStart = null;
+                let dragged = false;
+                const clampPan = () => {
+                    const maxX = Math.max(80, (mapWrap.clientWidth * (scale - 1)) / 2 + 80);
+                    const maxY = Math.max(80, (mapWrap.clientHeight * (scale - 1)) / 2 + 80);
+                    panX = Math.max(-maxX, Math.min(maxX, panX));
+                    panY = Math.max(-maxY, Math.min(maxY, panY));
+                };
+                const applyScale = () => {
+                    clampPan();
+                    mapStage.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                    zoomIn?.toggleAttribute('disabled', scale >= 4);
+                    zoomOut?.toggleAttribute('disabled', scale <= 0.8);
+                };
+                const changeScale = (amount) => {
+                    scale = Math.min(4, Math.max(0.8, Number((scale + amount).toFixed(1))));
+                    applyScale();
+                };
+                zoomIn?.addEventListener('click', () => changeScale(0.2));
+                zoomOut?.addEventListener('click', () => changeScale(-0.2));
+                reset?.addEventListener('click', () => { scale = 1; panX = 0; panY = 0; applyScale(); });
+                mapWrap.addEventListener('wheel', (event) => {
+                    event.preventDefault();
+                    changeScale(event.deltaY < 0 ? 0.1 : -0.1);
+                }, { passive: false });
+                const startDrag = (event) => {
+                    if (event.target.closest?.('.mainv1-map-controls')) return;
+                    event.preventDefault();
+                    pointerStart = { x: event.clientX, y: event.clientY, panX, panY };
+                    dragged = false;
+                    try { mapWrap.setPointerCapture?.(event.pointerId); } catch (error) {}
+                    mapWrap.classList.add('is-panning');
+                };
+                const moveDrag = (event) => {
+                    if (!pointerStart) return;
+                    event.preventDefault();
+                    const deltaX = event.clientX - pointerStart.x;
+                    const deltaY = event.clientY - pointerStart.y;
+                    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) dragged = true;
+                    panX = pointerStart.panX + deltaX;
+                    panY = pointerStart.panY + deltaY;
+                    applyScale();
+                };
+                const endDrag = (event) => {
+                    event.preventDefault();
+                    pointerStart = null;
+                    try { mapWrap.releasePointerCapture?.(event?.pointerId); } catch (error) {}
+                    mapWrap.classList.remove('is-panning');
+                };
+                mapWrap.addEventListener('pointerdown', startDrag);
+                mapWrap.addEventListener('pointermove', moveDrag);
+                mapWrap.addEventListener('pointerup', endDrag);
+                mapWrap.addEventListener('pointercancel', endDrag);
+                const attachSvgDrag = () => {
+                    const svgDocument = mapObject?.contentDocument;
+                    if (!svgDocument || svgDocument.documentElement.dataset.panBound === 'true') return;
+                    svgDocument.documentElement.dataset.panBound = 'true';
+                    svgDocument.documentElement.style.userSelect = 'none';
+                    svgDocument.documentElement.style.webkitUserSelect = 'none';
+                    svgDocument.documentElement.style.cursor = 'grab';
+                    svgDocument.addEventListener('pointerdown', startDrag, true);
+                    svgDocument.addEventListener('pointermove', moveDrag, true);
+                    svgDocument.addEventListener('pointerup', endDrag, true);
+                    svgDocument.addEventListener('pointercancel', endDrag, true);
+                    svgDocument.addEventListener('click', (event) => {
+                        if (!dragged) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dragged = false;
+                    }, true);
+                };
+                mapObject?.setAttribute('draggable', 'false');
+                mapObject?.addEventListener('load', attachSvgDrag, { once: true });
+                attachSvgDrag();
+                mapWrap.addEventListener('click', (event) => {
+                    if (!dragged) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    dragged = false;
+                }, true);
+                applyScale();
+            }
+        })();
 
         (() => {
             const popover = document.querySelector('.mainv1-gallery-popover');
