@@ -2515,6 +2515,49 @@
     display: none !important;
 }
 
+.mainv1-view-row {
+    min-height: 150px;
+    align-items: start;
+}
+
+.mainv1-analytics-panel {
+    min-height: 150px;
+}
+
+.mainv1-coverage-panel {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+}
+
+.mainv1-coverage-panel .mainv1-coverage-list {
+    flex: 1;
+    grid-template-rows: repeat(7, minmax(0, 1fr));
+    align-content: stretch;
+}
+
+.mainv1-coverage-panel .mainv1-coverage-item {
+    min-height: 34px;
+    font-size: .76rem;
+}
+
+.mainv1-coverage-panel .mainv1-coverage-item b {
+    color: #315b7c;
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.mainv1-coverage-panel .mainv1-coverage-bar {
+    height: 11px;
+    border-radius: 999px;
+    box-shadow: inset 0 1px 2px rgba(35, 75, 101, .08);
+}
+
+.mainv1-coverage-panel .mainv1-coverage-bar i {
+    border-radius: inherit;
+    box-shadow: 0 1px 3px rgba(27, 160, 155, .2);
+}
+
 @keyframes mainv1-view-enter {
     from { opacity: 0; transform: translate3d(0, 0, 0); }
     to { opacity: 1; transform: translateY(0); }
