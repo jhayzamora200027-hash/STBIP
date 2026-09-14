@@ -149,6 +149,7 @@
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.96);
         box-shadow: 0 8px 24px rgba(23, 50, 77, 0.07);
+        margin-bottom: 30px;
     }
 
     .mainv1-filter-heading {
@@ -1634,8 +1635,21 @@
 
         .mainv1-row > :first-child,
         .mainv1-row > :last-child {
+            box-sizing: border-box;
             width: 100%;
             max-width: none;
+        }
+
+        .mainv1-row > :last-child {
+            align-self: stretch;
+            padding-right: 0 !important;
+            padding-left: 0 !important;
+        }
+
+        .mainv1-filter {
+            box-sizing: border-box;
+            width: 100%;
+            padding-bottom: 1.5rem;
         }
 
         .mainv1-filter-grid {
@@ -1695,7 +1709,7 @@
         }
 
         .mainv1-row > :last-child {
-            align-self: flex-end;
+            align-self: stretch;
             margin-left: 0;
         }
 
@@ -1726,7 +1740,7 @@
         }
 
         .mainv1-filter {
-            padding: 1rem;
+            padding: 1rem 1rem 1.5rem;
             margin-top: 0;
         }
 
@@ -2358,18 +2372,47 @@
             </div>
             <div class="mainv1-directory-controls" aria-label="Filter directory records">
                 <input id="mainv1DirectorySearch" type="search" placeholder="Search title" aria-label="Search social technology title">
-                <select id="mainv1DirectoryProvince" aria-label="Filter by province"><option value="">All provinces</option></select>
-                <select id="mainv1DirectoryMunicipality" aria-label="Filter by city or municipality"><option value="">All cities / municipalities</option></select>
-                <select id="mainv1DirectoryYear" aria-label="Filter by year of MOA"><option value="">All years</option></select>
-                <select id="mainv1DirectoryStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="ongoing">Active</option><option value="inactive">Inactive</option></select>
-                <select id="mainv1DirectoryType" aria-label="Filter by coverage"><option value="">All coverage</option><option value="expr">Expression of Interest</option><option value="res">SB Resolution</option><option value="moa">MOA</option><option value="replicated">Replicated</option><option value="adopted">Adopted</option></select>
-                <button type="button" id="mainv1DirectoryExport">Export CSV</button>
+                <button type="button" class="mainv1-directory-filter-toggle" id="mainv1DirectoryFilterToggle" aria-expanded="true" aria-controls="mainv1DirectoryAdvancedFilters">More filters</button>
+                <div class="mainv1-directory-advanced-controls" id="mainv1DirectoryAdvancedFilters">
+                    <select id="mainv1DirectoryProvince" aria-label="Filter by province"><option value="">All provinces</option></select>
+                    <select id="mainv1DirectoryMunicipality" aria-label="Filter by city or municipality"><option value="">All cities / municipalities</option></select>
+                    <select id="mainv1DirectoryYear" aria-label="Filter by year of MOA"><option value="">All years</option></select>
+                    <select id="mainv1DirectoryStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="ongoing">Active</option><option value="inactive">Inactive</option></select>
+                    <select id="mainv1DirectoryType" aria-label="Filter by coverage"><option value="">All coverage</option><option value="expr">Expression of Interest</option><option value="res">SB Resolution</option><option value="moa">MOA</option><option value="replicated">Replicated</option><option value="adopted">Adopted</option></select>
+                    <button type="button" id="mainv1DirectoryExport">Export CSV</button>
+                </div>
             </div>
         </div>
         <div class="mainv1-directory-table-wrap"><table class="mainv1-directory-table"><thead><tr><th>Title</th><th>Province</th><th>City / Municipality</th><th>Status</th><th>Coverage</th><th>Attachment</th></tr></thead><tbody id="mainv1DirectoryRows"></tbody></table></div>
         <div class="mainv1-directory-footer"><span id="mainv1DirectorySummary"></span><div><button type="button" id="mainv1DirectoryPrev" aria-label="Previous page">&#8592; Prev</button><strong id="mainv1DirectoryPage">Page 1</strong><button type="button" id="mainv1DirectoryNext" aria-label="Next page">Next &#8594;</button></div></div>
     </article>
 </section>
+<script>
+(() => {
+    const toggle = document.getElementById('mainv1DirectoryFilterToggle');
+    const advanced = document.getElementById('mainv1DirectoryAdvancedFilters');
+    if (!toggle || !advanced) return;
+    const mobileViewport = window.matchMedia('(max-width: 1100px)');
+    const syncDirectoryFilters = () => {
+        const expanded = toggle.dataset.userExpanded === 'true' || !mobileViewport.matches;
+        advanced.hidden = !expanded;
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.textContent = expanded ? 'Hide filters' : 'More filters';
+    };
+    toggle.addEventListener('click', () => {
+        const expanded = advanced.hidden;
+        toggle.dataset.userExpanded = String(expanded);
+        advanced.hidden = !expanded;
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.textContent = expanded ? 'Hide filters' : 'More filters';
+    });
+    mobileViewport.addEventListener?.('change', () => {
+        delete toggle.dataset.userExpanded;
+        syncDirectoryFilters();
+    });
+    syncDirectoryFilters();
+})();
+</script>
 <script>
 (function () {
     const dashboard = document.querySelector('.mainv1-analytics');
@@ -2379,7 +2422,10 @@
     const panels = dashboard.querySelectorAll('[data-mainv1-view]');
     const directory = dashboard.querySelector('.mainv1-directory-panel');
     const viewRows = {};
-    ['summary', 'trends', 'titles', 'geography'].forEach(function (view) {
+    const viewOrder = ['summary', 'trends', 'titles', 'geography'];
+    let hasSelectedView = false;
+    let activeView = 'summary';
+    viewOrder.forEach(function (view) {
         const row = document.createElement('div');
         row.className = 'mainv1-view-row mainv1-view-row-' + view;
         row.dataset.mainv1Row = view;
@@ -2406,6 +2452,18 @@
         Object.keys(viewRows).forEach(function (view) {
             viewRows[view].hidden = view !== selectedView;
         });
+        const selectedRow = viewRows[selectedView];
+        if (hasSelectedView && selectedRow) {
+            const direction = viewOrder.indexOf(selectedView) >= viewOrder.indexOf(activeView) ? 'from-right' : 'from-left';
+            selectedRow.classList.remove('is-view-entering', 'is-view-from-left', 'is-view-from-right');
+            selectedRow.classList.add('is-view-entering', 'is-view-' + direction);
+            void selectedRow.offsetWidth;
+            selectedRow.addEventListener('animationend', function () {
+                selectedRow.classList.remove('is-view-entering', 'is-view-from-left', 'is-view-from-right');
+            }, { once: true });
+        }
+        hasSelectedView = true;
+        activeView = selectedView;
         dashboard.classList.toggle('mainv1-summary-active', selectedView === 'summary');
         if (updateHash) history.replaceState(null, '', '#' + selectedView);
         requestAnimationFrame(function () {
@@ -2457,6 +2515,46 @@
     display: none !important;
 }
 
+@keyframes mainv1-view-enter {
+    from { opacity: 0; transform: translate3d(0, 0, 0); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mainv1-view-slide-right {
+    from { opacity: 0; transform: translate3d(28px, 0, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes mainv1-view-slide-left {
+    from { opacity: 0; transform: translate3d(-28px, 0, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.mainv1-view-row.is-view-entering {
+    animation: mainv1-view-enter .42s cubic-bezier(.22, .61, .36, 1) both;
+    will-change: opacity, transform;
+}
+
+.mainv1-view-row.is-view-entering.is-view-from-right { animation-name: mainv1-view-slide-right; }
+.mainv1-view-row.is-view-entering.is-view-from-left { animation-name: mainv1-view-slide-left; }
+
+.mainv1-view-row.is-view-entering > .mainv1-analytics-panel {
+    animation: mainv1-panel-enter .38s cubic-bezier(.22, .61, .36, 1) both;
+}
+
+.mainv1-view-row.is-view-entering > .mainv1-analytics-panel:nth-child(2) { animation-delay: .05s; }
+.mainv1-view-row.is-view-entering > .mainv1-analytics-panel:nth-child(3) { animation-delay: .1s; }
+
+@keyframes mainv1-panel-enter {
+    from { opacity: 0; transform: translate3d(0, 6px, 0) scale(.995); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mainv1-view-row.is-view-entering,
+    .mainv1-view-row.is-view-entering > .mainv1-analytics-panel { animation: none; }
+}
+
 @media (max-width: 1100px) {
     .mainv1-analytics-heading-tools{width:100%;align-items:stretch}
     .mainv1-view-tabs{width:100%;box-sizing:border-box}
@@ -2465,6 +2563,33 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
+    }
+
+    .mainv1-view-row-summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .mainv1-view-row-trends {
+        grid-template-columns: 1fr;
+    }
+
+    .mainv1-view-row-trends > .mainv1-trend-panel,
+    .mainv1-view-row-trends > .mainv1-year-panel {
+        width: 100%;
+        max-width: none;
+    }
+
+    .mainv1-view-row-titles {
+        grid-template-columns: 1fr;
+    }
+
+    .mainv1-view-row-titles > .mainv1-title-count-panel {
+        width: 100%;
+        max-width: none;
+    }
+
+    .mainv1-view-row-geography {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -2589,10 +2714,33 @@
     .mainv1-directory-heading { flex-wrap: wrap; }
     .mainv1-directory-controls { width: min(100%, 760px); min-width: 0; grid-template-columns: minmax(150px, 1.5fr) repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, .8fr)) auto; }
     .mainv1-directory-controls > * { min-width: 0; }
+    .mainv1-directory-advanced-controls { display: contents; }
+    .mainv1-directory-advanced-controls[hidden] { display: none !important; }
+    .mainv1-directory-filter-toggle { display: none; }
     .mainv1-directory-controls button { min-height: 36px; padding: .45rem .7rem; border: 1px solid #165a91; border-radius: 7px; background: #15539a; color: #fff; font-size: .75rem; cursor: pointer; white-space: nowrap; }
     .mainv1-directory-controls button:hover, .mainv1-directory-controls button:focus-visible { background: #0d427b; }
-    @media (max-width: 1100px) { .mainv1-directory-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 576px) { .mainv1-directory-controls { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) {
+        .mainv1-directory-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .mainv1-directory-filter-toggle {
+            display: block;
+            min-height: 36px;
+            padding: .45rem .7rem;
+            border: 1px solid #c7dce9;
+            border-radius: 7px;
+            background: #f5faff;
+            color: #245b87;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+    }
+    @media (max-width: 576px) {
+        .mainv1-directory-controls { grid-template-columns: 1fr; }
+        .mainv1-directory-advanced-controls {
+            display: grid;
+            grid-column: 1 / -1;
+            gap: .5rem;
+        }
+    }
 </style>
 <style>
     .mainv1-directory-table-wrap {
@@ -2602,7 +2750,7 @@
 
     .mainv1-directory-table {
         width: 100%;
-        min-width: 900px;
+        min-width: 720px;
         table-layout: fixed;
     }
 
@@ -2612,6 +2760,12 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .mainv1-directory-table td:nth-child(5),
+    .mainv1-directory-table td:nth-child(6) {
+        white-space: nowrap;
+        vertical-align: middle;
     }
 
     .mainv1-directory-table th:nth-child(1),
@@ -2848,7 +3002,196 @@
     }
 
     @media (max-width: 576px) {
-        .mainv1-directory-table-wrap { height: 420px; }
+        .mainv1-directory-panel {
+            padding: .85rem;
+            border-radius: 14px;
+        }
+
+        .mainv1-directory-heading {
+            display: block;
+        }
+
+        .mainv1-directory-heading > div:first-child {
+            margin-bottom: .8rem;
+        }
+
+        .mainv1-directory-heading p {
+            margin-top: .35rem;
+            font-size: .74rem;
+        }
+
+        .mainv1-directory-controls {
+            display: grid;
+            gap: .5rem;
+            width: 100%;
+        }
+
+        .mainv1-directory-controls input,
+        .mainv1-directory-controls select,
+        .mainv1-directory-controls button {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 42px;
+            font-size: .78rem;
+        }
+
+        .mainv1-directory-controls input {
+            border-color: #8eb9d6;
+            box-shadow: 0 0 0 3px rgba(75, 155, 212, .1);
+        }
+
+        .mainv1-directory-table-wrap {
+            height: 430px;
+            margin-top: .75rem;
+            border: 0;
+            overflow: auto;
+            overscroll-behavior: contain;
+            scrollbar-color: #9bb9cf transparent;
+            scrollbar-width: thin;
+        }
+
+        .mainv1-directory-table {
+            display: block;
+            min-width: 0;
+        }
+
+        .mainv1-directory-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+
+        .mainv1-directory-table tbody {
+            display: grid;
+            gap: .65rem;
+        }
+
+        .mainv1-directory-table tr {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .55rem .75rem;
+            padding: .8rem;
+            border: 1px solid #dce8f0;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(23, 50, 77, .06);
+            transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+        }
+
+        .mainv1-directory-table tr:active {
+            border-color: #75a9ce;
+            box-shadow: 0 2px 7px rgba(23, 50, 77, .1);
+            transform: translateY(1px);
+        }
+
+        .mainv1-directory-table td {
+            display: block;
+            min-width: 0;
+            width: auto !important;
+            padding: 0;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            color: #315574;
+            font-size: .72rem;
+            line-height: 1.35;
+        }
+
+        .mainv1-directory-table td::before {
+            display: block;
+            margin-bottom: .18rem;
+            color: #8297a9;
+            content: '';
+            font-size: .58rem;
+            font-weight: 800;
+            letter-spacing: .07em;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .mainv1-directory-table td:nth-child(1) {
+            grid-column: 1 / -1;
+            padding-bottom: .55rem;
+            border-bottom: 1px solid #edf2f6;
+            color: #173d68;
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .mainv1-directory-table td:nth-child(1)::before { content: 'Social technology'; }
+        .mainv1-directory-table td:nth-child(2)::before { content: 'Province'; }
+        .mainv1-directory-table td:nth-child(3)::before { content: 'City / municipality'; }
+        .mainv1-directory-table td:nth-child(4)::before { content: 'Status'; }
+        .mainv1-directory-table td:nth-child(5)::before { content: 'Coverage'; }
+        .mainv1-directory-table td:nth-child(6)::before { content: 'Attachment'; }
+
+        .mainv1-directory-table td:nth-child(5),
+        .mainv1-directory-table td:nth-child(6) {
+            white-space: normal;
+            vertical-align: top;
+        }
+
+        .mainv1-directory-table td:nth-child(6) {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .mainv1-directory-table td:nth-child(6)::before { width: 100%; }
+        .mainv1-directory-table .mainv1-coverage-badges { max-height: none; }
+        .mainv1-directory-table .mainv1-attachment-button { min-height: 2rem; }
+
+        .mainv1-directory-footer {
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .55rem;
+            margin: .65rem -.1rem -.1rem;
+            padding: .65rem .1rem .1rem;
+            border-top: 1px solid #e1ebf2;
+            background: rgba(255, 255, 255, .96);
+        }
+
+        .mainv1-directory-footer > span {
+            color: #6d8296;
+            font-size: .7rem;
+            white-space: nowrap;
+        }
+
+        .mainv1-directory-footer > div {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+        .mainv1-directory-footer button {
+            min-width: 2.35rem;
+            min-height: 2.25rem;
+            padding: .4rem .55rem;
+            border: 1px solid #c9dce9;
+            border-radius: 7px;
+            background: #fff;
+            color: #245b87;
+            font-size: .7rem;
+            font-weight: 700;
+        }
+
+        .mainv1-directory-footer button:disabled {
+            color: #9aabba;
+            background: #f5f8fa;
+        }
+
+        .mainv1-directory-footer strong {
+            color: #315574;
+            font-size: .7rem;
+            white-space: nowrap;
+        }
     }
 
     .mainv1-replication-confirm-modal {

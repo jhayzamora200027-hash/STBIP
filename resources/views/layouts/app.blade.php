@@ -1393,7 +1393,7 @@
                     grid-template-columns: 1fr;
                 }
                 .portal-login-brand-panel {
-                    padding: 2rem;
+                    display: none;
                 }
                 .portal-login-form-panel {
                     padding: 2rem;

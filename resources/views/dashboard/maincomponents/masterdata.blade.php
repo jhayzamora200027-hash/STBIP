@@ -201,6 +201,68 @@
 		gap: 6px;
 		min-height: 118px;
 	}
+	.masterdata-collapsible-header {
+		position: relative;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		min-height: 88px;
+	}
+	.masterdata-collapse-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		flex: 0 0 auto;
+		min-height: 40px;
+		padding: 8px 12px;
+		border: 1px solid #bfd3e4;
+		border-radius: 8px;
+		background: #fff;
+		color: #194566;
+		font: inherit;
+		font-size: 0.82rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: background-color 0.18s ease, border-color 0.18s ease;
+	}
+	.masterdata-collapse-toggle:hover,
+	.masterdata-collapse-toggle:focus-visible {
+		border-color: #6ea4c8;
+		background: #f2f8fc;
+		outline: none;
+	}
+	.masterdata-collapse-icon {
+		font-size: 0.78rem;
+		line-height: 1;
+		transition: transform 0.18s ease;
+	}
+	.masterdata-collapsible-body[hidden] {
+		display: none;
+	}
+	.masterdata-collapsible-body {
+		max-height: 0;
+		overflow: hidden;
+		padding-top: 0;
+		padding-bottom: 0;
+		opacity: 0;
+		transform: translateY(-8px);
+		pointer-events: none;
+		transition: max-height 0.32s ease, padding 0.24s ease, opacity 0.24s ease, transform 0.24s ease;
+	}
+	.masterdata-collapsible-body.is-open {
+		max-height: 1400px;
+		padding-top: 22px;
+		padding-bottom: 22px;
+		opacity: 1;
+		transform: translateY(0);
+		pointer-events: auto;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.masterdata-collapsible-body {
+			transition: none;
+		}
+	}
 	.masterdata-card-header h2,
 	.masterdata-card-header h3 {
 		margin: 0;
@@ -764,6 +826,14 @@
 		}
 	}
 	@media (max-width: 560px) {
+		.masterdata-collapsible-header {
+			align-items: stretch;
+			flex-direction: column;
+		}
+		.masterdata-collapse-toggle {
+			justify-content: center;
+			width: 100%;
+		}
 		.masterdata-modal {
 			padding: 14px;
 		}
@@ -1415,9 +1485,40 @@
 			});
 		}
 
+		function initializeNewItemToggle(root) {
+			const toggle = (root || document).querySelector('#masterdataNewItemToggle');
+			const body = (root || document).querySelector('#masterdataNewItemBody');
+			if (!toggle || !body || toggle.dataset.bound === 'true') {
+				return;
+			}
+			toggle.dataset.bound = 'true';
+			toggle.addEventListener('click', function () {
+				const expanded = body.hidden;
+				const icon = toggle.querySelector('.masterdata-collapse-icon');
+				if (expanded) {
+					body.hidden = false;
+					requestAnimationFrame(function () {
+						body.classList.add('is-open');
+					});
+				} else {
+					body.classList.remove('is-open');
+					window.setTimeout(function () {
+						if (!body.classList.contains('is-open')) {
+							body.hidden = true;
+						}
+					}, 320);
+				}
+				toggle.setAttribute('aria-expanded', String(expanded));
+				toggle.querySelector('span').textContent = expanded ? 'Collapse form' : 'Expand form';
+				icon?.classList.toggle('bi-chevron-up', expanded);
+				icon?.classList.toggle('bi-chevron-down', !expanded);
+			});
+		}
+
 		function initializeUpdatesPanel(root) {
 			initializeConditionalFields(root);
 			initializeRowToggles(root);
+			initializeNewItemToggle(root);
 			initializeUpdatesPanelAjax(root);
 			initializeRegionItemHistoryModal(root);
 		}

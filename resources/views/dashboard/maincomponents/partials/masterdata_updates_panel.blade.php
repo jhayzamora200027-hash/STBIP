@@ -165,10 +165,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 @if($canWriteMasterData && $hasSelectedRegion)
 <section class="masterdata-card" style="margin-bottom: 22px;">
-	<div class="masterdata-card-header">
+	<div class="masterdata-card-header masterdata-collapsible-header">
 		<h2>Add New Item to {{ $selectedRegionName }}</h2>
+		<button type="button" class="masterdata-collapse-toggle" id="masterdataNewItemToggle" aria-expanded="false" aria-controls="masterdataNewItemBody">
+			<span>Expand form</span>
+			<i class="masterdata-collapse-icon bi bi-chevron-down" aria-hidden="true"></i>
+		</button>
 	</div>
-	<div class="masterdata-card-body">
+	<div class="masterdata-card-body masterdata-collapsible-body" id="masterdataNewItemBody" hidden>
 		<form method="POST" action="{{ route('masterdata.region-items.store') }}" data-masterdata-updates-form="create">
 			@csrf
 			<input type="hidden" name="form_origin" value="region_item_create">
