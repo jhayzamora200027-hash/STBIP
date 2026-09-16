@@ -87,7 +87,7 @@
           <div class="otp-send-captcha-panel mt-3">
             <div class="otp-send-captcha-title">Security check</div>
             <div class="otp-send-captcha-wrap">
-              <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+              <div class="g-recaptcha" data-otp-captcha data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
             </div>
             <div class="text-danger small mt-2" id="otpSendCaptchaError" style="display:none;"></div>
           </div>
@@ -317,7 +317,19 @@
       @if(config('services.recaptcha.site_key'))
       try {
         if (window.grecaptcha && typeof window.grecaptcha.reset === 'function') {
-          window.grecaptcha.reset();
+          const captcha = otpSendConfirmModalEl ? otpSendConfirmModalEl.querySelector('[data-otp-captcha]') : null;
+          const widgetId = captcha ? captcha.getAttribute('data-widget-id') : null;
+
+          if (widgetId !== null && widgetId !== '') {
+            window.grecaptcha.reset(widgetId);
+          } else {
+            for (let candidateId = 0; candidateId < 10; candidateId += 1) {
+              try {
+                window.grecaptcha.reset(candidateId);
+              } catch (e) {
+              }
+            }
+          }
         }
       } catch (e) {
       }
@@ -730,7 +742,7 @@
       }, 200);
     }
 
-    otpForm.addEventListener('submit', function(e){
+    otpForm.addEventListener('submit', async function(e){
       e.preventDefault();
       if (verifyBtn && verifyBtn.disabled) {
         showError(isLocked()
@@ -745,6 +757,23 @@
         return;
       }
       otpHidden.value = code;
+      try {
+        const csrfResponse = await fetch('{{ route('csrf.token') }}', {
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          credentials: 'same-origin',
+        });
+        const csrfData = await csrfResponse.json();
+        const csrfInput = otpForm.querySelector('input[name="_token"]');
+        if (!csrfResponse.ok || !csrfData.token || !csrfInput) {
+          throw new Error('Unable to refresh the security token.');
+        }
+        csrfInput.value = csrfData.token;
+      } catch (err) {
+        console.error(err);
+        showError('Your session has expired. Please refresh the page and sign in again.');
+        return;
+      }
+
       // POST via fetch
       const fd = new FormData(otpForm);
       fetch(otpForm.action, {

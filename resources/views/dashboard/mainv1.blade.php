@@ -54,23 +54,16 @@
         color: #17324d !important;
         width: 100%;
         overflow-x: clip;
+        padding: 50px;
         background: linear-gradient(180deg, #f8fbfd 0%, #ffffff 38%, #f7fafc 100%);
     }
 
     @media (min-width: 577px) and (max-width: 1100px) {
-        .content-body { padding: 30px !important; }
+        .content-body { padding: 30px; }
     }
 
     @media (max-width: 576px) {
-        .content-body { padding: 10px !important; }
-    }
-
-    @media (min-width: 577px) and (max-width: 1100px) {
-        .mainv1-analytics-shell { padding: 30px !important; }
-    }
-
-    @media (max-width: 576px) {
-        .mainv1-analytics-shell { padding: 10px !important; }
+        .content-body { padding: 10px; }
     }
 
     .mainv1-row {
@@ -100,10 +93,10 @@
     .mainv1-brand {
         display: flex;
         align-items: center;
-        justify-content: flex-start;
-        flex-direction: row;
-        gap: 1.25rem;
-        min-height: 100px;
+        justify-content: center;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 150px;
         padding: 1rem;
         box-sizing: border-box;
     }
@@ -116,15 +109,14 @@
 
     .mainv1-logo {
         display: block;
-        width: 420px;
-        max-width: 420px;
+        width: min(420px, 100%);
         height: auto;
         flex: 0 1 auto;
     }
 
     .mainv1-brand-copy {
-        max-width: none;
-        text-align: left;
+        max-width: 300px;
+        text-align: center;
     }
 
     .mainv1-brand-kicker {
@@ -228,6 +220,17 @@
 
     .mainv1-filter.is-collapsed .mainv1-filter-heading {
         margin-bottom: 0;
+    }
+
+    @media (min-width: 1101px) {
+        .mainv1-filter-toggle {
+            display: none;
+        }
+
+        .mainv1-filter-grid,
+        .mainv1-filter.is-collapsed .mainv1-filter-grid {
+            display: grid !important;
+        }
     }
 
     .mainv1-filter-grid {
@@ -1729,20 +1732,15 @@
             min-height: 0;
             padding: 0.5rem 0;
             text-align: center;
-            flex-direction: column;
-            gap: 0.75rem;
-            align-items: center;
         }
 
         .mainv1-logo {
-            width: min(320px, 82%);
-            max-width: 420px;
+            width: min(320px, 90%);
             flex-basis: auto;
         }
 
         .mainv1-brand-copy {
             max-width: 320px;
-            text-align: center;
         }
 
         .mainv1-brand-rule {
@@ -1847,7 +1845,7 @@
     
 </style>
 
-<div class="content-body" style="padding: 100px;">
+<div class="content-body">
     @php
         $mainv1Items = collect($regionItems ?? []);
         $mainv1FilterItems = collect($filterItems ?? $regionItems ?? []);
@@ -1939,16 +1937,23 @@
             const filterToggle = filterPanel?.querySelector('.mainv1-filter-toggle');
             const filterGrid = document.getElementById('mainv1Filters');
             if (!filterPanel || !filterToggle || !filterGrid) return;
-            const syncFilterState = () => {
-                const isCollapsed = filterPanel.classList.contains('is-collapsed');
+            const collapsibleViewport = window.matchMedia('(max-width: 1100px)');
+            const syncFilterViewport = () => {
+                const isDesktop = !collapsibleViewport.matches;
+                filterToggle.hidden = isDesktop;
+                if (isDesktop) {
+                    filterPanel.classList.remove('is-collapsed');
+                    filterGrid.hidden = false;
+                    filterToggle.setAttribute('aria-expanded', 'true');
+                }
+            };
+            syncFilterViewport();
+            collapsibleViewport.addEventListener?.('change', syncFilterViewport);
+            filterToggle.addEventListener('click', () => {
+                const isCollapsed = filterPanel.classList.toggle('is-collapsed');
                 filterGrid.hidden = isCollapsed;
                 filterToggle.setAttribute('aria-expanded', String(!isCollapsed));
                 filterToggle.firstChild.textContent = isCollapsed ? 'Show filters' : 'Hide filters';
-            };
-            syncFilterState();
-            filterToggle.addEventListener('click', () => {
-                filterPanel.classList.toggle('is-collapsed');
-                syncFilterState();
             });
         })();
     </script>
@@ -2323,77 +2328,75 @@
         'attachment_filename' => $item->attachment_filename,
     ])->values();
 @endphp
-<div class="mainv1-analytics-shell" style="padding:100px;">
-    <section class="mainv1-analytics" aria-labelledby="mainv1AnalyticsTitle">
-        <div class="mainv1-analytics-heading">
-            <div>
-                <span class="mainv1-analytics-eyebrow">Trend overview</span>
-                <h2 id="mainv1AnalyticsTitle">Social Technology Analytics</h2>
-            </div>
-            <div class="mainv1-analytics-heading-tools">
-                <div class="mainv1-analytics-badge"><span class="mainv1-live-dot"></span><span id="mainv1AnalyticsCount">{{ $mainv1AnalyticsRows->count() }} filtered records</span></div>
-                <div class="mainv1-view-tabs" role="tablist" aria-label="Analytics views">
-                    <button type="button" class="mainv1-view-tab is-active" role="tab" aria-selected="true" aria-controls="mainv1-view-summary" data-mainv1-tab="summary">Summary</button>
-                    <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-trends" data-mainv1-tab="trends">Trends</button>
-                    <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-titles" data-mainv1-tab="titles">Titles</button>
-                    <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-geography" data-mainv1-tab="geography">Geography</button>
-                </div>
+<section class="mainv1-analytics" aria-labelledby="mainv1AnalyticsTitle">
+    <div class="mainv1-analytics-heading">
+        <div>
+            <span class="mainv1-analytics-eyebrow">Trend overview</span>
+            <h2 id="mainv1AnalyticsTitle">Social Technology Analytics</h2>
+        </div>
+        <div class="mainv1-analytics-heading-tools">
+            <div class="mainv1-analytics-badge"><span class="mainv1-live-dot"></span><span id="mainv1AnalyticsCount">{{ $mainv1AnalyticsRows->count() }} filtered records</span></div>
+            <div class="mainv1-view-tabs" role="tablist" aria-label="Analytics views">
+                <button type="button" class="mainv1-view-tab is-active" role="tab" aria-selected="true" aria-controls="mainv1-view-summary" data-mainv1-tab="summary">Summary</button>
+                <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-trends" data-mainv1-tab="trends">Trends</button>
+                <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-titles" data-mainv1-tab="titles">Titles</button>
+                <button type="button" class="mainv1-view-tab" role="tab" aria-selected="false" aria-controls="mainv1-view-geography" data-mainv1-tab="geography">Geography</button>
             </div>
         </div>
-    
-        <div class="row g-3 mainv1-analytics-top p-2">
-            <article class="col-md-6 mainv1-analytics-panel mainv1-trend-panel" data-mainv1-view="trends">
-                <div class="mainv1-chart-wrap"><canvas id="mainv1StatusChart"></canvas></div>
-            </article>
-            <article class="col-md-6 mainv1-analytics-panel mainv1-title-count-panel" data-mainv1-view="titles">
-                <div class="mainv1-title-composition">
-                    <div class="mainv1-title-card mainv1-chart-wrap mainv1-title-count-chart-wrap"><div class="mainv1-title-card-heading"><span>Share by social technology</span></div><canvas id="mainv1TitleCountChart" aria-label="Social Technology title distribution chart"></canvas></div>
-                    <div class="mainv1-title-card mainv1-title-reference"><div class="mainv1-title-reference-header"><span class="mainv1-title-reference-heading">Top titles by volume</span><span id="mainv1TitleReferenceCount" class="mainv1-title-reference-count"></span></div><div id="mainv1TitleCountLegend" class="mainv1-title-count-legend" aria-label="Social technology titles" aria-live="polite"></div><div class="mainv1-title-pagination"><button type="button" id="mainv1TitlePrevious" aria-label="Previous titles page">Previous</button><span id="mainv1TitlePage" aria-live="polite">Page 1 of 1</span><button type="button" id="mainv1TitleNext" aria-label="Next titles page">Next</button></div></div>
-                </div>
-            </article>
-        </div>
-    
-        <div class="mainv1-analytics-grid mainv1-analytics-grid-secondary">
-            <article class="mainv1-analytics-panel mainv1-year-panel" data-mainv1-view="trends">
-                <div class="mainv1-panel-heading"><div><span>Distribution</span><h3>Year of MOAs</h3></div></div>
-                <div class="mainv1-chart-wrap"><canvas id="mainv1YearChart"></canvas></div>
-                <div class="mainv1-insight-strip"><div><span>Peak year</span><strong id="mainv1PeakYear">-</strong><small id="mainv1PeakMeta">No records yet</small></div><div><span>Average volume</span><strong id="mainv1AverageYear">-</strong><small>Records per year</small></div><div><span>Latest year</span><strong id="mainv1LatestYear">-</strong><small id="mainv1LatestMeta">No records yet</small></div></div>
-            </article>
-            <article class="mainv1-analytics-panel mainv1-share-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Ongoing vs inactive</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1StatusDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-teal"></i>Ongoing <b id="mainv1StatusOngoingPercent">0%</b></span><span><i class="legend-rose"></i>Inactive <b id="mainv1StatusInactivePercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-teal"><span>Ongoing</span><strong id="mainv1StatusOngoingValue">0</strong><small id="mainv1StatusOngoingSummary">0% of status records</small></div><div class="mainv1-share-stat share-stat-rose"><span>Inactive</span><strong id="mainv1StatusInactiveValue">0</strong><small id="mainv1StatusInactiveSummary">0% of status records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1StatusLead">Awaiting summary</strong></div></div></article>
-            <article class="mainv1-analytics-panel mainv1-share-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Replicated vs adopted</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1AdoptionDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-blue"></i>Replicated <b id="mainv1ReplicatedPercent">0%</b></span><span><i class="legend-gold"></i>Adopted <b id="mainv1AdoptedPercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-blue"><span>Replicated</span><strong id="mainv1ReplicatedValue">0</strong><small id="mainv1ReplicatedSummary">0% of replicated records</small></div><div class="mainv1-share-stat share-stat-gold"><span>Adopted</span><strong id="mainv1AdoptedValue">0</strong><small id="mainv1AdoptedSummary">0% of adoption records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1AdoptionLead">Awaiting summary</strong></div></div></article>
-            <article class="mainv1-analytics-panel mainv1-coverage-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Overall totals</span><h3>Social technology coverage</h3></div></div><div id="mainv1Coverage" class="mainv1-coverage-list"></div></article>
-        </div>
-    
-        <div class="mainv1-analytics-grid mainv1-analytics-grid-lower">
-            <article class="mainv1-analytics-panel mainv1-heatmap-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Regional pattern</span><h3>Regional year activity</h3></div></div><div id="mainv1Heatmap" class="mainv1-heatmap"></div></article>
-            <article class="mainv1-analytics-panel mainv1-ranking-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Geographic reach</span><h3>Top regions</h3></div></div><div id="mainv1TopRegions" class="mainv1-ranking-list"></div></article>
-            <article class="mainv1-analytics-panel mainv1-ranking-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Local concentration</span><h3>Top provinces</h3></div></div><div id="mainv1TopProvinces" class="mainv1-ranking-list"></div></article>
-        </div>
-    
-        <article class="mainv1-analytics-panel mainv1-directory-panel">
-            <div class="mainv1-directory-heading">
-                <div>
-                    <span class="mainv1-analytics-eyebrow">Record directory</span>
-                    <p>Filter the social technology records shown below.</p>
-                </div>
-                <div class="mainv1-directory-controls" aria-label="Filter directory records">
-                    <input id="mainv1DirectorySearch" type="search" placeholder="Search title" aria-label="Search social technology title">
-                    <button type="button" class="mainv1-directory-filter-toggle" id="mainv1DirectoryFilterToggle" aria-expanded="true" aria-controls="mainv1DirectoryAdvancedFilters">More filters</button>
-                    <div class="mainv1-directory-advanced-controls" id="mainv1DirectoryAdvancedFilters">
-                        <select id="mainv1DirectoryProvince" aria-label="Filter by province"><option value="">All provinces</option></select>
-                        <select id="mainv1DirectoryMunicipality" aria-label="Filter by city or municipality"><option value="">All cities / municipalities</option></select>
-                        <select id="mainv1DirectoryYear" aria-label="Filter by year of MOA"><option value="">All years</option></select>
-                        <select id="mainv1DirectoryStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="ongoing">Active</option><option value="inactive">Inactive</option></select>
-                        <select id="mainv1DirectoryType" aria-label="Filter by coverage"><option value="">All coverage</option><option value="expr">Expression of Interest</option><option value="res">SB Resolution</option><option value="moa">MOA</option><option value="replicated">Replicated</option><option value="adopted">Adopted</option></select>
-                        <button type="button" id="mainv1DirectoryExport">Export CSV</button>
-                    </div>
-                </div>
-            </div>
-            <div class="mainv1-directory-table-wrap"><table class="mainv1-directory-table"><thead><tr><th>Title</th><th>Province</th><th>City / Municipality</th><th>Status</th><th>Coverage</th><th>Attachment</th></tr></thead><tbody id="mainv1DirectoryRows"></tbody></table></div>
-            <div class="mainv1-directory-footer"><span id="mainv1DirectorySummary"></span><div><button type="button" id="mainv1DirectoryPrev" aria-label="Previous page">&#8592; Prev</button><strong id="mainv1DirectoryPage">Page 1</strong><button type="button" id="mainv1DirectoryNext" aria-label="Next page">Next &#8594;</button></div></div>
+    </div>
+
+    <div class="row g-3 mainv1-analytics-top p-2">
+        <article class="col-md-6 mainv1-analytics-panel mainv1-trend-panel" data-mainv1-view="trends">
+            <div class="mainv1-panel-heading"><div><span>Trend overview</span><h3>Status by year</h3></div></div>
+            <div class="mainv1-chart-wrap"><canvas id="mainv1StatusChart"></canvas></div>
         </article>
-    </section>
-</div>
+        <article class="col-md-6 mainv1-analytics-panel mainv1-title-count-panel" data-mainv1-view="titles">
+            <div class="mainv1-title-composition">
+                <div class="mainv1-title-card mainv1-chart-wrap mainv1-title-count-chart-wrap"><div class="mainv1-title-card-heading"><span>Share by social technology</span></div><canvas id="mainv1TitleCountChart" aria-label="Social Technology title distribution chart"></canvas></div>
+                <div class="mainv1-title-card mainv1-title-reference"><div class="mainv1-title-reference-header"><span class="mainv1-title-reference-heading">Top titles by volume</span><span id="mainv1TitleReferenceCount" class="mainv1-title-reference-count"></span></div><div id="mainv1TitleCountLegend" class="mainv1-title-count-legend" aria-label="Social technology titles" aria-live="polite"></div><div class="mainv1-title-pagination"><button type="button" id="mainv1TitlePrevious" aria-label="Previous titles page">Previous</button><span id="mainv1TitlePage" aria-live="polite">Page 1 of 1</span><button type="button" id="mainv1TitleNext" aria-label="Next titles page">Next</button></div></div>
+            </div>
+        </article>
+    </div>
+
+    <div class="mainv1-analytics-grid mainv1-analytics-grid-secondary">
+        <article class="mainv1-analytics-panel mainv1-year-panel" data-mainv1-view="trends">
+            <div class="mainv1-panel-heading"><div><span>Distribution</span><h3>Year of MOAs</h3></div></div>
+            <div class="mainv1-chart-wrap"><canvas id="mainv1YearChart"></canvas></div>
+            <div class="mainv1-insight-strip"><div><span>Peak year</span><strong id="mainv1PeakYear">-</strong><small id="mainv1PeakMeta">No records yet</small></div><div><span>Average volume</span><strong id="mainv1AverageYear">-</strong><small>Records per year</small></div><div><span>Latest year</span><strong id="mainv1LatestYear">-</strong><small id="mainv1LatestMeta">No records yet</small></div></div>
+        </article>
+        <article class="mainv1-analytics-panel mainv1-share-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Ongoing vs inactive</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1StatusDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-teal"></i>Ongoing <b id="mainv1StatusOngoingPercent">0%</b></span><span><i class="legend-rose"></i>Inactive <b id="mainv1StatusInactivePercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-teal"><span>Ongoing</span><strong id="mainv1StatusOngoingValue">0</strong><small id="mainv1StatusOngoingSummary">0% of status records</small></div><div class="mainv1-share-stat share-stat-rose"><span>Inactive</span><strong id="mainv1StatusInactiveValue">0</strong><small id="mainv1StatusInactiveSummary">0% of status records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1StatusLead">Awaiting summary</strong></div></div></article>
+        <article class="mainv1-analytics-panel mainv1-share-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Share analysis</span><h3>Replicated vs adopted</h3></div></div><div class="mainv1-donut-wrap"><canvas id="mainv1AdoptionDonut"></canvas></div><div class="mainv1-share-legend"><span><i class="legend-blue"></i>Replicated <b id="mainv1ReplicatedPercent">0%</b></span><span><i class="legend-gold"></i>Adopted <b id="mainv1AdoptedPercent">0%</b></span></div><div class="mainv1-share-summary"><div class="mainv1-share-metrics"><div class="mainv1-share-stat share-stat-blue"><span>Replicated</span><strong id="mainv1ReplicatedValue">0</strong><small id="mainv1ReplicatedSummary">0% of replicated records</small></div><div class="mainv1-share-stat share-stat-gold"><span>Adopted</span><strong id="mainv1AdoptedValue">0</strong><small id="mainv1AdoptedSummary">0% of adoption records</small></div></div><div class="mainv1-share-insight"><span>Current lead</span><strong id="mainv1AdoptionLead">Awaiting summary</strong></div></div></article>
+        <article class="mainv1-analytics-panel mainv1-coverage-panel" data-mainv1-view="summary"><div class="mainv1-panel-heading"><div><span>Overall totals</span><h3>Social technology coverage</h3></div></div><div id="mainv1Coverage" class="mainv1-coverage-list"></div></article>
+    </div>
+
+    <div class="mainv1-analytics-grid mainv1-analytics-grid-lower">
+        <article class="mainv1-analytics-panel mainv1-heatmap-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Regional pattern</span><h3>Regional year activity</h3></div></div><div id="mainv1Heatmap" class="mainv1-heatmap"></div></article>
+        <article class="mainv1-analytics-panel mainv1-ranking-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Geographic reach</span><h3>Top regions</h3></div></div><div id="mainv1TopRegions" class="mainv1-ranking-list"></div></article>
+        <article class="mainv1-analytics-panel mainv1-ranking-panel" data-mainv1-view="geography"><div class="mainv1-panel-heading"><div><span>Local concentration</span><h3>Top provinces</h3></div></div><div id="mainv1TopProvinces" class="mainv1-ranking-list"></div></article>
+    </div>
+
+    <article class="mainv1-analytics-panel mainv1-directory-panel">
+        <div class="mainv1-directory-heading">
+            <div>
+                <span class="mainv1-analytics-eyebrow">Record directory</span>
+            </div>
+            <div class="mainv1-directory-controls" aria-label="Filter directory records">
+                <input id="mainv1DirectorySearch" type="search" placeholder="Search title" aria-label="Search social technology title">
+                <button type="button" class="mainv1-directory-filter-toggle" id="mainv1DirectoryFilterToggle" aria-expanded="true" aria-controls="mainv1DirectoryAdvancedFilters">More filters</button>
+                <div class="mainv1-directory-advanced-controls" id="mainv1DirectoryAdvancedFilters">
+                    <select id="mainv1DirectoryProvince" aria-label="Filter by province"><option value="">All provinces</option></select>
+                    <select id="mainv1DirectoryMunicipality" aria-label="Filter by city or municipality"><option value="">All cities / municipalities</option></select>
+                    <select id="mainv1DirectoryYear" aria-label="Filter by year of MOA"><option value="">All years</option></select>
+                    <select id="mainv1DirectoryStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="ongoing">Active</option><option value="inactive">Inactive</option></select>
+                    <select id="mainv1DirectoryType" aria-label="Filter by coverage"><option value="">All coverage</option><option value="expr">Expression of Interest</option><option value="res">SB Resolution</option><option value="moa">MOA</option><option value="replicated">Replicated</option><option value="adopted">Adopted</option></select>
+                    <button type="button" id="mainv1DirectoryExport">Export CSV</button>
+                </div>
+            </div>
+        </div>
+        <div class="mainv1-directory-table-wrap"><table class="mainv1-directory-table"><thead><tr><th>Title</th><th>Province</th><th>City / Municipality</th><th>Status</th><th>Coverage</th><th>Attachment</th></tr></thead><tbody id="mainv1DirectoryRows"></tbody></table></div>
+        <div class="mainv1-directory-footer"><span id="mainv1DirectorySummary"></span><div><button type="button" id="mainv1DirectoryPrev" aria-label="Previous page">&#8592; Prev</button><strong id="mainv1DirectoryPage">Page 1</strong><button type="button" id="mainv1DirectoryNext" aria-label="Next page">Next &#8594;</button></div></div>
+    </article>
+</section>
 <script>
 (() => {
     const toggle = document.getElementById('mainv1DirectoryFilterToggle');
@@ -2517,16 +2520,6 @@
 }
 
 .mainv1-analytics [data-mainv1-view][hidden]{display:none!important}
-
-@media (min-width: 577px) and (max-width: 1100px) {
-    .mainv1-analytics,
-    .mainv1-analytics.mainv1-summary-active { padding: 30px !important; }
-}
-
-@media (max-width: 576px) {
-    .mainv1-analytics,
-    .mainv1-analytics.mainv1-summary-active { padding: 10px !important; }
-}
 
 .mainv1-view-row[hidden] {
     display: none !important;
@@ -2669,7 +2662,9 @@
 .mainv1-metric-trigger{cursor:pointer}.mainv1-metric-trigger:focus-visible{outline:3px solid rgba(46,111,216,.28);outline-offset:3px}.mainv1-metric-modal{position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;padding:1rem;background:rgba(11,35,59,.45)}.mainv1-metric-modal.is-open{display:flex}.mainv1-metric-dialog{width:min(920px,100%);max-height:min(760px,calc(100vh - 2rem));overflow:hidden;border:1px solid #d7e5ef;border-radius:16px;background:#fff;box-shadow:0 24px 70px rgba(8,43,81,.24)}.mainv1-metric-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.15rem 1.25rem;border-bottom:1px solid #e4edf3;background:linear-gradient(135deg,#f7fbff,#fff)}.mainv1-metric-modal-header span{color:#6d8296;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.mainv1-metric-modal-header h2{margin:.25rem 0;color:#123f70;font-size:1.25rem}.mainv1-metric-modal-header p{margin:0;color:#6b8197;font-size:.78rem}.mainv1-metric-modal-close{display:grid;width:34px;height:34px;place-items:center;border:1px solid #d5e3ed;border-radius:8px;background:#fff;color:#496780;font-size:1.35rem;line-height:1;cursor:pointer}.mainv1-metric-list-wrap{max-height:calc(min(760px,100vh - 2rem) - 100px);overflow:auto;padding:.75rem 1.25rem 1.25rem}.mainv1-metric-list{display:grid;gap:.55rem}.mainv1-metric-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(100px,.65fr) minmax(120px,.8fr) auto;gap:.75rem;align-items:center;padding:.75rem;border:1px solid #e1ebf2;border-radius:10px;background:#fbfdff}.mainv1-metric-row strong{overflow:hidden;color:#173d68;font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}.mainv1-metric-row span{overflow:hidden;color:#607990;font-size:.72rem;text-overflow:ellipsis;white-space:nowrap}.mainv1-metric-status{padding:.25rem .5rem;border-radius:99px;background:#dff7ed;color:#168456;font-size:.64rem;font-weight:800;text-align:center}.mainv1-metric-status.inactive{background:#ffe5ec;color:#dc4968}.mainv1-metric-empty{padding:2rem;text-align:center;color:#6b8197;border:1px dashed #d5e3ed;border-radius:10px}@media(max-width:576px){.mainv1-metric-dialog{max-height:calc(100vh - 1rem)}.mainv1-metric-modal-header{padding:.9rem}.mainv1-metric-list-wrap{padding:.65rem;max-height:calc(100vh - 100px)}.mainv1-metric-row{grid-template-columns:1fr;gap:.3rem}.mainv1-metric-row strong,.mainv1-metric-row span{white-space:normal}.mainv1-metric-status{width:max-content}}
 .mainv1-analytics-top{grid-template-columns:repeat(2,minmax(0,1fr))}
 .mainv1-analytics-top > .col-md-6{width:auto;max-width:none;min-width:0}
-.mainv1-trend-panel .mainv1-chart-wrap{height:330px}
+.mainv1-view-row-trends{align-items:stretch}
+.mainv1-trend-panel,.mainv1-year-panel{display:flex;flex-direction:column;height:100%;box-sizing:border-box}
+.mainv1-trend-panel .mainv1-chart-wrap,.mainv1-year-panel .mainv1-chart-wrap{height:270px;flex:0 0 270px}
 .mainv1-title-composition{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;align-items:stretch;min-width:0}
 .mainv1-title-count-chart-wrap{display:flex;width:100%;max-width:100%;min-width:0;height:clamp(220px,24vw,300px);align-items:center;justify-content:center;margin-top:0;padding:.5rem;box-sizing:border-box;aspect-ratio:1;overflow:hidden}
 .mainv1-title-count-chart-wrap canvas{display:block;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;aspect-ratio:1}
@@ -3616,9 +3611,10 @@
     const statusLead = ongoing >= inactive ? `Ongoing STs lead by ${ongoing - inactive} records.` : `Inactive STs lead by ${inactive - ongoing} records.`; const adoptionLead = replicated >= adopted ? `Replicated STs lead by ${replicated - adopted} records.` : `Adopted STs lead by ${adopted - replicated} records.`; const statusOngoingPercent = percentage(ongoing, ongoing + inactive); const statusInactivePercent = percentage(inactive, ongoing + inactive); const replicatedPercent = percentage(replicated, replicated + adopted); const adoptedPercent = percentage(adopted, replicated + adopted); setText('mainv1StatusOngoingPercent', statusOngoingPercent); setText('mainv1StatusInactivePercent', statusInactivePercent); setText('mainv1ReplicatedPercent', replicatedPercent); setText('mainv1AdoptedPercent', adoptedPercent); setText('mainv1StatusOngoingValue', ongoing); setText('mainv1StatusInactiveValue', inactive); setText('mainv1ReplicatedValue', replicated); setText('mainv1AdoptedValue', adopted); setText('mainv1StatusOngoingSummary', `${statusOngoingPercent} of status records`); setText('mainv1StatusInactiveSummary', `${statusInactivePercent} of status records`); setText('mainv1ReplicatedSummary', `${replicatedPercent} of replicated records`); setText('mainv1AdoptedSummary', `${adoptedPercent} of adoption records`); setText('mainv1StatusLead', statusLead); setText('mainv1AdoptionLead', adoptionLead);
     const years = [...new Set(rows.map(row => Number(row.year)).filter(year => Number.isFinite(year) && year > 1900))].sort((a, b) => a - b);
     const yearCounts = years.map(year => count(row => Number(row.year) === year));
+    const analyticsYAxisMax = Math.max(20, Math.ceil(Math.max(...yearCounts, 0) / 20) * 20);
     const chartDefaults = { responsive: true, maintainAspectRatio: false, onClick: (_, elements, chartInstance) => { const index = elements[0]?.index; const label = chartInstance.data.labels?.[index]; const year = Number(label); if (Number.isFinite(year) && year > 1900 && window.openMainv1YearRecords) return window.openMainv1YearRecords(year); const metricByLabel = { Ongoing: 'active', Inactive: 'inactive', Replicated: 'replicated', Adopted: 'adopted' }; if (metricByLabel[label] && window.openMainv1MetricRecords) window.openMainv1MetricRecords(metricByLabel[label]); }, onHover: (event, elements, chartInstance) => { const index = elements[0]?.index; const label = chartInstance.data.labels?.[index]; const year = Number(label); const metricByLabel = { Ongoing: true, Inactive: true, Replicated: true, Adopted: true }; chartInstance.canvas.style.cursor = (Number.isFinite(year) && year > 1900) || metricByLabel[label] ? 'pointer' : 'default'; }, plugins: { legend: { display: false } } };
     const chart = (id, config) => { const canvas = document.getElementById(id); return canvas && window.Chart ? new Chart(canvas, config) : null; };
-    chart('mainv1StatusChart', { type: 'line', data: { labels: years, datasets: [{ label: 'Ongoing STs', data: years.map(year => count(row => Number(row.year) === year && row.status === 'ongoing')), borderColor: '#42b9ba', backgroundColor: 'rgba(66,185,186,.12)', fill: true, tension: .35 }, { label: 'Inactive STs', data: years.map(year => count(row => Number(row.year) === year && (row.status === 'inactive' || row.status === 'dissolved'))), borderColor: '#ff6682', backgroundColor: 'rgba(255,102,130,.08)', fill: true, tension: .35 }] }, options: { ...chartDefaults, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 22, font: { size: 10 } } } } } });
+    chart('mainv1StatusChart', { type: 'line', data: { labels: years, datasets: [{ label: 'Ongoing STs', data: years.map(year => count(row => Number(row.year) === year && row.status === 'ongoing')), borderColor: '#42b9ba', backgroundColor: 'rgba(66,185,186,.12)', fill: true, tension: .35 }, { label: 'Inactive STs', data: years.map(year => count(row => Number(row.year) === year && (row.status === 'inactive' || row.status === 'dissolved'))), borderColor: '#ff6682', backgroundColor: 'rgba(255,102,130,.08)', fill: true, tension: .35 }] }, options: { ...chartDefaults, scales: { y: { beginAtZero: true, max: analyticsYAxisMax, ticks: { precision: 0 } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 22, font: { size: 10 } } } } } });
     const titleCounts = Object.entries(rows.reduce((result, row) => { const title = String(row.title || 'Untitled social technology').trim() || 'Untitled social technology'; result[title] = (result[title] || 0) + 1; return result; }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const titleColors = ['#12a8b0','#20d8ad','#9bdde7','#ffb347','#ee5b91','#8d70cf','#55b7a8','#f08080','#61a7e5','#a78b7a','#c4a7d9','#7abf7b'];
     const titleLegend = document.getElementById('mainv1TitleCountLegend');
@@ -3675,7 +3671,7 @@
     const largerTitleCounts = titleCounts.filter(item => titleShare(item) > 0.5);
     const smallerTitleCounts = titleCounts.filter(item => titleShare(item) <= 0.5);
     titleChart = chart('mainv1TitleCountChart', { type: 'doughnut', data: { labels: titleCounts.map(item => item[0]), datasets: [{ label: 'Titles above 0.5%', data: largerTitleCounts.map(item => item[1]), backgroundColor: largerTitleCounts.map((_, index) => titleColors[index % titleColors.length]), borderColor: '#fff', borderWidth: 2, hoverOffset: 8, hoverBorderWidth: 3 }, { label: 'Titles at or below 0.5%', data: smallerTitleCounts.map(item => item[1]), backgroundColor: smallerTitleCounts.map((_, index) => titleColors[(index + largerTitleCounts.length) % titleColors.length]), borderColor: '#fff', borderWidth: 2, hoverOffset: 8, hoverBorderWidth: 3 }] }, options: { ...chartDefaults, cutout: '48%', onClick: (_, elements) => { const element = elements[0]; if (!element) return; const source = element.datasetIndex === 1 ? smallerTitleCounts : largerTitleCounts; const title = source[element.index]?.[0]; if (title) openTitleRecords(title); }, onHover: (event, elements, chartInstance) => { chartInstance.canvas.style.cursor = elements.length ? 'pointer' : 'default'; }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => { const source = context.datasetIndex === 1 ? smallerTitleCounts : largerTitleCounts; const title = source[context.dataIndex]?.[0] || ''; return ` ${title}: ${context.parsed} social technolog${context.parsed === 1 ? 'y' : 'ies'}`; } } } } } });
-    chart('mainv1YearChart', { type: 'bar', data: { labels: years, datasets: [{ data: yearCounts, backgroundColor: ['#2db6b0','#42b9ba','#77cce0','#ffbd51','#8b82e8','#ee70aa'], borderRadius: 4 }] }, options: { ...chartDefaults, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
+    chart('mainv1YearChart', { type: 'bar', data: { labels: years, datasets: [{ data: yearCounts, backgroundColor: ['#2db6b0','#42b9ba','#77cce0','#ffbd51','#8b82e8','#ee70aa'], borderRadius: 4 }] }, options: { ...chartDefaults, scales: { y: { beginAtZero: true, max: analyticsYAxisMax, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
     chart('mainv1StatusDonut', { type: 'doughnut', data: { labels: ['Ongoing', 'Inactive'], datasets: [{ data: [ongoing, inactive], backgroundColor: ['#42b9ba','#ff6682'], borderWidth: 0 }] }, options: { ...chartDefaults, cutout: '68%' } });
     chart('mainv1AdoptionDonut', { type: 'doughnut', data: { labels: ['Replicated', 'Adopted'], datasets: [{ data: [replicated, adopted], backgroundColor: ['#3398dc','#ffc34f'], borderWidth: 0 }] }, options: { ...chartDefaults, cutout: '68%' } });
     const peak = yearCounts.reduce((best, value, index) => value > best.value ? { year: years[index], value } : best, { year: '-', value: 0 });
