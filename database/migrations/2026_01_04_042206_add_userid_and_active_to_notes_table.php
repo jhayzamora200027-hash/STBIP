@@ -11,10 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('notes', function (Blueprint $table) {
-        $table->unsignedBigInteger('userid')->nullable()->after('createdby');
-        $table->boolean('active')->default(true)->after('userid');
-        });
+        if (!Schema::hasColumn('notes', 'userid')) {
+            Schema::table('notes', function (Blueprint $table) {
+                $table->unsignedBigInteger('userid')->nullable()->after('createdby');
+            });
+        }
+
+        if (!Schema::hasColumn('notes', 'active')) {
+            Schema::table('notes', function (Blueprint $table) {
+                $table->boolean('active')->default(true)->after('userid');
+            });
+        }
     }
 
     /**
@@ -22,8 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('notes', function (Blueprint $table) {
-                $table->dropColumn(['userid', 'active']);
-        });
+        // Keep existing staging columns intact during rollback.
     }
 };
