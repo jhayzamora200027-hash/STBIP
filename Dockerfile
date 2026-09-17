@@ -24,11 +24,13 @@ RUN apt-get update \
         mbstring \
         zip \
         gd \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
     && a2enmod rewrite \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Redis extension and automatically accept default prompts
+RUN yes '' | pecl install redis \
+    && docker-php-ext-enable redis
 
 # Set Apache document root to Laravel's public directory
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
