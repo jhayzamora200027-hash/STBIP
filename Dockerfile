@@ -24,6 +24,8 @@ RUN apt-get update \
         mbstring \
         zip \
         gd \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
     && a2enmod rewrite \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
