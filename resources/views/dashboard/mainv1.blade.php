@@ -1877,7 +1877,7 @@
             <img class="mainv1-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo.png') }}" alt="DSWD STB Bagong Pil logo">
             <div class="mainv1-brand-copy">
                 <span class="mainv1-brand-kicker">Social Technology Bureau</span>
-                <h1 class="mainv1-brand-title">Social Technologies Dashboard</h1>
+                <h1 class="mainv1-brand-title">Social Technologies Dashboard test CICD</h1>
             </div>
         </div>
         <div class="pe-4 ps-3">
