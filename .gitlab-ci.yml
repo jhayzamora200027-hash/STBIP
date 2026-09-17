@@ -22,8 +22,8 @@ update_sourcecodes_staging:
     - if docker compose ps -q stbip | grep -q .; then docker compose cp stbip:/var/www/html/database/database.sqlite /var/lib/stbip/database.sqlite.previous || true; fi
     - if [ -f /var/lib/stbip/database.sqlite.previous ]; then cp /var/lib/stbip/database.sqlite.previous database/database.sqlite; fi
     - docker compose up -d --build --force-recreate
-    - docker compose exec -T stbip php artisan migrate --force --isolated
-    - docker compose exec -T stbip php artisan optimize:clear
+    - docker compose exec -T stbip sh -lc 'if grep -q "^DB_CONNECTION=sqlite[[:space:]]*$" .env; then export DB_DATABASE=/var/www/html/database/database.sqlite; fi; php artisan migrate --force --isolated'
+    - docker compose exec -T stbip sh -lc 'if grep -q "^DB_CONNECTION=sqlite[[:space:]]*$" .env; then export DB_DATABASE=/var/www/html/database/database.sqlite; fi; php artisan optimize:clear'
     - docker compose cp stbip:/var/www/html/database/database.sqlite /var/lib/stbip/database.sqlite
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
