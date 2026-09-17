@@ -19,8 +19,8 @@ update_sourcecodes_staging:
     - git rev-parse HEAD
     - docker compose up -d --build
     - docker compose exec -T stbip php artisan db:seed --force
-    - docker compose exec -T stbip php artisan config:clear
-    - docker compose exec -T stbip php artisan optimize:clear
+   # - docker compose exec -T stbip php artisan config:clear
+   # - docker compose exec -T stbip php artisan optimize:clear
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       exists:
