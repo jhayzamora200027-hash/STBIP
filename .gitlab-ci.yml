@@ -9,6 +9,7 @@ update_sourcecodes_staging:
   stage: deploy
   tags:
     - staging-stbip-u1
+  resource_group: staging-stbip
   script:
     - echo "Updating codebase and deploying containers"
     - cd "$PROJECT_DIRECTORY"
@@ -21,7 +22,7 @@ update_sourcecodes_staging:
     - if docker compose ps -q stbip | grep -q .; then docker compose cp stbip:/var/www/html/database/database.sqlite /var/lib/stbip/database.sqlite.previous || true; fi
     - if [ -f /var/lib/stbip/database.sqlite.previous ]; then cp /var/lib/stbip/database.sqlite.previous database/database.sqlite; fi
     - docker compose up -d --build --force-recreate
-    - docker compose exec -T stbip php artisan migrate --force
+    - docker compose exec -T stbip php artisan migrate --force --isolated
     - docker compose exec -T stbip php artisan optimize:clear
     - docker compose cp stbip:/var/www/html/database/database.sqlite /var/lib/stbip/database.sqlite
   rules:
