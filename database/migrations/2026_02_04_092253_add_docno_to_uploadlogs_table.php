@@ -7,15 +7,15 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up()
     {
-        Schema::table('uploadlogs', function (Blueprint $table) {
-    $table->string('docno')->nullable();
-});
+        if (!Schema::hasColumn('uploadlogs', 'docno')) {
+            Schema::table('uploadlogs', function (Blueprint $table) {
+                $table->string('docno')->nullable();
+            });
+        }
     }
 
     public function down()
     {
-        Schema::table('uploadlogs', function (Blueprint $table) {
-    $table->dropColumn('docno');
-});
+        // Keep an existing staging column intact during rollback.
     }
 };
