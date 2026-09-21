@@ -1,29 +1,112 @@
-stages:
-  - deploy
+# ====================================================
+# 1. SMART RULES (Prevent Overload)
+# ====================================================
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'development'
+    - if: $CI_COMMIT_BRANCH == 'staging'
+    - if: $CI_COMMIT_BRANCH == 'production'
+    - when: never
 
 variables:
-  GIT_DEPTH: 0
-  GIT_STRATEGY: fetch
+  REGISTRY_HOST: "registry-git.dswd.gov.ph"
+  REGISTRY_BASE: "registry-git.dswd.gov.ph/ict_sysad/docker-swarm"
+  APP_NAME: "stbip"
+  INFRA_REPO_URL: "git.dswd.gov.ph/ict_sysad/docker-swarm.git"
+  DOCKER_BUILDKIT: "1"
 
-update_sourcecodes_staging:
-  stage: deploy
+stages:
+  - build
+  - deploy-update
+
+# ====================================================
+# 2. BUILD IMAGE & PUSH TO REGISTRY
+# ====================================================
+build_image:
+  stage: build
   tags:
-    - staging-stbip-u1
+    - dso-build-factory-01
+  interruptible: true
   script:
-    - echo "Updating codebase and deploying containers"
-    - cd "$PROJECT_DIRECTORY"
-    - git stash
-    - git fetch
-    - git switch $CI_COMMIT_BRANCH
-    - git pull origin $CI_COMMIT_BRANCH
-    - git rev-parse HEAD
-    - docker compose up -d --build
-    - docker compose exec -T stbip php artisan db:seed --force
-    - docker compose exec -T stbip php artisan config:clear
-   # - docker compose exec -T stbip php artisan optimize:clear
-   # - docker compose exec -T stbip php artisan config:clear
-   # - docker compose exec -T stbip php artisan optimize:clear
+    - set -euo pipefail
+
+    - echo "🔐 Logging into registry..."
+    - echo "$REGISTRY_PASS" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+
+    # Set up dynamic image tags based on the branch and commit SHA
+    - export FULL_IMAGE_TAG="${REGISTRY_BASE}/${APP_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    - export CACHE_TAG="${REGISTRY_BASE}/${APP_NAME}:${CI_COMMIT_REF_SLUG}"
+
+    - echo "📦 Building Docker image..."
+
+    # Attempt to pull an existing image to use as a layer cache
+    - docker pull "$CACHE_TAG" || true
+
+    # Build the image using the standard Dockerfile
+    - docker build --pull --cache-from "$CACHE_TAG" -f Dockerfile -t "$FULL_IMAGE_TAG" -t "$CACHE_TAG" .
+
+    - echo "🚀 Pushing images to registry..."
+    - docker push "$FULL_IMAGE_TAG"
+    - docker push "$CACHE_TAG"
+
+    # Create the text file with just the tag and save it
+    - echo "${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}" > image_tag.txt
+    - echo "✅ Build and push completed successfully for $FULL_IMAGE_TAG"
+
+  artifacts:
+    paths:
+      - image_tag.txt
+    expire_in: 1 hour
+
+# ====================================================
+# 3. DEPLOY (GitOps Branching)
+# ====================================================
+update_manifest:
+  stage: deploy-update
+  tags:
+    - dso-build-factory-01
+  needs:
+    - job: build_image
+      artifacts: true
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      exists:
-        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      variables:
+        TARGET_ENV: "staging"
+    - if: '$CI_COMMIT_BRANCH == "development"'
+      variables:
+        TARGET_ENV: "development"
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      variables:
+        TARGET_ENV: "production"
+  script:
+    - set -euo pipefail
+    - if ! command -v yq >/dev/null 2>&1; then sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64; sudo chmod +x /usr/local/bin/yq; fi
+    - git config --global user.email "ci-bot@dswd.gov.ph"
+    - git config --global user.name "ci-bot"
+
+    # Read the artifact passed from build_image
+    - export NEW_TAG="$(cat image_tag.txt)"
+
+    - git clone "https://oauth2:${INFRA_REPO_TOKEN}@${INFRA_REPO_URL}" infra_repo
+    - cd infra_repo
+
+    # --- DYNAMIC ENV PATH ---
+    - export ENV_PATH="environments/${TARGET_ENV}/${APP_NAME}"
+    - cd "$ENV_PATH"
+
+    - echo "📝 Updating Deployment image tags in $TARGET_ENV..."
+
+    # --- SURGICAL FIX: Update ONLY app and worker services ---
+    - yq -i '.services.app.image |= sub(":[^:]+$", ":" + strenv(NEW_TAG)) | .services.worker.image |= sub(":[^:]+$", ":" + strenv(NEW_TAG))' 01-deployment.yaml
+
+    - git add 01-deployment.yaml
+
+    - |
+      if git diff --staged --quiet; then
+        echo "⚠️ No changes to commit (Image tag matches current)."
+      else
+        git commit -m "ci: auto-update ${APP_NAME} to ${NEW_TAG} in ${TARGET_ENV}"
+        echo "🚀 Pushing directly to main..."
+        git push origin main
+        echo "✅ Successfully updated infrastructure repo!"
+      fi
