@@ -106,8 +106,9 @@
     }
 
     .mainv1-brand-copy {
+        padding-left: 10px;
         max-width: 300px;
-        text-align: center;
+        text-align: start;
     }
 
     .mainv1-brand-kicker {
@@ -119,6 +120,9 @@
         letter-spacing: 0.12em;
         line-height: 1.2;
         text-transform: uppercase;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
 
     .mainv1-brand-title {
@@ -128,6 +132,8 @@
         font-weight: 800;
         letter-spacing: 0.01em;
         line-height: 1.08;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
     .mainv1-brand-rule {
@@ -141,15 +147,63 @@
     }
 
     .mainv1-filter {
+        position: absolute;
+        top: calc(100% + 12px);
+        right: 0;
         width: 100%;
-        min-width: 0;
+        min-width: 350px;
         margin-top: 0;
-        padding: clamp(0.5rem, 2vw, 1.25rem);
+        padding: 1rem;
         border: 1px solid #dce7ee;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.96);
-        box-shadow: 0 8px 24px rgba(23, 50, 77, 0.07);
-        margin-bottom: 30px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 12px 32px rgba(23, 50, 77, 0.15);
+        margin-bottom: 0;
+        z-index: 1000;
+        max-width: min(900px, 100%);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-10px);
+        visibility: hidden;
+        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+        margin-top: -100px;
+    }
+
+    .mainv1-filter.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+        visibility: visible;
+    }
+
+    .mainv1-filter-launch {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: fit-content;
+        min-height: 40px;
+        margin-bottom: 1rem;
+        margin-left: auto;
+        border: 1px solid #17324d;
+        border-radius: 7px;
+        padding: 0.55rem 0.85rem;
+        background: #17324d;
+        color: #fff;
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        justify-content: end;
+    }
+
+    .mainv1-filter-launch:hover,
+    .mainv1-filter-launch:focus-visible {
+        border-color: #0d426f;
+        background: #0d426f;
+    }
+
+    .mainv1-filter-container{
+        position: relative;
     }
 
     .mainv1-filter-heading {
@@ -198,30 +252,6 @@
         border-bottom: 2px solid #49627d;
         transform: rotate(45deg);
         transition: transform 0.2s ease;
-    }
-
-    .mainv1-filter.is-collapsed .mainv1-filter-toggle::after {
-        margin-top: 0.2rem;
-        transform: rotate(-135deg);
-    }
-
-    .mainv1-filter.is-collapsed .mainv1-filter-grid {
-        display: none !important;
-    }
-
-    .mainv1-filter.is-collapsed .mainv1-filter-heading {
-        margin-bottom: 0;
-    }
-
-    @media (min-width: 1101px) {
-        .mainv1-filter-toggle {
-            display: none;
-        }
-
-        .mainv1-filter-grid,
-        .mainv1-filter.is-collapsed .mainv1-filter-grid {
-            display: grid !important;
-        }
     }
 
     .mainv1-filter-grid {
@@ -1612,6 +1642,43 @@
     @media (max-width: 1100px) {
         .mainv1-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+        .mainv1-filter {
+            position: static;
+            width: 100%;
+            min-width: 0;
+            max-width: none;
+            margin-top: 0;
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            z-index: auto;
+            transform: translateY(-14px);
+            transition: max-height 0.35s ease, opacity 0.25s ease, transform 0.35s ease, visibility 0.35s ease;
+        }
+
+        .mainv1-filter.is-open {
+            max-height: 900px;
+            margin-bottom: 10px;
+            padding: 10px;
+            overflow: visible;
+            transform: translateY(0);
+        }
+
+        .mainv1-brand > .d-flex {
+            flex-direction: column;
+            align-items: center !important;
+            text-align: center;
+        }
+
+        .mainv1-brand-copy {
+            padding-left: 0;
+            text-align: center;
+        }
+
+        .mainv1-brand-kicker{
+            padding-top:10px;
+        }
+
         .mainv1-overview-row {
             display: flex;
             flex-wrap: wrap;
@@ -1646,10 +1713,12 @@
             padding-left: 0 !important;
         }
 
-        .mainv1-filter {
+        .mainv1-filter.is-open {
+            max-height: 900px;
             box-sizing: border-box;
             width: 100%;
             padding-bottom: 1.5rem;
+            padding: 10px;
         }
 
         .mainv1-filter-grid {
@@ -1682,7 +1751,11 @@
     }
 
     @media (max-width: 576px) {
-        .mainv1-metric-grid { grid-template-columns: 1fr; }
+        .mainv1-metric-grid {
+            grid-template-columns: 1fr;
+            box-sizing: border-box;
+            padding: 0 0.75rem;
+        }
 
         .mainv1-overview-row > .col-md-3 {
             width: 100%;
@@ -1739,7 +1812,7 @@
             margin-left: auto;
         }
 
-        .mainv1-filter {
+        .mainv1-filter.is-open {
             padding: 1rem 1rem 1.5rem;
             margin-top: 0;
         }
@@ -1795,6 +1868,11 @@
 
         .mainv1-map-panel object {
             height: min(100vw, 520px);
+        }
+
+        .mainv1-map-panel {
+            margin-right: 0.75rem;
+            margin-left: 0.75rem;
         }
 
         .mainv1-region-panel {
@@ -1874,19 +1952,22 @@
     @endphp
     <div class="mainv1-row d-flex justify-content-between align-items-center w-100">
         <div class="mainv1-brand">
-            <img class="mainv1-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo.png') }}" alt="DSWD STB Bagong Pil logo">
-            <div class="mainv1-brand-copy">
-                <span class="mainv1-brand-kicker">Social Technology Bureau</span>
-                <h1 class="mainv1-brand-title">Social Technologies Dashboard</h1>
+            <div class="d-flex align-items-center">
+                <img class="mainv1-logo" src="{{ asset('images/dattachments/DSWD STB Bagong Pil logo.png') }}" alt="DSWD STB Bagong Pil logo">
+                <div class="mainv1-brand-copy">
+                    <span class="mainv1-brand-kicker">Social Technology Bureau</span>
+                    <h1 class="mainv1-brand-title">Social Technologies Dashboard</h1>
+                </div>
             </div>
         </div>
-        <div class="pe-4 ps-3">
-            <form class="mainv1-filter is-collapsed" aria-label="Filter region items" method="GET" action="{{ auth()->check() ? route('main') : route('landing') }}">
+        <div class="mainv1-filter-container pe-4 ps-3">
+            <button class="mainv1-filter-launch" type="button" aria-expanded="false" aria-controls="mainv1FilterPanel">Show filters</button>
+            <form class="mainv1-filter" id="mainv1FilterPanel" aria-hidden="true" aria-label="Filter region items" method="GET" action="{{ auth()->check() ? route('main') : route('landing') }}">
                 <div class="mainv1-filter-heading">
                     <h2>Dashboard Filters</h2>
-                    <button class="mainv1-filter-toggle" type="button" aria-expanded="false" aria-controls="mainv1Filters">Show filters</button>
+                    <button class="mainv1-filter-toggle" type="button" aria-expanded="true" aria-controls="mainv1FilterPanel">Close filters</button>
                 </div>
-                <div class="mainv1-filter-grid" id="mainv1Filters" hidden>
+                <div class="mainv1-filter-grid" id="mainv1Filters">
                     @foreach([
                         ['key' => 'region', 'label' => 'Region', 'placeholder' => 'All regions'],
                         ['key' => 'province', 'label' => 'Province', 'placeholder' => 'All provinces'],
@@ -1924,27 +2005,20 @@
     <script>
         (() => {
             const filterPanel = document.querySelector('.mainv1-filter');
+            const filterLaunch = document.querySelector('.mainv1-filter-launch');
             const filterToggle = filterPanel?.querySelector('.mainv1-filter-toggle');
-            const filterGrid = document.getElementById('mainv1Filters');
-            if (!filterPanel || !filterToggle || !filterGrid) return;
-            const collapsibleViewport = window.matchMedia('(max-width: 1100px)');
-            const syncFilterViewport = () => {
-                const isDesktop = !collapsibleViewport.matches;
-                filterToggle.hidden = isDesktop;
-                if (isDesktop) {
-                    filterPanel.classList.remove('is-collapsed');
-                    filterGrid.hidden = false;
-                    filterToggle.setAttribute('aria-expanded', 'true');
-                }
+            if (!filterPanel || !filterLaunch || !filterToggle) return;
+
+            const setFilterOpen = (isOpen) => {
+                filterPanel.classList.toggle('is-open', isOpen);
+                filterPanel.setAttribute('aria-hidden', String(!isOpen));
+                filterLaunch.setAttribute('aria-expanded', String(isOpen));
+                filterLaunch.hidden = isOpen;
+                filterToggle.setAttribute('aria-expanded', String(isOpen));
             };
-            syncFilterViewport();
-            collapsibleViewport.addEventListener?.('change', syncFilterViewport);
-            filterToggle.addEventListener('click', () => {
-                const isCollapsed = filterPanel.classList.toggle('is-collapsed');
-                filterGrid.hidden = isCollapsed;
-                filterToggle.setAttribute('aria-expanded', String(!isCollapsed));
-                filterToggle.firstChild.textContent = isCollapsed ? 'Show filters' : 'Hide filters';
-            });
+
+            filterLaunch.addEventListener('click', () => setFilterOpen(true));
+            filterToggle.addEventListener('click', () => setFilterOpen(false));
         })();
     </script>
     @php
@@ -2128,6 +2202,7 @@
             <button type="button"
                     class="mainv1-replication-cancel"
                     id="mainv1ReplicationCancel">
+                Cancel
             </button>
 
             <button type="button"
@@ -3384,11 +3459,17 @@
 
     height:45px;
 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
     border-radius:10px;
 
     font-size:14px;
 
     font-weight:600;
+
+    white-space: nowrap;
 
     cursor:pointer;
 
